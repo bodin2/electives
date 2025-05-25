@@ -5,13 +5,13 @@
     "build": "turbo run build"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "turbo": "^2.5.3"
+    "@types/bun": "1.2.14",
+    "turbo": "2.5.3"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "5.8.3"
   },
   "workspaces": ["apps/*", "packages/*"],
-  "trustedDependencies": ["@biomejs/biome", "@parcel/watcher"],
+  "trustedDependencies": ["@biomejs/biome", "@parcel/watcher", "esbuild"],
   "packageManager": "bun@1.2.14"
 }
