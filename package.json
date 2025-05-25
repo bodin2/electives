@@ -1,0 +1,17 @@
+{
+  "name": "@bodin2/electives",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "turbo": "^2.5.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "workspaces": ["apps/*", "packages/*"],
+  "trustedDependencies": ["@biomejs/biome", "@parcel/watcher"],
+  "packageManager": "bun@1.2.14"
+}
