@@ -16,17 +16,17 @@
       "version": "1.0.0",
       "dependencies": {
         "@bodin2/electives-proto": "workspace:*",
-        "@elysiajs/bearer": "^1.3.0",
-        "@elysiajs/cors": "^1.3.3",
+        "@elysiajs/bearer": "1.3.0",
+        "@elysiajs/cors": "1.3.3",
         "drizzle-kit": "0.31.1",
         "drizzle-orm": "0.43.1",
         "elysia": "1.3.1",
-        "elysia-helmet": "^3.0.0",
-        "elysia-http-error": "^1.3.0",
-        "elysia-ip": "https://github.com/PalmDevs/elysia-ip#main",
+        "elysia-helmet": "3.0.0",
+        "elysia-http-error": "1.3.0",
+        "elysia-ip": "1.0.9",
         "elysia-protobuf": "1.0.4",
-        "elysia-rate-limit": "^4.3.0",
-        "paseto-ts": "^2.0.5",
+        "elysia-rate-limit": "4.3.0",
+        "paseto-ts": "2.0.5",
       },
       "devDependencies": {
         "@biomejs/biome": "1.9.4",
@@ -734,7 +734,7 @@
 
     "elysia-http-error": ["elysia-http-error@1.3.0", "", { "dependencies": { "elysia": "latest" }, "peerDependencies": { "typescript": "^5.0.0" } }, "sha512-28cVWYU6pBMgW4ptSGnY0rEPfhw2QXAkY92Y+hMCQPP3EJEhMdLTG+bC1Er/Pv4OuYw/S/o2BS0fP6EdxG8v8g=="],
 
-    "elysia-ip": ["elysia-ip@github:PalmDevs/elysia-ip#371918e", { "peerDependencies": { "elysia": ">= 1.0.9" } }, "PalmDevs-elysia-ip-371918e"],
+    "elysia-ip": ["elysia-ip@1.0.9", "", { "peerDependencies": { "elysia": ">= 1.0.9" } }, "sha512-kuoLZOyRE2PeSe3aBbXK2a1Xlsmj03Pb37aHzI5sZt4yjGx1xIkLOBqTjr2VnUL8S1Xvn7MNeg4vk3QccF4C8g=="],
 
     "elysia-protobuf": ["elysia-protobuf@1.0.4", "", { "dependencies": { "@bufbuild/protobuf": "2.2.3" }, "peerDependencies": { "elysia": ">= 1.2.0" } }, "sha512-oyAGV6g1c2Rn5R1FhAOOPl7xog8h9Z607Bo18u5ImvFAAtW4WrIyKw2J72FGokavvDvrQEe0pBoluddQv7MzNg=="],
 
