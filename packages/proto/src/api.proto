@@ -1,17 +1,18 @@
 syntax = "proto3";
 
-message RequestMessage {
-  string title = 1;
-  optional int32 updatedAt = 2;
-  repeated string tags = 3;
+message AuthRequest {
+  fixed32 id = 1;
+  string password = 2;
 }
 
-enum ResponseStatus {
-  OK = 0;
-  SOME = 1;
+message AuthResponse {
+  optional string token = 1;
 }
 
-message ResponseMessage {
-  ResponseStatus status = 1;
-  string inlineTags = 2;
+message Student {
+  fixed32 id = 1;
+  string first_name = 2;
+  optional string middle_name = 3;
+  string last_name = 4;
+  fixed32 team_id = 5;
 }

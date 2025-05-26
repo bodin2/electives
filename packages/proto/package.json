@@ -2,7 +2,8 @@
   "name": "@bodin2/electives-proto",
   "version": "1.0.0",
   "scripts": {
-    "build": "bun run scripts/build.ts api.proto"
+    "build": "bun run scripts/build.ts api.proto",
+    "dev": "bun run scripts/dev.ts"
   },
   "exports": {
     "./api": {
