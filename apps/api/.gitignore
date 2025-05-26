@@ -3,3 +3,6 @@ db.sqlite
 
 # environment variables
 .env
+
+# build
+dist

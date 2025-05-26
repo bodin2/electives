@@ -1,16 +1,29 @@
 {
   "name": "@bodin2/electives-api",
   "version": "1.0.0",
+  "main": "src/app.ts",
   "scripts": {
-    "build": "echo TODO && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "postinstall": "bun run build:db",
+    "build:db": "drizzle-kit push",
+    "build": "bun run scripts/build.ts",
+    "dev": "bun run --watch .",
+    "new-keypair": "bun run scripts/new-keypair.ts",
+    "new-student": "bun run scripts/new-student.ts",
+    "new-team": "bun run scripts/new-team.ts"
   },
   "dependencies": {
     "@bodin2/electives-proto": "workspace:*",
+    "@elysiajs/bearer": "^1.3.0",
+    "@elysiajs/cors": "^1.3.3",
     "drizzle-kit": "0.31.1",
     "drizzle-orm": "0.43.1",
     "elysia": "1.3.1",
-    "elysia-protobuf": "1.0.4"
+    "elysia-helmet": "^3.0.0",
+    "elysia-http-error": "^1.3.0",
+    "elysia-ip": "https://github.com/PalmDevs/elysia-ip#main",
+    "elysia-protobuf": "1.0.4",
+    "elysia-rate-limit": "^4.3.0",
+    "paseto-ts": "^2.0.5"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",

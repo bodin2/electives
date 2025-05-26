@@ -3,9 +3,9 @@ import { defineConfig } from 'drizzle-kit'
 export default defineConfig({
     out: './drizzle',
     dialect: 'sqlite',
-    schema: './drizzle/schema.ts',
+    schema: './src/db/schema.ts',
     dbCredentials: {
-        url: process.env.ELECTIVE_API_DB,
+        url: process.env.ELECTIVES_API_DB,
     },
     migrations: {
         prefix: 'timestamp',
@@ -13,6 +13,6 @@ export default defineConfig({
         schema: 'public',
     },
     breakpoints: true,
-    strict: true,
+    // strict: true,
     verbose: true,
 })

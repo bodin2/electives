@@ -25,7 +25,7 @@ export const electives = sqliteTable('electives', {
 })
 
 export const subjects = sqliteTable('subjects', {
-    id: integer('id').primaryKey(),
+    id: text('id').primaryKey(),
     /**
      * A subject must be associated with an elective. However, electives can exist without a team.
      */
@@ -34,19 +34,31 @@ export const subjects = sqliteTable('subjects', {
     name: text('name').notNull(),
     description: text('description').notNull(),
     location: text('location').notNull(),
-    code: text('code').notNull(),
 
     maxStudents: integer('max_students').notNull(),
 })
 
 export const students = sqliteTable('students', {
     id: integer('id').primaryKey(),
-    name: text('name').notNull(),
+
+    firstName: text('first_name').notNull(),
+    middleName: text('middle_name'),
+    lastName: text('last_name').notNull(),
+
     // A student must have a team
     teamId: integer('team_id')
         .notNull()
-        // If their team is deleted, the student will also be deleted
         .references(() => teams.id, { onDelete: 'restrict' }),
+
+    /**
+     * Hash of the student's password.
+     */
+    hash: text('hash').notNull(),
+
+    /**
+     * Hash of the session ID.
+     */
+    sessionHash: text('session_hash'),
 })
 
 export const studentsToSubjects = sqliteTable(
@@ -55,7 +67,7 @@ export const studentsToSubjects = sqliteTable(
         studentId: integer('student_id')
             .notNull()
             .references(() => students.id),
-        subjectId: integer('subject_id')
+        subjectId: text('subject_id')
             .notNull()
             .references(() => subjects.id),
     },
