@@ -9,7 +9,8 @@ import type { InferResultType } from '../db'
 
 export type StudentModel = InferResultType<'students'>
 
-export const SessionDuration = 1000 * 60 * 60 * 24 // 1 day in milliseconds
+// TODO(apps/api): put in config
+export const SessionDuration = Number(process.env.ELECTIVES_API_SESSION_DURATION) || 86_400_000
 
 export async function createStudent(student: Omit<StudentModel, 'hash' | 'sessionIAt'>, password: string) {
     return db

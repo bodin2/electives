@@ -31,9 +31,8 @@ export const app = new Elysia()
     .use(bearer())
     .use(
         rateLimit({
-            // Global rate limit at 120 requests per minute
-            max: 120,
-            duration: 60 * 1000,
+            max: Number(process.env.ELECTIVES_API_RATE_LIMIT_AMOUNT) || 120,
+            duration: Number(process.env.ELECTIVES_API_RATE_LIMIT_WINDOW) || 60_000,
             errorResponse: new Response('Too Many Requests', {
                 status: 429,
             }),
