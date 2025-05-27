@@ -1,12 +1,43 @@
 syntax = "proto3";
 
-message AuthRequest {
-  fixed32 id = 1;
-  string password = 2;
+message AuthService {
+  message Request {
+    fixed32 id = 1;
+    string password = 2;
+  }
+
+  message Response {
+    optional string token = 1;
+  }
 }
 
-message AuthResponse {
-  optional string token = 1;
+message ElectivesService {
+  message Response {
+    repeated Elective electives = 1;
+  }
+}
+
+message Team {
+  fixed32 id = 1;
+  string name = 2;
+}
+
+message Elective {
+  fixed32 id = 1;
+  string name = 2;
+  // Unix timestamp representing the start and end dates of the selection period
+  int32 start_date = 3;
+  // Unix timestamp representing the end date of the selection period
+  int32 end_date = 4;
+}
+
+message Subject {
+  fixed32 id = 1;
+  string name = 2;
+  string description = 3;
+  SubjectTag tag = 4;
+  string location = 5;
+  fixed32 max_students = 6;
 }
 
 message Student {
@@ -14,5 +45,19 @@ message Student {
   string first_name = 2;
   optional string middle_name = 3;
   string last_name = 4;
-  fixed32 team_id = 5;
+}
+
+enum SubjectTag {
+  THAI = 0;
+  MATH = 1;
+  SCIENCE_AND_TECHNOLOGY = 2;
+  SOCIAL_STUDIES = 3;
+  ART = 4;
+  PHYSICAL_EDUCATION = 5;
+  HOME_ECONOMICS = 6;
+  FOREIGN_LANGUAGE = 7;
+  GUIDANCE_AND_CAREER = 8;
+  ENGLISH_PROGRAM = 9;
+  // กิจกรรมพัฒนาผู้เรียน
+  ACTIVITIES = 10;
 }

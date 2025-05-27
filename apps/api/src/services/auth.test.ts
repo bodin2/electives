@@ -1,17 +1,12 @@
-import { AuthRequest, AuthResponse, Student } from '@bodin2/electives-proto/api'
+import { Student } from '@bodin2/electives-proto/api'
 
 import { describe, expect, test } from 'bun:test'
 
-import { BaseUrl } from '../__tests__/shared'
-import { AuthServiceGroup } from './auth'
+import { BaseUrl, Credentials, authenticate } from '../__tests__/shared'
+import AuthService from './auth'
 
-const Credentials = {
-    id: 23151,
-    password: 'password',
-} as AuthRequest
-
-describe('/auth', () => {
-    const Route = `${BaseUrl}/${AuthServiceGroup}`
+describe(AuthService.Group, () => {
+    const Route = `${BaseUrl}${AuthService.Group}`
 
     test('POST -> 400 (invalid body)', () => {
         expect(
@@ -22,27 +17,14 @@ describe('/auth', () => {
         ).resolves.toHaveProperty('status', 400)
     })
 
-    test('POST -> 200 | 401 (invalid credentials)  +  unique tokens', async () => {
-        const body = AuthRequest.encode(Credentials).finish()
-        const fetchAuth = () =>
-            fetch(Route, {
-                method: 'POST',
-                body,
-                headers: {
-                    'Content-Type': 'application/x-protobuf',
-                },
-            })
-
-        const oldRes = await fetchAuth()
-        const res = await fetchAuth()
-
-        const { token: oldToken } = AuthResponse.decode(new Uint8Array(await oldRes.arrayBuffer()))
-        const { token } = AuthResponse.decode(new Uint8Array(await res.arrayBuffer()))
+    test('POST -> 200 (gens unique tokens) | 401 (invalid credentials)', async () => {
+        const [oldToken] = await authenticate()
+        const [token, res] = await authenticate()
 
         describe('/auth/whoami', async () => {
             const WhoAmIRoute = `${Route}/whoami`
 
-            test.skipIf(res.status !== 200)('GET -> 200', async () => {
+            test.skipIf(!token)('GET -> 200', async () => {
                 const res = await fetch(WhoAmIRoute, {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -56,10 +38,9 @@ describe('/auth', () => {
                 expect(stud.id).toEqual(Credentials.id)
                 expect(stud).toHaveProperty('firstName')
                 expect(stud).toHaveProperty('lastName')
-                expect(stud).toHaveProperty('teamId')
             })
 
-            test.skipIf(res.status !== 200)('GET -> 401 (old token)', () => {
+            test.skipIf(!oldToken)('GET -> 401 (old token)', () => {
                 expect(
                     fetch(WhoAmIRoute, {
                         headers: {

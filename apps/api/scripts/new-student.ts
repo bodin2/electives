@@ -13,9 +13,6 @@ const middleName = prompt('✏️ Middle name (optional):')
 const lastName = prompt('✏️ Last name:')
 if (!lastName) error('Last name is required.')
 
-const teamId = Number(prompt('👥 Team ID (eg. 2568_05): '))
-if (!teamId) error('Team ID is required, and must be an integer.')
-
 const password = prompt('🔑 Password:')
 if (!password) error('Password is required.')
 
@@ -27,7 +24,6 @@ success(
             middleName: middleName || null,
             lastName,
             id,
-            teamId,
             sessionHash: null,
         },
         password,

@@ -1,14 +1,10 @@
-import type { Elysia } from 'elysia'
+import { Elysia } from 'elysia'
 
-export const StatusServiceGroup = '/status'
+const StatusService = () =>
+    new Elysia({ prefix: StatusService.Group })
+        // HEAD /status
+        .head('/', ({ status }) => status(200))
 
-const StatusService = (app: Elysia) =>
-    app.group(StatusServiceGroup, app =>
-        app
-            // HEAD /status
-            .head('/', ({ set }) => {
-                set.status = 200
-            }),
-    )
+StatusService.Group = '/status'
 
 export default StatusService

@@ -1,65 +1,60 @@
-import { AuthRequest, AuthResponse, Student } from '@bodin2/electives-proto/api'
+import { AuthService_Request, AuthService_Response, Student } from '@bodin2/electives-proto/api'
 
+import { Elysia } from 'elysia'
 import { HttpError } from 'elysia-http-error'
 import { protobuf } from 'elysia-protobuf'
 
 import { createStudentToken, fetchStudentByToken } from '../utils/users'
 
 import type bearer from '@elysiajs/bearer'
-import type Elysia from 'elysia'
 
-export const AuthServiceGroup = '/auth'
-
-const AuthService = (app: Elysia) =>
-    app
+const AuthService = () =>
+    new Elysia({ prefix: AuthService.Group })
         .use(
             protobuf({
                 schemas: {
-                    request: AuthRequest,
-                    response: AuthResponse,
+                    request: AuthService_Request,
+                    response: AuthService_Response,
                     user: Student,
                 },
             }),
         )
-        .group(AuthServiceGroup, app =>
-            app
-                // POST /auth
-                .post(
-                    '/',
-                    async ({ body, decode, set }) => {
-                        const { id, password } = await decode('request', body)
+        // POST /auth
+        .post(
+            '/',
+            async ({ body, decode, set }) => {
+                const { id, password } = await decode('request', body)
 
-                        try {
-                            return { token: await createStudentToken(id, password) }
-                        } catch {
-                            set.status = 401
-                            throw HttpError.Unauthorized()
-                        }
-                    },
-                    {
-                        parse: 'protobuf',
-                        responseSchema: 'response',
-                    },
-                )
-                .group('/whoami', app =>
-                    app
-                        .use(authenticator)
-                        // GET /auth/whoami
-                        .get(
-                            '/',
-                            ({ user }) => {
-                                return {
-                                    id: user.id,
-                                    firstName: user.firstName,
-                                    middleName: user.middleName ?? undefined,
-                                    lastName: user.lastName,
-                                    teamId: user.teamId,
-                                } satisfies Student
-                            },
-                            { parse: 'protobuf', responseSchema: 'user' },
-                        ),
+                try {
+                    return { token: await createStudentToken(id, password) } satisfies AuthService_Response
+                } catch {
+                    set.status = 401
+                    throw HttpError.Unauthorized()
+                }
+            },
+            {
+                parse: 'protobuf',
+                responseSchema: 'response',
+            },
+        )
+        .group('/whoami', app =>
+            app
+                .use(authenticator)
+                // GET /auth/whoami
+                .get(
+                    '/',
+                    ({ user }) =>
+                        ({
+                            id: user.id,
+                            firstName: user.firstName,
+                            middleName: user.middleName ?? undefined,
+                            lastName: user.lastName,
+                        }) satisfies Student,
+                    { parse: 'protobuf', responseSchema: 'user' },
                 ),
         )
+
+AuthService.Group = '/auth'
 
 export function authenticator(app: ReturnType<typeof bearer>) {
     return app.derive(async ({ bearer: token }) => {

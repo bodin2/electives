@@ -71,8 +71,8 @@ export const app = new Elysia()
             return err.message
         }
     })
-    .use(StatusService)
-    .use(AuthService)
+    .use(StatusService())
+    .use(AuthService())
 
 app.listen(
     {
