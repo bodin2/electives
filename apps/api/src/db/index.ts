@@ -1,9 +1,16 @@
 import { Database } from 'bun:sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
 
-import * as schema from './db/schema'
+import * as schema from './schema'
 
-const sqlite = new Database('db.sqlite')
+const sqlite = new Database('db.sqlite', {
+    strict: true,
+    readwrite: true,
+    create: true,
+})
+
+sqlite.run('PRAGMA journal_mode = WAL;')
+
 const db = drizzle({ client: sqlite, schema: schema })
 
 export default db
