@@ -58,11 +58,11 @@ export const app = new Elysia()
                     throw HttpError.NotFound()
 
                 case 'PROTO_RES_ERROR':
-                    process.emitWarning(`ProtoResponseError (${request.url}): ${error}`)
+                    console.trace(`ProtoResponseError (${request.url}):`, error)
                     throw HttpError.Internal()
 
                 default:
-                    process.emitWarning(`Error (${request.url}): ${error}`)
+                    console.trace(`Error (${request.url}):`, error)
                     throw HttpError.Internal()
             }
         } catch (e) {
