@@ -18,30 +18,30 @@ message ElectivesService {
 }
 
 message Team {
-  fixed32 id = 1;
+  int32 id = 1;
   string name = 2;
 }
 
 message Elective {
-  fixed32 id = 1;
+  int32 id = 1;
   string name = 2;
   // Unix timestamp representing the start and end dates of the selection period
-  int32 start_date = 3;
+  optional fixed32 start_date = 3;
   // Unix timestamp representing the end date of the selection period
-  int32 end_date = 4;
+  optional fixed32 end_date = 4;
 }
 
 message Subject {
-  fixed32 id = 1;
+  string id = 1;
   string name = 2;
   string description = 3;
   SubjectTag tag = 4;
   string location = 5;
-  fixed32 max_students = 6;
+  int32 max_students = 6;
 }
 
 message Student {
-  fixed32 id = 1;
+  int32 id = 1;
   string first_name = 2;
   optional string middle_name = 3;
   string last_name = 4;
