@@ -1,11 +1,11 @@
-import { AuthService_Request, AuthService_Response } from '@bodin2/electives-proto/api'
+import { AuthService_AuthenticateRequest, AuthService_AuthenticateResponse } from '@bodin2/electives-proto/api'
 
 export const BaseUrl = `http://${process.env.ELECTIVES_API_HOSTNAME ?? 'localhost'}:${process.env.ELECTIVES_API_PORT ?? 3000}`
 
 export const Credentials = {
     id: 23151,
     password: 'password',
-} as AuthService_Request
+} as AuthService_AuthenticateRequest
 
 try {
     await fetch(BaseUrl)
@@ -18,11 +18,11 @@ export async function authenticate(): Promise<[token: string | undefined, respon
     const { default: AuthService } = await import('../services/auth')
     const res = await fetch(`${BaseUrl}${AuthService.Group}`, {
         method: 'POST',
-        body: AuthService_Request.encode(Credentials).finish(),
+        body: AuthService_AuthenticateRequest.encode(Credentials).finish(),
         headers: {
             'Content-Type': 'application/x-protobuf',
         },
     })
 
-    return [AuthService_Response.decode(new Uint8Array(await res.arrayBuffer())).token, res]
+    return [AuthService_AuthenticateResponse.decode(new Uint8Array(await res.arrayBuffer())).token, res]
 }

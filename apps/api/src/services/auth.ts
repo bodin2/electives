@@ -1,4 +1,4 @@
-import { AuthService_Request, AuthService_Response, Student } from '@bodin2/electives-proto/api'
+import { AuthService_AuthenticateRequest, AuthService_AuthenticateResponse, Student } from '@bodin2/electives-proto/api'
 
 import { Elysia } from 'elysia'
 import { HttpError } from 'elysia-http-error'
@@ -13,9 +13,9 @@ const AuthService = () =>
         .use(
             protobuf({
                 schemas: {
-                    request: AuthService_Request,
-                    response: AuthService_Response,
-                    user: Student,
+                    authRequest: AuthService_AuthenticateRequest,
+                    auth: AuthService_AuthenticateResponse,
+                    whoami: Student,
                 },
             }),
         )
@@ -23,10 +23,10 @@ const AuthService = () =>
         .post(
             '/',
             async ({ body, decode, set }) => {
-                const { id, password } = await decode('request', body)
+                const { id, password } = await decode('authRequest', body)
 
                 try {
-                    return { token: await createStudentToken(id, password) } satisfies AuthService_Response
+                    return { token: await createStudentToken(id, password) } satisfies AuthService_AuthenticateResponse
                 } catch {
                     set.status = 401
                     throw HttpError.Unauthorized()
@@ -34,7 +34,7 @@ const AuthService = () =>
             },
             {
                 parse: 'protobuf',
-                responseSchema: 'response',
+                responseSchema: 'auth',
             },
         )
         .group('/whoami', app =>
@@ -50,7 +50,7 @@ const AuthService = () =>
                             middleName: user.middleName ?? undefined,
                             lastName: user.lastName,
                         }) satisfies Student,
-                    { parse: 'protobuf', responseSchema: 'user' },
+                    { parse: 'protobuf', responseSchema: 'whoami' },
                 ),
         )
 
