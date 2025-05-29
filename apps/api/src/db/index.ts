@@ -3,12 +3,14 @@ import { drizzle } from 'drizzle-orm/bun-sqlite'
 
 import * as schema from './schema'
 
+// TODO(apps/api): add test-only DB based on NODE_ENV
 const sqlite = new Database(process.env.ELECTIVES_API_DB, {
     strict: true,
     readwrite: true,
     create: true,
 })
 
+// TODO(apps/api): run based on NODE_ENV
 sqlite.run('PRAGMA journal_mode = WAL;')
 
 const db = drizzle({ client: sqlite, schema: schema })

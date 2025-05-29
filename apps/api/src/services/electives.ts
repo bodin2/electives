@@ -7,7 +7,7 @@ import {
 import { Elysia, t } from 'elysia'
 import { protobuf } from 'elysia-protobuf'
 
-import { getStudentElectives } from '../utils/users'
+import { getStudentElectives } from '../utils/users/students'
 import { authenticator } from './auth'
 
 import type { Elective } from '@bodin2/electives-proto/api'

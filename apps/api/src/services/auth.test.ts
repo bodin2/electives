@@ -1,4 +1,4 @@
-import { Student } from '@bodin2/electives-proto/api'
+import { User } from '@bodin2/electives-proto/api'
 
 import { describe, expect, test } from 'bun:test'
 
@@ -33,7 +33,7 @@ describe(AuthService.Group, () => {
 
                 expect(res.status).toBe(200)
 
-                const stud = Student.decode(new Uint8Array(await res.arrayBuffer()))
+                const stud = User.decode(new Uint8Array(await res.arrayBuffer()))
 
                 expect(stud.id).toEqual(Credentials.id)
                 expect(stud).toHaveProperty('firstName')

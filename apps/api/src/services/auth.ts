@@ -1,10 +1,15 @@
-import { AuthService_AuthenticateRequest, AuthService_AuthenticateResponse, Student } from '@bodin2/electives-proto/api'
+import {
+    AuthService_AuthenticateRequest,
+    AuthService_AuthenticateResponse,
+    User,
+    UserType,
+} from '@bodin2/electives-proto/api'
 
 import { Elysia } from 'elysia'
 import { HttpError } from 'elysia-http-error'
 import { protobuf } from 'elysia-protobuf'
 
-import { createStudentToken, fetchStudentByToken } from '../utils/users'
+import { createUserToken, fetchUserByToken } from '../utils/users'
 
 import type bearer from '@elysiajs/bearer'
 
@@ -15,7 +20,7 @@ const AuthService = () =>
                 schemas: {
                     authRequest: AuthService_AuthenticateRequest,
                     auth: AuthService_AuthenticateResponse,
-                    whoami: Student,
+                    whoami: User,
                 },
             }),
         )
@@ -26,7 +31,7 @@ const AuthService = () =>
                 const { id, password } = await decode('authRequest', body)
 
                 try {
-                    return { token: await createStudentToken(id, password) } satisfies AuthService_AuthenticateResponse
+                    return { token: await createUserToken(id, password) } satisfies AuthService_AuthenticateResponse
                 } catch {
                     set.status = 401
                     throw HttpError.Unauthorized()
@@ -49,7 +54,8 @@ const AuthService = () =>
                             firstName: user.firstName,
                             middleName: user.middleName ?? undefined,
                             lastName: user.lastName,
-                        }) satisfies Student,
+                            type: user.student ? UserType.STUDENT : UserType.TEACHER,
+                        }) satisfies User,
                     { parse: 'protobuf', responseSchema: 'whoami' },
                 ),
         )
@@ -62,7 +68,7 @@ export function authenticator(app: ReturnType<typeof bearer>) {
         if (typeof token !== 'string') throw err
 
         try {
-            return { user: await fetchStudentByToken(token) }
+            return { user: await fetchUserByToken(token) }
         } catch {
             throw err
         }

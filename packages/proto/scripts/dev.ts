@@ -1,6 +1,6 @@
 import { watch } from 'fs'
-import { build } from './build'
 import { resolve } from 'path'
+import { build } from './build'
 
 const watcher = watch(
     resolve(import.meta.dir, '..', 'src'),

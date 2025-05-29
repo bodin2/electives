@@ -14,7 +14,7 @@ try {
     process.exit(1)
 }
 
-export async function authenticate(): Promise<[token: string | undefined, response: Response]> {
+export async function authenticate(): Promise<[token: string | null, response: Response]> {
     const { default: AuthService } = await import('../services/auth')
     const res = await fetch(`${BaseUrl}${AuthService.Group}`, {
         method: 'POST',
@@ -23,6 +23,8 @@ export async function authenticate(): Promise<[token: string | undefined, respon
             'Content-Type': 'application/x-protobuf',
         },
     })
+
+    if (!res.ok) return [null, res]
 
     return [AuthService_AuthenticateResponse.decode(new Uint8Array(await res.arrayBuffer())).token, res]
 }

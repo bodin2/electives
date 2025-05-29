@@ -1,9 +1,9 @@
-import { createStudent } from '../../src/utils/users/students'
+import { createTeacher } from '../../src/utils/users/teachers'
 
 import { error, success } from '../shared'
 
-const id = Number(prompt('💳 Student ID:'))
-if (!id) error('Student ID is required, and must be an integer.')
+const id = Number(prompt('💳 Teacher ID:'))
+if (!id) error('Teacher ID is required, and must be an integer.')
 
 const firstName = prompt('✏️ First name:')
 if (!firstName) error('First name is required.')
@@ -17,8 +17,8 @@ const password = prompt('🔑 Password:')
 if (!password) error('Password is required.')
 
 success(
-    'Created student:',
-    await createStudent(
+    'Created teacher:',
+    await createTeacher(
         {
             id,
             firstName,
