@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/bun-sqlite'
 
 import * as schema from './schema'
 
-const sqlite = new Database('db.sqlite', {
+const sqlite = new Database(process.env.ELECTIVES_API_DB, {
     strict: true,
     readwrite: true,
     create: true,
