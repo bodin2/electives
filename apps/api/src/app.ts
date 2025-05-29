@@ -9,6 +9,7 @@ import { ProtoRequestError, ProtoResponseError } from 'elysia-protobuf'
 import { type Generator, rateLimit } from 'elysia-rate-limit'
 
 import AuthService from './services/auth'
+import ElectivesService from './services/electives'
 import StatusService from './services/status'
 
 if (!process.env.ELECTIVES_API_CORS_ORIGIN)
@@ -16,6 +17,7 @@ if (!process.env.ELECTIVES_API_CORS_ORIGIN)
 
 export const app = new Elysia()
     .use(
+        // @ts-expect-error: ?
         httpError({
             returnStringOnly: true,
         }),
@@ -73,6 +75,7 @@ export const app = new Elysia()
     })
     .use(StatusService())
     .use(AuthService())
+    .use(ElectivesService())
 
 app.listen(
     {

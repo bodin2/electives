@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 
 import db from '../db'
-import { students } from '../db/schema'
+import { students, studentsToTeams, teams } from '../db/schema'
 
 import { hash, sign, verifyHash, verifyToken } from './crypto'
 
@@ -9,7 +9,6 @@ import type { InferResultType } from '../db'
 
 export type StudentModel = InferResultType<'students'>
 
-// TODO(apps/api): put in config
 export const SessionDuration = Number(process.env.ELECTIVES_API_SESSION_DURATION) || 86_400_000
 
 export async function createStudent(student: Omit<StudentModel, 'hash' | 'sessionIAt'>, password: string) {
@@ -26,6 +25,8 @@ export async function createStudent(student: Omit<StudentModel, 'hash' | 'sessio
 interface StudentTokenPayload {
     sid: string
 }
+
+const InvalidCredentialsError = new Error('Invalid credentials')
 
 export async function createStudentToken(id: StudentModel['id'], password: string) {
     const student = await db.query.students.findFirst({
@@ -53,7 +54,19 @@ export async function createStudentToken(id: StudentModel['id'], password: strin
         return token
     }
 
-    throw new Error('Invalid credentials')
+    throw InvalidCredentialsError
+}
+
+export async function getStudentElectives(id: StudentModel['id']) {
+    const teamIds = await db.query.studentsToTeams
+        .findMany({
+            where: eq(studentsToTeams.studentId, id),
+        })
+        .then(val => val.map(it => it.teamId))
+
+    return await db.query.electives.findMany({
+        where: inArray(teams.id, teamIds),
+    })
 }
 
 export async function fetchStudentByToken(token: string): Promise<StudentModel> {
@@ -67,5 +80,5 @@ export async function fetchStudentByToken(token: string): Promise<StudentModel> 
         if (student?.sessionHash && (await verifyHash(sid, student.sessionHash))) return student
     }
 
-    throw new Error('Invalid token')
+    throw InvalidCredentialsError
 }

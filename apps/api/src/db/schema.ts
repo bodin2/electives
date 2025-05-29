@@ -46,20 +46,20 @@ export const subjects = sqliteTable('subjects', {
      *
      * ### Scenario
      *
-     * - You have an elective for the team `2568_03_0` (M3 Y2568). This subject belongs to this elective.
-     * - You want to restrict this subject, only to those who also belong to the `2568_03_1` (M3 Y2568 English Program) team.
+     * - You have an elective for the team `2568_3_0` (M3 Y2568). This subject belongs to this elective.
+     * - You want to restrict this subject, only to those who also belong to the `2568_3_1` (M3 Y2568 English Program) team.
      *
      * ### Implementation
      *
-     * - You set the subject's elective's `teamId` to `2568_05_0`.
-     * - You set this subject's `teamId` to `2568_05_1`.
+     * - You set the subject's elective's `teamId` to `2568_3_0`.
+     * - You set this subject's `teamId` to `2568_3_1`.
      */
     teamId: integer('team_id').references(() => teams.id),
 
     name: text('name').notNull(),
     description: text('description').notNull(),
     /**
-     * Tag of the subject, such as "Math", "Science", etc.
+     * Tag of the subject, such as SubjectTag.MATH, etc.
      */
     tag: integer('tag').notNull(),
     location: text('location').notNull(),
