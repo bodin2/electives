@@ -12,8 +12,9 @@ export type User = InferResultType<'users', { student: true; teacher: true }>
 export type UserInsert = OmitSecurityFields<InferInsertType<'users'> & { id: User['id'] }>
 type OmitSecurityFields<T> = Omit<T, 'hash' | 'sessionHash'>
 
-export const SessionDuration = Number(process.env.ELECTIVES_API_SESSION_DURATION) || 86_400_000
-export const InvalidCredentialsError = new Error('Invalid credentials')
+const SessionDuration = Number(process.env.ELECTIVES_API_SESSION_DURATION) || 86_400_000
+const InvalidCredentialsError = new Error('Invalid credentials')
+const NotFoundError = new ReferenceError('User not found')
 
 export interface TokenPayload {
     sid: string
@@ -61,6 +62,20 @@ export async function createUserToken(id: User['id'], password: string) {
     }
 
     throw InvalidCredentialsError
+}
+
+export async function fetchUserById(id: User['id']): Promise<User> {
+    const user = await db.query.users.findFirst({
+        where: eq(users.id, id),
+        with: {
+            student: true,
+            teacher: true,
+        },
+    })
+
+    if (!user) throw NotFoundError
+
+    return user
 }
 
 export async function fetchUserByToken(token: string): Promise<User> {

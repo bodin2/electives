@@ -1,8 +1,6 @@
-import { User } from '@bodin2/electives-proto/api'
-
 import { describe, expect, test } from 'bun:test'
 
-import { BaseUrl, Credentials, authenticate } from '../__tests__/shared'
+import { BaseUrl, authenticate } from '../__tests__/shared'
 import AuthService from './auth'
 
 describe(AuthService.Group, () => {
@@ -20,40 +18,6 @@ describe(AuthService.Group, () => {
     test('POST -> 200 (gens unique tokens) | 401 (invalid credentials)', async () => {
         const [oldToken] = await authenticate()
         const [token, res] = await authenticate()
-
-        describe('/auth/whoami', async () => {
-            const WhoAmIRoute = `${Route}/whoami`
-
-            test.skipIf(!token)('GET -> 200', async () => {
-                const res = await fetch(WhoAmIRoute, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                })
-
-                expect(res.status).toBe(200)
-
-                const stud = User.decode(new Uint8Array(await res.arrayBuffer()))
-
-                expect(stud.id).toEqual(Credentials.id)
-                expect(stud).toHaveProperty('firstName')
-                expect(stud).toHaveProperty('lastName')
-            })
-
-            test.skipIf(!oldToken)('GET -> 401 (old token)', () => {
-                expect(
-                    fetch(WhoAmIRoute, {
-                        headers: {
-                            Authorization: `Bearer ${oldToken}`,
-                        },
-                    }),
-                ).resolves.toHaveProperty('status', 401)
-            })
-
-            test('GET -> 401 (no token)', () => {
-                return expect(fetch(WhoAmIRoute)).resolves.toHaveProperty('status', 401)
-            })
-        })
 
         expect(oldToken).not.toEqual(token)
         expect(res.status).toBeOneOf([200, 401])

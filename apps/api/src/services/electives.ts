@@ -59,7 +59,7 @@ const ElectivesService = () =>
                         '/subjects',
                         async ({ params: { id }, query: { tag, limit, offset } }) => {
                             return {
-                                subjects: await getElectiveSubjects(Number(id), tag, limit, offset),
+                                subjects: await getElectiveSubjects(id, tag, limit, offset),
                             } satisfies ElectivesService_ListSubjectsResponse
                         },
                         {

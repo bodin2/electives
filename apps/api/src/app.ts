@@ -11,6 +11,7 @@ import { type Generator, rateLimit } from 'elysia-rate-limit'
 import AuthService from './services/auth'
 import ElectivesService from './services/electives'
 import StatusService from './services/status'
+import UsersService from './services/users'
 
 if (!process.env.ELECTIVES_API_CORS_ORIGIN)
     process.emitWarning('ELECTIVES_API_CORS_ORIGIN is not set, accepting all origins')
@@ -75,6 +76,7 @@ export const app = new Elysia()
     })
     .use(StatusService())
     .use(AuthService())
+    .use(UsersService())
     .use(ElectivesService())
 
 app.listen(
