@@ -45,3 +45,7 @@ export async function getElectiveSubjects(
         offset,
     })
 }
+
+export async function getAllElectives(limit = 5, offset = 0): Promise<Elective[]> {
+    return await db.query.electives.findMany({ limit, offset })
+}

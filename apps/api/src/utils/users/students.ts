@@ -22,10 +22,12 @@ export async function createStudent(student: StudentInsert & UserInsert, passwor
     })) as Student
 }
 
-export async function getStudentElectives(id: Student['id']) {
+export async function getStudentElectives(id: Student['id'], limit = 5, offset = 0) {
     const teamIds = await db.query.studentsToTeams
         .findMany({
             where: eq(studentsToTeams.studentId, id),
+            limit,
+            offset,
         })
         .then(val => val.map(it => it.teamId))
 
