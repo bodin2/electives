@@ -42,6 +42,13 @@
   "files": {
     "ignoreUnknown": true,
     "include": ["*.js", "*.json", "*.ts", "*.tsx", "*.jsx", "*.mjs"],
-    "ignore": ["dist/**/*", "node_modules/**/*", "generated/**/*"]
+    "ignore": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "generated/**/*",
+      ".output/**/*",
+      ".vinxi/**/*",
+      ".turbo/**/*"
+    ]
   }
 }
