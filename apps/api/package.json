@@ -7,9 +7,11 @@
     "build:db": "drizzle-kit push",
     "build": "bun run scripts/build.ts",
     "dev": "bun run --watch .",
-    "new-keypair": "bun run scripts/new-keypair.ts",
-    "new-student": "bun run scripts/new-student.ts",
-    "new-team": "bun run scripts/new-team.ts"
+    "new:elective": "bun run scripts/new/elective.ts",
+    "new:keypair": "bun run scripts/new/keypair.ts",
+    "new:student": "bun run scripts/new/student.ts",
+    "new:subject": "bun run scripts/new/subject.ts",
+    "new:team": "bun run scripts/new/team.ts"
   },
   "dependencies": {
     "@bodin2/electives-proto": "workspace:*",

@@ -1,6 +1,6 @@
-import { createStudent } from '../src/utils/users'
+import { createStudent } from '../../src/utils/users'
 
-import { error, success } from './shared'
+import { error, success } from '../shared'
 
 const id = Number(prompt('💳 Student ID:'))
 if (!id) error('Student ID is required, and must be an integer.')

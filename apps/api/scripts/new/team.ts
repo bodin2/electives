@@ -1,8 +1,8 @@
-import { createTeam } from '../src/utils/teams'
+import { createTeam } from '../../src/utils/teams'
 
-import { error, success } from './shared'
+import { error, success } from '../shared'
 
-const id = Number(prompt('💳 Team ID (eg. 2568_05):'))
+const id = Number(prompt('💳 Team ID (eg. 2568_5):'))
 if (!id) error('Team ID is required, and must be an integer.')
 
 const name = prompt('✏️ Name (eg. ม.5 (2568)):')
