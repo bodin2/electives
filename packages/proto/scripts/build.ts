@@ -1,3 +1,4 @@
+import { mkdirSync } from 'fs'
 import { platform } from 'os'
 import { join } from 'path'
 
@@ -12,6 +13,8 @@ export function build(filename: string): Promise<void> {
         rj = reject
     })
 
+    mkdirSync(join(process.cwd(), 'build', 'ts'), { recursive: true })
+
     const protoPath = join(
         '..',
         '..',
@@ -21,7 +24,7 @@ export function build(filename: string): Promise<void> {
     )
 
     Bun.spawn(
-        ['bunx', 'protoc', '--proto_path=./src', `--plugin=${protoPath}`, '--ts_proto_out=./src/generated', filename],
+        ['bunx', 'protoc', '--proto_path=./src', `--plugin=${protoPath}`, '--ts_proto_out=./build/ts', filename],
         {
             stdio: ['ignore', 'inherit', 'inherit'],
             onExit: (_, code) => {

@@ -1,6 +1,20 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.8.2/schema.json",
-  "organizeImports": {
+  "$schema": "https://biomejs.dev/schemas/2.0.4/schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              {
+                "type": false
+              }
+            ]
+          }
+        }
+      }
+    },
     "enabled": true
   },
   "linter": {
@@ -10,7 +24,17 @@
       "style": {
         "useNodejsImportProtocol": {
           "level": "off"
-        }
+        },
+        "noParameterAssign": "error",
+        "useAsConstAssertion": "error",
+        "useDefaultParameterLast": "error",
+        "useEnumInitializers": "error",
+        "useSelfClosingElements": "error",
+        "useSingleVarDeclarator": "error",
+        "noUnusedTemplateLiteral": "error",
+        "useNumberNamespace": "error",
+        "noInferrableTypes": "error",
+        "noUselessElse": "error"
       }
     }
   },
@@ -41,14 +65,19 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "include": ["*.js", "*.json", "*.ts", "*.tsx", "*.jsx", "*.mjs"],
-    "ignore": [
-      "dist/**/*",
-      "node_modules/**/*",
-      "generated/**/*",
-      ".output/**/*",
-      ".vinxi/**/*",
-      ".turbo/**/*"
+    "includes": [
+      "**/*.js",
+      "**/*.json",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.jsx",
+      "**/*.mjs",
+      "!**/dist/**/*",
+      "!**/node_modules/**/*",
+      "!**/generated/**/*",
+      "!**/.output/**/*",
+      "!**/.vinxi/**/*",
+      "!**/.turbo/**/*"
     ]
   }
 }

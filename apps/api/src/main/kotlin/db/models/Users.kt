@@ -1,0 +1,20 @@
+package th.ac.bodin2.electives.api.db.models
+
+import org.jetbrains.exposed.dao.id.IdTable
+
+object Users : IdTable<Int>("users") {
+    override val id = integer("id").entityId()
+
+    val firstName = varchar("first_name", 255)
+    val middleName = varchar("middle_name", 255).nullable()
+    val lastName = varchar("last_name", 255).nullable()
+
+    val passwordHash = varchar("hash", 255)
+
+    /**
+     * Hash of the session token.
+     */
+    val sessionHash = varchar("session_hash", 255).nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}

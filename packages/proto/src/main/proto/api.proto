@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package th.ac.bodin2.electives.proto.api;
+
+option java_multiple_files = true;
+option java_package = "th.ac.bodin2.electives.proto.api";
+
+message AuthService {
+  message AuthenticateRequest {
+    fixed32 id = 1;
+    string password = 2;
+    string client_name = 3;
+  }
+
+  message AuthenticateResponse {
+    string token = 1;
+  }
+}
+
+message ElectivesService {
+  message ListResponse {
+    repeated Elective electives = 1;
+  }
+
+  message ListSubjectsResponse {
+    repeated Subject subjects = 1;
+  }
+}
+
+message UsersService {
+  message GetStudentSelectionsResponse {
+    // Elective ID -> Subject
+    map<int32, Subject> subjects = 1;
+  }
+
+  message SetStudentElectiveSelectionRequest {
+    int32 subject_id = 1;
+  }
+}
+
+message Team {
+  int32 id = 1;
+  string name = 2;
+}
+
+message Elective {
+  int32 id = 1;
+  string name = 2;
+  // Unix timestamp representing the start and end dates of the selection period
+  optional fixed64 start_date = 3;
+  // Unix timestamp representing the end date of the selection period
+  optional fixed64 end_date = 4;
+  int32 team_id = 5;
+}
+
+message Subject {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  string code = 4;
+  SubjectTag tag = 5;
+  string location = 6;
+  int32 capacity = 7;
+  repeated User teachers = 8;
+  repeated int32 team_ids = 9;
+}
+
+message User {
+  int32 id = 1;
+  string first_name = 2;
+  optional string middle_name = 3;
+  string last_name = 4; 
+  UserType type = 5;
+  optional bytes avatar = 6;
+}
+
+enum UserType {
+  STUDENT = 0;
+  TEACHER = 1;
+}
+
+enum SubjectTag {
+  THAI = 0;
+  MATH = 1;
+  SCIENCE_AND_TECHNOLOGY = 2;
+  SOCIAL_STUDIES = 3;
+  ART = 4;
+  PHYSICAL_EDUCATION = 5;
+  HOME_ECONOMICS = 6;
+  FOREIGN_LANGUAGE = 7;
+  GUIDANCE_AND_CAREER = 8;
+  ENGLISH_PROGRAM = 9;
+  // กิจกรรมพัฒนาผู้เรียน
+  ACTIVITIES = 10;
+}
