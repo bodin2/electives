@@ -1,7 +1,11 @@
 package th.ac.bodin2.electives.api.utils
 
+import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.Routing
 import io.ktor.server.routing.RoutingContext
+import th.ac.bodin2.electives.api.USER_AUTHENTICATION
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.UserType
 
@@ -24,4 +28,10 @@ suspend fun RoutingContext.authenticated(types: List<UserType> = ALL_USER_TYPES,
     }
 
     block(userId)
+}
+
+fun Routing.authenticated(types: List<UserType> = ALL_USER_TYPES, block: Route.() -> Unit) {
+    authenticate(USER_AUTHENTICATION) {
+        block()
+    }
 }

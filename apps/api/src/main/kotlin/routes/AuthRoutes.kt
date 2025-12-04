@@ -2,14 +2,13 @@ package th.ac.bodin2.electives.api.routes
 
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
-import io.ktor.server.auth.authenticate
-import io.ktor.server.response.respondText
 import io.ktor.server.routing.*
 import th.ac.bodin2.electives.proto.api.AuthService
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.authenticated
 import th.ac.bodin2.electives.api.utils.parse
 import th.ac.bodin2.electives.api.utils.respondMessage
+import th.ac.bodin2.electives.api.utils.unauthorized
 
 fun Application.registerAuthRoutes() {
     routing {
@@ -25,11 +24,11 @@ fun Application.registerAuthRoutes() {
                         .build()
                 )
             } catch (_: IllegalArgumentException) {
-                call.respondText("Bad credentials", status = HttpStatusCode.Unauthorized)
+                return@post unauthorized("Bad credentials")
             }
         }
 
-        authenticate("auth-user") {
+        authenticated {
             post("/logout") {
                 authenticated { userId ->
                     UsersService.clearSession(userId)

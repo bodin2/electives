@@ -6,9 +6,11 @@ import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.bearer
 import th.ac.bodin2.electives.api.services.UsersService
 
+const val USER_AUTHENTICATION = "user"
+
 fun Application.configureSecurity() {
     install(Authentication) {
-        bearer("auth-user") {
+        bearer(USER_AUTHENTICATION) {
             authenticate { tokenCredential ->
                 try {
                     val id = UsersService.getSessionUserId(tokenCredential.token)

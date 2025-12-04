@@ -10,7 +10,7 @@ import th.ac.bodin2.electives.api.db.Database
 import th.ac.bodin2.electives.api.routes.registerAuthRoutes
 import th.ac.bodin2.electives.api.routes.registerDevRoutes
 import th.ac.bodin2.electives.api.routes.registerMiscRoutes
-import th.ac.bodin2.electives.api.routes.registerUserRoutes
+import th.ac.bodin2.electives.api.routes.registerUsersRoutes
 import th.ac.bodin2.electives.api.utils.getEnv
 import th.ac.bodin2.electives.api.utils.isDev
 import th.ac.bodin2.electives.api.utils.loadDotEnv
@@ -49,7 +49,7 @@ fun Application.module() {
     configureSecurity()
 
     registerAuthRoutes()
-    registerUserRoutes()
+    registerUsersRoutes()
     registerMiscRoutes()
 
     if (isDev) {
