@@ -30,43 +30,43 @@ message ElectivesService {
 message UsersService {
   message GetStudentSelectionsResponse {
     // Elective ID -> Subject
-    map<int32, Subject> subjects = 1;
+    map<uint32, Subject> subjects = 1;
   }
 
   message SetStudentElectiveSelectionRequest {
-    int32 subject_id = 1;
+    uint32 subject_id = 1;
   }
 }
 
 message Team {
-  int32 id = 1;
+  uint32 id = 1;
   string name = 2;
 }
 
 message Elective {
-  int32 id = 1;
+  uint32 id = 1;
   string name = 2;
   // Unix timestamp representing the start and end dates of the selection period
   optional fixed64 start_date = 3;
   // Unix timestamp representing the end date of the selection period
   optional fixed64 end_date = 4;
-  int32 team_id = 5;
+  uint32 team_id = 5;
 }
 
 message Subject {
-  int32 id = 1;
+  uint32 id = 1;
   string name = 2;
   string description = 3;
   string code = 4;
   SubjectTag tag = 5;
   string location = 6;
-  int32 capacity = 7;
+  uint32 capacity = 7;
   repeated User teachers = 8;
-  repeated int32 team_ids = 9;
+  repeated uint32 team_ids = 9;
 }
 
 message User {
-  int32 id = 1;
+  uint32 id = 1;
   string first_name = 2;
   optional string middle_name = 3;
   string last_name = 4; 
