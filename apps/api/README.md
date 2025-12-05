@@ -1,6 +1,7 @@
 # Bodindecha 2 Electives API
 
-API for the Bodindecha 2 Electives project. It provides endpoints for managing electives, students, and their selections.
+API for the Bodindecha 2 Electives project. It provides endpoints for managing electives, students, and their
+selections.
 
 ## Technologies Used
 
@@ -37,15 +38,16 @@ If the server starts successfully, you'll see the following output:
 
 The server can be configured using the following environment variables:
 
-| Variable Name              | Description                                              | Default Value                              |
-|----------------------------|----------------------------------------------------------|--------------------------------------------|
-| `HOST`                     | The host the server binds to                             | `0.0.0.0`                                  |
-| `PORT`                     | The port the server listens on                           | `8080`                                     |
-| `DB_PATH`                  | The SQLite database file path                            | `data.db`                                  |
-| `CORS_HOSTS`               | Comma-separated list of allowed CORS origins             | (None, will throw an exception if not set) |
-| `PASETO_PRIVATE_KEY`       | The PASETO private key for authentication                | (None, will throw an exception if not set) |
-| `PASETO_PUBLIC_KEY`        | The PASETO public key for authentication                 | (None, will throw an exception if not set) |
-| `PASETO_ISSUER`            | The PASETO issuer claim. This is not a security option.  | `electives.bodin2.ac.th`                   |
+| Variable Name        | Description                                                                 | Default Value                                                                                                                       |
+|----------------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `APP_ENV`            | The application environment. Can be `development`, `test`, or `production`. | (Unset, will assume `production`)<br>**Try not to set in production environments.**                                                 |
+| `HOST`               | The host the server binds to                                                | `0.0.0.0`                                                                                                                           |
+| `PORT`               | The port the server listens on                                              | `8080`                                                                                                                              |
+| `DB_PATH`            | The SQLite database file path                                               | `data.db`                                                                                                                           |
+| `CORS_HOSTS`         | Comma-separated list of allowed CORS origins                                | (None)<br>Defaults to `*` when `APP_ENV` is `development` or `test`.<br>Otherwise will throw an exception in production if not set. |
+| `PASETO_PRIVATE_KEY` | The PASETO private key for authentication                                   | (None, will throw an exception if not set)                                                                                          |
+| `PASETO_PUBLIC_KEY`  | The PASETO public key for authentication                                    | (None, will throw an exception if not set)                                                                                          |
+| `PASETO_ISSUER`      | The PASETO issuer claim. This is not a security option.                     | `electives.bodin2.ac.th`                                                                                                            |
 
 ## Routes
 
