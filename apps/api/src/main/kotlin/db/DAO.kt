@@ -122,7 +122,6 @@ data class Student(val id: Int, val user: User) {
      *
      * @throws NotFoundException if the selection does not exist.
      */
-    fun removeElectiveSelection(electiveId: Int) = Student.removeElectiveSelection(id, electiveId)
     fun removeElectiveSelection(electiveId: Int) = removeElectiveSelection(id, electiveId)
 
     val teams
