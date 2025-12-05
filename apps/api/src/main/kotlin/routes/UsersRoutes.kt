@@ -20,27 +20,27 @@ import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelection
 fun Application.registerUsersRoutes() {
     routing {
         authenticated {
-            get<Users.Id> { params ->
-                resolveUserIdEnforced(params.id) { userId, _ ->
+            get<Users.Id> {
+                resolveUserIdEnforced(it.id) { userId, _ ->
                     handleGetUser(userId)
                 }
             }
 
-            get<Users.Id.Selections> { params ->
-                resolveUserIdEnforced(params.parent.id) { userId, _ ->
+            get<Users.Id.Selections> {
+                resolveUserIdEnforced(it.parent.id) { userId, _ ->
                     handleGetStudentSelections(userId)
                 }
             }
 
-            put<Users.Id.Selections.ElectiveId> { params ->
-                resolveUserIdEnforced(params.parent.parent.id) { userId, authenticatedUserId ->
-                    handlePutStudentElectiveSelection(params.electiveId, userId, authenticatedUserId)
+            put<Users.Id.Selections.ElectiveId> {
+                resolveUserIdEnforced(it.parent.parent.id) { userId, authenticatedUserId ->
+                    handlePutStudentElectiveSelection(it.electiveId, userId, authenticatedUserId)
                 }
             }
 
-            delete<Users.Id.Selections.ElectiveId> { params ->
-                resolveUserIdEnforced(params.parent.parent.id) { userId, authenticatedUserId ->
-                    handleDeleteStudentElectiveSelection(params.electiveId, userId, authenticatedUserId)
+            delete<Users.Id.Selections.ElectiveId> {
+                resolveUserIdEnforced(it.parent.parent.id) { userId, authenticatedUserId ->
+                    handleDeleteStudentElectiveSelection(it.electiveId, userId, authenticatedUserId)
                 }
             }
         }
@@ -145,9 +145,16 @@ private suspend inline fun RoutingContext.resolveUserIdEnforced(
     idParam: String,
     crossinline block: suspend (gettingUserId: Int, authenticatedUserId: Int) -> Unit
 ) {
-    authenticated(
+    authenticated({ userId ->
+        // If accessing own data, allow all user types
+        idParam.toIntOrNull()?.let {
+            if (it == userId) {
+                return@authenticated ALL_USER_TYPES
+            }
+        }
+
         if (idParam == ME_USER_ID) ALL_USER_TYPES else TEACHER_USER_ONLY
-    ) { userId ->
+    }) { userId ->
         val gettingUserId = if (idParam == ME_USER_ID) {
             userId
         } else {

@@ -30,6 +30,24 @@ suspend fun RoutingContext.authenticated(types: List<UserType> = ALL_USER_TYPES,
     block(userId)
 }
 
+/**
+ * Helper function to get the authenticated user ID from the routing context with dynamic user type checking.
+ * If the user is not authenticated or does not have the required type, it responds with HTTP 401 Unauthorized.
+ *
+ * @param getTypes A lambda function that takes the authenticated user ID and returns a list of allowed user types.
+ * @param block A lambda function that takes the authenticated user ID as a parameter.
+ */
+suspend fun RoutingContext.authenticated(getTypes: (userId: Int) -> List<UserType>, block: suspend RoutingContext.(userId: Int) -> Unit) {
+    val userId = call.principal<Int>()
+        ?: return unauthorized()
+
+    if (UsersService.getUserType(userId) !in getTypes(userId)) {
+        return unauthorized()
+    }
+
+    block(userId)
+}
+
 fun Routing.authenticated(types: List<UserType> = ALL_USER_TYPES, block: Route.() -> Unit) {
     authenticate(USER_AUTHENTICATION) {
         block()
