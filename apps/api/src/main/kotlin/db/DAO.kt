@@ -3,11 +3,8 @@ package th.ac.bodin2.electives.api.db
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.statements.api.ExposedBlob
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
@@ -39,10 +36,77 @@ data class Student(val id: Int, val user: User) {
             Student(id, user)
         }
 
-        fun getSelections(studentId: Int): List<Pair<Elective, Subject>> = transaction {
-            (StudentElectives innerJoin Subjects)
+        fun getAllElectiveSelectionIds(studentId: Int): List<Pair<Int, Int>> = transaction {
+            StudentElectives
                 .selectAll().where { StudentElectives.student eq studentId }
-                .map { Elective.wrapRow(it) to Subject.wrapRow(it) }
+                .map { it[StudentElectives.elective].value to it[StudentElectives.subject].value }
+        }
+
+        fun getAllElectiveSelections(studentId: Int): List<Pair<Elective, Subject>> = transaction {
+            getAllElectiveSelectionIds(studentId).map { (electiveId, subjectId) ->
+                val elective = Elective.findById(electiveId)!!
+                val subject = Subject.findById(subjectId)!!
+                elective to subject
+            }
+        }
+
+        fun getElectiveSelectionId(studentId: Int, electiveId: Int): Int? = transaction {
+            val selection = StudentElectives
+                .selectAll()
+                .where { (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) }
+                .singleOrNull() ?: return@transaction null
+
+            selection[StudentElectives.subject].value
+        }
+
+        fun getElectiveSelection(studentId: Int, electiveId: Int): Subject? = transaction {
+            val subjectId = getElectiveSelectionId(studentId, electiveId) ?: return@transaction null
+            Subject.findById(subjectId)!!
+        }
+
+        fun setElectiveSelection(studentId: Int, electiveId: Int, subjectId: Int) {
+            transaction {
+                val updated =
+                    StudentElectives.update({ (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) }) {
+                        it[subject] = subjectId
+                    }
+
+                if (updated == 0) {
+                    StudentElectives.insert {
+                        it[student] = studentId
+                        it[elective] = electiveId
+                        it[subject] = subjectId
+                    }
+                }
+            }
+
+            logger.info("Student elective selection, user: $studentId, elective: $electiveId, subject: $subjectId")
+        }
+
+    /**
+     * Removes a subject from the student's list of subjects.
+     */
+    fun deselectElectiveSubject(electiveId: Int) {
+        transaction {
+            StudentElectives.deleteWhere {
+                (student eq this@Student.id) and (elective eq electiveId)
+            }
+        }
+        /**
+         * Removes a selection from the specified elective.
+         *
+         * @throws IllegalArgumentException if the selection does not exist.
+         */
+        fun removeElectiveSelection(studentId: Int, electiveId: Int) {
+            val count = transaction {
+                StudentElectives.deleteWhere {
+                    (student eq studentId) and (elective eq electiveId)
+                }
+            }
+
+            if (count == 0) throw IllegalArgumentException("Student elective selection does not exist")
+
+            logger.info("Student elective deselection, user: $studentId, elective: $electiveId")
         }
 
         fun new(id: Int, user: User): Student {
@@ -57,35 +121,19 @@ data class Student(val id: Int, val user: User) {
     }
 
     /**
-     * Adds a subject to the student's list of subjects.
+     * Adds a selection to the specified elective.
      */
-    fun selectElectiveSubject(electiveId: Int, subjectId: Int) {
-        transaction {
-            StudentElectives.insert {
-                it[student] = this@Student.id
-                it[elective] = electiveId
-                it[subject] = subjectId
-            }
-        }
-
-        logger.info("Student elective selection, user: $id, elective: $electiveId, subject: $subjectId")
-    }
+    fun setElectiveSelection(electiveId: Int, subjectId: Int) = Student.setElectiveSelection(id, electiveId, subjectId)
 
     /**
-     * Removes a subject from the student's list of subjects.
+     * Removes a selection from the specified elective.
+     *
+     * @throws IllegalArgumentException if the selection does not exist.
      */
-    fun deselectElectiveSubject(electiveId: Int) {
-        transaction {
-            StudentElectives.deleteWhere {
-                (student eq this@Student.id) and (elective eq electiveId)
-            }
-        }
-
-        logger.info("Student elective deselection, user: $id, elective: $electiveId")
-    }
+    fun removeElectiveSelection(electiveId: Int) = Student.removeElectiveSelection(id, electiveId)
 
     val selections
-        get() = getSelections(id)
+        get() = getAllElectiveSelections(id)
 }
 
 class Teacher(val id: Int, val user: User, val avatar: ByteArray?) {
@@ -104,6 +152,12 @@ class Teacher(val id: Int, val user: User, val avatar: ByteArray?) {
             (TeacherSubjects innerJoin Subjects)
                 .selectAll().where { TeacherSubjects.teacher eq teacherId }
                 .map { Subject.wrapRow(it) }
+        }
+
+        fun teachesSubject(teacherId: Int, subjectId: Int): Boolean = transaction {
+            TeacherSubjects
+                .selectAll().where { (TeacherSubjects.teacher eq teacherId) and (TeacherSubjects.subject eq subjectId) }
+                .count() > 0L
         }
 
         fun new(id: Int, user: User, avatar: ByteArray? = null): Teacher {
@@ -159,6 +213,14 @@ class Subject(id: EntityID<Int>) : Entity<Int>(id) {
                         Teacher.findById(teacherId)!!
                     }
             }
+        get() = transaction {
+            (TeacherSubjects innerJoin Teachers)
+                .selectAll().where { TeacherSubjects.subject eq this@Subject.id }
+                .map {
+                    val teacherId = it[Teachers.id].value
+                    Teacher.findById(teacherId)!!
+                }
+        }
         }
 
     var description by Subjects.description

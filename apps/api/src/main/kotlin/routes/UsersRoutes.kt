@@ -1,38 +1,46 @@
 package th.ac.bodin2.electives.api.routes
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.resources.Resource
-import io.ktor.server.application.Application
+import io.ktor.http.*
+import io.ktor.resources.*
+import io.ktor.server.application.*
+import io.ktor.server.resources.delete
 import io.ktor.server.resources.get
-import io.ktor.server.routing.RoutingContext
+import io.ktor.server.routing.*
 import io.ktor.server.routing.put
-import io.ktor.server.routing.routing
 import org.jetbrains.exposed.sql.transactions.transaction
+import th.ac.bodin2.electives.api.db.Student
+import th.ac.bodin2.electives.api.db.Teacher
 import th.ac.bodin2.electives.api.db.toProto
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.utils.ALL_USER_TYPES
-import th.ac.bodin2.electives.api.utils.TEACHER_USER_ONLY
-import th.ac.bodin2.electives.api.utils.authenticated
-import th.ac.bodin2.electives.api.utils.badRequest
-import th.ac.bodin2.electives.api.utils.parse
-import th.ac.bodin2.electives.api.utils.respondMessage
+import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.GetStudentSelectionsResponse
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
+
 fun Application.registerUsersRoutes() {
     routing {
         authenticated {
             get<Users.Id> { params ->
-                resolveUserIdEnforced(params.id, ::handleGetUser)
+                resolveUserIdEnforced(params.id) { userId, _ ->
+                    handleGetUser(userId)
+                }
             }
 
             get<Users.Id.Selections> { params ->
-                resolveUserIdEnforced(params.parent.id, ::handleGetStudentSelections)
+                resolveUserIdEnforced(params.parent.id) { userId, _ ->
+                    handleGetStudentSelections(userId)
+                }
             }
 
             put<Users.Id.Selections.ElectiveId> { params ->
-                resolveUserIdEnforced(params.parent.parent.id) { userId ->
-                    handlePutStudentElectiveSelection(params.electiveId, userId)
+                resolveUserIdEnforced(params.parent.parent.id) { userId, authenticatedUserId ->
+                    handlePutStudentElectiveSelection(params.electiveId, userId, authenticatedUserId)
+                }
+            }
+
+            delete<Users.Id.Selections.ElectiveId> { params ->
+                resolveUserIdEnforced(params.parent.parent.id) { userId, authenticatedUserId ->
+                    handleDeleteStudentElectiveSelection(params.electiveId, userId, authenticatedUserId)
                 }
             }
         }
@@ -79,16 +87,51 @@ private suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
     }.build())
 }
 
-private suspend fun RoutingContext.handlePutStudentElectiveSelection(electiveId: Int, userId: Int) {
+private suspend fun RoutingContext.handlePutStudentElectiveSelection(
+    electiveId: Int,
+    userId: Int,
+    authenticatedUserId: Int
+) {
     if (UsersService.getUserType(userId) != UserType.STUDENT) {
         return badRequest("Modifying selections for non-student users")
     }
 
     val req = call.parse<SetStudentElectiveSelectionRequest>()
+    if (
+        UsersService.getUserType(authenticatedUserId) == UserType.TEACHER &&
+        !Teacher.teachesSubject(authenticatedUserId, req.subjectId)
+    ) {
+        return teacherDoesNotTeachSubjectError()
+    }
 
-    val student = UsersService.getStudentById(userId)!!
+    val student = UsersService.getStudentById(userId)
+        ?: return userNotFoundError()
 
-    student.selectElectiveSubject(electiveId, req.subjectId)
+    student.setElectiveSelection(electiveId, req.subjectId)
+
+    call.response.status(HttpStatusCode.OK)
+}
+
+private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
+    electiveId: Int,
+    userId: Int,
+    authenticatedUserId: Int
+) {
+    if (UsersService.getUserType(userId) != UserType.STUDENT) {
+        return badRequest("Modifying selections for non-student users")
+    }
+
+    if (UsersService.getUserType(authenticatedUserId) == UserType.TEACHER) {
+        val subjectId = Student.getElectiveSelectionId(userId, electiveId)
+            ?: return badRequest("Student has not enrolled in the selected elective")
+
+        if (!Teacher.teachesSubject(authenticatedUserId, subjectId)) {
+            return teacherDoesNotTeachSubjectError()
+        }
+    }
+
+    // This will never throw, because we already checked that the selection exists
+    Student.removeElectiveSelection(userId, electiveId)
 
     call.response.status(HttpStatusCode.OK)
 }
@@ -100,7 +143,7 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(electiveId:
  */
 private suspend inline fun RoutingContext.resolveUserIdEnforced(
     idParam: String,
-    crossinline block: suspend (Int) -> Unit
+    crossinline block: suspend (gettingUserId: Int, authenticatedUserId: Int) -> Unit
 ) {
     authenticated(
         if (idParam == ME_USER_ID) ALL_USER_TYPES else TEACHER_USER_ONLY
@@ -111,11 +154,13 @@ private suspend inline fun RoutingContext.resolveUserIdEnforced(
             idParam.toIntOrNull() ?: return@authenticated userNotFoundError()
         }
 
-        block(gettingUserId)
+        block(gettingUserId, userId)
     }
 }
 
 private suspend inline fun RoutingContext.userNotFoundError() = badRequest("User not found")
+private suspend inline fun RoutingContext.teacherDoesNotTeachSubjectError() =
+    badRequest("Teacher does not teach the selected subject")
 
 @Suppress("UNUSED")
 @Resource("/users")
