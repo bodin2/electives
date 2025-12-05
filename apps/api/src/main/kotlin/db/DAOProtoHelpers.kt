@@ -45,21 +45,31 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User = transaction {
     builder.build()
 }
 
-fun Subject.toProto(): th.ac.bodin2.electives.proto.api.Subject {
+/**
+ * Convert Subject DAO to Proto representation.
+ *
+ * @param electiveId Optional elective ID to include enrolled count.
+ * @param withDescription Whether to include the description field.
+ */
+fun Subject.toProto(electiveId: Int? = null, withDescription: Boolean = true): th.ac.bodin2.electives.proto.api.Subject {
     val subjectId = id.value
 
     return transaction {
         val builder = th.ac.bodin2.electives.proto.api.Subject.newBuilder()
             .setId(subjectId)
             .setName(name)
-            .setDescription(description)
             .setCode(code)
             .setTag(SubjectTag.forNumber(tag))
             .setLocation(location)
             .setCapacity(capacity)
 
+        if (withDescription) {
+            builder.setDescription(description)
+        }
+
+        electiveId?.let { builder.setEnrolledCount(getEnrolledCount(it)) }
+
         teams.forEach { team -> builder.addTeamIds(team.id.value) }
-        teachers.forEach { teacher -> builder.addTeachers(teacher.toProto()) }
 
         builder.build()
     }

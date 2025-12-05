@@ -181,8 +181,52 @@ class Team(id: EntityID<Int>) : Entity<Int>(id) {
     var name by Teams.name
 }
 
+open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
+    fun exists(id: Int): Boolean = transaction {
+        Electives
+            .selectAll().where { Electives.id eq id }
+            .count() > 0L
+    }
+
+    /**
+     * Gets the subjects for the specified elective.
+     *
+     * @throws NotFoundException if the elective does not exist.
+     */
+    fun getSubjects(electiveId: Int): List<Subject> {
+        if (!exists(electiveId)) throw NotFoundException("Elective does not exist")
+
+        return transaction {
+            (ElectiveSubjects innerJoin Subjects)
+                .selectAll().where { ElectiveSubjects.elective eq electiveId }
+                .map { Subject.wrapRow(it) }
+        }
+    }
+
+    fun getSubjectsEnrolledCounts(electiveId: Int): Map<Int, Int> {
+        if (!exists(electiveId)) throw NotFoundException("Elective does not exist")
+
+        return transaction {
+            val subjectIds = (ElectiveSubjects innerJoin Subjects)
+                .selectAll().where { ElectiveSubjects.elective eq electiveId }
+                .map { it[Subjects.id].value }
+
+            val counts = mutableMapOf<Int, Int>()
+            subjectIds.forEach { subjectId ->
+                val count = StudentElectives
+                    .selectAll().where { StudentElectives.subject eq subjectId }
+                    .count().toInt()
+
+                counts[subjectId] = count
+            }
+
+            counts
+        }
+    }
+}
+
 class Elective(id: EntityID<Int>) : Entity<Int>(id) {
-    companion object : EntityClass<Int, Elective>(Electives)
+    companion object : ElectiveCompanion()
 
     var name by Electives.name
     val team by Team optionalReferencedOn Electives.team
@@ -193,34 +237,71 @@ class Elective(id: EntityID<Int>) : Entity<Int>(id) {
     var endDate by Electives.endDate
 }
 
-class Subject(id: EntityID<Int>) : Entity<Int>(id) {
-    companion object : EntityClass<Int, Subject>(Subjects)
+open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
+    fun exists(id: Int): Boolean = transaction {
+        Subjects
+            .selectAll().where { Subjects.id eq id }
+            .count() > 0L
+    }
 
-    var name by Subjects.name
+    fun getTeachers(subjectId: Int, electiveId: Int): List<Teacher> {
+        if (!exists(subjectId)) throw NotFoundException("Subject does not exist")
 
-    val teams by Team via SubjectTeams
-
-    val teachers
-        get() = run {
-            val subjectId = id
-
-            transaction {
-                (TeacherSubjects innerJoin Teachers)
-                    .selectAll().where { TeacherSubjects.subject eq subjectId }
-                    .map {
-                        val teacherId = it[Teachers.id].value
-                        Teacher.findById(teacherId)!!
-                    }
-            }
-        get() = transaction {
+        return transaction {
             (TeacherSubjects innerJoin Teachers)
-                .selectAll().where { TeacherSubjects.subject eq this@Subject.id }
+                .selectAll()
+                .where { (TeacherSubjects.subject eq subjectId) and (TeacherSubjects.elective eq electiveId) }
                 .map {
                     val teacherId = it[Teachers.id].value
                     Teacher.findById(teacherId)!!
                 }
         }
+    }
+
+    fun getStudents(subjectId: Int, electiveId: Int): List<Student> {
+        if (!exists(subjectId)) throw NotFoundException("Subject does not exist")
+
+        return transaction {
+            (StudentElectives innerJoin Students)
+                .selectAll()
+                .where { (StudentElectives.subject eq subjectId) and (StudentElectives.elective eq electiveId) }
+                .map {
+                    val studentId = it[Students.id].value
+                    Student.findById(studentId)!!
+                }
         }
+    }
+
+    fun getEnrolledCount(subjectId: Int, electiveId: Int): Int {
+        if (!exists(subjectId)) throw NotFoundException("Subject does not exist")
+
+        return transaction {
+            val subjectExists = (ElectiveSubjects innerJoin Subjects)
+                .selectAll().where {
+                    (ElectiveSubjects.elective eq electiveId) and (ElectiveSubjects.subject eq subjectId)
+                }
+                .count() > 0L
+
+            if (!subjectExists) throw NotFoundException("Subject is not part of the elective")
+
+            StudentElectives
+                .selectAll()
+                .where { (StudentElectives.subject eq subjectId) and (StudentElectives.elective eq electiveId) }
+                .count().toInt()
+        }
+    }
+}
+
+class Subject(id: EntityID<Int>) : Entity<Int>(id) {
+    companion object : SubjectCompanion()
+
+    var name by Subjects.name
+
+    val teams by Team via SubjectTeams
+
+    fun getTeachers(electiveId: Int) = getTeachers(id.value, electiveId)
+    fun getStudents(electiveId: Int) = getStudents(id.value, electiveId)
+    fun getEnrolledCount(electiveId: Int) = getEnrolledCount(id.value, electiveId)
 
     var description by Subjects.description
     var code by Subjects.code

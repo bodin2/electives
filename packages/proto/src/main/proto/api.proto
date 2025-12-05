@@ -25,6 +25,15 @@ message ElectivesService {
   message ListSubjectsResponse {
     repeated Subject subjects = 1;
   }
+
+  message ListSubjectsCountsResponse {
+    map<uint32, uint32> subject_enrolled_counts = 1;
+  }
+
+  message ListSubjectMembersResponse {
+    repeated User teachers = 1;
+    repeated User students = 2;
+  }
 }
 
 message UsersService {
@@ -56,15 +65,14 @@ message Elective {
 message Subject {
   uint32 id = 1;
   string name = 2;
-  string description = 3;
+  optional string description = 3;
   string code = 4;
   SubjectTag tag = 5;
   string location = 6;
   uint32 capacity = 7;
-  repeated User teachers = 8;
-  repeated uint32 team_ids = 9;
+  repeated uint32 team_ids = 8;
   // Only passed in ListSubjectsResponse
-  optional uint32 enrolled_count = 10;
+  optional uint32 enrolled_count = 9;
 }
 
 message User {
