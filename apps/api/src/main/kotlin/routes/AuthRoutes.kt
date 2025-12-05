@@ -1,21 +1,22 @@
 package th.ac.bodin2.electives.api.routes
 
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
-import th.ac.bodin2.electives.proto.api.AuthService
+import th.ac.bodin2.electives.api.NotFoundException
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.authenticated
 import th.ac.bodin2.electives.api.utils.parse
 import th.ac.bodin2.electives.api.utils.respondMessage
 import th.ac.bodin2.electives.api.utils.unauthorized
+import th.ac.bodin2.electives.proto.api.AuthService
 
 fun Application.registerAuthRoutes() {
     routing {
         post("/auth") {
             val req = call.parse<AuthService.AuthenticateRequest>()
 
-            try {
+            runCatching {
                 val token = UsersService.createSession(req.id, req.password, req.clientName)
 
                 call.respondMessage(
@@ -23,8 +24,15 @@ fun Application.registerAuthRoutes() {
                         .setToken(token)
                         .build()
                 )
-            } catch (_: IllegalArgumentException) {
-                return@post unauthorized("Bad credentials")
+            }.onFailure {
+                when (it) {
+                    is NotFoundException,
+                    is IllegalArgumentException -> {
+                        return@post unauthorized("Bad credentials")
+                    }
+
+                    else -> throw it
+                }
             }
         }
 

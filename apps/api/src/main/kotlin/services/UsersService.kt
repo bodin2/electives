@@ -4,6 +4,7 @@ import com.mayakapps.kache.InMemoryKache
 import com.mayakapps.kache.KacheStrategy
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
+import th.ac.bodin2.electives.api.NotFoundException
 import th.ac.bodin2.electives.api.db.Student
 import th.ac.bodin2.electives.api.db.Teacher
 import th.ac.bodin2.electives.api.db.User
@@ -32,7 +33,7 @@ object UsersService {
      *
      * Values are LRU-cached with TTL after each database read, see [userTypeCache].
      *
-     * @throws IllegalArgumentException if the user does not exist.
+     * @throws NotFoundException if the user does not exist.
      * @throws IllegalStateException if the user is neither a Student nor a Teacher.
      */
     suspend fun getUserType(id: Int): UserType {
@@ -54,7 +55,7 @@ object UsersService {
                 .firstOrNull()
         }
 
-        query ?: throw IllegalArgumentException("User does not exist: $id")
+        query ?: throw NotFoundException("User does not exist: $id")
 
         userTypeCache.put(id, query)
         return query
@@ -88,11 +89,12 @@ object UsersService {
     /**
      * Creates a session for the user with the given ID and password.
      *
-     * @throws IllegalArgumentException if the user does not exist or the password is invalid.
+     * @throws NotFoundException if the user does not exist.
+     * @throws IllegalArgumentException if the password is invalid.
      */
     fun createSession(id: Int, password: String, aud: String): String {
         val user = transaction { Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull() }
-            ?: throw IllegalArgumentException("User does not exist: $id")
+            ?: throw NotFoundException("User does not exist: $id")
 
         val passwordHash = user[Users.passwordHash]
 
@@ -123,7 +125,8 @@ object UsersService {
     /**
      * Gets the user ID associated with the given session token.
      *
-     * @throws IllegalArgumentException if the token is invalid or the session does not exist.
+     * @throws NotFoundException if the user does not exist.
+     * @throws IllegalArgumentException if the token or session is invalid.
      */
     fun getSessionUserId(token: String): Int {
         val claims = Paseto.verify(token)
@@ -132,7 +135,7 @@ object UsersService {
             ?: throw IllegalArgumentException("Invalid token subject: ${claims.sub}")
 
         val user = transaction { Users.select(Users.sessionHash).where { Users.id eq userId }.singleOrNull() }
-            ?: throw IllegalArgumentException("User does not exist: $userId")
+            ?: throw NotFoundException("User does not exist: $userId")
 
         val sessionHash = user[Users.sessionHash]
             ?: throw IllegalArgumentException("No active session for user: $userId")

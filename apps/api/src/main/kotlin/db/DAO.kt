@@ -8,6 +8,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.api.ExposedBlob
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
+import th.ac.bodin2.electives.api.NotFoundException
 import th.ac.bodin2.electives.api.db.models.*
 
 class User(id: EntityID<Int>) : Entity<Int>(id) {
@@ -83,19 +84,10 @@ data class Student(val id: Int, val user: User) {
             logger.info("Student elective selection, user: $studentId, elective: $electiveId, subject: $subjectId")
         }
 
-    /**
-     * Removes a subject from the student's list of subjects.
-     */
-    fun deselectElectiveSubject(electiveId: Int) {
-        transaction {
-            StudentElectives.deleteWhere {
-                (student eq this@Student.id) and (elective eq electiveId)
-            }
-        }
         /**
          * Removes a selection from the specified elective.
          *
-         * @throws IllegalArgumentException if the selection does not exist.
+         * @throws NotFoundException if the selection does not exist.
          */
         fun removeElectiveSelection(studentId: Int, electiveId: Int) {
             val count = transaction {
@@ -104,7 +96,7 @@ data class Student(val id: Int, val user: User) {
                 }
             }
 
-            if (count == 0) throw IllegalArgumentException("Student elective selection does not exist")
+            if (count == 0) throw NotFoundException("Student elective selection does not exist")
 
             logger.info("Student elective deselection, user: $studentId, elective: $electiveId")
         }
@@ -123,14 +115,15 @@ data class Student(val id: Int, val user: User) {
     /**
      * Adds a selection to the specified elective.
      */
-    fun setElectiveSelection(electiveId: Int, subjectId: Int) = Student.setElectiveSelection(id, electiveId, subjectId)
+    fun setElectiveSelection(electiveId: Int, subjectId: Int) = setElectiveSelection(id, electiveId, subjectId)
 
     /**
      * Removes a selection from the specified elective.
      *
-     * @throws IllegalArgumentException if the selection does not exist.
+     * @throws NotFoundException if the selection does not exist.
      */
     fun removeElectiveSelection(electiveId: Int) = Student.removeElectiveSelection(id, electiveId)
+    fun removeElectiveSelection(electiveId: Int) = removeElectiveSelection(id, electiveId)
 
     val selections
         get() = getAllElectiveSelections(id)
