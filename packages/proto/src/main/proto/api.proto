@@ -74,6 +74,8 @@ message User {
   string last_name = 4; 
   UserType type = 5;
   optional bytes avatar = 6;
+  // Only passed for Students
+  repeated Team teams = 7;
 }
 
 enum UserType {

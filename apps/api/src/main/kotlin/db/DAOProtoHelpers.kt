@@ -21,6 +21,8 @@ fun Student.toProto(): th.ac.bodin2.electives.proto.api.User = transaction {
         builder.setLastName(user.lastName)
     }
 
+    teams.forEach { builder.addTeams(it.toProto()) }
+
     builder.build()
 }
 

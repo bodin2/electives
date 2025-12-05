@@ -125,6 +125,13 @@ data class Student(val id: Int, val user: User) {
     fun removeElectiveSelection(electiveId: Int) = Student.removeElectiveSelection(id, electiveId)
     fun removeElectiveSelection(electiveId: Int) = removeElectiveSelection(id, electiveId)
 
+    val teams
+        get() = transaction {
+            (StudentTeams innerJoin Teams)
+                .selectAll().where { StudentTeams.student eq this@Student.id }
+                .map { Team.wrapRow(it) }
+        }
+
     val selections
         get() = getAllElectiveSelections(id)
 }
