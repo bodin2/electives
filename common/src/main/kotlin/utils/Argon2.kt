@@ -6,7 +6,7 @@ import de.mkammerer.argon2.Argon2Helper
 private val CORES = Runtime.getRuntime().availableProcessors()
 
 object Argon2 {
-    private val argon2 = Argon2Factory.create()
+    private val argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id)
 
     // Default: 64MB
     var MEMORY = 65536
