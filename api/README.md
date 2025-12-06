@@ -48,6 +48,8 @@ The server can be configured using the following environment variables:
 | `PASETO_PRIVATE_KEY` | The PASETO private key for authentication                                   | (None, will throw an exception if not set)                                                                                          |
 | `PASETO_PUBLIC_KEY`  | The PASETO public key for authentication                                    | (None, will throw an exception if not set)                                                                                          |
 | `PASETO_ISSUER`      | The PASETO issuer claim. This is not a security option.                     | `electives.bodin2.ac.th`                                                                                                            |
+| `ARGON2_MEMORY`      | The memory cost for Argon2 password hashing                                 | `65536` (64 MB)                                                                                                                     |
+| `ARGON2_AVG_TIME`    | The average time cost (in milliseconds) for Argon2 password hashing         | `500` (0.5s)                                                                                                                        |
 
 ## Routes
 
