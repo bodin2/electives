@@ -10,8 +10,22 @@ fun loadDotEnv() {
     dotenv.entries().forEach { System.setProperty(it.key, it.value) }
 }
 
-fun getEnv(key: String): String? =
-    System.getenv(key) ?: System.getProperty(key)
+fun getEnv(key: String): String? {
+    val key = "$ENV_PREFIX$key"
+
+    return if (ENV_GET_FROM_SYSTEM) System.getenv(key) ?: System.getProperty(key)
+    else System.getProperty(key)
+}
+
+/**
+ * Prefix to add to all environment variable lookups.
+ */
+var ENV_PREFIX = ""
+
+/**
+ * Whether to get environment variables from the system environment variables.
+ */
+var ENV_GET_FROM_SYSTEM = true
 
 val isTest = getEnv("APP_ENV") == "test"
 val isDev = getEnv("APP_ENV") == "development"
