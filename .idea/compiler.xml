@@ -4,8 +4,6 @@
     <bytecodeTargetLevel target="21">
       <module name="electives.api.main" target="21" />
       <module name="electives.api.test" target="21" />
-      <module name="electives.common.main" target="21" />
-      <module name="electives.common.test" target="21" />
     </bytecodeTargetLevel>
   </component>
 </project>
