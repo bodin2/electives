@@ -1,7 +1,7 @@
 import com.google.protobuf.gradle.id
 
 plugins {
-    kotlin("jvm") version "2.2.20"
+    kotlin("jvm")
     id("com.google.protobuf") version "0.9.4"
 }
 
@@ -54,6 +54,17 @@ sourceSets {
         java {
             srcDir("build/generated/source/proto/main/kotlin")
         }
+    }
+}
+
+// Force UTF-8 encoding for Java compilation to handle non-ASCII (Thai) chars in generated sources
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.set(freeCompilerArgs.get() + listOf("-Xjsr305=strict"))
     }
 }
 
