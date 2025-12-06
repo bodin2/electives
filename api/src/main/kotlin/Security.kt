@@ -5,10 +5,15 @@ import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.bearer
 import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.utils.Argon2
+import th.ac.bodin2.electives.utils.getEnv
 
 const val USER_AUTHENTICATION = "user"
 
 fun Application.configureSecurity() {
+    Argon2.MEMORY = getEnv("ARGON2_MEMORY")?.toIntOrNull() ?: 65536
+    Argon2.ITERATIONS = Argon2.findIterations(getEnv("ARGON2_AVG_TIME")?.toLongOrNull() ?: 500)
+
     install(Authentication) {
         bearer(USER_AUTHENTICATION) {
             authenticate { tokenCredential ->
