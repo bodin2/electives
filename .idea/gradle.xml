@@ -7,19 +7,19 @@
         <compositeConfiguration>
           <compositeBuild compositeDefinitionSource="SCRIPT">
             <builds>
-              <build path="$PROJECT_DIR$/packages/proto" name="proto">
+              <build path="$PROJECT_DIR$/proto" name="proto">
                 <projects>
-                  <project path="$PROJECT_DIR$/packages/proto" />
+                  <project path="$PROJECT_DIR$/proto" />
                 </projects>
               </build>
             </builds>
           </compositeBuild>
         </compositeConfiguration>
-        <option name="externalProjectPath" value="$PROJECT_DIR$/apps/api" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/api" />
         <option name="modules">
           <set>
-            <option value="$PROJECT_DIR$/apps/api" />
-            <option value="$PROJECT_DIR$/packages/proto" />
+            <option value="$PROJECT_DIR$/api" />
+            <option value="$PROJECT_DIR$/proto" />
           </set>
         </option>
       </GradleProjectSettings>
