@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api.utils
+package th.ac.bodin2.electives.utils
 
 import de.mkammerer.argon2.Argon2Factory
 import de.mkammerer.argon2.Argon2Helper

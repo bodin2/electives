@@ -4,17 +4,15 @@ import com.mayakapps.kache.InMemoryKache
 import com.mayakapps.kache.KacheStrategy
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
-import th.ac.bodin2.electives.api.NotFoundException
-import th.ac.bodin2.electives.api.db.Student
-import th.ac.bodin2.electives.api.db.Teacher
-import th.ac.bodin2.electives.api.db.User
-import th.ac.bodin2.electives.api.db.models.Students
-import th.ac.bodin2.electives.api.db.models.Teachers
-import th.ac.bodin2.electives.api.db.models.Users
-import th.ac.bodin2.electives.api.utils.Argon2
-import th.ac.bodin2.electives.api.utils.Paseto
-import th.ac.bodin2.electives.api.utils.PasetoClaims
+import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.db.models.Students
+import th.ac.bodin2.electives.db.models.Teachers
+import th.ac.bodin2.electives.db.models.Users
+import th.ac.bodin2.electives.utils.Argon2
+import th.ac.bodin2.electives.utils.Paseto
+import th.ac.bodin2.electives.utils.PasetoClaims
 import th.ac.bodin2.electives.proto.api.UserType
+import th.ac.bodin2.electives.db.*
 import java.time.OffsetDateTime
 import kotlin.time.Duration.Companion.minutes
 

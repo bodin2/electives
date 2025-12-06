@@ -10,8 +10,8 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import th.ac.bodin2.electives.api.db.models.Students
 import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.db.models.Students
 
 fun Application.registerDevRoutes() {
     routing {

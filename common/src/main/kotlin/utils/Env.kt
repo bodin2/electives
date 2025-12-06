@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api.utils
+package th.ac.bodin2.electives.utils
 
 import io.github.cdimascio.dotenv.Dotenv
 

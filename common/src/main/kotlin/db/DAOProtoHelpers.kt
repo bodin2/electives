@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api.db
+package th.ac.bodin2.electives.db
 
 import com.google.protobuf.ByteString
 import org.jetbrains.exposed.sql.transactions.transaction

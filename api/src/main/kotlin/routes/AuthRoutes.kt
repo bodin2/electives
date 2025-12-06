@@ -3,7 +3,7 @@ package th.ac.bodin2.electives.api.routes
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
-import th.ac.bodin2.electives.api.NotFoundException
+import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.authenticated
 import th.ac.bodin2.electives.api.utils.parse

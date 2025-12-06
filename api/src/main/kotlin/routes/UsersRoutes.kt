@@ -8,9 +8,9 @@ import io.ktor.server.resources.get
 import io.ktor.server.routing.*
 import io.ktor.server.routing.put
 import org.jetbrains.exposed.sql.transactions.transaction
-import th.ac.bodin2.electives.api.db.Student
-import th.ac.bodin2.electives.api.db.Teacher
-import th.ac.bodin2.electives.api.db.toProto
+import th.ac.bodin2.electives.db.Student
+import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.proto.api.UserType

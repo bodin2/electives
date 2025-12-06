@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api.db
+package th.ac.bodin2.electives.db
 
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
@@ -8,8 +8,8 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.api.ExposedBlob
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
-import th.ac.bodin2.electives.api.NotFoundException
-import th.ac.bodin2.electives.api.db.models.*
+import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.db.models.*
 
 class User(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : EntityClass<Int, User>(Users)
@@ -69,14 +69,14 @@ data class Student(val id: Int, val user: User) {
             transaction {
                 val updated =
                     StudentElectives.update({ (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) }) {
-                        it[subject] = subjectId
+                        it[StudentElectives.subject] = subjectId
                     }
 
                 if (updated == 0) {
                     StudentElectives.insert {
-                        it[student] = studentId
-                        it[elective] = electiveId
-                        it[subject] = subjectId
+                        it[StudentElectives.student] = studentId
+                        it[StudentElectives.elective] = electiveId
+                        it[StudentElectives.subject] = subjectId
                     }
                 }
             }
@@ -87,12 +87,12 @@ data class Student(val id: Int, val user: User) {
         /**
          * Removes a selection from the specified elective.
          *
-         * @throws NotFoundException if the selection does not exist.
+         * @throws th.ac.bodin2.electives.api.NotFoundException if the selection does not exist.
          */
         fun removeElectiveSelection(studentId: Int, electiveId: Int) {
             val count = transaction {
                 StudentElectives.deleteWhere {
-                    (student eq studentId) and (elective eq electiveId)
+                    (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId)
                 }
             }
 
@@ -120,7 +120,7 @@ data class Student(val id: Int, val user: User) {
     /**
      * Removes a selection from the specified elective.
      *
-     * @throws NotFoundException if the selection does not exist.
+     * @throws th.ac.bodin2.electives.NotFoundException if the selection does not exist.
      */
     fun removeElectiveSelection(electiveId: Int) = removeElectiveSelection(id, electiveId)
 
@@ -191,7 +191,7 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
     /**
      * Gets the subjects for the specified elective.
      *
-     * @throws NotFoundException if the elective does not exist.
+     * @throws th.ac.bodin2.electives.api.NotFoundException if the elective does not exist.
      */
     fun getSubjects(electiveId: Int): List<Subject> {
         if (!exists(electiveId)) throw NotFoundException("Elective does not exist")

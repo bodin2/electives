@@ -8,4 +8,4 @@ dependencyResolutionManagement {
     }
 }
 
-includeBuild("../proto")
+includeBuild("../common")

@@ -1,11 +1,11 @@
-package th.ac.bodin2.electives.api.utils
+package th.ac.bodin2.electives.utils
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.paseto4j.commons.PrivateKey
 import org.paseto4j.commons.PublicKey
-import org.paseto4j.version4.Paseto
 import org.paseto4j.commons.Version
+import org.paseto4j.version4.Paseto
 import java.security.KeyFactory
 import java.security.SignatureException
 import java.security.spec.PKCS8EncodedKeySpec
@@ -33,7 +33,7 @@ object Paseto {
      */
     fun verify(token: String): PasetoClaims {
         val json = Paseto.parse(publicKey, token)
-        val claims = Json.decodeFromString(PasetoClaims.serializer(), json)
+        val claims = Json.decodeFromString<PasetoClaims>(json)
 
         if (claims.iss != ISSUER) {
             throw IllegalArgumentException("Invalid issuer: ${claims.iss}")

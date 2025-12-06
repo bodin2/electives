@@ -6,9 +6,9 @@ import io.ktor.server.plugins.bodylimit.RequestBodyLimit
 import io.ktor.server.plugins.conditionalheaders.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.resources.Resources
-import th.ac.bodin2.electives.api.utils.getEnv
-import th.ac.bodin2.electives.api.utils.isDev
-import th.ac.bodin2.electives.api.utils.isTest
+import th.ac.bodin2.electives.utils.getEnv
+import th.ac.bodin2.electives.utils.isDev
+import th.ac.bodin2.electives.utils.isTest
 
 fun Application.configureHTTP() {
     install(Resources)

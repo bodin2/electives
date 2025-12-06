@@ -7,9 +7,9 @@
         <compositeConfiguration>
           <compositeBuild compositeDefinitionSource="SCRIPT">
             <builds>
-              <build path="$PROJECT_DIR$/proto" name="proto">
+              <build path="$PROJECT_DIR$/common" name="common">
                 <projects>
-                  <project path="$PROJECT_DIR$/proto" />
+                  <project path="$PROJECT_DIR$/common" />
                 </projects>
               </build>
             </builds>
@@ -19,7 +19,7 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$/api" />
-            <option value="$PROJECT_DIR$/proto" />
+            <option value="$PROJECT_DIR$/common" />
           </set>
         </option>
       </GradleProjectSettings>

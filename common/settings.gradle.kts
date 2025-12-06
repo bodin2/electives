@@ -1,6 +1,7 @@
-rootProject.name = "proto"
+rootProject.name = "common"
 
 dependencyResolutionManagement {
+    @Suppress("UnstableApiUsage")
     repositories {
         mavenCentral()
     }

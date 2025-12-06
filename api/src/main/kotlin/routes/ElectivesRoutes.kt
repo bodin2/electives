@@ -4,12 +4,12 @@ import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.*
-import th.ac.bodin2.electives.api.NotFoundException
-import th.ac.bodin2.electives.api.db.Elective
-import th.ac.bodin2.electives.api.db.Subject
-import th.ac.bodin2.electives.api.db.toProto
+import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.utils.badRequest
 import th.ac.bodin2.electives.api.utils.respondMessage
+import th.ac.bodin2.electives.db.Elective
+import th.ac.bodin2.electives.db.Subject
+import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.ElectivesService
 
 private suspend inline fun RoutingContext.electiveNotFoundError() = badRequest("Elective not found")

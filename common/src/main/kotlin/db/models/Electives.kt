@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api.db.models
+package th.ac.bodin2.electives.db.models
 
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.javatime.datetime
