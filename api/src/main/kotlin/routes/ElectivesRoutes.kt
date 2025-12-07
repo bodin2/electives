@@ -5,14 +5,14 @@ import io.ktor.server.application.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.*
 import th.ac.bodin2.electives.NotFoundException
-import th.ac.bodin2.electives.api.utils.badRequest
+import th.ac.bodin2.electives.api.utils.notFound
 import th.ac.bodin2.electives.api.utils.respondMessage
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.ElectivesService
 
-private suspend inline fun RoutingContext.electiveNotFoundError() = badRequest("Elective not found")
+private suspend inline fun RoutingContext.electiveNotFoundError() = notFound("Elective not found")
 
 fun Application.registerElectivesRoutes() {
     routing {
@@ -66,7 +66,7 @@ private suspend fun RoutingContext.handleGetElectiveSubjectEnrolledCounts(electi
 }
 
 private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, subjectId: Int) {
-    val subject = Subject.findById(subjectId) ?: return badRequest("Subject not found")
+    val subject = Subject.findById(subjectId) ?: return notFound("Subject not found")
     call.respondMessage(subject.toProto(electiveId))
 }
 

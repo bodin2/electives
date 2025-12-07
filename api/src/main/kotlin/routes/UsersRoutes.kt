@@ -8,11 +8,11 @@ import io.ktor.server.resources.get
 import io.ktor.server.routing.*
 import io.ktor.server.routing.put
 import org.jetbrains.exposed.sql.transactions.transaction
+import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.toProto
-import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.GetStudentSelectionsResponse
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
@@ -52,15 +52,13 @@ private const val ME_USER_ID = "@me"
 private suspend fun RoutingContext.handleGetUser(userId: Int) {
     when (val type = UsersService.getUserType(userId)) {
         UserType.STUDENT -> {
-            val student = UsersService.getStudentById(userId)
-                ?: return userNotFoundError()
+            val student = UsersService.getStudentById(userId) ?: return userNotFoundError()
 
             call.respondMessage(student.toProto())
         }
 
         UserType.TEACHER -> {
-            val teacher = UsersService.getTeacherById(userId)
-                ?: return userNotFoundError()
+            val teacher = UsersService.getTeacherById(userId) ?: return userNotFoundError()
 
             call.respondMessage(teacher.toProto())
         }
@@ -165,7 +163,7 @@ private suspend inline fun RoutingContext.resolveUserIdEnforced(
     }
 }
 
-private suspend inline fun RoutingContext.userNotFoundError() = badRequest("User not found")
+private suspend inline fun RoutingContext.userNotFoundError() = notFound("User not found")
 private suspend inline fun RoutingContext.teacherDoesNotTeachSubjectError() =
     badRequest("Teacher does not teach the selected subject")
 
