@@ -18,7 +18,6 @@ fun Application.registerElectivesRoutes() {
     routing {
         get<Electives.Id> { handleGetElective(it.id) }
         get<Electives.Id.Subjects> { handleGetElectiveSubjects(it.parent.id) }
-        get<Electives.Id.Subjects.EnrolledCounts> { handleGetElectiveSubjectEnrolledCounts(it.parent.parent.id) }
         get<Electives.Id.Subjects.SubjectId> { handleGetElectiveSubject(it.parent.parent.id, it.subjectId) }
         get<Electives.Id.Subjects.SubjectId.Members> {
             handleGetElectiveSubjectMembers(
@@ -51,20 +50,6 @@ private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
     }
 }
 
-private suspend fun RoutingContext.handleGetElectiveSubjectEnrolledCounts(electiveId: Int) {
-    try {
-        val counts = Elective.getSubjectsEnrolledCounts(electiveId)
-
-        call.respondMessage(
-            ElectivesService.ListSubjectsCountsResponse.newBuilder().apply {
-                counts.forEach { (subjectId, count) -> putSubjectEnrolledCounts(subjectId, count) }
-            }.build()
-        )
-    } catch (_: NotFoundException) {
-        return electiveNotFoundError()
-    }
-}
-
 private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, subjectId: Int) {
     val subject = Subject.findById(subjectId) ?: return notFound("Subject not found")
     call.respondMessage(subject.toProto(electiveId))
@@ -76,7 +61,7 @@ private suspend fun RoutingContext.handleGetElectiveSubjectMembers(
     withStudents: Boolean,
 ) {
     try {
-        val teachers = Subject.getTeachers(subjectId, electiveId)
+        val teachers = Subject.getTeachers(subjectId)
         val students = if (withStudents) Subject.getStudents(subjectId, electiveId) else emptyList()
 
         call.respondMessage(
@@ -102,9 +87,6 @@ class Electives {
                 @Resource("members")
                 class Members(val parent: SubjectId, val with_students: Boolean? = false)
             }
-
-            @Resource("enrolled_counts")
-            class EnrolledCounts(val parent: Subjects)
         }
     }
 }
