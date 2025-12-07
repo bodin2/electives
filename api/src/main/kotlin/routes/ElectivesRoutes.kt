@@ -16,6 +16,7 @@ private suspend inline fun RoutingContext.electiveNotFoundError() = notFound("El
 
 fun Application.registerElectivesRoutes() {
     routing {
+        get<Electives> { handleGetElectives() }
         get<Electives.Id> { handleGetElective(it.id) }
         get<Electives.Id.Subjects> { handleGetElectiveSubjects(it.parent.id) }
         get<Electives.Id.Subjects.SubjectId> { handleGetElectiveSubject(it.parent.parent.id, it.subjectId) }
@@ -29,9 +30,18 @@ fun Application.registerElectivesRoutes() {
     }
 }
 
+private suspend fun RoutingContext.handleGetElectives() {
+    val electives = Elective.all()
+
+    call.respondMessage(
+        ElectivesService.ListResponse.newBuilder().apply {
+            electives.map { addElectives(it.toProto()) }
+        }.build()
+    )
+}
+
 private suspend fun RoutingContext.handleGetElective(electiveId: Int) {
-    val elective = Elective.findById(electiveId)
-        ?: return electiveNotFoundError()
+    val elective = Elective.findById(electiveId) ?: return electiveNotFoundError()
 
     call.respondMessage(elective.toProto())
 }
