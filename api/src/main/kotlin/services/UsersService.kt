@@ -5,14 +5,17 @@ import com.mayakapps.kache.KacheStrategy
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.services.UsersService.userTypeCache
+import th.ac.bodin2.electives.db.Student
+import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.User
 import th.ac.bodin2.electives.db.models.Students
 import th.ac.bodin2.electives.db.models.Teachers
 import th.ac.bodin2.electives.db.models.Users
+import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.Paseto
 import th.ac.bodin2.electives.utils.PasetoClaims
-import th.ac.bodin2.electives.proto.api.UserType
-import th.ac.bodin2.electives.db.*
 import java.time.OffsetDateTime
 import kotlin.time.Duration.Companion.minutes
 
@@ -20,6 +23,7 @@ private val logger = LoggerFactory.getLogger(UsersService::class.java)
 
 object UsersService {
     private const val SESSION_DURATION_DAYS = 1L
+
     // 4 MB cache for user types
     private val userTypeCache = InMemoryKache<Int, UserType>(maxSize = 4 * 1024 * 1024) {
         strategy = KacheStrategy.LRU
@@ -49,8 +53,7 @@ object UsersService {
                         it.getOrNull(Teachers.id) != null -> UserType.TEACHER
                         else -> throw IllegalStateException("User is not a Student or a Teacher: $id")
                     }
-                }
-                .firstOrNull()
+                }.firstOrNull()
         }
 
         query ?: throw NotFoundException("User does not exist: $id")
@@ -129,14 +132,13 @@ object UsersService {
     fun getSessionUserId(token: String): Int {
         val claims = Paseto.verify(token)
 
-        val userId = claims.sub.toIntOrNull()
-            ?: throw IllegalArgumentException("Invalid token subject: ${claims.sub}")
+        val userId = claims.sub.toIntOrNull() ?: throw IllegalArgumentException("Invalid token subject: ${claims.sub}")
 
         val user = transaction { Users.select(Users.sessionHash).where { Users.id eq userId }.singleOrNull() }
             ?: throw NotFoundException("User does not exist: $userId")
 
-        val sessionHash = user[Users.sessionHash]
-            ?: throw IllegalArgumentException("No active session for user: $userId")
+        val sessionHash =
+            user[Users.sessionHash] ?: throw IllegalArgumentException("No active session for user: $userId")
 
         if (!Argon2.verify(sessionHash.toByteArray(), token.toCharArray())) {
             throw IllegalArgumentException("Invalid session token for user: $userId")

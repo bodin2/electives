@@ -1,9 +1,7 @@
 package th.ac.bodin2.electives.api
 
-import io.ktor.server.application.Application
-import io.ktor.server.application.install
-import io.ktor.server.auth.Authentication
-import io.ktor.server.auth.bearer
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.getEnv

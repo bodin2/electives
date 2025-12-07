@@ -6,11 +6,7 @@ import io.ktor.server.engine.*
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import th.ac.bodin2.electives.api.routes.registerAuthRoutes
-import th.ac.bodin2.electives.api.routes.registerDevRoutes
-import th.ac.bodin2.electives.api.routes.registerElectivesRoutes
-import th.ac.bodin2.electives.api.routes.registerMiscRoutes
-import th.ac.bodin2.electives.api.routes.registerUsersRoutes
+import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.utils.getEnv
 import th.ac.bodin2.electives.utils.isDev

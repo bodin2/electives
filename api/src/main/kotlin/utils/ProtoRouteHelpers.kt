@@ -10,6 +10,7 @@ import io.ktor.server.response.*
 suspend inline fun <reified T : MessageLite> ApplicationCall.parse(): T {
     val bytes = receive<ByteArray>()
     val parserField = T::class.java.getDeclaredField("PARSER")
+
     @Suppress("UNCHECKED_CAST")
     val parser = parserField.get(null) as Parser<T>
     return parser.parseFrom(bytes)

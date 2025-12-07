@@ -1,10 +1,7 @@
 package th.ac.bodin2.electives.api.utils
 
-import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.principal
-import io.ktor.server.routing.Route
-import io.ktor.server.routing.Routing
-import io.ktor.server.routing.RoutingContext
+import io.ktor.server.auth.*
+import io.ktor.server.routing.*
 import th.ac.bodin2.electives.api.USER_AUTHENTICATION
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.UserType
@@ -19,9 +16,11 @@ val ALL_USER_TYPES = UserType.entries.toList()
  * @param block A lambda function that takes the authenticated user ID as a parameter.
  * @param types List of user types able to access this resource. Default is any type.
  */
-suspend fun RoutingContext.authenticated(types: List<UserType> = ALL_USER_TYPES, block: suspend RoutingContext.(userId: Int) -> Unit) {
-    val userId = call.principal<Int>()
-        ?: return unauthorized()
+suspend fun RoutingContext.authenticated(
+    types: List<UserType> = ALL_USER_TYPES,
+    block: suspend RoutingContext.(userId: Int) -> Unit
+) {
+    val userId = call.principal<Int>() ?: return unauthorized()
 
     if (UsersService.getUserType(userId) !in types) {
         return unauthorized()
@@ -37,9 +36,11 @@ suspend fun RoutingContext.authenticated(types: List<UserType> = ALL_USER_TYPES,
  * @param getTypes A lambda function that takes the authenticated user ID and returns a list of allowed user types.
  * @param block A lambda function that takes the authenticated user ID as a parameter.
  */
-suspend fun RoutingContext.authenticated(getTypes: (userId: Int) -> List<UserType>, block: suspend RoutingContext.(userId: Int) -> Unit) {
-    val userId = call.principal<Int>()
-        ?: return unauthorized()
+suspend fun RoutingContext.authenticated(
+    getTypes: (userId: Int) -> List<UserType>,
+    block: suspend RoutingContext.(userId: Int) -> Unit
+) {
+    val userId = call.principal<Int>() ?: return unauthorized()
 
     if (UsersService.getUserType(userId) !in getTypes(userId)) {
         return unauthorized()

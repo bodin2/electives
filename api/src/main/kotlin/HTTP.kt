@@ -2,10 +2,10 @@ package th.ac.bodin2.electives.api
 
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.plugins.bodylimit.RequestBodyLimit
+import io.ktor.server.plugins.bodylimit.*
 import io.ktor.server.plugins.conditionalheaders.*
 import io.ktor.server.plugins.cors.routing.*
-import io.ktor.server.resources.Resources
+import io.ktor.server.resources.*
 import th.ac.bodin2.electives.utils.getEnv
 import th.ac.bodin2.electives.utils.isDev
 import th.ac.bodin2.electives.utils.isTest
