@@ -102,8 +102,18 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
         return teacherDoesNotTeachSubjectError()
     }
 
-    val student = UsersService.getStudentById(userId)
-        ?: return userNotFoundError()
+    when (Student.canEnrollInSubject(userId, electiveId, req.subjectId)) {
+        Student.CanEnrollStatus.CAN_ENROLL -> {}
+        Student.CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE -> return badRequest("Subject is not part of this elective")
+
+        Student.CanEnrollStatus.NOT_IN_SUBJECT_TEAM,
+        Student.CanEnrollStatus.NOT_IN_ELECTIVE_TEAM -> return badRequest("Student is not part of the team")
+
+        Student.CanEnrollStatus.ALREADY_ENROLLED -> return badRequest("Student is already enrolled in this elective")
+        Student.CanEnrollStatus.SUBJECT_FULL -> return badRequest("Subject is full")
+    }
+
+    val student = UsersService.getStudentById(userId) ?: return userNotFoundError()
 
     student.setElectiveSelection(electiveId, req.subjectId)
 
