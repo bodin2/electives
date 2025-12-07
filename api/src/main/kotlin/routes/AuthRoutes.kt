@@ -6,6 +6,7 @@ import io.ktor.server.routing.*
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.authenticated
+import th.ac.bodin2.electives.api.utils.authenticatedRoutes
 import th.ac.bodin2.electives.api.utils.parse
 import th.ac.bodin2.electives.api.utils.respondMessage
 import th.ac.bodin2.electives.api.utils.unauthorized
@@ -36,7 +37,7 @@ fun Application.registerAuthRoutes() {
             }
         }
 
-        authenticated {
+        authenticatedRoutes {
             post("/logout") {
                 authenticated { userId ->
                     UsersService.clearSession(userId)

@@ -18,3 +18,13 @@ suspend inline fun RoutingContext.unauthorized(message: String? = null) {
     call.response.status(HttpStatusCode.Unauthorized)
     message?.let { call.respondText(it) }
 }
+
+suspend inline fun RoutingContext.forbidden(message: String? = null) {
+    call.response.status(HttpStatusCode.Forbidden)
+    message?.let { call.respondText(it) }
+}
+
+suspend inline fun RoutingContext.conflict(message: String? = null) {
+    call.response.status(HttpStatusCode.Conflict)
+    message?.let { call.respondText(it) }
+}

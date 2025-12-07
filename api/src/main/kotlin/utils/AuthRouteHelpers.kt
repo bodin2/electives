@@ -50,6 +50,7 @@ suspend fun RoutingContext.authenticated(
 }
 
 fun Routing.authenticated(types: List<UserType> = ALL_USER_TYPES, block: Route.() -> Unit) {
+fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
     authenticate(USER_AUTHENTICATION) {
         block()
     }

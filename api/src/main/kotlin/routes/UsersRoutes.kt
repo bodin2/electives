@@ -19,7 +19,7 @@ import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelection
 
 fun Application.registerUsersRoutes() {
     routing {
-        authenticated {
+        authenticatedRoutes {
             get<Users.Id> {
                 resolveUserIdEnforced(it.id) { userId, _ ->
                     handleGetUser(userId)
@@ -107,10 +107,10 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
         Student.CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE -> return badRequest("Subject is not part of this elective")
 
         Student.CanEnrollStatus.NOT_IN_SUBJECT_TEAM,
-        Student.CanEnrollStatus.NOT_IN_ELECTIVE_TEAM -> return badRequest("Student is not part of the team")
+        Student.CanEnrollStatus.NOT_IN_ELECTIVE_TEAM -> return forbidden("Student is not part of the team")
 
-        Student.CanEnrollStatus.ALREADY_ENROLLED -> return badRequest("Student is already enrolled in this elective")
-        Student.CanEnrollStatus.SUBJECT_FULL -> return badRequest("Subject is full")
+        Student.CanEnrollStatus.ALREADY_ENROLLED -> return conflict("Student is already enrolled in this elective")
+        Student.CanEnrollStatus.SUBJECT_FULL -> return conflict("Subject is full")
     }
 
     val student = UsersService.getStudentById(userId) ?: return userNotFoundError()
@@ -175,7 +175,7 @@ private suspend inline fun RoutingContext.resolveUserIdEnforced(
 
 private suspend inline fun RoutingContext.userNotFoundError() = notFound("User not found")
 private suspend inline fun RoutingContext.teacherDoesNotTeachSubjectError() =
-    badRequest("Teacher does not teach the selected subject")
+    forbidden("Teacher does not teach the selected subject")
 
 @Suppress("UNUSED")
 @Resource("/users")
