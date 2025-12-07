@@ -11,6 +11,22 @@ object Subjects : IdTable<Int>("subjects") {
      * If a team is specified, only students in that team can enroll in this subject.
      * Useful for special subjects that are only available to certain teams.
      *
+     * Subject team restrictions are applied in addition to elective team restrictions.
+     * A student must satisfy both the elective's team and the subject's team restrictions to enroll in the subject.
+     *
+     * A student can enroll multiple times in the same subject if the subject belongs to multiple electives.
+     *
+     * ### Limitations
+     *
+     * A subject cannot have multiple teams.
+     * To achieve similar functionality, assign the same team to the students who can pick this subject.
+     *
+     * A subject cannot have different details per elective.
+     * To achieve similar functionality, simply create another subject with similar details.
+     *
+     * A subject cannot have different teachers per elective.
+     * To achieve similar functionality, simply create another subject with same details and assign different teachers.
+     *
      * ### Example use case
      *
      * - You have an elective for the team `A`. This subject belongs to this elective.

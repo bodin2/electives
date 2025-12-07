@@ -22,7 +22,6 @@ object Database {
                 Students,
                 StudentTeams,
                 Subjects,
-                SubjectTeams,
                 Teachers,
                 TeacherSubjects,
                 Teams,

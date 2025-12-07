@@ -247,15 +247,9 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
     fun getTeachers(subjectId: Int, electiveId: Int): List<Teacher> {
         if (!exists(subjectId)) throw NotFoundException("Subject does not exist")
 
-        return transaction {
-            (TeacherSubjects innerJoin Teachers)
-                .selectAll()
-                .where { (TeacherSubjects.subject eq subjectId) and (TeacherSubjects.elective eq electiveId) }
-                .map {
-                    val teacherId = it[Teachers.id].value
-                    Teacher.findById(teacherId)!!
-                }
-        }
+        (TeacherSubjects innerJoin Teachers)
+            .selectAll().where { (TeacherSubjects.subject eq subjectId) }
+            .map { Teacher.findById(it[Teachers.id].value)!! }
     }
 
     fun getStudents(subjectId: Int, electiveId: Int): List<Student> {
@@ -297,15 +291,16 @@ class Subject(id: EntityID<Int>) : Entity<Int>(id) {
 
     var name by Subjects.name
 
-    val teams by Team via SubjectTeams
-
-    fun getTeachers(electiveId: Int) = getTeachers(id.value, electiveId)
     fun getStudents(electiveId: Int) = getStudents(id.value, electiveId)
     fun getEnrolledCount(electiveId: Int) = getEnrolledCount(id.value, electiveId)
+
+    val teachers: List<Teacher>
+        get() = getTeachers(id.value)
 
     var description by Subjects.description
     var code by Subjects.code
     var tag by Subjects.tag
+    var team by Subjects.team
 
     var location by Subjects.location
     var capacity by Subjects.capacity

@@ -70,9 +70,10 @@ message Subject {
   SubjectTag tag = 5;
   string location = 6;
   uint32 capacity = 7;
-  repeated uint32 team_ids = 8;
+  optional uint32 team_id = 8;
+  repeated User teachers = 9;
   // Only passed in ListSubjectsResponse
-  optional uint32 enrolled_count = 9;
+  optional uint32 enrolled_count = 10;
 }
 
 message User {

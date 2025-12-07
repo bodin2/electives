@@ -63,13 +63,14 @@ fun Subject.toProto(electiveId: Int? = null, withDescription: Boolean = true): t
             .setLocation(location)
             .setCapacity(capacity)
 
+
         if (withDescription) {
             builder.setDescription(description)
         }
 
+        team?.let { builder.setTeamId(it.value) }
         electiveId?.let { builder.setEnrolledCount(getEnrolledCount(it)) }
 
-        teams.forEach { team -> builder.addTeamIds(team.id.value) }
 
         builder.build()
     }
