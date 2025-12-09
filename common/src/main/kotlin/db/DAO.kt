@@ -313,6 +313,10 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
 
     fun exists(id: Int): Boolean = transaction { existsInTxn(id) }
 
+    fun getAllIds(): List<Int> = transaction {
+        Electives.select(Electives.id).map { it[Electives.id].value }
+    }
+
     /**
      * Gets the team ID for the specified elective.
      *
@@ -344,6 +348,8 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
      * Gets all subject IDs and their enrolled counts for the specified elective.
      *
      * @throws NotFoundException if the elective does not exist.
+     *
+     * @return Map<SubjectId, EnrolledCount>
      */
     fun getSubjectsEnrolledCounts(electiveId: Int): Map<Int, Int> = transaction {
         if (!existsInTxn(electiveId)) throw NotFoundException("Elective does not exist")

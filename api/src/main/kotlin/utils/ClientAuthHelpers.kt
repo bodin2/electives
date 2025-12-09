@@ -2,6 +2,7 @@ package th.ac.bodin2.electives.api.utils
 
 import io.ktor.server.auth.*
 import io.ktor.server.routing.*
+import io.ktor.server.websocket.WebSocketServerSession
 import th.ac.bodin2.electives.api.USER_AUTHENTICATION
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.UserType
@@ -49,7 +50,22 @@ suspend fun RoutingContext.authenticated(
     block(userId)
 }
 
-fun Routing.authenticated(types: List<UserType> = ALL_USER_TYPES, block: Route.() -> Unit) {
+/**
+ * [RoutingContext.authenticated], but for WebSocket sessions.
+ */
+suspend fun WebSocketServerSession.authenticated(
+    types: List<UserType> = ALL_USER_TYPES,
+    block: suspend WebSocketServerSession.(userId: Int) -> Unit
+) {
+    val userId = call.principal<Int>() ?: return unauthorized()
+
+    if (UsersService.getUserType(userId) !in types) {
+        return unauthorized()
+    }
+
+    block(userId)
+}
+
 fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
     authenticate(USER_AUTHENTICATION) {
         block()

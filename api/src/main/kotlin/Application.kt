@@ -49,10 +49,9 @@ fun Application.module() {
     registerElectivesRoutes()
     registerUsersRoutes()
     registerMiscRoutes()
+    registerNotificationsRoutes()
 
     if (isDev) {
         registerDevRoutes()
     }
-
-    //configureSockets()
 }

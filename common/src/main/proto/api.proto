@@ -47,6 +47,58 @@ message UsersService {
   }
 }
 
+message NotificationsService {
+  message Envelope {
+    enum MessageType {
+      SUBJECT_ENROLLMENT_UPDATE_SUBSCRIPTION_REQUEST = 0;
+      SUBJECT_ENROLLMENT_UPDATE = 1;
+      BULK_SUBJECT_ENROLLMENT_UPDATE = 2;
+      ACKNOWLEDGED = 3;
+    }
+
+    MessageType type = 1;
+    optional uint64 message_id = 2;
+
+    oneof payload {
+      SubjectEnrollmentUpdateSubscriptionRequest subject_enrollment_update_subscription_request = 3;
+      SubjectEnrollmentUpdate subject_enrollment_update = 4;
+      BulkSubjectEnrollmentUpdate bulk_subject_enrollment_update = 5;
+      Acknowledged acknowledged = 6;
+    }
+  }
+
+  // Server acknowledges the client message with the given `message_id`.
+  message Acknowledged {}
+
+  // Request to subscribe to updates for specific subjects
+  message SubjectEnrollmentUpdateSubscriptionRequest {
+    // Elective ID -> (subscription data)
+    map<uint32, SubjectEnrollmentUpdateSubscription> subscriptions = 1;
+  }
+
+  message SubjectEnrollmentUpdateSubscription {
+    /**
+     * List of subject IDs to subscribe to for updates.
+     *
+     * The server may limit the number of subjects a client can subscribe to.
+     */
+    repeated uint32 subject_ids = 1;
+  }
+
+  // Sent immediately for important UI updates
+  message SubjectEnrollmentUpdate {
+    uint32 elective_id = 1;
+    uint32 subject_id = 2;
+    uint32 enrolled_count = 3;
+  }
+
+  // Sent every so often for non-important UI updates
+  message BulkSubjectEnrollmentUpdate {
+    uint32 elective_id = 1;
+    map<uint32, uint32> subject_enrolled_counts = 2;
+  }
+}
+
 message Team {
   uint32 id = 1;
   string name = 2;
