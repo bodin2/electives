@@ -14,8 +14,8 @@ import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.UserType
-import th.ac.bodin2.electives.proto.api.UsersService.GetStudentSelectionsResponse
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
+import th.ac.bodin2.electives.proto.api.UsersServiceKt.getStudentSelectionsResponse
 
 fun Application.registerUsersRoutes() {
     routing {
@@ -54,13 +54,13 @@ private suspend fun RoutingContext.handleGetUser(userId: Int) {
         UserType.STUDENT -> {
             val student = UsersService.getStudentById(userId) ?: return userNotFoundError()
 
-            call.respondMessage(student.toProto())
+            call.respond(student.toProto())
         }
 
         UserType.TEACHER -> {
             val teacher = UsersService.getTeacherById(userId) ?: return userNotFoundError()
 
-            call.respondMessage(teacher.toProto())
+            call.respond(teacher.toProto())
         }
 
         else -> {
@@ -76,13 +76,13 @@ private suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
 
     val student = UsersService.getStudentById(userId)!!
 
-    call.respondMessage(GetStudentSelectionsResponse.newBuilder().apply {
+    call.respond(getStudentSelectionsResponse {
         transaction {
             student.selections.map { (elective, subject) ->
-                putSubjects(elective.id.value, subject.toProto())
+                subjects.put(elective.id.value, subject.toProto())
             }
         }
-    }.build())
+    })
 }
 
 private suspend fun RoutingContext.handlePutStudentElectiveSelection(
@@ -94,7 +94,7 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
         return badRequest("Modifying selections for non-student users")
     }
 
-    val req = call.parse<SetStudentElectiveSelectionRequest>()
+    val req = call.parseOrNull<SetStudentElectiveSelectionRequest>() ?: return badRequest("Invalid request body")
     if (
         UsersService.getUserType(authenticatedUserId) == UserType.TEACHER &&
         !Teacher.teachesSubject(authenticatedUserId, req.subjectId)
@@ -113,9 +113,7 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
         Student.CanEnrollStatus.SUBJECT_FULL -> return conflict("Subject is full")
     }
 
-    val student = UsersService.getStudentById(userId) ?: return userNotFoundError()
-
-    student.setElectiveSelection(electiveId, req.subjectId)
+    Student.setElectiveSelection(userId, electiveId, req.subjectId)
 
     call.response.status(HttpStatusCode.OK)
 }

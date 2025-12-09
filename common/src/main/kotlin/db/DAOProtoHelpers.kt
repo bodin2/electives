@@ -1,48 +1,48 @@
 package th.ac.bodin2.electives.db
 
-import com.google.protobuf.ByteString
+import com.google.protobuf.kotlin.toByteString
 import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import th.ac.bodin2.electives.proto.api.UserType
+import th.ac.bodin2.electives.proto.api.elective
+import th.ac.bodin2.electives.proto.api.subject
+import th.ac.bodin2.electives.proto.api.team
+import th.ac.bodin2.electives.proto.api.user
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-fun Student.toProto(): th.ac.bodin2.electives.proto.api.User = transaction {
-    val builder = th.ac.bodin2.electives.proto.api.User.newBuilder()
-        .setId(user.id.value)
-        .setFirstName(user.firstName)
-        .setType(UserType.STUDENT)
+fun Student.toProto(): th.ac.bodin2.electives.proto.api.User {
+    val student = this
 
-    if (user.middleName != null) {
-        builder.setMiddleName(user.middleName)
+    return transaction {
+        user {
+            id = user.id.value
+            firstName = user.firstName
+            type = UserType.STUDENT
+
+            user.middleName?.let { middleName = it }
+            user.lastName?.let { lastName = it }
+
+            teams.addAll(student.teams.map { it.toProto() })
+        }
     }
-
-    if (user.lastName != null) {
-        builder.setLastName(user.lastName)
-    }
-
-    teams.forEach { builder.addTeams(it.toProto()) }
-
-    builder.build()
 }
 
-fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User = transaction {
-    val builder = th.ac.bodin2.electives.proto.api.User.newBuilder()
-        .setId(user.id.value)
-        .setFirstName(user.firstName)
-        .setType(UserType.TEACHER)
+fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
+    val teacher = this
 
-    if (user.middleName != null) {
-        builder.setMiddleName(user.middleName)
+    return transaction {
+        user {
+            id = user.id.value
+            firstName = user.firstName
+            type = UserType.TEACHER
+
+            user.middleName?.let { middleName = it }
+            user.lastName?.let { lastName = it }
+
+            teacher.avatar?.let { avatar = it.toByteString() }
+        }
     }
-
-    if (user.lastName != null) {
-        builder.setLastName(user.lastName)
-    }
-
-    avatar?.let { builder.setAvatar(ByteString.copyFrom(it)) }
-
-    builder.build()
 }
 
 /**
@@ -52,56 +52,51 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User = transaction {
  * @param withDescription Whether to include the description field.
  */
 fun Subject.toProto(electiveId: Int? = null, withDescription: Boolean = true): th.ac.bodin2.electives.proto.api.Subject {
-    val subjectId = id.value
+    val subject = this
 
     return transaction {
-        val builder = th.ac.bodin2.electives.proto.api.Subject.newBuilder()
-            .setId(subjectId)
-            .setName(name)
-            .setCode(code)
-            .setTag(SubjectTag.forNumber(tag))
-            .setLocation(location)
-            .setCapacity(capacity)
+        subject {
+            id = subject.id.value
+            name = subject.name
+            tag = SubjectTag.forNumber(subject.tag)
+            capacity = subject.capacity
 
+            subject.location?.let { location = it }
+            subject.code?.let { code = it }
 
-        if (withDescription) {
-            builder.setDescription(description)
+            if (withDescription) {
+                subject.description?.let { description = it }
+            }
+
+            team?.let { teamId = it.value }
+            electiveId?.let { enrolledCount = getEnrolledCount(it) }
         }
-
-        team?.let { builder.setTeamId(it.value) }
-        electiveId?.let { builder.setEnrolledCount(getEnrolledCount(it)) }
-
-
-        builder.build()
     }
 }
 
 fun Team.toProto(): th.ac.bodin2.electives.proto.api.Team {
-    val teamId = id.value
+    val team = this
 
     return transaction {
-        val builder = th.ac.bodin2.electives.proto.api.Team.newBuilder()
-            .setId(teamId)
-            .setName(name)
-
-        builder.build()
+        team {
+            id = team.id.value
+            name = team.name
+        }
     }
 }
 
 fun Elective.toProto(): th.ac.bodin2.electives.proto.api.Elective {
-    val electiveId = id.value
+    val elective = this
 
     return transaction {
-        val builder = th.ac.bodin2.electives.proto.api.Elective.newBuilder()
-            .setId(electiveId)
-            .setName(name)
+        elective {
+            id = elective.id.value
+            name = elective.name
 
-        team?.let { builder.setTeamId(it.id.value) }
-
-        startDate?.let { builder.setStartDate(it.toUnixTimestamp()) }
-        endDate?.let { builder.setEndDate(it.toUnixTimestamp()) }
-
-        builder.build()
+            elective.team?.let { teamId = it.id.value }
+            elective.startDate?.toUnixTimestamp()?.let { startDate = it }
+            elective.endDate?.toUnixTimestamp()?.let { endDate = it }
+        }
     }
 }
 

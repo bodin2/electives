@@ -5,26 +5,19 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.utils.authenticated
-import th.ac.bodin2.electives.api.utils.authenticatedRoutes
-import th.ac.bodin2.electives.api.utils.parse
-import th.ac.bodin2.electives.api.utils.respondMessage
-import th.ac.bodin2.electives.api.utils.unauthorized
+import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.proto.api.AuthService
+import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
 
 fun Application.registerAuthRoutes() {
     routing {
         post("/auth") {
-            val req = call.parse<AuthService.AuthenticateRequest>()
+            val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post badRequest()
 
             runCatching {
-                val token = UsersService.createSession(req.id, req.password, req.clientName)
-
-                call.respondMessage(
-                    AuthService.AuthenticateResponse.newBuilder()
-                        .setToken(token)
-                        .build()
-                )
+                call.respond(authenticateResponse {
+                    token = UsersService.createSession(req.id, req.password, req.clientName)
+                })
             }.onFailure {
                 when (it) {
                     is NotFoundException,

@@ -6,11 +6,13 @@ import io.ktor.server.resources.*
 import io.ktor.server.routing.*
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.utils.notFound
-import th.ac.bodin2.electives.api.utils.respondMessage
+import th.ac.bodin2.electives.api.utils.respond
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.toProto
-import th.ac.bodin2.electives.proto.api.ElectivesService
+import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listResponse
+import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectMembersResponse
+import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
 
 private suspend inline fun RoutingContext.electiveNotFoundError() = notFound("Elective not found")
 
@@ -33,28 +35,24 @@ fun Application.registerElectivesRoutes() {
 private suspend fun RoutingContext.handleGetElectives() {
     val electives = Elective.all()
 
-    call.respondMessage(
-        ElectivesService.ListResponse.newBuilder().apply {
-            electives.map { addElectives(it.toProto()) }
-        }.build()
-    )
+    call.respond(listResponse {
+        this.electives.addAll(electives.map { it.toProto() })
+    })
 }
 
 private suspend fun RoutingContext.handleGetElective(electiveId: Int) {
     val elective = Elective.findById(electiveId) ?: return electiveNotFoundError()
 
-    call.respondMessage(elective.toProto())
+    call.respond(elective.toProto())
 }
 
 private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
     try {
         val subjects = Elective.getSubjects(electiveId)
 
-        call.respondMessage(
-            ElectivesService.ListSubjectsResponse.newBuilder().apply {
-                subjects.map { addSubjects(it.toProto(withDescription = false)) }
-            }.build()
-        )
+        call.respond(listSubjectsResponse {
+            this.subjects.addAll(subjects.map { it.toProto(withDescription = false) })
+        })
     } catch (_: NotFoundException) {
         return electiveNotFoundError()
     }
@@ -62,7 +60,7 @@ private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
 
 private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, subjectId: Int) {
     val subject = Subject.findById(subjectId) ?: return notFound("Subject not found")
-    call.respondMessage(subject.toProto(electiveId))
+    call.respond(subject.toProto(electiveId))
 }
 
 private suspend fun RoutingContext.handleGetElectiveSubjectMembers(
@@ -74,12 +72,10 @@ private suspend fun RoutingContext.handleGetElectiveSubjectMembers(
         val teachers = Subject.getTeachers(subjectId)
         val students = if (withStudents) Subject.getStudents(subjectId, electiveId) else emptyList()
 
-        call.respondMessage(
-            ElectivesService.ListSubjectMembersResponse.newBuilder().apply {
-                teachers.map { addTeachers(it.toProto()) }
-                students.map { addStudents(it.toProto()) }
-            }.build()
-        )
+        call.respond(listSubjectMembersResponse {
+            this.teachers.addAll(teachers.map { it.toProto() })
+            this.students.addAll(students.map { it.toProto() })
+        })
     } catch (_: NotFoundException) {
         return electiveNotFoundError()
     }
