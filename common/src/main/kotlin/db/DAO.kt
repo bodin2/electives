@@ -72,24 +72,12 @@ data class Student(val id: Int, val user: User) {
                 .count() > 0L
         }
 
-        fun getAllElectiveSelectionIds(studentId: Int): List<Pair<Int, Int>> = transaction {
-            if (!existsInTxn(studentId)) throw NotFoundException("Student does not exist")
-
-            StudentElectives
-                .selectAll().where { StudentElectives.student eq studentId }
-                .map { it[StudentElectives.elective].value to it[StudentElectives.subject].value }
-        }
-
         fun getAllElectiveSelections(studentId: Int): List<Pair<Elective, Subject>> = transaction {
             if (!existsInTxn(studentId)) throw NotFoundException("Student does not exist")
 
             StudentElectives
                 .selectAll().where { StudentElectives.student eq studentId }
-                .map {
-                    val elective = Elective.findById(it[StudentElectives.elective].value)!!
-                    val subject = Subject.findById(it[StudentElectives.subject].value)!!
-                    elective to subject
-                }
+                .map { Elective.wrapRow(it) to Subject.wrapRow(it) }
         }
 
         fun getElectiveSelectionId(studentId: Int, electiveId: Int): Int? = transaction {
@@ -101,17 +89,6 @@ data class Student(val id: Int, val user: User) {
                 .singleOrNull()
                 ?.get(StudentElectives.subject)
                 ?.value
-        }
-
-        fun getElectiveSelection(studentId: Int, electiveId: Int): Subject? = transaction {
-            if (!existsInTxn(studentId)) throw NotFoundException("Student does not exist")
-
-            val selection = StudentElectives
-                .selectAll()
-                .where { (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) }
-                .singleOrNull() ?: return@transaction null
-
-            Subject.findById(selection[StudentElectives.subject].value)
         }
 
         fun setElectiveSelection(studentId: Int, electiveId: Int, subjectId: Int) {
@@ -152,14 +129,6 @@ data class Student(val id: Int, val user: User) {
             if (count == 0) throw NotFoundException("Student elective selection does not exist")
 
             logger.info("Student elective deselection, user: $studentId, elective: $electiveId")
-        }
-
-        fun getTeamIds(studentId: Int): List<Int> = transaction {
-            if (!existsInTxn(studentId)) throw NotFoundException("Student does not exist")
-
-            StudentTeams
-                .selectAll().where { StudentTeams.student eq studentId }
-                .map { it[StudentTeams.team].value }
         }
 
         /**
@@ -213,20 +182,6 @@ data class Student(val id: Int, val user: User) {
             return Student(id, user)
         }
     }
-
-    /**
-     * Adds a selection to the specified elective.
-     */
-    fun setElectiveSelection(electiveId: Int, subjectId: Int) =
-        setElectiveSelection(id, electiveId, subjectId)
-
-    /**
-     * Removes a selection from the specified elective.
-     *
-     * @throws NotFoundException if the selection does not exist.
-     */
-    fun removeElectiveSelection(electiveId: Int) =
-        removeElectiveSelection(id, electiveId)
 
     val teams
         get() = transaction {
@@ -331,6 +286,12 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
             .where { Electives.id eq electiveId }
             .singleOrNull()
             ?.get(Electives.team)?.value
+    }
+
+    fun getSubjectIds(electiveId: Int): List<Int> = transaction {
+        if (!existsInTxn(electiveId)) throw NotFoundException("Elective does not exist")
+
+        getSubjectIdsInTxn(electiveId)
     }
 
     /**
