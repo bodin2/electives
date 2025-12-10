@@ -7,12 +7,11 @@ import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.routing
 import org.jetbrains.exposed.sql.transactions.transaction
+import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
-import th.ac.bodin2.electives.db.Student
-import th.ac.bodin2.electives.db.Teacher
-import th.ac.bodin2.electives.db.toProto
+import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
 import th.ac.bodin2.electives.proto.api.UsersServiceKt.getStudentSelectionsResponse
@@ -47,104 +46,20 @@ fun Application.registerUsersRoutes() {
     }
 }
 
+@Suppress("UNUSED")
+@Resource("/users")
+class Users {
+    @Resource("{id}")
+    class Id(val parent: Users = Users(), val id: String) {
+        @Resource("selections")
+        class Selections(val parent: Id) {
+            @Resource("{electiveId}")
+            class ElectiveId(val parent: Selections, val electiveId: Int)
+        }
+    }
+}
+
 private const val ME_USER_ID = "@me"
-
-private suspend fun RoutingContext.handleGetUser(userId: Int) {
-    try {
-        when (val type = UsersService.getUserType(userId)) {
-            UserType.STUDENT -> {
-                val student = UsersService.getStudentById(userId) ?: return userNotFoundError()
-
-                call.respond(student.toProto())
-            }
-
-            UserType.TEACHER -> {
-                val teacher = UsersService.getTeacherById(userId) ?: return userNotFoundError()
-
-                call.respond(teacher.toProto())
-            }
-
-            else -> {
-                throw IllegalStateException("Unknown user type: $type (id: $userId)")
-            }
-        }
-    } catch (_: NotFoundException) {
-        return userNotFoundError()
-    }
-}
-
-private suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
-    if (UsersService.getUserType(userId) != UserType.STUDENT) {
-        return badRequest("Viewing selections for non-student users")
-    }
-
-    val student = UsersService.getStudentById(userId)!!
-
-    call.respond(getStudentSelectionsResponse {
-        transaction {
-            student.selections.map { (elective, subject) ->
-                subjects.put(elective.id.value, subject.toProto())
-            }
-        }
-    })
-}
-
-private suspend fun RoutingContext.handlePutStudentElectiveSelection(
-    electiveId: Int,
-    userId: Int,
-    authenticatedUserId: Int
-) {
-    if (UsersService.getUserType(userId) != UserType.STUDENT) {
-        return badRequest("Modifying selections for non-student users")
-    }
-
-    val req = call.parseOrNull<SetStudentElectiveSelectionRequest>() ?: return badRequest("Invalid request body")
-    if (
-        UsersService.getUserType(authenticatedUserId) == UserType.TEACHER &&
-        !Teacher.teachesSubject(authenticatedUserId, req.subjectId)
-    ) {
-        return teacherDoesNotTeachSubjectError()
-    }
-
-    when (Student.canEnrollInSubject(userId, electiveId, req.subjectId)) {
-        Student.CanEnrollStatus.CAN_ENROLL -> {}
-        Student.CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE -> return badRequest("Subject is not part of this elective")
-
-        Student.CanEnrollStatus.NOT_IN_SUBJECT_TEAM,
-        Student.CanEnrollStatus.NOT_IN_ELECTIVE_TEAM -> return forbidden("Student is not part of the team")
-
-        Student.CanEnrollStatus.ALREADY_ENROLLED -> return conflict("Student is already enrolled in this elective")
-        Student.CanEnrollStatus.SUBJECT_FULL -> return conflict("Subject is full")
-    }
-
-    Student.setElectiveSelection(userId, electiveId, req.subjectId)
-
-    call.response.status(HttpStatusCode.OK)
-}
-
-private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
-    electiveId: Int,
-    userId: Int,
-    authenticatedUserId: Int
-) {
-    if (UsersService.getUserType(userId) != UserType.STUDENT) {
-        return badRequest("Modifying selections for non-student users")
-    }
-
-    val subjectId = Student.getElectiveSelectionId(userId, electiveId)
-        ?: return badRequest("Student has not enrolled in the selected elective")
-
-    if (UsersService.getUserType(authenticatedUserId) == UserType.TEACHER &&
-        !Teacher.teachesSubject(authenticatedUserId, subjectId)
-    ) {
-        return teacherDoesNotTeachSubjectError()
-    }
-
-    // This will never throw, because we already checked that the selection exists
-    Student.removeElectiveSelection(userId, electiveId)
-
-    call.response.status(HttpStatusCode.OK)
-}
 
 /**
  * Resolve user IDs for routes that accept either a specific user ID or "@me" to refer to the authenticated user.
@@ -168,10 +83,138 @@ private suspend inline fun RoutingContext.resolveUserIdEnforced(
         val gettingUserId = if (idParam == ME_USER_ID) {
             userId
         } else {
-            idParam.toIntOrNull() ?: return@authenticated userNotFoundError()
+            idParam.toIntOrNull() ?: return@authenticated badRequest()
         }
 
         block(gettingUserId, userId)
+    }
+}
+
+private suspend fun RoutingContext.handleGetUser(userId: Int) {
+    val userProto = transaction {
+        try {
+            when (val type = UsersService.getUserType(userId)) {
+                UserType.STUDENT -> UsersService.getStudentById(userId)?.toProto() ?: return@transaction null
+                UserType.TEACHER -> UsersService.getTeacherById(userId)?.toProto() ?: return@transaction null
+
+                else -> throw IllegalStateException("Unknown user type: $type (id: $userId)")
+            }
+        } catch (_: NotFoundException) {
+            return@transaction null
+        }
+    } ?: return userNotFoundError()
+
+    call.respond(userProto)
+}
+
+private suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
+    val response = transaction {
+        val student = UsersService.getStudentById(userId) ?: return@transaction null
+
+        getStudentSelectionsResponse {
+            student.selections.map { (elective, subject) ->
+                subjects.put(elective.id.value, subject.toProto())
+            }
+        }
+    } ?: return badRequest("Viewing selections for non-student users")
+
+    call.respond(response)
+}
+
+private suspend fun RoutingContext.handlePutStudentElectiveSelection(
+    electiveId: Int,
+    userId: Int,
+    authenticatedUserId: Int
+) {
+    val req = call.parseOrNull<SetStudentElectiveSelectionRequest>() ?: return badRequest()
+
+    val result: SelectionRequestResult = transaction {
+        if (!Elective.exists(electiveId)) return@transaction SelectionRequestResult.ELECTIVE_NOT_FOUND
+
+        try {
+            when (Student.canEnrollInSubject(userId, electiveId, req.subjectId)) {
+                Student.CanEnrollStatus.CAN_ENROLL -> {}
+                Student.CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE -> return@transaction SelectionRequestResult.SUBJECT_NOT_IN_ELECTIVE
+
+                Student.CanEnrollStatus.NOT_IN_SUBJECT_TEAM,
+                Student.CanEnrollStatus.NOT_IN_ELECTIVE_TEAM -> return@transaction SelectionRequestResult.NOT_IN_TEAM
+
+                Student.CanEnrollStatus.ALREADY_ENROLLED -> return@transaction SelectionRequestResult.ALREADY_ENROLLED
+
+                Student.CanEnrollStatus.SUBJECT_FULL -> return@transaction SelectionRequestResult.SUBJECT_FULL
+            }
+        } catch (e: NotFoundException) {
+            return@transaction when (e.entity) {
+                NotFoundEntity.STUDENT -> SelectionRequestResult.NOT_STUDENT
+                NotFoundEntity.SUBJECT -> SelectionRequestResult.SUBJECT_NOT_FOUND
+                NotFoundEntity.ELECTIVE -> SelectionRequestResult.ELECTIVE_NOT_FOUND
+
+                else -> throw e
+            }
+        }
+
+        if (
+            UsersService.getUserType(authenticatedUserId) == UserType.TEACHER &&
+            !Teacher.teachesSubject(authenticatedUserId, req.subjectId)
+        ) {
+            return@transaction SelectionRequestResult.TEACHER_DOES_NOT_TEACH_SUBJECT
+        }
+
+        Student.setElectiveSelection(userId, electiveId, req.subjectId)
+        SelectionRequestResult.SUCCESS
+    }
+
+    when (result) {
+        SelectionRequestResult.SUCCESS -> call.response.status(HttpStatusCode.OK)
+
+        SelectionRequestResult.NOT_STUDENT -> return modifyingNonStudentUserSelectionError()
+        SelectionRequestResult.ELECTIVE_NOT_FOUND -> return notFound("Elective not found")
+        SelectionRequestResult.TEACHER_DOES_NOT_TEACH_SUBJECT -> return teacherDoesNotTeachSubjectError()
+        SelectionRequestResult.SUBJECT_NOT_FOUND -> return badRequest("Subject does not exist")
+        SelectionRequestResult.SUBJECT_NOT_IN_ELECTIVE -> return badRequest("Subject is not part of this elective")
+        SelectionRequestResult.NOT_IN_TEAM -> return forbidden("Student does not pass the team requirements")
+        SelectionRequestResult.ALREADY_ENROLLED -> return conflict("Student has already enrolled for this elective")
+        SelectionRequestResult.SUBJECT_FULL -> return badRequest("Selected subject is full")
+
+        else -> throw IllegalStateException("Reached unreachable case: $result")
+    }
+}
+
+private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
+    electiveId: Int,
+    userId: Int,
+    authenticatedUserId: Int
+) {
+    val result: SelectionRequestResult = transaction {
+        if (UsersService.getUserType(authenticatedUserId) == UserType.TEACHER) {
+            val subjectId = Student.getElectiveSelectionId(userId, electiveId)
+                ?: return@transaction SelectionRequestResult.NOT_ENROLLED
+
+            if (!Teacher.teachesSubject(authenticatedUserId, subjectId))
+                return@transaction SelectionRequestResult.TEACHER_DOES_NOT_TEACH_SUBJECT
+        }
+
+        try {
+            Student.removeElectiveSelection(userId, electiveId)
+            SelectionRequestResult.SUCCESS
+        } catch (e: NotFoundException) {
+            return@transaction when (e.entity) {
+                NotFoundEntity.STUDENT -> SelectionRequestResult.NOT_STUDENT
+                NotFoundEntity.ELECTIVE_SELECTION -> SelectionRequestResult.NOT_ENROLLED
+
+                else -> throw e
+            }
+        }
+    }
+
+    when (result) {
+        SelectionRequestResult.SUCCESS -> call.response.status(HttpStatusCode.OK)
+
+        SelectionRequestResult.NOT_STUDENT -> return modifyingNonStudentUserSelectionError()
+        SelectionRequestResult.NOT_ENROLLED -> return badRequest("Student has not enrolled in the selected elective")
+        SelectionRequestResult.TEACHER_DOES_NOT_TEACH_SUBJECT -> return teacherDoesNotTeachSubjectError()
+
+        else -> throw IllegalStateException("Reached unreachable case: $result")
     }
 }
 
@@ -179,15 +222,18 @@ private suspend inline fun RoutingContext.userNotFoundError() = notFound("User n
 private suspend inline fun RoutingContext.teacherDoesNotTeachSubjectError() =
     forbidden("Teacher does not teach the selected subject")
 
-@Suppress("UNUSED")
-@Resource("/users")
-private class Users {
-    @Resource("{id}")
-    class Id(val parent: Users = Users(), val id: String) {
-        @Resource("selections")
-        class Selections(val parent: Id) {
-            @Resource("{electiveId}")
-            class ElectiveId(val parent: Selections, val electiveId: Int)
-        }
-    }
+private suspend inline fun RoutingContext.modifyingNonStudentUserSelectionError() =
+    badRequest("Modifying selections for non-student users")
+
+private enum class SelectionRequestResult {
+    SUCCESS,
+    NOT_STUDENT,
+    ELECTIVE_NOT_FOUND,
+    SUBJECT_NOT_FOUND,
+    SUBJECT_NOT_IN_ELECTIVE,
+    NOT_IN_TEAM,
+    ALREADY_ENROLLED,
+    SUBJECT_FULL,
+    TEACHER_DOES_NOT_TEACH_SUBJECT,
+    NOT_ENROLLED,
 }

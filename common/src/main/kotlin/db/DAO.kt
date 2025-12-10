@@ -6,8 +6,8 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.api.ExposedBlob
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
+import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.db.models.*
 
@@ -51,39 +51,37 @@ data class Student(val id: Int, val user: User) {
     companion object {
         private val logger = LoggerFactory.getLogger(Student::class.java)
 
-        private fun existsInTxn(id: Int): Boolean = Students.selectAll().where { Students.id eq id }.count() > 0L
-
         /// PUBLIC API
 
-        fun exists(id: Int): Boolean = transaction { existsInTxn(id) }
+        fun exists(id: Int): Boolean = Students.selectAll().where { Students.id eq id }.count() > 0L
 
-        fun findById(id: Int): Student? = transaction {
-            if (!existsInTxn(id)) return@transaction null
+        fun findById(id: Int): Student? {
+            if (!exists(id)) return null
 
-            val user = User.findById(id) ?: return@transaction null
-            Student(id, user)
+            val user = User.findById(id) ?: return null
+            return Student(id, user)
         }
 
-        fun hasTeam(studentId: Int, teamId: Int): Boolean = transaction {
-            if (!existsInTxn(studentId)) throw NotFoundException("Student does not exist")
+        fun hasTeam(studentId: Int, teamId: Int): Boolean {
+            if (!exists(studentId)) throw NotFoundException(NotFoundEntity.STUDENT)
 
-            StudentTeams
+            return StudentTeams
                 .selectAll().where { (StudentTeams.student eq studentId) and (StudentTeams.team eq teamId) }
                 .count() > 0L
         }
 
-        fun getAllElectiveSelections(studentId: Int): List<Pair<Elective, Subject>> = transaction {
-            if (!existsInTxn(studentId)) throw NotFoundException("Student does not exist")
+        fun getAllElectiveSelections(studentId: Int): List<Pair<Elective, Subject>> {
+            if (!exists(studentId)) throw NotFoundException(NotFoundEntity.STUDENT)
 
-            StudentElectives
+            return StudentElectives
                 .selectAll().where { StudentElectives.student eq studentId }
                 .map { Elective.findById(it[StudentElectives.elective])!! to Subject.findById(it[StudentElectives.subject])!! }
         }
 
-        fun getElectiveSelectionId(studentId: Int, electiveId: Int): Int? = transaction {
-            if (!existsInTxn(studentId)) throw NotFoundException("Student does not exist")
+        fun getElectiveSelectionId(studentId: Int, electiveId: Int): Int? {
+            if (!exists(studentId)) throw NotFoundException(NotFoundEntity.STUDENT)
 
-            StudentElectives
+            return StudentElectives
                 .selectAll()
                 .where { (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) }
                 .singleOrNull()
@@ -92,20 +90,18 @@ data class Student(val id: Int, val user: User) {
         }
 
         fun setElectiveSelection(studentId: Int, electiveId: Int, subjectId: Int) {
-            transaction {
-                if (!existsInTxn(studentId)) throw NotFoundException("Student does not exist")
+            if (!exists(studentId)) throw NotFoundException(NotFoundEntity.STUDENT)
 
-                val updated = StudentElectives.update(
-                    where = { (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) },
-                    body = { it[StudentElectives.subject] = subjectId }
-                )
+            val updated = StudentElectives.update(
+                where = { (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) },
+                body = { it[StudentElectives.subject] = subjectId }
+            )
 
-                if (updated == 0) {
-                    StudentElectives.insert {
-                        it[StudentElectives.student] = studentId
-                        it[StudentElectives.elective] = electiveId
-                        it[StudentElectives.subject] = subjectId
-                    }
+            if (updated == 0) {
+                StudentElectives.insert {
+                    it[StudentElectives.student] = studentId
+                    it[StudentElectives.elective] = electiveId
+                    it[StudentElectives.subject] = subjectId
                 }
             }
 
@@ -118,15 +114,13 @@ data class Student(val id: Int, val user: User) {
          * @throws NotFoundException if the selection does not exist.
          */
         fun removeElectiveSelection(studentId: Int, electiveId: Int) {
-            val count = transaction {
-                if (!existsInTxn(studentId)) throw NotFoundException("Student does not exist")
+            if (!exists(studentId)) throw NotFoundException(NotFoundEntity.STUDENT)
 
-                StudentElectives.deleteWhere {
-                    (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId)
-                }
+            val count = StudentElectives.deleteWhere {
+                (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId)
             }
 
-            if (count == 0) throw NotFoundException("Student elective selection does not exist")
+            if (count == 0) throw NotFoundException(NotFoundEntity.ELECTIVE_SELECTION)
 
             logger.info("Student elective deselection, user: $studentId, elective: $electiveId")
         }
@@ -139,20 +133,20 @@ data class Student(val id: Int, val user: User) {
          * 3. Checking if the student is part of the elective's team (if any).
          * 4. Checking if the student is part of the subject's team (if any).
          * 5. Checking if the subject is full.
+         *
+         * @throws NotFoundException if the student does not exist.
          */
         fun canEnrollInSubject(studentId: Int, electiveId: Int, subjectId: Int): CanEnrollStatus {
-            if (!exists(studentId)) throw NotFoundException("Student does not exist")
+            if (!exists(studentId)) throw NotFoundException(NotFoundEntity.STUDENT)
 
             if (!Subject.isPartOfElective(subjectId, electiveId))
                 return CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE
 
             // Check if the student is already enrolled in another subject of the same elective
-            val alreadyEnrolled = transaction {
-                StudentElectives
-                    .selectAll()
-                    .where { (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) }
-                    .count() > 0L
-            }
+            val alreadyEnrolled = StudentElectives
+                .selectAll()
+                .where { (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) }
+                .count() > 0L
 
             if (alreadyEnrolled) return CanEnrollStatus.ALREADY_ENROLLED
 
@@ -173,10 +167,8 @@ data class Student(val id: Int, val user: User) {
         }
 
         fun new(id: Int, user: User): Student {
-            transaction {
-                Students.insert {
-                    it[Students.id] = id
-                }
+            Students.insert {
+                it[Students.id] = id
             }
 
             return Student(id, user)
@@ -184,10 +176,10 @@ data class Student(val id: Int, val user: User) {
     }
 
     val teams
-        get() = transaction {
-            if (!existsInTxn(this@Student.id)) throw NotFoundException("Student does not exist")
+        get(): List<Team> {
+            if (!exists(this@Student.id)) throw NotFoundException(NotFoundEntity.STUDENT)
 
-            (StudentTeams innerJoin Teams)
+            return (StudentTeams innerJoin Teams)
                 .selectAll().where { StudentTeams.student eq this@Student.id }
                 .map { Team.wrapRow(it) }
         }
@@ -198,34 +190,32 @@ data class Student(val id: Int, val user: User) {
 
 class Teacher(val id: Int, val user: User, val avatar: ByteArray?) {
     companion object {
-        fun findById(id: Int): Teacher? = transaction {
+        fun findById(id: Int): Teacher? {
             val teacher = Teachers
                 .selectAll().where { Teachers.id eq id }
                 .singleOrNull()
-                ?: return@transaction null
+                ?: return null
 
-            val user = User.findById(id) ?: return@transaction null
-            Teacher(id, user, teacher[Teachers.avatar]?.bytes)
+            val user = User.findById(id) ?: return null
+            return Teacher(id, user, teacher[Teachers.avatar]?.bytes)
         }
 
-        fun getSubjects(teacherId: Int): List<Subject> = transaction {
-            (TeacherSubjects innerJoin Subjects)
+        fun getSubjects(teacherId: Int): List<Subject> {
+            return (TeacherSubjects innerJoin Subjects)
                 .selectAll().where { TeacherSubjects.teacher eq teacherId }
                 .map { Subject.wrapRow(it) }
         }
 
-        fun teachesSubject(teacherId: Int, subjectId: Int): Boolean = transaction {
-            TeacherSubjects
+        fun teachesSubject(teacherId: Int, subjectId: Int): Boolean {
+            return TeacherSubjects
                 .selectAll().where { (TeacherSubjects.teacher eq teacherId) and (TeacherSubjects.subject eq subjectId) }
                 .count() > 0L
         }
 
         fun new(id: Int, user: User, avatar: ByteArray? = null): Teacher {
-            transaction {
-                Teachers.insert {
-                    it[Teachers.id] = id
-                    it[Teachers.avatar] = avatar?.let { bytes -> ExposedBlob(bytes) }
-                }
+            Teachers.insert {
+                it[Teachers.id] = id
+                it[Teachers.avatar] = avatar?.let { bytes -> ExposedBlob(bytes) }
             }
 
             return Teacher(id, user, avatar)
@@ -243,9 +233,6 @@ class Team(id: EntityID<Int>) : Entity<Int>(id) {
 }
 
 open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
-    private fun existsInTxn(id: Int): Boolean =
-        Electives.selectAll().where { Electives.id eq id }.count() > 0L
-
     private fun getSubjectsInTxn(electiveId: Int): List<Subject> =
         (ElectiveSubjects innerJoin Subjects)
             .selectAll().where { ElectiveSubjects.elective eq electiveId }
@@ -266,10 +253,11 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
 
     /// PUBLIC API
 
-    fun exists(id: Int): Boolean = transaction { existsInTxn(id) }
+    fun exists(id: Int): Boolean =
+        Electives.selectAll().where { Electives.id eq id }.count() > 0L
 
-    fun getAllIds(): List<Int> = transaction {
-        Electives.select(Electives.id).map { it[Electives.id].value }
+    fun getAllIds(): List<Int> {
+        return Electives.select(Electives.id).map { it[Electives.id].value }
     }
 
     /**
@@ -277,21 +265,21 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
      *
      * @throws NotFoundException if the elective does not exist.
      */
-    fun getTeamId(electiveId: Int): Int? = transaction {
-        if (!existsInTxn(electiveId))
-            throw NotFoundException("Elective does not exist")
+    fun getTeamId(electiveId: Int): Int? {
+        if (!exists(electiveId))
+            throw NotFoundException(NotFoundEntity.ELECTIVE)
 
-        Electives
+        return Electives
             .select(Electives.team)
             .where { Electives.id eq electiveId }
             .singleOrNull()
             ?.get(Electives.team)?.value
     }
 
-    fun getSubjectIds(electiveId: Int): List<Int> = transaction {
-        if (!existsInTxn(electiveId)) throw NotFoundException("Elective does not exist")
+    fun getSubjectIds(electiveId: Int): List<Int> {
+        if (!exists(electiveId)) throw NotFoundException(NotFoundEntity.ELECTIVE)
 
-        getSubjectIdsInTxn(electiveId)
+        return getSubjectIdsInTxn(electiveId)
     }
 
     /**
@@ -299,10 +287,10 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
      *
      * @throws NotFoundException if the elective does not exist.
      */
-    fun getSubjects(electiveId: Int): List<Subject> = transaction {
-        if (!existsInTxn(electiveId)) throw NotFoundException("Elective does not exist")
+    fun getSubjects(electiveId: Int): List<Subject> {
+        if (!exists(electiveId)) throw NotFoundException(NotFoundEntity.ELECTIVE)
 
-        getSubjectsInTxn(electiveId)
+        return getSubjectsInTxn(electiveId)
     }
 
     /**
@@ -312,11 +300,11 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
      *
      * @return Map<SubjectId, EnrolledCount>
      */
-    fun getSubjectsEnrolledCounts(electiveId: Int): Map<Int, Int> = transaction {
-        if (!existsInTxn(electiveId)) throw NotFoundException("Elective does not exist")
+    fun getSubjectsEnrolledCounts(electiveId: Int): Map<Int, Int> {
+        if (!exists(electiveId)) throw NotFoundException(NotFoundEntity.ELECTIVE)
 
         val subjectIds = getSubjectIdsInTxn(electiveId)
-        subjectIds.associateWith { getEnrolledCountForSubjectInTxn(it) }
+        return subjectIds.associateWith { getEnrolledCountForSubjectInTxn(it) }
     }
 }
 
@@ -333,14 +321,6 @@ class Elective(id: EntityID<Int>) : Entity<Int>(id) {
 }
 
 open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
-    private fun existsInTxn(id: Int): Boolean =
-        Subjects.selectAll().where { Subjects.id eq id }.count() > 0L
-
-    private fun isPartOfElectiveInTxn(subjectId: Int, electiveId: Int): Boolean =
-        (ElectiveSubjects innerJoin Subjects)
-            .selectAll().where { (ElectiveSubjects.elective eq electiveId) and (ElectiveSubjects.subject eq subjectId) }
-            .count() > 0L
-
     private fun getCapacityInTxn(subjectId: Int): Int =
         Subjects
             .select(Subjects.capacity)
@@ -355,17 +335,18 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
 
     /// PUBLIC API
 
-    fun exists(id: Int): Boolean = transaction { existsInTxn(id) }
+    fun exists(id: Int): Boolean =
+        Subjects.selectAll().where { Subjects.id eq id }.count() > 0L
 
     /**
      * Gets the team ID for the specified subject.
      *
      * @throws NotFoundException if the subject does not exist.
      */
-    fun getTeamId(subjectId: Int): Int? = transaction {
-        if (!existsInTxn(subjectId)) throw NotFoundException("Subject does not exist")
+    fun getTeamId(subjectId: Int): Int? {
+        if (!exists(subjectId)) throw NotFoundException(NotFoundEntity.SUBJECT)
 
-        Subjects
+        return Subjects
             .select(Subjects.team)
             .where { Subjects.id eq subjectId }
             .single()[Subjects.team]?.value
@@ -376,10 +357,10 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
      *
      * @throws NotFoundException if the subject does not exist or is not part of the elective.
      */
-    fun getTeachers(subjectId: Int): List<Teacher> = transaction {
-        if (!existsInTxn(subjectId)) throw NotFoundException("Subject does not exist")
+    fun getTeachers(subjectId: Int): List<Teacher> {
+        if (!exists(subjectId)) throw NotFoundException(NotFoundEntity.SUBJECT)
 
-        (TeacherSubjects innerJoin Teachers)
+        return (TeacherSubjects innerJoin Teachers)
             .selectAll().where { (TeacherSubjects.subject eq subjectId) }
             .map { Teacher.findById(it[Teachers.id].value)!! }
     }
@@ -387,17 +368,14 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
     /**
      * Gets students for the specified subject of the specified elective.
      *
-     * @throws NotFoundException if the subject does not exist or is not part of the elective.
+     * @throws NotFoundException if the subject does not exist.
+     * @throws Subject.NotPartOfElectiveException if the subject is not part of the specified elective.
      */
-    fun getStudents(subjectId: Int, electiveId: Int): List<Student> = transaction {
-        if (!existsInTxn(subjectId)) throw NotFoundException("Subject does not exist")
-        if (!isPartOfElectiveInTxn(
-                subjectId,
-                electiveId
-            )
-        ) throw NotFoundException("Subject is not part of the elective")
+    fun getStudents(subjectId: Int, electiveId: Int): List<Student> {
+        if (!exists(subjectId)) throw NotFoundException(NotFoundEntity.SUBJECT)
+        if (!isPartOfElective(subjectId, electiveId)) throw Subject.NotPartOfElectiveException(subjectId, electiveId)
 
-        (StudentElectives innerJoin Students)
+        return (StudentElectives innerJoin Students)
             .selectAll().where {
                 (StudentElectives.subject eq subjectId) and
                         (StudentElectives.elective eq electiveId)
@@ -409,50 +387,49 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
      * Checks if the subject is part of the specified elective.
      *
      * @throws NotFoundException if the subject does not exist.
+     * @throws Subject.NotPartOfElectiveException if the subject is not part of the specified elective.
      */
-    fun isPartOfElective(subjectId: Int, electiveId: Int): Boolean = transaction {
-        if (!existsInTxn(subjectId)) throw NotFoundException("Subject does not exist")
+    fun isPartOfElective(subjectId: Int, electiveId: Int): Boolean {
+        if (!exists(subjectId)) throw NotFoundException(NotFoundEntity.SUBJECT)
 
-        isPartOfElectiveInTxn(subjectId, electiveId)
+        return (ElectiveSubjects innerJoin Subjects)
+            .selectAll().where { (ElectiveSubjects.elective eq electiveId) and (ElectiveSubjects.subject eq subjectId) }
+            .count() > 0L
     }
 
     /**
      * Checks if the subject is full for the specified elective.
      *
      * @throws NotFoundException if the subject does not exist or is not part of the elective.
+     * @throws Subject.NotPartOfElectiveException if the subject is not part of the specified elective.
      */
-    fun isFull(subjectId: Int, electiveId: Int): Boolean = transaction {
-        if (!existsInTxn(subjectId)) throw NotFoundException("Subject does not exist")
-        if (!isPartOfElectiveInTxn(
-                subjectId,
-                electiveId
-            )
-        ) throw NotFoundException("Subject is not part of the elective")
+    fun isFull(subjectId: Int, electiveId: Int): Boolean {
+        if (!exists(subjectId)) throw NotFoundException(NotFoundEntity.SUBJECT)
+        if (!isPartOfElective(subjectId, electiveId)) throw Subject.NotPartOfElectiveException(subjectId, electiveId)
 
         val capacity = getCapacityInTxn(subjectId)
         val enrolled = getEnrolledCountInTxn(subjectId, electiveId)
-        enrolled >= capacity
+        return enrolled >= capacity
     }
 
     /**
      * Gets the enrolled count for the specified subject of the specified elective.
      *
-     * @throws NotFoundException if the subject does not exist or is not part of the elective.
+     * @throws NotFoundException if the subject does not exist.
+     * @throws Subject.NotPartOfElectiveException if the subject is not part of the specified elective.
      */
-    fun getEnrolledCount(subjectId: Int, electiveId: Int): Int = transaction {
-        if (!existsInTxn(subjectId)) throw NotFoundException("Subject does not exist")
-        if (!isPartOfElectiveInTxn(
-                subjectId,
-                electiveId
-            )
-        ) throw NotFoundException("Subject is not part of the elective")
+    fun getEnrolledCount(subjectId: Int, electiveId: Int): Int {
+        if (!exists(subjectId)) throw NotFoundException(NotFoundEntity.SUBJECT)
+        if (!isPartOfElective(subjectId, electiveId)) throw Subject.NotPartOfElectiveException(subjectId, electiveId)
 
-        getEnrolledCountInTxn(subjectId, electiveId)
+        return getEnrolledCountInTxn(subjectId, electiveId)
     }
 }
 
 class Subject(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : SubjectCompanion()
+
+    class NotPartOfElectiveException(subjectId: Int, electiveId: Int) : Exception("Subject $subjectId is not part of elective $electiveId")
 
     var name by Subjects.name
 

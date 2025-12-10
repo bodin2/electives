@@ -2,8 +2,9 @@ package th.ac.bodin2.electives.api.services
 
 import com.mayakapps.kache.InMemoryKache
 import com.mayakapps.kache.KacheStrategy
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
+import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.services.UsersService.userTypeCache
 import th.ac.bodin2.electives.db.Student
@@ -59,27 +60,25 @@ object UsersService {
      * @throws NotFoundException if the user does not exist.
      * @throws IllegalStateException if the user is neither a Student nor a Teacher.
      */
-    suspend fun getUserType(id: Int): UserType {
-        userTypeCache.get(id)?.let { return it }
+    fun getUserType(id: Int): UserType {
+        runBlocking { userTypeCache.get(id) }?.let { return it }
 
-        val query = transaction {
-            Users
-                .leftJoin(Students)
-                .leftJoin(Teachers)
-                .select(Users.id, Students.id, Teachers.id)
-                .where { Users.id eq id }
-                .map {
-                    when {
-                        it.getOrNull(Students.id) != null -> UserType.STUDENT
-                        it.getOrNull(Teachers.id) != null -> UserType.TEACHER
-                        else -> throw IllegalStateException("User is not a Student or a Teacher: $id")
-                    }
-                }.firstOrNull()
-        }
+        val query = Users
+            .leftJoin(Students)
+            .leftJoin(Teachers)
+            .select(Users.id, Students.id, Teachers.id)
+            .where { Users.id eq id }
+            .map {
+                when {
+                    it.getOrNull(Students.id) != null -> UserType.STUDENT
+                    it.getOrNull(Teachers.id) != null -> UserType.TEACHER
+                    else -> throw IllegalStateException("User is not a Student or a Teacher: $id")
+                }
+            }.firstOrNull()
 
-        query ?: throw NotFoundException("User does not exist: $id")
+        query ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
 
-        userTypeCache.put(id, query)
+        runBlocking { userTypeCache.put(id, query) }
         return query
     }
 
@@ -89,9 +88,7 @@ object UsersService {
         middleName: String? = null,
         lastName: String? = null,
         password: String,
-    ): Student = transaction {
-        Student.new(id, createUser(id, firstName, middleName, lastName, password))
-    }
+    ): Student = Student.new(id, createUser(id, firstName, middleName, lastName, password))
 
     fun createTeacher(
         id: Int,
@@ -100,9 +97,7 @@ object UsersService {
         lastName: String? = null,
         password: String,
         avatar: ByteArray? = null,
-    ): Teacher = transaction {
-        Teacher.new(id, createUser(id, firstName, middleName, lastName, password), avatar)
-    }
+    ): Teacher = Teacher.new(id, createUser(id, firstName, middleName, lastName, password), avatar)
 
     fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)
 
@@ -123,8 +118,8 @@ object UsersService {
             throw IllegalArgumentException("Client name too long for user: $id")
         }
 
-        val user = transaction { Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull() }
-            ?: throw NotFoundException("User does not exist: $id")
+        val user = Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull()
+            ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
 
         val passwordHash = user[Users.passwordHash]
 
@@ -138,10 +133,8 @@ object UsersService {
                 )
             )
 
-            transaction {
-                User.findByIdAndUpdate(id) {
-                    it.sessionHash = Argon2.hash(token.toCharArray())
-                }
+            User.findByIdAndUpdate(id) {
+                it.sessionHash = Argon2.hash(token.toCharArray())
             }
 
             logger.info("New session created, user: $id, aud: $aud")
@@ -163,8 +156,8 @@ object UsersService {
 
         val userId = claims.sub.toIntOrNull() ?: throw IllegalArgumentException("Invalid token subject: ${claims.sub}")
 
-        val user = transaction { Users.select(Users.sessionHash).where { Users.id eq userId }.singleOrNull() }
-            ?: throw NotFoundException("User does not exist: $userId")
+        val user = Users.select(Users.sessionHash).where { Users.id eq userId }.singleOrNull()
+            ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $userId")
 
         val sessionHash =
             user[Users.sessionHash] ?: throw IllegalArgumentException("No active session for user: $userId")
@@ -182,10 +175,8 @@ object UsersService {
      * Clears the session (logs out) for the user with the given ID.
      */
     fun clearSession(userId: Int) {
-        transaction {
-            User.findByIdAndUpdate(userId) {
-                it.sessionHash = null
-            }
+        User.findByIdAndUpdate(userId) {
+            it.sessionHash = null
         }
 
         logger.info("Session cleared, user: $userId")
@@ -197,12 +188,10 @@ object UsersService {
         middleName: String?,
         lastName: String?,
         password: String,
-    ) = transaction {
-        User.new(id) {
-            this.firstName = firstName
-            this.middleName = middleName
-            this.lastName = lastName
-            passwordHash = Argon2.hash(password.toCharArray())
-        }
+    ) = User.new(id) {
+        this.firstName = firstName
+        this.middleName = middleName
+        this.lastName = lastName
+        passwordHash = Argon2.hash(password.toCharArray())
     }
 }

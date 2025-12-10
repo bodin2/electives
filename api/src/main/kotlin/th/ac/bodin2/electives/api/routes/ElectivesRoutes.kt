@@ -2,10 +2,13 @@ package th.ac.bodin2.electives.api.routes
 
 import io.ktor.resources.*
 import io.ktor.server.application.*
-import io.ktor.server.resources.*
-import io.ktor.server.routing.*
+import io.ktor.server.resources.get
+import io.ktor.server.routing.RoutingContext
+import io.ktor.server.routing.routing
 import org.jetbrains.exposed.sql.transactions.transaction
+import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.utils.badRequest
 import th.ac.bodin2.electives.api.utils.notFound
 import th.ac.bodin2.electives.api.utils.respond
 import th.ac.bodin2.electives.db.Elective
@@ -14,8 +17,6 @@ import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listResponse
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectMembersResponse
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
-
-private suspend inline fun RoutingContext.electiveNotFoundError() = notFound("Elective not found")
 
 fun Application.registerElectivesRoutes() {
     routing {
@@ -29,6 +30,22 @@ fun Application.registerElectivesRoutes() {
                 subjectId = it.parent.subjectId,
                 withStudents = it.with_students == true,
             )
+        }
+    }
+}
+
+@Suppress("UNUSED")
+@Resource("/electives")
+private class Electives {
+    @Resource("{id}")
+    class Id(val parent: Electives = Electives(), val id: Int) {
+        @Resource("subjects")
+        class Subjects(val parent: Id) {
+            @Resource("{subjectId}")
+            class SubjectId(val parent: Subjects, val subjectId: Int) {
+                @Resource("members")
+                class Members(val parent: SubjectId, val with_students: Boolean? = null)
+            }
         }
     }
 }
@@ -52,19 +69,27 @@ private suspend fun RoutingContext.handleGetElective(electiveId: Int) {
 
 private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
     try {
-        val subjects = Elective.getSubjects(electiveId)
+        val response = transaction {
+            val subjects = Elective.getSubjects(electiveId)
 
-        call.respond(listSubjectsResponse {
-            this.subjects.addAll(subjects.map { it.toProto(withDescription = false) })
-        })
+            listSubjectsResponse {
+                this.subjects.addAll(subjects.map { it.toProto(withDescription = false) })
+            }
+        }
+
+        call.respond(response)
     } catch (_: NotFoundException) {
         return electiveNotFoundError()
     }
 }
 
 private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, subjectId: Int) {
-    val subject = transaction { Subject.findById(subjectId) } ?: return notFound("Subject not found")
-    call.respond(subject.toProto(electiveId))
+    val subjectProto = transaction {
+        val subject = Subject.findById(subjectId) ?: return@transaction null
+        subject.toProto(electiveId)
+    } ?: return subjectNotFoundError()
+
+    call.respond(subjectProto)
 }
 
 private suspend fun RoutingContext.handleGetElectiveSubjectMembers(
@@ -72,33 +97,45 @@ private suspend fun RoutingContext.handleGetElectiveSubjectMembers(
     subjectId: Int,
     withStudents: Boolean,
 ) {
-    try {
-        val teachers = Subject.getTeachers(subjectId)
-        val students = if (withStudents) Subject.getStudents(subjectId, electiveId) else emptyList()
+    val result = transaction {
+        if (!Elective.exists(electiveId))
+            return@transaction GetElectiveSubjectMembersResult.ElectiveNotFound
 
-        call.respond(transaction {
-            listSubjectMembersResponse {
+        try {
+            val teachers = Subject.getTeachers(subjectId)
+            val students = if (withStudents) Subject.getStudents(subjectId, electiveId) else emptyList()
+
+            GetElectiveSubjectMembersResult.Success(listSubjectMembersResponse {
                 this.teachers.addAll(teachers.map { it.toProto() })
                 this.students.addAll(students.map { it.toProto() })
+            })
+
+        } catch (e: NotFoundException) {
+            return@transaction when (e.entity) {
+                NotFoundEntity.SUBJECT -> GetElectiveSubjectMembersResult.SubjectNotFound
+                else -> throw e
             }
-        })
-    } catch (_: NotFoundException) {
-        return electiveNotFoundError()
+        } catch (_: Subject.NotPartOfElectiveException) {
+            return@transaction GetElectiveSubjectMembersResult.SubjectNotPartOfElective(subjectId, electiveId)
+        }
+    }
+
+    when (result) {
+        is GetElectiveSubjectMembersResult.ElectiveNotFound -> return electiveNotFoundError()
+        is GetElectiveSubjectMembersResult.SubjectNotFound -> return subjectNotFoundError()
+        is GetElectiveSubjectMembersResult.SubjectNotPartOfElective -> return badRequest("Subject ${result.subjectId} is not part of elective ${result.electiveId}")
+        is GetElectiveSubjectMembersResult.Success -> call.respond(result.response)
     }
 }
 
-@Suppress("UNUSED")
-@Resource("/electives")
-class Electives {
-    @Resource("{id}")
-    class Id(val parent: Electives = Electives(), val id: Int) {
-        @Resource("subjects")
-        class Subjects(val parent: Id) {
-            @Resource("{subjectId}")
-            class SubjectId(val parent: Subjects, val subjectId: Int) {
-                @Resource("members")
-                class Members(val parent: SubjectId, val with_students: Boolean? = false)
-            }
-        }
-    }
+private sealed class GetElectiveSubjectMembersResult {
+    data class Success(val response: th.ac.bodin2.electives.proto.api.ElectivesService.ListSubjectMembersResponse) :
+        GetElectiveSubjectMembersResult()
+
+    data object ElectiveNotFound : GetElectiveSubjectMembersResult()
+    data object SubjectNotFound : GetElectiveSubjectMembersResult()
+    data class SubjectNotPartOfElective(val subjectId: Int, val electiveId: Int) : GetElectiveSubjectMembersResult()
 }
+
+private suspend inline fun RoutingContext.electiveNotFoundError() = notFound("Elective not found")
+private suspend inline fun RoutingContext.subjectNotFoundError() = notFound("Subject not found")

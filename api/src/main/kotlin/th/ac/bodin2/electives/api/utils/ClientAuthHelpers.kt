@@ -2,7 +2,8 @@ package th.ac.bodin2.electives.api.utils
 
 import io.ktor.server.auth.*
 import io.ktor.server.routing.*
-import io.ktor.server.websocket.WebSocketServerSession
+import io.ktor.server.websocket.*
+import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.api.USER_AUTHENTICATION
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.UserType
@@ -22,10 +23,7 @@ suspend fun RoutingContext.authenticated(
     block: suspend RoutingContext.(userId: Int) -> Unit
 ) {
     val userId = call.principal<Int>() ?: return unauthorized()
-
-    if (UsersService.getUserType(userId) !in types) {
-        return unauthorized()
-    }
+    if (getUserType(userId) !in types) return unauthorized()
 
     block(userId)
 }
@@ -42,10 +40,7 @@ suspend fun RoutingContext.authenticated(
     block: suspend RoutingContext.(userId: Int) -> Unit
 ) {
     val userId = call.principal<Int>() ?: return unauthorized()
-
-    if (UsersService.getUserType(userId) !in getTypes(userId)) {
-        return unauthorized()
-    }
+    if (getUserType(userId) !in getTypes(userId)) return unauthorized()
 
     block(userId)
 }
@@ -58,13 +53,12 @@ suspend fun WebSocketServerSession.authenticated(
     block: suspend WebSocketServerSession.(userId: Int) -> Unit
 ) {
     val userId = call.principal<Int>() ?: return unauthorized()
-
-    if (UsersService.getUserType(userId) !in types) {
-        return unauthorized()
-    }
+    if (getUserType(userId) !in types) return unauthorized()
 
     block(userId)
 }
+
+private fun getUserType(userId: Int): UserType = transaction { UsersService.getUserType(userId) }
 
 fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
     authenticate(USER_AUTHENTICATION) {
