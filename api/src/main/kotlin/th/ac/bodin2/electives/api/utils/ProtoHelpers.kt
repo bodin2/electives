@@ -15,8 +15,8 @@ private val parserCache = ConcurrentHashMap<Class<*>, Parser<*>>()
 fun <T : MessageLite> getParser(clazz: Class<T>): Parser<T> {
     @Suppress("UNCHECKED_CAST")
     return parserCache.getOrPut(clazz) {
-        val parserField = clazz.getDeclaredField("PARSER")
-        parserField.get(null) as Parser<T>
+        val parserMethod = clazz.getDeclaredMethod("parser")
+        parserMethod.invoke(null) as Parser<T>
     } as Parser<T>
 }
 

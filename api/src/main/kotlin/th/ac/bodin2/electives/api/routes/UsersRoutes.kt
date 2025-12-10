@@ -3,11 +3,11 @@ package th.ac.bodin2.electives.api.routes
 import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
-import io.ktor.server.resources.delete
-import io.ktor.server.resources.get
-import io.ktor.server.routing.*
-import io.ktor.server.routing.put
+import io.ktor.server.resources.*
+import io.ktor.server.routing.RoutingContext
+import io.ktor.server.routing.routing
 import org.jetbrains.exposed.sql.transactions.transaction
+import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.Student
@@ -50,22 +50,26 @@ fun Application.registerUsersRoutes() {
 private const val ME_USER_ID = "@me"
 
 private suspend fun RoutingContext.handleGetUser(userId: Int) {
-    when (val type = UsersService.getUserType(userId)) {
-        UserType.STUDENT -> {
-            val student = UsersService.getStudentById(userId) ?: return userNotFoundError()
+    try {
+        when (val type = UsersService.getUserType(userId)) {
+            UserType.STUDENT -> {
+                val student = UsersService.getStudentById(userId) ?: return userNotFoundError()
 
-            call.respond(student.toProto())
+                call.respond(student.toProto())
+            }
+
+            UserType.TEACHER -> {
+                val teacher = UsersService.getTeacherById(userId) ?: return userNotFoundError()
+
+                call.respond(teacher.toProto())
+            }
+
+            else -> {
+                throw IllegalStateException("Unknown user type: $type (id: $userId)")
+            }
         }
-
-        UserType.TEACHER -> {
-            val teacher = UsersService.getTeacherById(userId) ?: return userNotFoundError()
-
-            call.respond(teacher.toProto())
-        }
-
-        else -> {
-            throw IllegalStateException("Unknown user type: $type (id: $userId)")
-        }
+    } catch (_: NotFoundException) {
+        return userNotFoundError()
     }
 }
 
@@ -127,13 +131,13 @@ private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
         return badRequest("Modifying selections for non-student users")
     }
 
-    if (UsersService.getUserType(authenticatedUserId) == UserType.TEACHER) {
-        val subjectId = Student.getElectiveSelectionId(userId, electiveId)
-            ?: return badRequest("Student has not enrolled in the selected elective")
+    val subjectId = Student.getElectiveSelectionId(userId, electiveId)
+        ?: return badRequest("Student has not enrolled in the selected elective")
 
-        if (!Teacher.teachesSubject(authenticatedUserId, subjectId)) {
-            return teacherDoesNotTeachSubjectError()
-        }
+    if (UsersService.getUserType(authenticatedUserId) == UserType.TEACHER &&
+        !Teacher.teachesSubject(authenticatedUserId, subjectId)
+    ) {
+        return teacherDoesNotTeachSubjectError()
     }
 
     // This will never throw, because we already checked that the selection exists

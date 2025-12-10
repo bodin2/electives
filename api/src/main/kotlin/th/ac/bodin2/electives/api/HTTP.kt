@@ -14,7 +14,7 @@ fun Application.configureHTTP() {
     install(Resources)
 
     install(RequestBodyLimit) {
-        bodyLimit { 4 * 1024 * 1024L } // 4 MB
+        bodyLimit { 4 * 1024 * 1024L } // 4 MiB
     }
 
     install(CORS) {

@@ -77,7 +77,7 @@ data class Student(val id: Int, val user: User) {
 
             StudentElectives
                 .selectAll().where { StudentElectives.student eq studentId }
-                .map { Elective.wrapRow(it) to Subject.wrapRow(it) }
+                .map { Elective.findById(it[StudentElectives.elective])!! to Subject.findById(it[StudentElectives.subject])!! }
         }
 
         fun getElectiveSelectionId(studentId: Int, electiveId: Int): Int? = transaction {

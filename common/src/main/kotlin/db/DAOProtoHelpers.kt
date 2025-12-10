@@ -1,47 +1,37 @@
 package th.ac.bodin2.electives.db
 
 import com.google.protobuf.kotlin.toByteString
-import org.jetbrains.exposed.sql.transactions.transaction
-import th.ac.bodin2.electives.proto.api.SubjectTag
-import th.ac.bodin2.electives.proto.api.UserType
-import th.ac.bodin2.electives.proto.api.elective
-import th.ac.bodin2.electives.proto.api.subject
-import th.ac.bodin2.electives.proto.api.team
-import th.ac.bodin2.electives.proto.api.user
+import th.ac.bodin2.electives.proto.api.*
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 fun Student.toProto(): th.ac.bodin2.electives.proto.api.User {
     val student = this
 
-    return transaction {
-        user {
-            id = user.id.value
-            firstName = user.firstName
-            type = UserType.STUDENT
+    return user {
+        id = user.id.value
+        firstName = user.firstName
+        type = UserType.STUDENT
 
-            user.middleName?.let { middleName = it }
-            user.lastName?.let { lastName = it }
+        user.middleName?.let { middleName = it }
+        user.lastName?.let { lastName = it }
 
-            teams.addAll(student.teams.map { it.toProto() })
-        }
+        teams.addAll(student.teams.map { it.toProto() })
     }
 }
 
 fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
     val teacher = this
 
-    return transaction {
-        user {
-            id = user.id.value
-            firstName = user.firstName
-            type = UserType.TEACHER
+    return user {
+        id = user.id.value
+        firstName = user.firstName
+        type = UserType.TEACHER
 
-            user.middleName?.let { middleName = it }
-            user.lastName?.let { lastName = it }
+        user.middleName?.let { middleName = it }
+        user.lastName?.let { lastName = it }
 
-            teacher.avatar?.let { avatar = it.toByteString() }
-        }
+        teacher.avatar?.let { avatar = it.toByteString() }
     }
 }
 
@@ -51,52 +41,49 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
  * @param electiveId Optional elective ID to include enrolled count.
  * @param withDescription Whether to include the description field.
  */
-fun Subject.toProto(electiveId: Int? = null, withDescription: Boolean = true): th.ac.bodin2.electives.proto.api.Subject {
+fun Subject.toProto(
+    electiveId: Int? = null,
+    withDescription: Boolean = true
+): th.ac.bodin2.electives.proto.api.Subject {
     val subject = this
 
-    return transaction {
-        subject {
-            id = subject.id.value
-            name = subject.name
-            tag = SubjectTag.forNumber(subject.tag)
-            capacity = subject.capacity
+    return subject {
+        id = subject.id.value
+        name = subject.name
+        tag = SubjectTag.forNumber(subject.tag)
+        capacity = subject.capacity
 
-            subject.location?.let { location = it }
-            subject.code?.let { code = it }
+        subject.location?.let { location = it }
+        subject.code?.let { code = it }
 
-            if (withDescription) {
-                subject.description?.let { description = it }
-            }
-
-            team?.let { teamId = it.value }
-            electiveId?.let { enrolledCount = getEnrolledCount(it) }
+        if (withDescription) {
+            subject.description?.let { description = it }
         }
+
+        team?.let { teamId = it.value }
+        electiveId?.let { enrolledCount = getEnrolledCount(it) }
     }
 }
 
 fun Team.toProto(): th.ac.bodin2.electives.proto.api.Team {
     val team = this
 
-    return transaction {
-        team {
-            id = team.id.value
-            name = team.name
-        }
+    return team {
+        id = team.id.value
+        name = team.name
     }
 }
 
 fun Elective.toProto(): th.ac.bodin2.electives.proto.api.Elective {
     val elective = this
 
-    return transaction {
-        elective {
-            id = elective.id.value
-            name = elective.name
+    return elective {
+        id = elective.id.value
+        name = elective.name
 
-            elective.team?.let { teamId = it.id.value }
-            elective.startDate?.toUnixTimestamp()?.let { startDate = it }
-            elective.endDate?.toUnixTimestamp()?.let { endDate = it }
-        }
+        elective.team?.let { teamId = it.id.value }
+        elective.startDate?.toUnixTimestamp()?.let { startDate = it }
+        elective.endDate?.toUnixTimestamp()?.let { endDate = it }
     }
 }
 

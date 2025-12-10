@@ -4,6 +4,7 @@ import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.*
+import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.utils.notFound
 import th.ac.bodin2.electives.api.utils.respond
@@ -33,17 +34,20 @@ fun Application.registerElectivesRoutes() {
 }
 
 private suspend fun RoutingContext.handleGetElectives() {
-    val electives = Elective.all()
-
-    call.respond(listResponse {
-        this.electives.addAll(electives.map { it.toProto() })
+    call.respond(transaction {
+        listResponse {
+            electives.addAll(Elective.all().map { it.toProto() })
+        }
     })
 }
 
 private suspend fun RoutingContext.handleGetElective(electiveId: Int) {
-    val elective = Elective.findById(electiveId) ?: return electiveNotFoundError()
+    val electiveProto = transaction {
+        val elective = Elective.findById(electiveId) ?: return@transaction null
+        elective.toProto()
+    } ?: return electiveNotFoundError()
 
-    call.respond(elective.toProto())
+    call.respond(electiveProto)
 }
 
 private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
@@ -59,7 +63,7 @@ private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
 }
 
 private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, subjectId: Int) {
-    val subject = Subject.findById(subjectId) ?: return notFound("Subject not found")
+    val subject = transaction { Subject.findById(subjectId) } ?: return notFound("Subject not found")
     call.respond(subject.toProto(electiveId))
 }
 
@@ -72,9 +76,11 @@ private suspend fun RoutingContext.handleGetElectiveSubjectMembers(
         val teachers = Subject.getTeachers(subjectId)
         val students = if (withStudents) Subject.getStudents(subjectId, electiveId) else emptyList()
 
-        call.respond(listSubjectMembersResponse {
-            this.teachers.addAll(teachers.map { it.toProto() })
-            this.students.addAll(students.map { it.toProto() })
+        call.respond(transaction {
+            listSubjectMembersResponse {
+                this.teachers.addAll(teachers.map { it.toProto() })
+                this.students.addAll(students.map { it.toProto() })
+            }
         })
     } catch (_: NotFoundException) {
         return electiveNotFoundError()

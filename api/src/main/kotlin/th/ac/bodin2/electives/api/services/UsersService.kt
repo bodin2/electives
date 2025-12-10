@@ -115,6 +115,14 @@ object UsersService {
      * @throws IllegalArgumentException if the password is invalid.
      */
     fun createSession(id: Int, password: String, aud: String): String {
+        if (password.length > 4096) {
+            throw IllegalArgumentException("Password too long for user: $id")
+        }
+
+        if (aud.length > 256) {
+            throw IllegalArgumentException("Client name too long for user: $id")
+        }
+
         val user = transaction { Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull() }
             ?: throw NotFoundException("User does not exist: $id")
 
