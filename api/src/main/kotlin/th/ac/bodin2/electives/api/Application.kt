@@ -9,13 +9,15 @@ import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.utils.getEnv
 import th.ac.bodin2.electives.utils.isDev
+import th.ac.bodin2.electives.utils.isTest
 import th.ac.bodin2.electives.utils.loadDotEnv
 
 private val logger: Logger = LoggerFactory.getLogger("ElectivesAPI")
 
 fun main() {
-    // Required for PASETO support (loading keys)
-    Security.addProvider(BouncyCastleProvider())
+    if (isTest) {
+        logger.warn("Running in test mode!")
+    }
 
     if (isDev) {
         logger.warn("Running in development mode!")
@@ -38,10 +40,11 @@ fun main() {
 }
 
 fun Application.module() {
-    Database.init()
-    val path = getEnv("DB_PATH") ?: ""
-    if (path.isBlank()) logger.warn("DB_PATH not specified, using default path: ${Database.DEFAULT_PATH}")
-    Database.init(path.ifBlank { Database.DEFAULT_PATH })
+    if (!isTest) {
+        val path = getEnv("DB_PATH") ?: ""
+        if (path.isBlank()) logger.warn("DB_PATH not specified, using default path: ${Database.DEFAULT_PATH}")
+        Database.init(path.ifBlank { Database.DEFAULT_PATH })
+    }
 
     configureHTTP()
     configureSecurity()
@@ -51,8 +54,4 @@ fun Application.module() {
     registerUsersRoutes()
     registerMiscRoutes()
     registerNotificationsRoutes()
-
-    if (isDev) {
-        registerDevRoutes()
-    }
 }
