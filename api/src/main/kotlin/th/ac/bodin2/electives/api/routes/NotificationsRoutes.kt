@@ -6,6 +6,7 @@ import io.ktor.server.websocket.*
 import io.ktor.util.collections.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.api.services.SubjectSelectionUpdateListener
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
@@ -23,8 +24,8 @@ import kotlin.time.Duration.Companion.seconds
 val clients = ConcurrentSet<WebSocketServerSession>()
 
 // UserId -> Map<ElectiveId, List<SubjectId>>
-val clientSubscriptions = ConcurrentHashMap<Int, MutableMap<Int, List<Int>>>()
-val clientCleanups = ConcurrentHashMap<Int, () -> Unit>()
+val clientSubscriptions = ConcurrentHashMap<WebSocketServerSession, MutableMap<Int, List<Int>>>()
+val clientCleanups = ConcurrentHashMap<WebSocketServerSession, () -> Unit>()
 
 private const val MAX_SUBJECTS_SUBSCRIPTIONS_PER_CLIENT = 5
 private val BULK_UPDATE_INTERVAL = 5.seconds
@@ -43,43 +44,43 @@ fun Application.registerNotificationsRoutes() {
         setInterval(BULK_UPDATE_INTERVAL) {
             if (clients.isEmpty()) return@setInterval
 
-            val updates = Elective.getAllIds().map { electiveId ->
-                val enrolledCounts = Elective.getSubjectsEnrolledCounts(electiveId)
+            val updates = transaction {
+                Elective.getAllIds().map { electiveId ->
+                    val enrolledCounts = Elective.getSubjectsEnrolledCounts(electiveId)
 
-                bulkSubjectEnrollmentUpdate {
-                    this.electiveId = electiveId
-                    this.subjectEnrolledCounts.putAll(enrolledCounts)
+                    envelope {
+                        bulkSubjectEnrollmentUpdate = bulkSubjectEnrollmentUpdate {
+                            this.electiveId = electiveId
+                            this.subjectEnrolledCounts.putAll(enrolledCounts)
+                        }
+                    }
                 }
             }
 
             for (client in clients)
-                for (update in updates) client.send(envelope {
-                    bulkSubjectEnrollmentUpdate = update
-                })
+                for (update in updates) client.send(update)
         }
     }
 
     routing {
         authenticatedRoutes {
             webSocket("/notifications") {
-                authenticated { userId ->
-                    clients.add(this)
+                clients.add(this)
 
-                    try {
-                        for (frame in incoming) handleFrame(frame, userId)
-                    } finally {
-                        // Cleanup on disconnect
-                        clients.remove(this)
-                        clientSubscriptions.remove(userId)
-                        clientCleanups.remove(userId)?.invoke()
-                    }
+                try {
+                    for (frame in incoming) handleFrame(frame)
+                } finally {
+                    // Cleanup on disconnect
+                    clients.remove(this)
+                    clientSubscriptions.remove(this)
+                    clientCleanups.remove(this)?.invoke()
                 }
             }
         }
     }
 }
 
-private suspend fun WebSocketServerSession.handleFrame(frame: Frame, userId: Int) {
+private suspend fun WebSocketServerSession.handleFrame(frame: Frame) {
     if (frame !is Frame.Binary) return badFrame()
 
     val envelope = frame.parseOrNull<NotificationsService.Envelope>() ?: return badFrame()
@@ -98,7 +99,7 @@ private suspend fun WebSocketServerSession.handleFrame(frame: Frame, userId: Int
 
             subscriptions.forEach { (electiveId, subjectIds) ->
                 clientSubscriptions
-                    .getOrPut(userId) { mutableMapOf() }[electiveId] =
+                    .getOrPut(this) { mutableMapOf() }[electiveId] =
                     subjectIds.subjectIdsList
             }
 
@@ -106,7 +107,7 @@ private suspend fun WebSocketServerSession.handleFrame(frame: Frame, userId: Int
 
             // ? In the future, if we need more cleanups, simply wrap it in one big lambda
             // Send the immediate updates the client requested
-            clientCleanups[userId] = sendClientEnrollmentUpdates(userId)
+            clientCleanups[this] = sendClientEnrollmentUpdates()
         }
 
         // Server payloads
@@ -118,10 +119,15 @@ private suspend fun WebSocketServerSession.handleFrame(frame: Frame, userId: Int
     }
 }
 
-private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+suspend fun WebSocketSession.acknowledge(envelope: NotificationsService.Envelope) {
+    send(envelope {
+        messageId = envelope.messageId
+        acknowledged = acknowledged {}
+    })
+}
 
-private fun WebSocketServerSession.sendClientEnrollmentUpdates(userId: Int): () -> Unit {
-    val subscriptions = clientSubscriptions[userId]
+private fun WebSocketServerSession.sendClientEnrollmentUpdates(): () -> Unit {
+    val subscriptions = clientSubscriptions[this]
         ?: throw IllegalStateException("Client subscriptions $clientSubscriptions not found")
 
     val listener: SubjectSelectionUpdateListener = { enrolledCount ->
@@ -147,9 +153,4 @@ private fun WebSocketServerSession.sendClientEnrollmentUpdates(userId: Int): () 
     }
 }
 
-suspend fun WebSocketSession.acknowledge(envelope: NotificationsService.Envelope) {
-    send(envelope {
-        messageId = envelope.messageId
-        acknowledged = acknowledged {}
-    })
-}
+private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
