@@ -20,14 +20,21 @@ There are also other issues, such as students not being to view details of subje
 - [Protocol Buffers](https://protobuf.dev) provide a compact binary format for data exchange, making it efficient to send and receive data between the server and clients.
 - [SQLite](https://sqlite.org) allows us to manage data efficiently, ensuring that data is stored and retrieved quickly.  
   We are using [SQLite JDBC](https://github.com/xerial/sqlite-jdbc) with [JetBrains Exposed](https://www.jetbrains.com/exposed), which binds fully-typed database schemas and data-access-objects to a high-performance native SQLite3 binding.
-- WebSockets allow students and teachers to get up-to-date information without needing to refresh.  
-  For less frequent updates, polling is done via HTTP.
+- WebSockets allow students and teachers to get up-to-date information without needing to refresh.
 
 #### Frontend
 
 - Built with [SolidStart](https://start.solidjs.com), fully client-sided. We provide a small-sized, responsive, and interactive user interface for students to view and select subjects easier and faster.  
   Being fully client-sided also means the frontend can be fully cached through services like Cloudflare to prevent downtime from too many requests hitting the server at once!  
-  Serving a lot of content was one of the issues with the previous system, so we intend to serve the frontewitthrough Cloudflare instead, which is fast and reliable.
+  Serving content manually was one of the bottlenecks with the previous system, so we intend to serve the frontend through Cloudflare instead, which should fix slow loads on clients.
+
+## Security policy
+
+Please refer to [SECURITY.md](./SECURITY.md).
+
+## Contributing
+
+Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
