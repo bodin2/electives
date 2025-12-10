@@ -12,10 +12,20 @@ fun loadDotEnv() {
 
 fun getEnv(key: String): String? {
     val key = "$ENV_PREFIX$key"
-    if (key.isBlank()) throw IllegalArgumentException("Cannot getEnv with blank key")
+    if (key.isBlank()) throw IllegalArgumentException("Cannot get environment variable with blank key")
 
     return if (ENV_GET_FROM_SYSTEM) System.getenv(key) ?: System.getProperty(key)
     else System.getProperty(key)
+}
+
+fun requireEnv(key: String): String {
+    return getEnv(key) ?: throw IllegalStateException("Required environment variable '$key' is not set")
+}
+
+fun requireEnvNonBlank(key: String): String {
+    val value = requireEnv(key)
+    if (value.isBlank()) throw IllegalStateException("Required environment variable '$key' is blank")
+    return value
 }
 
 /**

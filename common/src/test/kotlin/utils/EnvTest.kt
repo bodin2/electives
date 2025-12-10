@@ -87,5 +87,20 @@ class EnvTest {
         val value = getEnv("KEY WITH SPACES")
         assertEquals("value", value)
     }
+
+    @Test
+    fun testGetUnsetEnvWithRequireEnv() {
+        assertFailsWith<IllegalStateException> {
+            requireEnv("UNSET_VAR")
+        }
+    }
+
+    @Test
+    fun testGetBlankEnvWithRequireEnvNonBlank() {
+        System.setProperty("BLANK_VAR", "")
+        assertFailsWith<IllegalStateException> {
+            requireEnvNonBlank("BLANK_VAR")
+        }
+    }
 }
 
