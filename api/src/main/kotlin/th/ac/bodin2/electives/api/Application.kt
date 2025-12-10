@@ -39,6 +39,9 @@ fun main() {
 
 fun Application.module() {
     Database.init()
+    val path = getEnv("DB_PATH") ?: ""
+    if (path.isBlank()) logger.warn("DB_PATH not specified, using default path: ${Database.DEFAULT_PATH}")
+    Database.init(path.ifBlank { Database.DEFAULT_PATH })
 
     configureHTTP()
     configureSecurity()

@@ -10,9 +10,11 @@ class PasetoTest {
     fun setupEach() {
         Security.addProvider(BouncyCastleProvider())
 
-        System.setProperty("PASETO_PRIVATE_KEY", "MC4CAQAwBQYDK2VwBCIEIAdX5xpM5fLhFERZW9ASIatBKBVC2yT8ieZKkWZy2H6Z")
-        System.setProperty("PASETO_PUBLIC_KEY", "MCowBQYDK2VwAyEAve+YNChVkaFQwynmkoR0K63Ep3Jtds7Ud//7aTg1Kec=")
-        System.setProperty("PASETO_ISSUER", "test-iss")
+        Paseto.init(
+            Paseto.loadPublicKey("MCowBQYDK2VwAyEAve+YNChVkaFQwynmkoR0K63Ep3Jtds7Ud//7aTg1Kec="),
+            Paseto.loadPrivateKey("MC4CAQAwBQYDK2VwBCIEIAdX5xpM5fLhFERZW9ASIatBKBVC2yT8ieZKkWZy2H6Z"),
+            "test-iss"
+        )
     }
 
     @Test

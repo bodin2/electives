@@ -6,9 +6,9 @@ import io.ktor.server.plugins.bodylimit.*
 import io.ktor.server.plugins.conditionalheaders.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.resources.*
-import th.ac.bodin2.electives.utils.getEnv
 import th.ac.bodin2.electives.utils.isDev
 import th.ac.bodin2.electives.utils.isTest
+import th.ac.bodin2.electives.utils.requireEnvNonBlank
 
 fun Application.configureHTTP() {
     install(Resources)
@@ -26,8 +26,7 @@ fun Application.configureHTTP() {
         if (isDev || isTest) {
             anyHost()
         } else {
-            val hosts = getEnv("CORS_HOSTS")
-            if (hosts.isNullOrBlank()) throw Exception("CORS_HOSTS is not set in production mode")
+            val hosts = requireEnvNonBlank("CORS_HOSTS")
 
             hosts.split(",").forEach { host ->
                 allowHost(host.trim(), schemes = listOf("https"))
