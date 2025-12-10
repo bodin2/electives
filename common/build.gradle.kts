@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
+    kotlin("plugin.serialization")
     id("com.google.protobuf") version "0.9.4"
 }
 
@@ -25,6 +26,8 @@ dependencies {
     // @TODO: Use the version without prebuilt binaries and include setup instructions
     implementation("de.mkammerer:argon2-jvm:2.12")
     api("org.bouncycastle:bcpkix-jdk18on:1.83")
+
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
 }
 
 tasks.processResources {

@@ -9,7 +9,7 @@ object Argon2 {
     private val argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id)
 
     // Default: 64MB
-    var MEMORY = 65536
+    var MEMORY = getEnv("ARGON2_MEMORY")?.toIntOrNull() ?: 65536
     var ITERATIONS = Argon2Helper.findIterations(argon2, 500, MEMORY, CORES)
 
     fun hash(password: CharArray): String {

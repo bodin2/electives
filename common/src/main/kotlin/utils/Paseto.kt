@@ -13,13 +13,13 @@ import java.security.spec.X509EncodedKeySpec
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME
-import java.util.Base64
+import java.util.*
 
 object Paseto {
-    private val privateKey = PrivateKey(loadPrivateKey(), Version.V4)
-    private val publicKey = PublicKey(loadPublicKey(), Version.V4)
+    private val privateKey by lazy { PrivateKey(loadPrivateKey(), Version.V4) }
+    private val publicKey by lazy { PublicKey(loadPublicKey(), Version.V4) }
 
-    val ISSUER = getEnv("PASETO_ISSUER") ?: "electives.bodin2.ac.th"
+    val ISSUER by lazy { getEnv("PASETO_ISSUER") ?: "electives.bodin2.ac.th" }
 
 
     fun sign(payload: PasetoClaims): String = Paseto.sign(privateKey, Json.encodeToString(payload))
@@ -52,8 +52,7 @@ object Paseto {
 
 
     private fun loadPrivateKey(): java.security.PrivateKey {
-        val base64 = getEnv("PASETO_PRIVATE_KEY")
-            ?: error("Environment variable PASETO_PRIVATE_KEY is not set")
+        val base64 = getEnv("PASETO_PRIVATE_KEY") ?: error("Environment variable PASETO_PRIVATE_KEY is not set")
 
         val keyBytes = Base64.getDecoder().decode(base64)
         val spec = PKCS8EncodedKeySpec(keyBytes)
@@ -62,8 +61,7 @@ object Paseto {
     }
 
     private fun loadPublicKey(): java.security.PublicKey {
-        val base64 = getEnv("PASETO_PUBLIC_KEY")
-            ?: error("Environment variable PASETO_PUBLIC_KEY is not set")
+        val base64 = getEnv("PASETO_PUBLIC_KEY") ?: error("Environment variable PASETO_PUBLIC_KEY is not set")
 
         val keyBytes = Base64.getDecoder().decode(base64)
         val spec = X509EncodedKeySpec(keyBytes)

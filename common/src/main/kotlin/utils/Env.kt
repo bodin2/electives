@@ -12,6 +12,7 @@ fun loadDotEnv() {
 
 fun getEnv(key: String): String? {
     val key = "$ENV_PREFIX$key"
+    if (key.isBlank()) throw IllegalArgumentException("Cannot getEnv with blank key")
 
     return if (ENV_GET_FROM_SYSTEM) System.getenv(key) ?: System.getProperty(key)
     else System.getProperty(key)
