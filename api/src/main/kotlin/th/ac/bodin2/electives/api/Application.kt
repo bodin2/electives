@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.routes.*
@@ -24,26 +25,32 @@ fun main() {
         loadDotEnv()
     }
 
-    embeddedServer(
-        CIO,
-        configure = {
-            connectionIdleTimeoutSeconds = 45
-            connector {
-                host = getEnv("HOST") ?: "0.0.0.0"
-                port = getEnv("PORT")?.toInt() ?: 8080
-            }
-        },
-        module = Application::module
-    ).start(wait = true)
+    if (isTest || isDev) {
+        logger.warn("Running in non-production mode! Security may be significantly reduced!")
+    }
 
-    logger.info("Shutting down!")
+    val server = embeddedServer(
+        CIO,
+        host = getEnv("HOST") ?: "0.0.0.0",
+        port = getEnv("PORT")?.toInt() ?: 8080,
+        module = Application::module
+    )
+
+    server.monitor.subscribe(ApplicationStopping) {
+        logger.info("Shutting down!")
+    }
+
+    server.start(wait = true)
 }
 
 fun Application.module() {
-    if (!isTest) {
+    if (!TransactionManager.isInitialized()) {
         val path = getEnv("DB_PATH") ?: ""
-        if (path.isBlank()) logger.warn("DB_PATH not specified, using default path: ${Database.DEFAULT_PATH}")
-        Database.init(path.ifBlank { Database.DEFAULT_PATH })
+        if (path.isBlank()) logger.warn("DB_PATH not specified, using default path: ${Database.DEFAULT_URL}")
+        Database.init(path.ifBlank { Database.DEFAULT_URL })
+    } else if (!isTest) {
+        // Already initialized in non-test environment?
+        logger.warn("Database already initialized? If you're running this in production, this is not normal.")
     }
 
     configureHTTP()

@@ -11,7 +11,10 @@ import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
-import th.ac.bodin2.electives.db.*
+import th.ac.bodin2.electives.db.Elective
+import th.ac.bodin2.electives.db.Student
+import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
 import th.ac.bodin2.electives.proto.api.UsersServiceKt.getStudentSelectionsResponse

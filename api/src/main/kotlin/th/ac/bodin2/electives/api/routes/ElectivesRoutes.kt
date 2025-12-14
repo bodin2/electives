@@ -2,9 +2,8 @@ package th.ac.bodin2.electives.api.routes
 
 import io.ktor.resources.*
 import io.ktor.server.application.*
-import io.ktor.server.resources.get
-import io.ktor.server.routing.RoutingContext
-import io.ktor.server.routing.routing
+import io.ktor.server.resources.*
+import io.ktor.server.routing.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException

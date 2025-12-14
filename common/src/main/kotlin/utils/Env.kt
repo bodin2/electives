@@ -38,5 +38,5 @@ var ENV_PREFIX = ""
  */
 var ENV_GET_FROM_SYSTEM = true
 
-val isTest = getEnv("APP_ENV") == "test"
-val isDev = getEnv("APP_ENV") == "development"
+val isTest by lazy { getEnv("APP_ENV") == "test" }
+val isDev by lazy { getEnv("APP_ENV") == "development" }
