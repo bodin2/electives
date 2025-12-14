@@ -6,8 +6,7 @@ class Argon2Test {
     @BeforeTest
     fun setupEach() {
         System.setProperty("APP_ENV", "test")
-        System.setProperty("ARGON2_MEMORY", "16384")
-        System.setProperty("ARGON2_AVG_TIME", "250")
+        Argon2.init(memory = 16384, iterations = 10)
     }
 
     @Test

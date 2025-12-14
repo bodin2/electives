@@ -24,10 +24,14 @@ fun Application.configureSecurity() {
             Paseto.loadPrivateKey(requireEnvNonBlank("PASETO_PRIVATE_KEY")),
             requireEnvNonBlank("PASETO_ISSUER")
         )
+    Argon2.init(
+        getEnv("ARGON2_MEMORY")?.toIntOrNull() ?: 65536,
+        Argon2.findIterations(
+            getEnv("ARGON2_AVG_TIME")?.toLongOrNull() ?: 500.milliseconds.inWholeMilliseconds
+        )
+    )
     }
 
-    Argon2.MEMORY = getEnv("ARGON2_MEMORY")?.toIntOrNull() ?: 65536
-    Argon2.ITERATIONS = Argon2.findIterations(getEnv("ARGON2_AVG_TIME")?.toLongOrNull() ?: 500)
 
     install(Authentication) {
         bearer(USER_AUTHENTICATION) {
