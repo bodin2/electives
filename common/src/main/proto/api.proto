@@ -7,7 +7,7 @@ option java_package = "th.ac.bodin2.electives.proto.api";
 
 message AuthService {
   message AuthenticateRequest {
-    fixed32 id = 1;
+    uint32 id = 1;
     string password = 2;
     string client_name = 3;
   }
@@ -108,9 +108,9 @@ message Elective {
   uint32 id = 1;
   string name = 2;
   // Unix timestamp representing the start and end dates of the selection period
-  optional fixed64 start_date = 3;
+  optional uint64 start_date = 3;
   // Unix timestamp representing the end date of the selection period
-  optional fixed64 end_date = 4;
+  optional uint64 end_date = 4;
   uint32 team_id = 5;
 }
 
