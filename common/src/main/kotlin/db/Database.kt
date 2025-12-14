@@ -6,25 +6,28 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.db.models.*
 
 object Database {
-    const val DEFAULT_PATH = "data.db"
+    const val DEFAULT_URL = "jdbc:sqlite:data.db"
+    const val DEFAULT_DRIVER = "org.sqlite.JDBC"
 
-    fun init(path: String = DEFAULT_PATH) {
-        Database.connect("jdbc:sqlite:$path", driver = "org.sqlite.JDBC")
+    fun init(url: String = DEFAULT_URL, driver: String = DEFAULT_DRIVER): Database {
+        val db = Database.connect(url, driver)
 
         // Create tables if they do not exist
-        transaction {
-            SchemaUtils.create(
-                Electives,
-                ElectiveSubjects,
-                StudentElectives,
-                Students,
-                StudentTeams,
-                Subjects,
-                Teachers,
-                TeacherSubjects,
-                Teams,
-                Users,
-            )
-        }
+        transaction { SchemaUtils.create(*tables.toTypedArray()) }
+
+        return db
     }
+
+    val tables = listOf(
+        Electives,
+        ElectiveSubjects,
+        StudentElectives,
+        Students,
+        StudentTeams,
+        Subjects,
+        Teachers,
+        TeacherSubjects,
+        Teams,
+        Users,
+    )
 }
