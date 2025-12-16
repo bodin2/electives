@@ -9,6 +9,7 @@ import io.ktor.server.routing.routing
 import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.services.NotificationsService
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.*
@@ -163,6 +164,11 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
             }
 
             Student.setElectiveSelection(student, elective, subject)
+            NotificationsService.notifySubjectSelectionUpdate(
+                electiveId,
+                req.subjectId,
+                Subject.getEnrolledCount(subject, elective)
+            )
 
             SelectionRequestResult.SUCCESS
         } catch (e: NotFoundException) {
@@ -212,13 +218,23 @@ private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
                     return@transaction SelectionRequestResult.TEACHER_DOES_NOT_TEACH_SUBJECT
             }
 
+            val selection = Student.getElectiveSelectionId(student, elective)
+                ?: return@transaction SelectionRequestResult.NOT_ENROLLED
+
             Student.removeElectiveSelection(student, elective)
+
+            NotificationsService.notifySubjectSelectionUpdate(
+                electiveId,
+                selection.value,
+                Subject.getEnrolledCount(selection, elective)
+            )
 
             SelectionRequestResult.SUCCESS
         } catch (e: NotFoundException) {
             return@transaction when (e.entity) {
                 NotFoundEntity.STUDENT -> SelectionRequestResult.NOT_STUDENT
-                NotFoundEntity.ELECTIVE_SELECTION -> SelectionRequestResult.NOT_ENROLLED
+                // Should never throw, we already try to get the selection above
+//                NotFoundEntity.ELECTIVE_SELECTION -> SelectionRequestResult.NOT_ENROLLED
 
                 else -> throw e
             }
