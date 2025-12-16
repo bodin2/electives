@@ -71,6 +71,7 @@ class Student(val reference: Reference, val user: User) {
             return Student(Reference(id), user)
         }
 
+        fun hasTeam(student: Reference, teamId: EntityID<Int>) = hasTeam(student, teamId.value)
         fun hasTeam(student: Reference, teamId: Int): Boolean {
             return StudentTeams
                 .selectAll().where { (StudentTeams.student eq student.id) and (StudentTeams.team eq teamId) }
@@ -94,13 +95,12 @@ class Student(val reference: Reference, val user: User) {
                 }
         }
 
-        fun getElectiveSelectionId(student: Reference, elective: Elective.Reference): Int? {
+        fun getElectiveSelectionId(student: Reference, elective: Elective.Reference): EntityID<Int>? {
             return StudentElectives
                 .selectAll()
                 .where { (StudentElectives.student eq student.id) and (StudentElectives.elective eq elective.id) }
                 .singleOrNull()
                 ?.get(StudentElectives.subject)
-                ?.value
         }
 
         fun setElectiveSelection(student: Reference, elective: Elective.Reference, subject: Subject.Reference) {
@@ -231,6 +231,7 @@ class Teacher(val reference: Reference, val user: User, val avatar: ByteArray?) 
                 .map { Subject.wrapRow(it) }
         }
 
+        fun teachesSubject(teacher: Reference, subjectId: EntityID<Int>) = teachesSubject(teacher, subjectId.value)
         fun teachesSubject(teacher: Reference, subjectId: Int): Boolean {
             return TeacherSubjects
                 .selectAll()
@@ -276,18 +277,18 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
     /**
      * Gets the team ID for the specified elective.
      */
-    fun getTeamId(elective: Elective.Reference): Int? {
+    fun getTeamId(elective: Elective.Reference): EntityID<Int>? {
         return Electives
             .select(Electives.team)
             .where { Electives.id eq elective.id }
             .singleOrNull()
-            ?.get(Electives.team)?.value
+            ?.get(Electives.team)
     }
 
-    fun getSubjectIds(elective: Elective.Reference): List<Int> {
+    fun getSubjectIds(elective: Elective.Reference): List<EntityID<Int>> {
         return ElectiveSubjects
             .selectAll().where { ElectiveSubjects.elective eq elective.id }
-            .map { it[ElectiveSubjects.subject].value }
+            .map { it[ElectiveSubjects.subject] }
     }
 
     /**
@@ -305,12 +306,12 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
      * @return Map<SubjectId, EnrolledCount>
      */
     fun getSubjectsEnrolledCounts(elective: Elective.Reference): Map<Int, Int> =
-        getSubjectIds(elective).associateWith { subjectId ->
+        getSubjectIds(elective).associateBy({ it.value }, { subjectId ->
             StudentElectives
                 .selectAll().where { StudentElectives.subject eq subjectId }
                 .count()
                 .toInt()
-        }
+        })
 }
 
 class Elective(id: EntityID<Int>) : Entity<Int>(id) {
@@ -342,11 +343,12 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
     /**
      * Gets the team ID for the specified subject.
      */
-    fun getTeamId(subject: Subject.Reference): Int? {
+    fun getTeamId(subject: Subject.Reference): EntityID<Int>? {
         return Subjects
             .select(Subjects.team)
             .where { Subjects.id eq subject.id }
-            .single()[Subjects.team]?.value
+            .singleOrNull()
+            ?.get(Subjects.team)
     }
 
     fun getTeamId(subjectId: EntityID<Int>) = getTeamId(Subject.Reference(subjectId.value))
