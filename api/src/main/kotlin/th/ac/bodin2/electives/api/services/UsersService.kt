@@ -22,8 +22,6 @@ import kotlin.time.Duration.Companion.minutes
 
 private val logger = LoggerFactory.getLogger(UsersService::class.java)
 
-typealias SubjectSelectionUpdateListener = (enrolledCount: Int) -> Unit
-
 object UsersService {
     private const val SESSION_DURATION_DAYS = 1L
 
@@ -31,25 +29,6 @@ object UsersService {
     private val userTypeCache = InMemoryKache<Int, UserType>(maxSize = 4 * 1024 * 1024) {
         strategy = KacheStrategy.LRU
         expireAfterWriteDuration = 10.minutes
-    }
-
-
-    private val subjectSelectionSubscriptions =
-        mutableMapOf<Int, MutableMap<Int, MutableList<SubjectSelectionUpdateListener>>>()
-
-    /**
-     * Subscribes to elective selection updates for the given elective ID and subject ID.
-     *
-     * @param electiveId The ID of the elective.
-     */
-    fun subscribeToSubjectSelections(electiveId: Int, subjectId: Int, listener: SubjectSelectionUpdateListener) {
-        val subjectSubscriptions = subjectSelectionSubscriptions.getOrPut(electiveId) { mutableMapOf() }
-        val listeners = subjectSubscriptions.getOrPut(subjectId) { mutableListOf() }
-        listeners.add(listener)
-    }
-
-    fun unsubscribeFromSubjectSelections(electiveId: Int, subjectId: Int, listener: SubjectSelectionUpdateListener) {
-        subjectSelectionSubscriptions[electiveId]?.get(subjectId)?.remove(listener)
     }
 
     /**

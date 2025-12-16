@@ -27,8 +27,11 @@ import kotlin.time.Duration.Companion.seconds
 
 private val bulkUpdateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+// Bulk updates are always sent on connection, then in an interval after.
 // Map<ElectiveId, Envelope (latest)>
 private val bulkUpdates = MutableStateFlow<Map<Int, NotificationsService.Envelope>>(emptyMap())
+
+typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
 object NotificationsService {
     private val logger = LoggerFactory.getLogger(NotificationsService::class.java)
@@ -41,6 +44,22 @@ object NotificationsService {
     private val BULK_UPDATE_INTERVAL = 5.seconds
 
     private val updateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private val subjectSelectionSubscriptions =
+        mutableMapOf<Int, MutableMap<Int, MutableList<SubjectSelectionUpdateListener>>>()
+
+    fun notifySubjectSelectionUpdate(
+        electiveId: Int,
+        subjectId: Int,
+        enrolledCount: Int,
+    ) {
+        val electiveSubscriptions = subjectSelectionSubscriptions[electiveId] ?: return
+        val subjectListeners = electiveSubscriptions[subjectId] ?: return
+
+        for (listener in subjectListeners) {
+            listener(electiveId, subjectId, enrolledCount)
+        }
+    }
 
     fun startBulkUpdateLoop() = bulkUpdateScope.launch {
         setInterval(BULK_UPDATE_INTERVAL) {
@@ -120,9 +139,15 @@ object NotificationsService {
                 logger.info("Client subscriptions updated, user: $userId")
 
                 // Cleanup previous enrollment updates
-                for (cleanup in cleanups) runCatching { cleanup() }.onFailure { logger.error("Error during elective enrollment subscription update:", it) }
+                for (cleanup in cleanups) runCatching { cleanup() }.onFailure {
+                    logger.error(
+                        "Error during elective enrollment subscription update:",
+                        it
+                    )
+                }
                 cleanups.clear()
-                // Send the immediate updates the client requested
+
+                // Listen for enrollment updates the client requested
                 cleanups += sendEnrollmentUpdates()
             }
 
@@ -139,7 +164,7 @@ object NotificationsService {
     }
 
     private fun ClientConnection.sendEnrollmentUpdates(): () -> Unit {
-        val listener: SubjectSelectionUpdateListener = { enrolledCount ->
+        val listener: SubjectSelectionUpdateListener = { electiveId, subjectId, enrolledCount ->
             trySend(envelope {
                 subjectEnrollmentUpdate = subjectEnrollmentUpdate {
                     this.electiveId = electiveId
@@ -149,14 +174,20 @@ object NotificationsService {
             })
         }
 
-        for ((electiveId, subjectIds) in subscriptions)
-            for (subjectId in subjectIds)
-                UsersService.subscribeToSubjectSelections(electiveId, subjectId, listener)
+        for ((electiveId, subjectIds) in subscriptions) {
+            val electiveSubscriptions = subjectSelectionSubscriptions.getOrPut(electiveId) { mutableMapOf() }
+            for (subjectId in subjectIds) {
+                val listeners = electiveSubscriptions.getOrPut(subjectId) { mutableListOf() }
+                listeners.add(listener)
+            }
+        }
 
         return {
-            for ((electiveId, subjectIds) in subscriptions)
+            for ((electiveId, subjectIds) in subscriptions) {
+                val electiveSubscriptions = subjectSelectionSubscriptions[electiveId]
                 for (subjectId in subjectIds)
-                    UsersService.unsubscribeFromSubjectSelections(electiveId, subjectId, listener)
+                    electiveSubscriptions?.get(subjectId)?.remove(listener)
+            }
         }
     }
 
@@ -216,9 +247,10 @@ class ClientConnection(
                 }
             }
 
-            for (cleanup in cleanups) runCatching { cleanup() }.onFailure { logger.error("Error during ClientConnection close:", it) }
+            for (cleanup in cleanups) runCatching { cleanup() }.onFailure {
+                logger.error("Error during ClientConnection close:", it)
+            }
         }
-
 
         scope.launch {
             for (msg in outgoing) session.send(msg)
