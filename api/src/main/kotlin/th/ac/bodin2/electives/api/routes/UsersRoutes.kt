@@ -15,6 +15,7 @@ import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
 import th.ac.bodin2.electives.proto.api.UsersServiceKt.getStudentSelectionsResponse
+import java.sql.Connection.TRANSACTION_SERIALIZABLE
 
 fun Application.registerUsersRoutes() {
     routing {
@@ -128,13 +129,19 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
 ) {
     val req = call.parseOrNull<SetStudentElectiveSelectionRequest>() ?: return badRequest()
 
-    val result: SelectionRequestResult = transaction {
-        if (!Elective.exists(electiveId)) return@transaction SelectionRequestResult.ELECTIVE_NOT_FOUND
+    // We're currently using SQLite, but in case if we ever switch, adding this isolation will be required
+    // We want to prevent overbooking: Thread A reads (29/30) -> Thread B reads (29/30) -> A inserts (30/30) -> B inserts (31/30)
+    // SERIALIZABLE will ensure that if two transactions try to do this at the same time, one of them will be fail and be retried by Exposed
+    val result: SelectionRequestResult = transaction(TRANSACTION_SERIALIZABLE) {
+        maxAttempts = 3
 
         try {
             val student = Student.require(userId)
             val elective = Elective.require(electiveId)
             val subject = Subject.require(req.subjectId)
+
+            // Acquire lock (will block instances of this transaction running in parallel)
+            exec("BEGIN IMMEDIATE")
 
             when (Student.canEnrollInSubject(student, elective, subject)) {
                 Student.CanEnrollStatus.CAN_ENROLL -> {}
