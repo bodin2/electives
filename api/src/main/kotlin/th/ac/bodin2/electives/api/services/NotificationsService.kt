@@ -69,17 +69,14 @@ object NotificationsService {
             logger.info("Sending bulk enrollment updates...")
 
             val updates = transaction {
-                Elective.getAllIds().map { electiveId ->
-                    val enrolledCounts =
-                        Elective.getSubjectsEnrolledCounts(electiveId)
+                Elective.allReferences().map { elective ->
+                    val enrolledCounts = Elective.getSubjectsEnrolledCounts(elective)
 
                     envelope {
-                        bulkSubjectEnrollmentUpdate =
-                            bulkSubjectEnrollmentUpdate {
-                                this.electiveId = electiveId
-                                this.subjectEnrolledCounts
-                                    .putAll(enrolledCounts)
-                            }
+                        bulkSubjectEnrollmentUpdate = bulkSubjectEnrollmentUpdate {
+                            electiveId = elective.id
+                            subjectEnrolledCounts.putAll(enrolledCounts)
+                        }
                     }
                 }
             }

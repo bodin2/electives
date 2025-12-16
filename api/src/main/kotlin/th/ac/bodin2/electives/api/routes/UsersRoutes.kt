@@ -11,10 +11,7 @@ import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
-import th.ac.bodin2.electives.db.Elective
-import th.ac.bodin2.electives.db.Student
-import th.ac.bodin2.electives.db.Teacher
-import th.ac.bodin2.electives.db.toProto
+import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
 import th.ac.bodin2.electives.proto.api.UsersServiceKt.getStudentSelectionsResponse
@@ -135,7 +132,11 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
         if (!Elective.exists(electiveId)) return@transaction SelectionRequestResult.ELECTIVE_NOT_FOUND
 
         try {
-            when (Student.canEnrollInSubject(userId, electiveId, req.subjectId)) {
+            val student = Student.require(userId)
+            val elective = Elective.require(electiveId)
+            val subject = Subject.require(req.subjectId)
+
+            when (Student.canEnrollInSubject(student, elective, subject)) {
                 Student.CanEnrollStatus.CAN_ENROLL -> {}
                 Student.CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE -> return@transaction SelectionRequestResult.SUBJECT_NOT_IN_ELECTIVE
 
@@ -146,6 +147,17 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
 
                 Student.CanEnrollStatus.SUBJECT_FULL -> return@transaction SelectionRequestResult.SUBJECT_FULL
             }
+
+            if (UsersService.getUserType(authenticatedUserId) == UserType.TEACHER) {
+                val teacher = Teacher.require(authenticatedUserId)
+                if (!Teacher.teachesSubject(teacher, req.subjectId)) {
+                    return@transaction SelectionRequestResult.TEACHER_DOES_NOT_TEACH_SUBJECT
+                }
+            }
+
+            Student.setElectiveSelection(student, elective, subject)
+
+            SelectionRequestResult.SUCCESS
         } catch (e: NotFoundException) {
             return@transaction when (e.entity) {
                 NotFoundEntity.STUDENT -> SelectionRequestResult.NOT_STUDENT
@@ -155,16 +167,6 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
                 else -> throw e
             }
         }
-
-        if (
-            UsersService.getUserType(authenticatedUserId) == UserType.TEACHER &&
-            !Teacher.teachesSubject(authenticatedUserId, req.subjectId)
-        ) {
-            return@transaction SelectionRequestResult.TEACHER_DOES_NOT_TEACH_SUBJECT
-        }
-
-        Student.setElectiveSelection(userId, electiveId, req.subjectId)
-        SelectionRequestResult.SUCCESS
     }
 
     when (result) {
@@ -189,16 +191,22 @@ private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
     authenticatedUserId: Int
 ) {
     val result: SelectionRequestResult = transaction {
-        if (UsersService.getUserType(authenticatedUserId) == UserType.TEACHER) {
-            val subjectId = Student.getElectiveSelectionId(userId, electiveId)
-                ?: return@transaction SelectionRequestResult.NOT_ENROLLED
-
-            if (!Teacher.teachesSubject(authenticatedUserId, subjectId))
-                return@transaction SelectionRequestResult.TEACHER_DOES_NOT_TEACH_SUBJECT
-        }
-
         try {
-            Student.removeElectiveSelection(userId, electiveId)
+            val student = Student.require(userId)
+            val elective = Elective.require(electiveId)
+
+            if (UsersService.getUserType(authenticatedUserId) == UserType.TEACHER) {
+                val subjectId = Student.getElectiveSelectionId(student, elective)
+                    ?: return@transaction SelectionRequestResult.NOT_ENROLLED
+
+                val teacher = Teacher.require(authenticatedUserId)
+
+                if (!Teacher.teachesSubject(teacher, subjectId))
+                    return@transaction SelectionRequestResult.TEACHER_DOES_NOT_TEACH_SUBJECT
+            }
+
+            Student.removeElectiveSelection(student, elective)
+
             SelectionRequestResult.SUCCESS
         } catch (e: NotFoundException) {
             return@transaction when (e.entity) {

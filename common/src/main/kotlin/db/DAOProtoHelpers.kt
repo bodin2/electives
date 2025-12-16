@@ -61,7 +61,7 @@ fun Subject.toProto(
         }
 
         team?.let { teamId = it.value }
-        electiveId?.let { enrolledCount = getEnrolledCount(it) }
+        electiveId?.let { enrolledCount = getEnrolledCount(Elective.require(it)) }
     }
 }
 

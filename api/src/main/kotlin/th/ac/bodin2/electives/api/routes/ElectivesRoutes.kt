@@ -69,12 +69,17 @@ private suspend fun RoutingContext.handleGetElective(electiveId: Int) {
 private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
     try {
         val response = transaction {
-            val subjects = Elective.getSubjects(electiveId)
+            try {
+                val elective = Elective.require(electiveId)
+                val subjects = Elective.getSubjects(elective)
 
-            listSubjectsResponse {
-                this.subjects.addAll(subjects.map { it.toProto(withDescription = false) })
+                listSubjectsResponse {
+                    this.subjects.addAll(subjects.map { it.toProto(withDescription = false) })
+                }
+            } catch (_: NotFoundException) {
+                return@transaction null
             }
-        }
+        } ?: return electiveNotFoundError()
 
         call.respond(response)
     } catch (_: NotFoundException) {
@@ -97,12 +102,12 @@ private suspend fun RoutingContext.handleGetElectiveSubjectMembers(
     withStudents: Boolean,
 ) {
     val result = transaction {
-        if (!Elective.exists(electiveId))
-            return@transaction GetElectiveSubjectMembersResult.ElectiveNotFound
 
         try {
-            val teachers = Subject.getTeachers(subjectId)
-            val students = if (withStudents) Subject.getStudents(subjectId, electiveId) else emptyList()
+            val elective = Elective.require(electiveId)
+            val subject = Subject.require(subjectId)
+            val teachers = Subject.getTeachers(subject)
+            val students = if (withStudents) Subject.getStudents(subject, elective) else emptyList()
 
             GetElectiveSubjectMembersResult.Success(listSubjectMembersResponse {
                 this.teachers.addAll(teachers.map { it.toProto() })
@@ -112,6 +117,7 @@ private suspend fun RoutingContext.handleGetElectiveSubjectMembers(
         } catch (e: NotFoundException) {
             return@transaction when (e.entity) {
                 NotFoundEntity.SUBJECT -> GetElectiveSubjectMembersResult.SubjectNotFound
+                NotFoundEntity.ELECTIVE -> GetElectiveSubjectMembersResult.ElectiveNotFound
                 else -> throw e
             }
         } catch (_: Subject.NotPartOfElectiveException) {
