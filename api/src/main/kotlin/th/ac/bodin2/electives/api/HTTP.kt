@@ -5,12 +5,10 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.bodylimit.*
 import io.ktor.server.plugins.conditionalheaders.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.request.*
 import io.ktor.server.resources.*
-import th.ac.bodin2.electives.utils.KiB
-import th.ac.bodin2.electives.utils.isDev
-import th.ac.bodin2.electives.utils.isTest
-import th.ac.bodin2.electives.utils.requireEnvNonBlank
+import th.ac.bodin2.electives.utils.*
 
 fun Application.configureHTTP() {
     install(Resources)
@@ -47,6 +45,10 @@ fun Application.configureHTTP() {
 
     install(ConditionalHeaders)
 
-    // install(ForwardedHeaders) // @TODO: WARNING: for security, do not include this if not behind a reverse proxy
-    // install(XForwardedHeaders) // @TODO: WARNING: for security, do not include this if not behind a reverse proxy
+    if (!getEnv("IS_BEHIND_PROXY").isNullOrBlank()) {
+         logger.info("IS_BEHIND_PROXY is set, respecting forwarded headers. This may be dangerous.")
+
+         install(ForwardedHeaders)
+         install(XForwardedHeaders)
+    }
 }
