@@ -25,6 +25,7 @@ import th.ac.bodin2.electives.utils.isTest
 import th.ac.bodin2.electives.utils.setInterval
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 private val bulkUpdateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -42,11 +43,10 @@ object NotificationsService {
     private val logger = LoggerFactory.getLogger(NotificationsService::class.java)
     private val connections = ConcurrentHashMap<Int, ClientConnection>()
 
-    // @TODO: Load from config
-    private const val MAX_SUBJECTS_SUBSCRIPTIONS_PER_CLIENT = 5
-
-    // @TODO: Load from config
-    private val BULK_UPDATE_INTERVAL = 5.seconds
+    private val MAX_SUBJECTS_SUBSCRIPTIONS_PER_CLIENT =
+        getEnv("NOTIFICATIONS_UPDATE_MAX_SUBSCRIPTIONS_PER_CLIENT")?.toIntOrNull() ?: 5
+    private val BULK_UPDATE_INTERVAL =
+        getEnv("NOTIFICATIONS_BULK_UPDATE_INTERVAL")?.toIntOrNull()?.milliseconds ?: 5.seconds
 
     private val updateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
