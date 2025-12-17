@@ -40,7 +40,7 @@ private fun shouldSkipBulkUpdatesDuringTest() =
 
 object NotificationsService {
     private val logger = LoggerFactory.getLogger(NotificationsService::class.java)
-    private val connectionCount = AtomicInteger(0)
+    private val connections = ConcurrentHashMap<Int, ClientConnection>()
 
     // @TODO: Load from config
     private const val MAX_SUBJECTS_SUBSCRIPTIONS_PER_CLIENT = 5
@@ -70,8 +70,8 @@ object NotificationsService {
         logger.info("Starting bulk enrollment update loop with interval: ${BULK_UPDATE_INTERVAL.inWholeMilliseconds}ms")
 
         setInterval(BULK_UPDATE_INTERVAL) {
-            if (connectionCount.get() == 0) return@setInterval
             logger.debug("Bulk enrollment update loop tick, active connections: ${connections.size}")
+            if (connections.isEmpty()) return@setInterval
 
             if (shouldSkipBulkUpdatesDuringTest()) {
                 logger.debug("Skipping bulk enrollment updates during test environment")
@@ -105,6 +105,11 @@ object NotificationsService {
     suspend fun WebSocketServerSession.handleConnection(userId: Int) {
         logger.info("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
+        connections.get(userId)?.let {
+            logger.info("Existing connection found for user: $userId, closing previous connection")
+            it.close()
+        }
+
         val connection = ClientConnection(
             userId = userId,
             session = this,
@@ -113,13 +118,13 @@ object NotificationsService {
             parentScope = updateScope,
         )
 
-        connectionCount.incrementAndGet()
+        connections[userId] = connection
 
         try {
             for (frame in incoming) connection.handleFrame(frame)
         } finally {
             connection.close()
-            connectionCount.decrementAndGet()
+            connections.remove(userId)
         }
     }
 
