@@ -13,7 +13,7 @@ import th.ac.bodin2.electives.utils.isDev
 import th.ac.bodin2.electives.utils.isTest
 import th.ac.bodin2.electives.utils.loadDotEnv
 
-private val logger: Logger = LoggerFactory.getLogger("ElectivesAPI")
+internal val logger: Logger = LoggerFactory.getLogger("ElectivesAPI")
 
 fun main() {
     if (isTest) {
@@ -46,8 +46,16 @@ fun main() {
 fun Application.module() {
     if (!TransactionManager.isInitialized()) {
         val path = getEnv("DB_PATH") ?: ""
-        if (path.isBlank()) logger.warn("DB_PATH not specified, using default path: ${Database.DEFAULT_URL}")
-        Database.init(path.ifBlank { Database.DEFAULT_URL })
+        val defaultPath = "data.db"
+
+        Database.init(
+            "jdbc:sqlite:${
+                path.ifBlank {
+                    logger.warn("DB_PATH not specified, using default path: $defaultPath")
+                    defaultPath
+                }
+            }", "org.sqlite.JDBC"
+        )
     } else if (!isTest) {
         // Already initialized in non-test environment?
         logger.warn("Database already initialized? If you're running this in production, this is not normal.")

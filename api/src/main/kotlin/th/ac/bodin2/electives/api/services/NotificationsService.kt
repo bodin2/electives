@@ -20,6 +20,8 @@ import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.acknowledged
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.bulkSubjectEnrollmentUpdate
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.envelope
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
+import th.ac.bodin2.electives.utils.getEnv
+import th.ac.bodin2.electives.utils.isTest
 import th.ac.bodin2.electives.utils.setInterval
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -32,6 +34,9 @@ private val bulkUpdateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 private val bulkUpdates = MutableStateFlow<Map<Int, NotificationsService.Envelope>>(emptyMap())
 
 typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
+
+private fun shouldSkipBulkUpdatesDuringTest() =
+    isTest && getEnv("APP_TEST_NOTIFICATIONS_SERVICE_SEND_BULK_UPDATES").isNullOrBlank()
 
 object NotificationsService {
     private val logger = LoggerFactory.getLogger(NotificationsService::class.java)
@@ -62,8 +67,16 @@ object NotificationsService {
     }
 
     fun startBulkUpdateLoop() = bulkUpdateScope.launch {
+        logger.info("Starting bulk enrollment update loop with interval: ${BULK_UPDATE_INTERVAL.inWholeMilliseconds}ms")
+
         setInterval(BULK_UPDATE_INTERVAL) {
             if (connectionCount.get() == 0) return@setInterval
+            logger.debug("Bulk enrollment update loop tick, active connections: ${connections.size}")
+
+            if (shouldSkipBulkUpdatesDuringTest()) {
+                logger.debug("Skipping bulk enrollment updates during test environment")
+                return@setInterval
+            }
 
             val startMs = System.currentTimeMillis()
             logger.info("Sending bulk enrollment updates...")
@@ -257,6 +270,11 @@ class ClientConnection(
             var last: Map<Int, NotificationsService.Envelope> = emptyMap()
 
             bulkUpdates.collect { current ->
+                if (shouldSkipBulkUpdatesDuringTest()) {
+                    logger.warn("Skipping sending bulk updates during test environment")
+                    return@collect
+                }
+
                 // ? This is generally fine for small numbers of electives.
                 // ? If this becomes a bottleneck, move to per‑elective StateFlow.
                 for ((id, update) in current)

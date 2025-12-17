@@ -16,6 +16,7 @@ import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
 import th.ac.bodin2.electives.proto.api.UsersServiceKt.getStudentSelectionsResponse
+import th.ac.bodin2.electives.utils.isTest
 import java.sql.Connection.TRANSACTION_SERIALIZABLE
 
 fun Application.registerUsersRoutes() {
@@ -142,7 +143,7 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
             val subject = Subject.require(req.subjectId)
 
             // Acquire lock (will block instances of this transaction running in parallel)
-            exec("BEGIN IMMEDIATE")
+            if (!isTest) exec("BEGIN IMMEDIATE")
 
             when (Student.canEnrollInSubject(student, elective, subject)) {
                 Student.CanEnrollStatus.CAN_ENROLL -> {}

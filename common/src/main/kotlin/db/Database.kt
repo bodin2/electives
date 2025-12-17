@@ -6,10 +6,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.db.models.*
 
 object Database {
-    const val DEFAULT_URL = "jdbc:sqlite:data.db"
-    const val DEFAULT_DRIVER = "org.sqlite.JDBC"
-
-    fun init(url: String = DEFAULT_URL, driver: String = DEFAULT_DRIVER): Database {
+    fun init(url: String, driver: String): Database {
         val db = Database.connect(url, driver)
 
         // Create tables if they do not exist

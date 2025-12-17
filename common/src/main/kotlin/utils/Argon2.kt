@@ -18,9 +18,9 @@ object Argon2 {
     const val DEFAULT_MEMORY = 65536
     val DEFAULT_TIME = 500.milliseconds
 
-    fun init(memory: Int = DEFAULT_MEMORY, iterations: Int = findIterations(DEFAULT_TIME.inWholeMilliseconds)) {
+    fun init(memory: Int = DEFAULT_MEMORY, iterations: Int?) {
         MEMORY = memory
-        ITERATIONS = iterations
+        ITERATIONS = iterations ?: findIterations(DEFAULT_TIME.inWholeMilliseconds)
     }
 
     fun init(memory: Int = DEFAULT_MEMORY, maxTime: Duration = DEFAULT_TIME) {

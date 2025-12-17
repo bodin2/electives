@@ -24,9 +24,7 @@ fun Application.configureSecurity() {
 
         Argon2.init(
             getEnv("ARGON2_MEMORY")?.toIntOrNull() ?: 65536,
-            Argon2.findIterations(
-                getEnv("ARGON2_AVG_TIME")?.toLongOrNull() ?: 500.milliseconds.inWholeMilliseconds
-            )
+            getEnv("ARGON2_AVG_TIME")?.toIntOrNull()?.milliseconds ?: 500.milliseconds
         )
     }
 
