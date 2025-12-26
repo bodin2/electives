@@ -3,10 +3,12 @@ package th.ac.bodin2.electives.api
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
+import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.routes.*
+import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.utils.getEnv
 import th.ac.bodin2.electives.utils.isDev
@@ -26,7 +28,7 @@ fun main() {
     }
 
     if (isTest || isDev) {
-        logger.warn("Running in non-production mode! Security may be significantly reduced!")
+        logger.warn("Running in non-production mode! Security may be significantly reduced and features may not work as expected!")
     }
 
     val server = embeddedServer(
@@ -44,6 +46,21 @@ fun main() {
 }
 
 fun Application.module() {
+//    @TODO: Ratelimits
+
+    if (!isTest) {
+        dependencies {
+            provide<UsersService> { UsersServiceImpl() }
+            provide<NotificationsService> { NotificationsServiceImpl() }
+            provide<ElectiveService> { ElectiveServiceImpl() }
+            provide<ElectiveSelectionService> {
+                val notificationsService = resolve<NotificationsService>()
+                val usersService = resolve<UsersService>()
+                ElectiveSelectionServiceImpl(usersService, notificationsService)
+            }
+        }
+    }
+
     if (!TransactionManager.isInitialized()) {
         val path = getEnv("DB_PATH") ?: ""
         val defaultPath = "data.db"

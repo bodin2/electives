@@ -1,6 +1,7 @@
 package th.ac.bodin2.electives.api.utils
 
 import io.ktor.server.auth.*
+import io.ktor.server.plugins.di.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -23,7 +24,8 @@ suspend fun RoutingContext.authenticated(
     block: suspend RoutingContext.(userId: Int) -> Unit
 ) {
     val userId = call.principal<Int>() ?: return unauthorized()
-    if (getUserType(userId) !in types) return unauthorized()
+    val usersService: UsersService by call.application.dependencies
+    if (usersService.missingType(userId, types)) return unauthorized()
 
     block(userId)
 }
@@ -40,7 +42,8 @@ suspend fun RoutingContext.authenticated(
     block: suspend RoutingContext.(userId: Int) -> Unit
 ) {
     val userId = call.principal<Int>() ?: return unauthorized()
-    if (getUserType(userId) !in getTypes(userId)) return unauthorized()
+    val usersService: UsersService by call.application.dependencies
+    if (usersService.missingType(userId, getTypes(userId))) return unauthorized()
 
     block(userId)
 }
@@ -53,13 +56,18 @@ suspend fun WebSocketServerSession.authenticated(
     block: suspend WebSocketServerSession.(userId: Int) -> Unit
 ) {
     val userId = call.principal<Int>() ?: return unauthorized()
-    if (getUserType(userId) !in types) return unauthorized()
+    val usersService: UsersService by call.application.dependencies
+    if (usersService.missingType(userId, types)) return unauthorized()
 
     block(userId)
 }
 
-private fun getUserType(userId: Int): UserType = transaction { UsersService.getUserType(userId) }
+fun UsersService.missingType(userId: Int, types: List<UserType>): Boolean {
+    return transaction { this@missingType.getUserType(userId) } !in types
+}
 
+// NOTE TO SELF: DO NOT CHANGE TO Routing.() -> Unit
+// This will break authentication silently. You will have a bad time debugging it.
 fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
     authenticate(USER_AUTHENTICATION) {
         block()

@@ -2,6 +2,7 @@ package th.ac.bodin2.electives.api
 
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.plugins.di.*
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.api.services.UsersService
@@ -28,12 +29,13 @@ fun Application.configureSecurity() {
         )
     }
 
+    val usersService: UsersService by dependencies
 
     install(Authentication) {
         bearer(USER_AUTHENTICATION) {
             authenticate { tokenCredential ->
                 try {
-                    transaction { UsersService.getSessionUserId(tokenCredential.token) }
+                    transaction { usersService.getSessionUserId(tokenCredential.token) }
                 } catch (e: Exception) {
                     println("Cannot authenticate user with token: ${tokenCredential.token}, cause: $e")
                     null

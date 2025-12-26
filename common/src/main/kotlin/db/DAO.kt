@@ -6,10 +6,10 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.api.ExposedBlob
-import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.db.models.*
+import java.time.LocalDateTime
 
 class User(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : EntityClass<Int, User>(Users)
@@ -27,36 +27,7 @@ class Student(val reference: Reference, val user: User) {
 
     val id = reference.id
 
-    enum class CanEnrollStatus {
-        CAN_ENROLL,
-
-        /**
-         * The subject is not part of the elective.
-         */
-        SUBJECT_NOT_IN_ELECTIVE,
-        ALREADY_ENROLLED,
-
-        /**
-         * The student is not part of the elective's team.
-         */
-        NOT_IN_ELECTIVE_TEAM,
-
-        /**
-         * The student is not part of the subject's team.
-         */
-        NOT_IN_SUBJECT_TEAM,
-
-        /**
-         * The subject is already full.
-         */
-        SUBJECT_FULL,
-    }
-
     companion object {
-        private val logger = LoggerFactory.getLogger(Student::class.java)
-
-        /// PUBLIC API
-
         fun exists(id: Int): Boolean = Students.selectAll().where { Students.id eq id }.empty().not()
 
         fun require(id: Int): Reference {
@@ -120,8 +91,6 @@ class Student(val reference: Reference, val user: User) {
                     it[StudentElectives.subject] = subjectId
                 }
             }
-
-            logger.info("Student elective selection, user: $studentId, elective: $electiveId, subject: $subjectId")
         }
 
         /**
@@ -136,49 +105,6 @@ class Student(val reference: Reference, val user: User) {
             }
 
             if (count == 0) throw NotFoundException(NotFoundEntity.ELECTIVE_SELECTION)
-
-            logger.info("Student elective deselection, user: $studentId, elective: $electiveId")
-        }
-
-        /**
-         * Checks if the student can enroll in the specified subject of the elective by:
-         *
-         * 1. Checking if the subject is part of the elective.
-         * 2. Checking if the student is already enrolled in another subject of the same elective.
-         * 3. Checking if the student is part of the elective's team (if any).
-         * 4. Checking if the student is part of the subject's team (if any).
-         * 5. Checking if the subject is full.
-         */
-        fun canEnrollInSubject(
-            student: Reference,
-            elective: Elective.Reference,
-            subject: Subject.Reference
-        ): CanEnrollStatus {
-            if (!Subject.isPartOfElective(subject, elective))
-                return CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE
-
-            // Check if the student is already enrolled in another subject of the same elective
-            val alreadyEnrolled = StudentElectives
-                .selectAll()
-                .where { (StudentElectives.student eq student.id) and (StudentElectives.elective eq elective.id) }
-                .empty().not()
-
-            if (alreadyEnrolled) return CanEnrollStatus.ALREADY_ENROLLED
-
-            // Check if the student is part of the elective's team (if any)
-            val electiveTeamId = Elective.getTeamId(elective)
-            if (electiveTeamId != null && !hasTeam(student, electiveTeamId))
-                return CanEnrollStatus.NOT_IN_ELECTIVE_TEAM
-
-            // Check if the student is part of the subject's team (if any)
-            val subjectTeamId = Subject.getTeamId(subject)
-            if (subjectTeamId != null && !hasTeam(student, subjectTeamId))
-                return CanEnrollStatus.NOT_IN_SUBJECT_TEAM
-
-            if (Subject.isFull(subject, elective))
-                return CanEnrollStatus.SUBJECT_FULL
-
-            return CanEnrollStatus.CAN_ENROLL
         }
 
         fun new(id: Int, user: User): Student {
@@ -312,6 +238,16 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
                 .count()
                 .toInt()
         })
+
+    fun getEnrollmentDateRange(elective: Elective.Reference): Pair<LocalDateTime?, LocalDateTime?> {
+        val row = Electives
+            .selectAll()
+            .where { Electives.id eq elective.id }
+            .singleOrNull()
+            ?: throw NotFoundException(NotFoundEntity.ELECTIVE)
+
+        return row[Electives.startDate] to row[Electives.endDate]
+    }
 }
 
 class Elective(id: EntityID<Int>) : Entity<Int>(id) {

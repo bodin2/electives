@@ -30,8 +30,8 @@ dependencies {
     implementation("io.ktor:ktor-server-auth")
     implementation("io.github.flaxoos:ktor-server-rate-limiting:2.2.1")
     implementation("io.ktor:ktor-server-cio")
+    implementation("io.ktor:ktor-server-di")
     implementation("ch.qos.logback:logback-classic:$logback_version")
-    implementation("io.ktor:ktor-server-config-yaml")
 
     implementation(project(":common"))
 
@@ -39,5 +39,5 @@ dependencies {
 
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
-    testImplementation("com.h2database:h2:2.2.224")
+    testImplementation("io.mockk:mockk:1.14.7")
 }

@@ -2,6 +2,7 @@ package th.ac.bodin2.electives.api.routes
 
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.plugins.di.*
 import io.ktor.server.routing.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.NotFoundException
@@ -11,13 +12,15 @@ import th.ac.bodin2.electives.proto.api.AuthService
 import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
 
 fun Application.registerAuthRoutes() {
+    val usersService: UsersService by dependencies
+
     routing {
         post("/auth") {
             val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post badRequest()
 
             runCatching {
                 call.respond(authenticateResponse {
-                    token = transaction { UsersService.createSession(req.id, req.password, req.clientName) }
+                    token = transaction { usersService.createSession(req.id, req.password, req.clientName) }
                 })
             }.onFailure {
                 when (it) {
@@ -34,7 +37,7 @@ fun Application.registerAuthRoutes() {
         authenticatedRoutes {
             post("/logout") {
                 authenticated { userId ->
-                    transaction { UsersService.clearSession(userId) }
+                    transaction { usersService.clearSession(userId) }
                     call.response.status(HttpStatusCode.OK)
                 }
             }
