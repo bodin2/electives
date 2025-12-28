@@ -14,19 +14,22 @@ import th.ac.bodin2.electives.db.models.Teachers
 import th.ac.bodin2.electives.db.models.Users
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
-import th.ac.bodin2.electives.utils.Paseto
-import th.ac.bodin2.electives.utils.PasetoClaims
-import java.time.OffsetDateTime
+import th.ac.bodin2.electives.utils.getEnv
+import java.security.SecureRandom
+import java.time.LocalDateTime
+import java.util.*
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 class UsersServiceImpl : UsersService {
     companion object {
+        private const val TOKEN_SIZE = 32
         private val logger = LoggerFactory.getLogger(UsersServiceImpl::class.java)
     }
 
-//    @TODO: Config
-    private val sessionDuration = 1.days
+    private val sessionDurationSeconds =
+        (getEnv("USER_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.days).inWholeSeconds
 
     // 4 MB cache for user types
     private val userTypeCache = InMemoryKache<Int, UserType>(maxSize = 4 * 1024 * 1024) {
@@ -91,53 +94,53 @@ class UsersServiceImpl : UsersService {
             throw IllegalArgumentException("Password too long for user: $id")
         }
 
-        if (aud.length > 256) {
-            throw IllegalArgumentException("Client name too long for user: $id")
-        }
-
         val user = Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull()
             ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
 
         val passwordHash = user[Users.passwordHash]
 
         return if (Argon2.verify(passwordHash.toByteArray(), password.toCharArray())) {
-            val token = Paseto.sign(
-                PasetoClaims.from(
-                    iss = Paseto.ISSUER,
-                    sub = id.toString(),
-                    aud = aud,
-                    exp = OffsetDateTime.now().plusSeconds(sessionDuration.inWholeSeconds)
-                )
-            )
+            val session = Base64.getEncoder()
+                .withoutPadding()
+                .encodeToString(ByteArray(TOKEN_SIZE).apply {
+                    SecureRandom().nextBytes(this)
+                })
 
             User.findByIdAndUpdate(id) {
-                it.sessionHash = Argon2.hash(token.toCharArray())
+                it.sessionExpiry = LocalDateTime.now().plusSeconds(sessionDurationSeconds)
+                it.sessionHash = Argon2.hash(session.toCharArray())
             }
 
             logger.info("New session created, user: $id, aud: $aud")
 
-            token
+            "$id:$session"
         } else {
             throw IllegalArgumentException("Invalid password for user: $id")
         }
     }
 
     override fun getSessionUserId(token: String): Int {
-        val claims = Paseto.verify(token)
+        val (subject, session) = token.split(":", limit = 2).takeIf { it.size == 2 }
+            ?: throw IllegalArgumentException("Invalid session token format")
 
-        val userId = claims.sub.toIntOrNull() ?: throw IllegalArgumentException("Invalid token subject: ${claims.sub}")
+        val userId = subject.toIntOrNull() ?: throw IllegalArgumentException("Invalid token subject: $subject")
 
-        val user = Users.select(Users.sessionHash).where { Users.id eq userId }.singleOrNull()
+        val user = Users.select(Users.sessionHash, Users.sessionExpiry).where { Users.id eq userId }.singleOrNull()
             ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $userId")
+
+        val sessionExpiry = user[Users.sessionExpiry]
+            ?: throw IllegalArgumentException("No active session for user: $userId")
 
         val sessionHash = user[Users.sessionHash]
             ?: throw IllegalArgumentException("No active session for user: $userId")
 
-        if (!Argon2.verify(sessionHash.toByteArray(), token.toCharArray())) {
-            throw IllegalArgumentException("Invalid session token for user: $userId")
-        }
+        if (sessionExpiry.isBefore(LocalDateTime.now()))
+            throw IllegalArgumentException("Session expired for user: $userId")
 
-        logger.info("Validated session token, user: $userId, aud: ${claims.aud}")
+        if (!Argon2.verify(sessionHash.toByteArray(), session.toCharArray()))
+            throw IllegalArgumentException("Invalid session token for user: $userId")
+
+        logger.info("Validated session token, user: $userId")
 
         return userId
     }

@@ -1,6 +1,7 @@
 package th.ac.bodin2.electives.db.models
 
 import org.jetbrains.exposed.dao.id.IdTable
+import org.jetbrains.exposed.sql.javatime.datetime
 
 object Users : IdTable<Int>("users") {
     override val id = integer("id").entityId()
@@ -15,6 +16,12 @@ object Users : IdTable<Int>("users") {
      * Hash of the session token.
      */
     val sessionHash = varchar("session_hash", 255).nullable()
+
+    /**
+     * Expiry time of the current session.
+     * If not set, consider the session expired.
+     */
+    val sessionExpiry = datetime("session_expiry").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

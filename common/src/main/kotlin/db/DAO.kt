@@ -19,6 +19,7 @@ class User(id: EntityID<Int>) : Entity<Int>(id) {
     var lastName by Users.lastName
 
     var passwordHash by Users.passwordHash
+    var sessionExpiry by Users.sessionExpiry
     var sessionHash by Users.sessionHash
 }
 

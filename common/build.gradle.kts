@@ -22,10 +22,8 @@ dependencies {
 
     implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
 
-    implementation("io.github.nbaars:paseto4j-version4:2024.3")
     // @TODO: Use the version without prebuilt binaries and include setup instructions
     implementation("de.mkammerer:argon2-jvm:2.12")
-    api("org.bouncycastle:bcpkix-jdk18on:1.83")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
 }
