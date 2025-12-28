@@ -24,11 +24,9 @@ fun Application.registerNotificationsRoutes() {
 
     routing {
         authenticatedRoutes {
-            with(notificationsService) {
-                webSocket("/notifications") {
-                    authenticated { userId ->
-                        handleConnection(userId)
-                    }
+            webSocket("/notifications") {
+                authenticated { userId ->
+                    notificationsService.apply { handleConnection(userId) }
                 }
             }
         }

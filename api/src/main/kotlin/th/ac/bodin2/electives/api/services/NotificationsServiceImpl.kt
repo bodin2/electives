@@ -14,7 +14,7 @@ import th.ac.bodin2.electives.api.utils.badFrame
 import th.ac.bodin2.electives.api.utils.parseOrNull
 import th.ac.bodin2.electives.api.utils.send
 import th.ac.bodin2.electives.db.Elective
-import th.ac.bodin2.electives.proto.api.NotificationsService
+import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope
 import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope.PayloadCase
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.acknowledged
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.bulkSubjectEnrollmentUpdate
@@ -27,13 +27,13 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-//@TODO: Cleanup
-typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
+
+private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
 private fun shouldSkipBulkUpdatesDuringTest() =
     isTest && getEnv("APP_TEST_NOTIFICATIONS_SERVICE_SEND_BULK_UPDATES").isNullOrBlank()
 
-class NotificationsServiceImpl() : th.ac.bodin2.electives.api.services.NotificationsService {
+class NotificationsServiceImpl() : NotificationsService {
     companion object {
         private val logger = LoggerFactory.getLogger(NotificationsService::class.java)
     }
@@ -46,7 +46,7 @@ class NotificationsServiceImpl() : th.ac.bodin2.electives.api.services.Notificat
     private val bulkUpdateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val updateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    override val bulkUpdates = MutableStateFlow<Map<Int, NotificationsService.Envelope>>(emptyMap())
+    override val bulkUpdates = MutableStateFlow<Map<Int, Envelope>>(emptyMap())
 
     private val connections = ConcurrentHashMap<Int, ClientConnection>()
 
@@ -134,7 +134,7 @@ class NotificationsServiceImpl() : th.ac.bodin2.electives.api.services.Notificat
     private suspend fun ClientConnection.handleFrame(frame: Frame) = with(session) {
         if (frame !is Frame.Binary) return badFrame()
 
-        val envelope = frame.parseOrNull<NotificationsService.Envelope>() ?: return badFrame()
+        val envelope = frame.parseOrNull<Envelope>() ?: return badFrame()
 
         when (envelope.payloadCase) {
             PayloadCase.SUBJECT_ENROLLMENT_UPDATE_SUBSCRIPTION_REQUEST -> {
@@ -209,7 +209,7 @@ class NotificationsServiceImpl() : th.ac.bodin2.electives.api.services.Notificat
         }
     }
 
-    private suspend fun ClientConnection.acknowledge(envelope: NotificationsService.Envelope) {
+    private suspend fun ClientConnection.acknowledge(envelope: Envelope) {
         send(envelope {
             messageId = envelope.messageId
             acknowledged = acknowledged {}
@@ -248,7 +248,7 @@ private class ClientConnection(
     private val droppedCount = AtomicInteger(0)
 
     // One channel per client to buffer outgoing messages, to prevent concurrent sends/writes
-    private val outgoing = Channel<NotificationsService.Envelope>(
+    private val outgoing = Channel<Envelope>(
         16,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
         onUndeliveredElement = { handleUndeliveredElement() }
@@ -276,7 +276,7 @@ private class ClientConnection(
         }
 
         scope.launch {
-            var last: Map<Int, NotificationsService.Envelope> = emptyMap()
+            var last: Map<Int, Envelope> = emptyMap()
 
             notificationsService.bulkUpdates.collect { current ->
                 if (shouldSkipBulkUpdatesDuringTest()) {
@@ -294,9 +294,9 @@ private class ClientConnection(
         }
     }
 
-    suspend fun send(msg: NotificationsService.Envelope) = outgoing.send(msg)
+    suspend fun send(msg: Envelope) = outgoing.send(msg)
 
-    fun trySend(msg: NotificationsService.Envelope) = outgoing.trySend(msg)
+    fun trySend(msg: Envelope) = outgoing.trySend(msg)
 
     fun close() = scope.cancel()
 }

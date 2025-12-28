@@ -10,10 +10,7 @@ import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.db.Database
-import th.ac.bodin2.electives.utils.getEnv
-import th.ac.bodin2.electives.utils.isDev
-import th.ac.bodin2.electives.utils.isTest
-import th.ac.bodin2.electives.utils.loadDotEnv
+import th.ac.bodin2.electives.utils.*
 
 internal val logger: Logger = LoggerFactory.getLogger("ElectivesAPI")
 
@@ -49,33 +46,14 @@ fun Application.module() {
 //    @TODO: Ratelimits
 
     if (!isTest) {
-        dependencies {
-            provide<UsersService> { UsersServiceImpl() }
-            provide<NotificationsService> { NotificationsServiceImpl() }
-            provide<ElectiveService> { ElectiveServiceImpl() }
-            provide<ElectiveSelectionService> {
-                val notificationsService = resolve<NotificationsService>()
-                val usersService = resolve<UsersService>()
-                ElectiveSelectionServiceImpl(usersService, notificationsService)
-            }
+        provideDependencies()
+
+        if (!TransactionManager.isInitialized()) {
+            val path = requireEnvNonBlank("DB_PATH")
+            Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC")
+        } else {
+            logger.warn("Database already initialized? If you're running this in production, this is not normal.")
         }
-    }
-
-    if (!TransactionManager.isInitialized()) {
-        val path = getEnv("DB_PATH") ?: ""
-        val defaultPath = "data.db"
-
-        Database.init(
-            "jdbc:sqlite:${
-                path.ifBlank {
-                    logger.warn("DB_PATH not specified, using default path: $defaultPath")
-                    defaultPath
-                }
-            }", "org.sqlite.JDBC"
-        )
-    } else if (!isTest) {
-        // Already initialized in non-test environment?
-        logger.warn("Database already initialized? If you're running this in production, this is not normal.")
     }
 
     configureHTTP()
@@ -86,4 +64,17 @@ fun Application.module() {
     registerUsersRoutes()
     registerMiscRoutes()
     registerNotificationsRoutes()
+}
+
+fun Application.provideDependencies() {
+    dependencies {
+        provide<UsersService> { UsersServiceImpl() }
+        provide<NotificationsService> { NotificationsServiceImpl() }
+        provide<ElectiveService> { ElectiveServiceImpl() }
+        provide<ElectiveSelectionService> {
+            val notificationsService = resolve<NotificationsService>()
+            val usersService = resolve<UsersService>()
+            ElectiveSelectionServiceImpl(usersService, notificationsService)
+        }
+    }
 }

@@ -62,7 +62,8 @@ suspend fun WebSocketServerSession.authenticated(
     block(userId)
 }
 
-fun UsersService.missingType(userId: Int, types: List<UserType>): Boolean {
+@Suppress("NOTHING_TO_INLINE")
+inline fun UsersService.missingType(userId: Int, types: List<UserType>): Boolean {
     return transaction { this@missingType.getUserType(userId) } !in types
 }
 

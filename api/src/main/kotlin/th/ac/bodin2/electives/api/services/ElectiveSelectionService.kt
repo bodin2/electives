@@ -55,10 +55,11 @@ interface ElectiveSelectionService {
     }
 
     sealed class ModifySelectionResult {
-        object Success : ModifySelectionResult()
-        class NotFound(val entity: NotFoundEntity) : ModifySelectionResult()
-        class CannotEnroll(val status: CanEnrollStatus) : ModifySelectionResult()
-        class CannotModify(val status: ModifySelectionStatus) : ModifySelectionResult()
+        data object Success : ModifySelectionResult()
+
+        data class NotFound(val entity: NotFoundEntity) : ModifySelectionResult()
+        data class CannotEnroll(val status: CanEnrollStatus) : ModifySelectionResult()
+        data class CannotModify(val status: ModifySelectionStatus) : ModifySelectionResult()
     }
 
     enum class ModifySelectionStatus {
