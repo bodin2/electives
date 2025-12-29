@@ -4,12 +4,15 @@ import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.di.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.routing
 import org.jetbrains.exposed.sql.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.RATE_LIMIT_USERS
+import th.ac.bodin2.electives.api.RATE_LIMIT_USERS_SELECTIONS
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.ModifySelectionResult
@@ -35,27 +38,31 @@ class UsersController(
     fun Application.register() {
         routing {
             authenticatedRoutes {
-                get<Users.Id> {
-                    resolveUserIdEnforced(it.id) { userId, _ ->
-                        handleGetUser(userId)
+                rateLimit(RATE_LIMIT_USERS) {
+                    get<Users.Id> {
+                        resolveUserIdEnforced(it.id) { userId, _ ->
+                            handleGetUser(userId)
+                        }
+                    }
+
+                    get<Users.Id.Selections> {
+                        resolveUserIdEnforced(it.parent.id) { userId, _ ->
+                            handleGetStudentSelections(userId)
+                        }
                     }
                 }
 
-                get<Users.Id.Selections> {
-                    resolveUserIdEnforced(it.parent.id) { userId, _ ->
-                        handleGetStudentSelections(userId)
+                rateLimit(RATE_LIMIT_USERS_SELECTIONS) {
+                    put<Users.Id.Selections.ElectiveId> {
+                        resolveUserIdEnforced(it.parent.parent.id) { userId, authenticatedUserId ->
+                            handlePutStudentElectiveSelection(it.electiveId, userId, authenticatedUserId)
+                        }
                     }
-                }
 
-                put<Users.Id.Selections.ElectiveId> {
-                    resolveUserIdEnforced(it.parent.parent.id) { userId, authenticatedUserId ->
-                        handlePutStudentElectiveSelection(it.electiveId, userId, authenticatedUserId)
-                    }
-                }
-
-                delete<Users.Id.Selections.ElectiveId> {
-                    resolveUserIdEnforced(it.parent.parent.id) { userId, authenticatedUserId ->
-                        handleDeleteStudentElectiveSelection(it.electiveId, userId, authenticatedUserId)
+                    delete<Users.Id.Selections.ElectiveId> {
+                        resolveUserIdEnforced(it.parent.parent.id) { userId, authenticatedUserId ->
+                            handleDeleteStudentElectiveSelection(it.electiveId, userId, authenticatedUserId)
+                        }
                     }
                 }
             }

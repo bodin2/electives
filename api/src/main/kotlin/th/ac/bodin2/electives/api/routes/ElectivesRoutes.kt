@@ -3,11 +3,15 @@ package th.ac.bodin2.electives.api.routes
 import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.di.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import th.ac.bodin2.electives.api.RATE_LIMIT_ELECTIVES
+import th.ac.bodin2.electives.api.RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS
 import th.ac.bodin2.electives.api.services.ElectiveService
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
+import th.ac.bodin2.electives.api.utils.authenticatedRoutes
 import th.ac.bodin2.electives.api.utils.badRequest
 import th.ac.bodin2.electives.api.utils.notFound
 import th.ac.bodin2.electives.api.utils.respond
@@ -25,16 +29,23 @@ fun Application.registerElectivesRoutes() {
 class ElectivesController(private val electiveService: ElectiveService) {
     fun Application.register() {
         routing {
-            get<Electives> { handleGetElectives() }
-            get<Electives.Id> { handleGetElective(it.id) }
-            get<Electives.Id.Subjects> { handleGetElectiveSubjects(it.parent.id) }
-            get<Electives.Id.Subjects.SubjectId> { handleGetElectiveSubject(it.parent.parent.id, it.subjectId) }
-            get<Electives.Id.Subjects.SubjectId.Members> {
-                handleGetElectiveSubjectMembers(
-                    electiveId = it.parent.parent.parent.id,
-                    subjectId = it.parent.subjectId,
-                    withStudents = it.with_students == true,
-                )
+            rateLimit(RATE_LIMIT_ELECTIVES) {
+                get<Electives> { handleGetElectives() }
+                get<Electives.Id> { handleGetElective(it.id) }
+                get<Electives.Id.Subjects> { handleGetElectiveSubjects(it.parent.id) }
+                get<Electives.Id.Subjects.SubjectId> { handleGetElectiveSubject(it.parent.parent.id, it.subjectId) }
+            }
+
+            authenticatedRoutes {
+                rateLimit(RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS) {
+                    get<Electives.Id.Subjects.SubjectId.Members> {
+                        handleGetElectiveSubjectMembers(
+                            electiveId = it.parent.parent.parent.id,
+                            subjectId = it.parent.subjectId,
+                            withStudents = it.with_students == true,
+                        )
+                    }
+                }
             }
         }
     }

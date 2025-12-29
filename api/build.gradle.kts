@@ -28,9 +28,9 @@ dependencies {
     implementation("io.ktor:ktor-server-websockets")
     implementation("io.ktor:ktor-server-body-limit")
     implementation("io.ktor:ktor-server-auth")
-    implementation("io.github.flaxoos:ktor-server-rate-limiting:2.2.1")
     implementation("io.ktor:ktor-server-cio")
     implementation("io.ktor:ktor-server-di")
+    implementation("io.ktor:ktor-server-rate-limit")
     implementation("ch.qos.logback:logback-classic:$logback_version")
 
     implementation(project(":common"))
@@ -40,4 +40,10 @@ dependencies {
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
     testImplementation("io.mockk:mockk:1.14.7")
+}
+repositories {
+    maven {
+        url = uri("https://packages.confluent.io/maven")
+        name = "confluence"
+    }
 }

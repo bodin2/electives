@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.utils
 
+import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.routing.*
@@ -23,7 +24,7 @@ suspend fun RoutingContext.authenticated(
     types: List<UserType> = ALL_USER_TYPES,
     block: suspend RoutingContext.(userId: Int) -> Unit
 ) {
-    val userId = call.principal<Int>() ?: return unauthorized()
+    val userId = call.authenticatedUserId() ?: return unauthorized()
     val usersService: UsersService by call.application.dependencies
     if (usersService.missingType(userId, types)) return unauthorized()
 
@@ -41,7 +42,7 @@ suspend fun RoutingContext.authenticated(
     getTypes: (userId: Int) -> List<UserType>,
     block: suspend RoutingContext.(userId: Int) -> Unit
 ) {
-    val userId = call.principal<Int>() ?: return unauthorized()
+    val userId = call.authenticatedUserId() ?: return unauthorized()
     val usersService: UsersService by call.application.dependencies
     if (usersService.missingType(userId, getTypes(userId))) return unauthorized()
 
@@ -55,7 +56,7 @@ suspend fun WebSocketServerSession.authenticated(
     types: List<UserType> = ALL_USER_TYPES,
     block: suspend WebSocketServerSession.(userId: Int) -> Unit
 ) {
-    val userId = call.principal<Int>() ?: return unauthorized()
+    val userId = call.authenticatedUserId() ?: return unauthorized()
     val usersService: UsersService by call.application.dependencies
     if (usersService.missingType(userId, types)) return unauthorized()
 
@@ -73,4 +74,8 @@ fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
     authenticate(USER_AUTHENTICATION) {
         block()
     }
+}
+
+fun ApplicationCall.authenticatedUserId(): Int? {
+    return principal<Int>()
 }

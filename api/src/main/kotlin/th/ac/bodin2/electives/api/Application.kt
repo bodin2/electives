@@ -46,8 +46,6 @@ fun main() {
 }
 
 fun Application.module() {
-//    @TODO: Ratelimits
-
     if (!isTest) {
         provideDependencies()
 
