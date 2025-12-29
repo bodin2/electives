@@ -158,10 +158,11 @@ class UsersServiceImpl(val config: Config) : UsersService {
         middleName: String?,
         lastName: String?,
         password: String,
-    ) = User.new(id) {
-        this.firstName = firstName
-        this.middleName = middleName
-        this.lastName = lastName
-        passwordHash = Argon2.hash(password.toCharArray())
-    }
+    ) = User.wrapRow(Users.insert {
+        it[Users.id] = id
+        it[Users.firstName] = firstName
+        it[Users.middleName] = middleName
+        it[Users.lastName] = lastName
+        it[Users.passwordHash] = Argon2.hash(password.toCharArray())
+    }.resultedValues!!.first())
 }
