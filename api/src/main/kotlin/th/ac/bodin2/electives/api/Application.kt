@@ -11,6 +11,9 @@ import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.utils.*
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 internal val logger: Logger = LoggerFactory.getLogger("ElectivesAPI")
 
@@ -68,8 +71,19 @@ fun Application.module() {
 
 fun Application.provideDependencies() {
     dependencies {
-        provide<UsersService> { UsersServiceImpl() }
-        provide<NotificationsService> { NotificationsServiceImpl() }
+        provide<UsersService> { UsersServiceImpl(object : UsersServiceImpl.Config {
+            override val sessionDurationSeconds =
+                (getEnv("USER_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.days).inWholeSeconds
+        }) }
+        provide<NotificationsService> {
+            NotificationsServiceImpl(object : NotificationsServiceImpl.Config {
+                override val maxSubjectSubscriptionsPerClient =
+                    getEnv("NOTIFICATIONS_UPDATE_MAX_SUBSCRIPTIONS_PER_CLIENT")?.toIntOrNull() ?: 5
+                override val bulkUpdateInterval =
+                    getEnv("NOTIFICATIONS_BULK_UPDATE_INTERVAL")?.toIntOrNull()?.milliseconds ?: 5.seconds
+                override var bulkUpdatesEnabled = true
+            })
+        }
         provide<ElectiveService> { ElectiveServiceImpl() }
         provide<ElectiveSelectionService> {
             val notificationsService = resolve<NotificationsService>()

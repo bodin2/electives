@@ -20,38 +20,45 @@ import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.acknowledged
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.bulkSubjectEnrollmentUpdate
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.envelope
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
-import th.ac.bodin2.electives.utils.getEnv
-import th.ac.bodin2.electives.utils.isTest
 import th.ac.bodin2.electives.utils.setInterval
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration
 
 private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
-private fun shouldSkipBulkUpdatesDuringTest() =
-    isTest && getEnv("APP_TEST_NOTIFICATIONS_SERVICE_SEND_BULK_UPDATES").isNullOrBlank()
+class NotificationsServiceImpl(val config: Config) : NotificationsService {
+    interface Config {
+        val maxSubjectSubscriptionsPerClient: Int
+        val bulkUpdateInterval: Duration
 
-class NotificationsServiceImpl() : NotificationsService {
+        /**
+         * Set to `false` to disable bulk updates (usually for testing purposes).
+         */
+        var bulkUpdatesEnabled: Boolean
+    }
+
     companion object {
         private val logger = LoggerFactory.getLogger(NotificationsService::class.java)
     }
 
-    private val maxSubjectSubscriptionsPerClient =
-        getEnv("NOTIFICATIONS_UPDATE_MAX_SUBSCRIPTIONS_PER_CLIENT")?.toIntOrNull() ?: 5
-    private val bulkUpdateInterval =
-        getEnv("NOTIFICATIONS_BULK_UPDATE_INTERVAL")?.toIntOrNull()?.milliseconds ?: 5.seconds
+    /**
+     * A flow that holds latest bulk updates to be sent to connected clients.
+     * **Bulk updates must always be sent on connection, then in an interval after.**
+     *
+     * Map<ElectiveId, Envelope>
+     */
+    internal val bulkUpdates = MutableStateFlow<Map<Int, Envelope>>(emptyMap())
 
     private val bulkUpdateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val updateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    override val bulkUpdates = MutableStateFlow<Map<Int, Envelope>>(emptyMap())
 
     private val connections = ConcurrentHashMap<Int, ClientConnection>()
 
     private val subjectSelectionSubscriptions =
         mutableMapOf<Int, MutableMap<Int, MutableList<SubjectSelectionUpdateListener>>>()
+
+    internal fun isBulkUpdatesEnabled() = config.bulkUpdatesEnabled
 
     override fun notifySubjectSelectionUpdate(
         electiveId: Int,
@@ -69,14 +76,14 @@ class NotificationsServiceImpl() : NotificationsService {
     }
 
     override fun startBulkUpdateLoop() = bulkUpdateScope.launch {
-        logger.info("Starting bulk enrollment update loop with interval: ${bulkUpdateInterval.inWholeMilliseconds}ms")
+        logger.info("Starting bulk enrollment update loop with interval: ${config.bulkUpdateInterval.inWholeMilliseconds}ms")
 
-        setInterval(bulkUpdateInterval) {
+        setInterval(config.bulkUpdateInterval) {
             logger.debug("Bulk enrollment update loop tick, active connections: ${connections.size}")
             if (connections.isEmpty()) return@setInterval
 
-            if (shouldSkipBulkUpdatesDuringTest()) {
-                logger.debug("Skipping bulk enrollment updates during test environment")
+            if (!isBulkUpdatesEnabled()) {
+                logger.debug("Skipping bulk enrollment updates...")
                 return@setInterval
             }
 
@@ -144,9 +151,9 @@ class NotificationsServiceImpl() : NotificationsService {
 
                 if (subscriptions
                         .map { (_, subscription) -> subscription.subjectIdsCount }
-                        .sum() > maxSubjectSubscriptionsPerClient
+                        .sum() > config.maxSubjectSubscriptionsPerClient
                 )
-                    return badFrame("Exceeded maximum subject subscriptions per client: $maxSubjectSubscriptionsPerClient")
+                    return badFrame("Exceeded maximum subject subscriptions per client: ${config.maxSubjectSubscriptionsPerClient}")
 
                 subscriptions.forEach { (electiveId, subjectIds) ->
                     this@handleFrame.subscriptions
@@ -218,7 +225,7 @@ class NotificationsServiceImpl() : NotificationsService {
 }
 
 private class ClientConnection(
-    private val notificationsService: th.ac.bodin2.electives.api.services.NotificationsService,
+    private val notificationsService: NotificationsServiceImpl,
     val userId: Int,
     val session: WebSocketServerSession,
     // Map<ElectiveId, List<SubjectId>>
@@ -279,14 +286,13 @@ private class ClientConnection(
             var last: Map<Int, Envelope> = emptyMap()
 
             notificationsService.bulkUpdates.collect { current ->
-                if (shouldSkipBulkUpdatesDuringTest()) {
-                    logger.warn("Skipping sending bulk updates during test environment")
+                if (!notificationsService.isBulkUpdatesEnabled())
                     return@collect
-                }
 
                 // ? This is generally fine for small numbers of electives.
                 // ? If this becomes a bottleneck, move to per‑elective StateFlow.
                 for ((id, update) in current)
+                    // Prevent sending duplicate updates. Protobuf message comparison is by‑value.
                     if (last[id] != update) send(update)
 
                 last = current

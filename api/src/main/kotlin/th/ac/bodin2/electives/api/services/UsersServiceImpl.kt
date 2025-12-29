@@ -14,22 +14,20 @@ import th.ac.bodin2.electives.db.models.Teachers
 import th.ac.bodin2.electives.db.models.Users
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
-import th.ac.bodin2.electives.utils.getEnv
 import java.security.SecureRandom
 import java.time.LocalDateTime
 import java.util.*
-import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
-class UsersServiceImpl : UsersService {
+class UsersServiceImpl(val config: Config) : UsersService {
     companion object {
         private const val TOKEN_SIZE = 32
         private val logger = LoggerFactory.getLogger(UsersServiceImpl::class.java)
     }
 
-    private val sessionDurationSeconds =
-        (getEnv("USER_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.days).inWholeSeconds
+    interface Config {
+        val sessionDurationSeconds: Long
+    }
 
     // 4 MB cache for user types
     private val userTypeCache = InMemoryKache<Int, UserType>(maxSize = 4 * 1024 * 1024) {
@@ -107,7 +105,7 @@ class UsersServiceImpl : UsersService {
                 })
 
             User.findByIdAndUpdate(id) {
-                it.sessionExpiry = LocalDateTime.now().plusSeconds(sessionDurationSeconds)
+                it.sessionExpiry = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds)
                 it.sessionHash = Argon2.hash(session.toCharArray())
             }
 
