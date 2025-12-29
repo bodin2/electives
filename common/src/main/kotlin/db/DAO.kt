@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.db
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.api.ExposedBlob
@@ -11,6 +12,20 @@ import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.db.models.*
 import java.time.LocalDateTime
 
+@Suppress("NOTHING_TO_INLINE")
+private inline fun <T> Entity<Int>.getColumn(table: IdTable<Int>, column: Column<T>): T {
+    return table.select(column)
+        .where { table.id eq this@getColumn.id }
+        .single()[column]
+}
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun <T> Entity<Int>.setColumn(table: IdTable<Int>, column: Column<T>, value: T) {
+    table.update({ table.id eq this@setColumn.id }) {
+        it[column] = value
+    }
+}
+
 class User(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : EntityClass<Int, User>(Users)
 
@@ -18,9 +33,21 @@ class User(id: EntityID<Int>) : Entity<Int>(id) {
     var middleName by Users.middleName
     var lastName by Users.lastName
 
-    var passwordHash by Users.passwordHash
-    var sessionExpiry by Users.sessionExpiry
-    var sessionHash by Users.sessionHash
+    var passwordHash
+        get() = getColumn(Users, Users.passwordHash)
+        set(value) {
+            Users.update({ Users.id eq id.value }) {
+                it[passwordHash] = value
+            }
+        }
+
+    var sessionExpiry
+        get() = getColumn(Users, Users.sessionExpiry)
+        set(value) = setColumn(Users, Users.sessionExpiry, value)
+
+    var sessionHash
+        get() = getColumn(Users, Users.sessionHash)
+        set(value) = setColumn(Users, Users.sessionHash, value)
 }
 
 class Student(val reference: Reference, val user: User) {
@@ -383,7 +410,9 @@ class Subject(id: EntityID<Int>) : Entity<Int>(id) {
     val teachers: List<Teacher>
         get() = getTeachers(this@Subject.id)
 
-    var description by Subjects.description
+    val description
+        get() = getColumn(Subjects, Subjects.description)
+
     var code by Subjects.code
     var tag by Subjects.tag
     var team by Subjects.team
