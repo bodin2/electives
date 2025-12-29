@@ -4,7 +4,7 @@ import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 import io.ktor.server.plugins.di.*
-import org.jetbrains.exposed.sql.transactions.TransactionManager
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.routes.*
@@ -23,6 +23,7 @@ fun main() {
     }
 
     if (isDev) {
+        System.setProperty("io.ktor.development", "true")
         logger.warn("Running in development mode!")
         loadDotEnv()
     }
@@ -49,7 +50,7 @@ fun Application.module() {
     if (!isTest) {
         provideDependencies()
 
-        if (!TransactionManager.isInitialized()) {
+        if (TransactionManager.primaryDatabase == null) {
             val path = requireEnvNonBlank("DB_PATH")
             Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC")
         } else {

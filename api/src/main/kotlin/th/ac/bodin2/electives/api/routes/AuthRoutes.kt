@@ -5,7 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_AUTH
 import th.ac.bodin2.electives.api.services.UsersService

@@ -8,7 +8,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.utils.badFrame
 import th.ac.bodin2.electives.api.utils.parseOrNull
@@ -114,7 +114,7 @@ class NotificationsServiceImpl(val config: Config) : NotificationsService {
     override suspend fun WebSocketServerSession.handleConnection(userId: Int) {
         logger.info("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
-        connections.get(userId)?.let {
+        connections[userId]?.let {
             logger.info("Existing connection found for user: $userId, closing previous connection")
             it.close()
         }
@@ -138,54 +138,56 @@ class NotificationsServiceImpl(val config: Config) : NotificationsService {
         }
     }
 
-    private suspend fun ClientConnection.handleFrame(frame: Frame) = with(session) {
-        if (frame !is Frame.Binary) return badFrame()
+    private suspend fun ClientConnection.handleFrame(frame: Frame) {
+        with(session) {
+            if (frame !is Frame.Binary) return badFrame()
 
-        val envelope = frame.parseOrNull<Envelope>() ?: return badFrame()
+            val envelope = frame.parseOrNull<Envelope>() ?: return badFrame()
 
-        when (envelope.payloadCase) {
-            PayloadCase.SUBJECT_ENROLLMENT_UPDATE_SUBSCRIPTION_REQUEST -> {
-                val subscriptions = envelope
-                    .subjectEnrollmentUpdateSubscriptionRequest
-                    .subscriptionsMap
+            when (envelope.payloadCase) {
+                PayloadCase.SUBJECT_ENROLLMENT_UPDATE_SUBSCRIPTION_REQUEST -> {
+                    val subscriptions = envelope
+                        .subjectEnrollmentUpdateSubscriptionRequest
+                        .subscriptionsMap
 
-                if (subscriptions
-                        .map { (_, subscription) -> subscription.subjectIdsCount }
-                        .sum() > config.maxSubjectSubscriptionsPerClient
-                )
-                    return badFrame("Exceeded maximum subject subscriptions per client: ${config.maxSubjectSubscriptionsPerClient}")
-
-                subscriptions.forEach { (electiveId, subjectIds) ->
-                    this@handleFrame.subscriptions
-                        .getOrPut(electiveId) { ConcurrentHashMap.newKeySet() } += subjectIds.subjectIdsList
-                }
-
-                acknowledge(envelope)
-                logger.info("Client subscriptions updated, user: $userId")
-
-                // Cleanup previous enrollment updates
-                for (cleanup in cleanups) runCatching { cleanup() }.onFailure {
-                    logger.error(
-                        "Error during elective enrollment subscription update:",
-                        it
+                    if (subscriptions
+                            .map { (_, subscription) -> subscription.subjectIdsCount }
+                            .sum() > config.maxSubjectSubscriptionsPerClient
                     )
-                }
-                cleanups.clear()
+                        return badFrame("Exceeded maximum subject subscriptions per client: ${config.maxSubjectSubscriptionsPerClient}")
 
-                // Listen for enrollment updates the client requested
-                cleanups += sendEnrollmentUpdates()
+                    subscriptions.forEach { (electiveId, subjectIds) ->
+                        this@handleFrame.subscriptions
+                            .getOrPut(electiveId) { ConcurrentHashMap.newKeySet() } += subjectIds.subjectIdsList
+                    }
+
+                    acknowledge(envelope)
+                    logger.info("Client subscriptions updated, user: $userId")
+
+                    // Cleanup previous enrollment updates
+                    for (cleanup in cleanups) runCatching { cleanup() }.onFailure {
+                        logger.error(
+                            "Error during elective enrollment subscription update:",
+                            it
+                        )
+                    }
+                    cleanups.clear()
+
+                    // Listen for enrollment updates the client requested
+                    cleanups += sendEnrollmentUpdates()
+                }
+
+                // Server payloads
+                PayloadCase.SUBJECT_ENROLLMENT_UPDATE, PayloadCase.BULK_SUBJECT_ENROLLMENT_UPDATE, PayloadCase.ACKNOWLEDGED ->
+                    return badFrame()
+
+                // Invalid payload
+                PayloadCase.PAYLOAD_NOT_SET -> return badFrame()
             }
 
-            // Server payloads
-            PayloadCase.SUBJECT_ENROLLMENT_UPDATE, PayloadCase.BULK_SUBJECT_ENROLLMENT_UPDATE, PayloadCase.ACKNOWLEDGED ->
-                return badFrame()
-
-            // Invalid payload
-            PayloadCase.PAYLOAD_NOT_SET -> return badFrame()
+            // Make sure it returns something
+            return@with
         }
-
-        // Make sure it returns something
-        return@with
     }
 
     private fun ClientConnection.sendEnrollmentUpdates(): () -> Unit {
@@ -292,7 +294,7 @@ private class ClientConnection(
                 // ? This is generally fine for small numbers of electives.
                 // ? If this becomes a bottleneck, move to per‑elective StateFlow.
                 for ((id, update) in current)
-                    // Prevent sending duplicate updates. Protobuf message comparison is by‑value.
+                // Prevent sending duplicate updates. Protobuf message comparison is by‑value.
                     if (last[id] != update) send(update)
 
                 last = current

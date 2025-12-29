@@ -5,7 +5,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.USER_AUTHENTICATION
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.UserType

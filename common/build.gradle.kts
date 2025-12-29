@@ -3,29 +3,25 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization")
-    id("com.google.protobuf") version "0.9.4"
+    alias(libs.plugins.protobuf)
 }
 
 dependencies {
-    api("com.google.protobuf:protobuf-kotlin-lite:4.28.2")
-    api("com.google.protobuf:protobuf-java:4.28.2")
+    api(libs.protobuf.kotlin.lite)
+    api(libs.protobuf.java)
 
-    api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    api(libs.exposed.core)
+    api(libs.exposed.dao)
+    api(libs.exposed.jdbc)
+    api(libs.exposed.java.time)
 
-    api("org.jetbrains.exposed:exposed-core:0.53.0")
-    api("org.jetbrains.exposed:exposed-dao:0.53.0")
-    api("org.jetbrains.exposed:exposed-jdbc:0.53.0")
-    api("org.jetbrains.exposed:exposed-java-time:0.53.0")
-
-    implementation("org.xerial:sqlite-jdbc:3.46.0.0")
-
-    implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
+    implementation(libs.sqlite.jdbc)
+    implementation(libs.dotenv.kotlin)
 
     // @TODO: Use the version without prebuilt binaries and include setup instructions
-    implementation("de.mkammerer:argon2-jvm:2.12")
+    implementation(libs.argon2.jvm)
 
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
+    testImplementation(libs.kotlin.test.junit)
 }
 
 tasks.processResources {
@@ -35,13 +31,13 @@ tasks.processResources {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.1"
+        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.asProvider().get()}"
     }
 
     generateProtoTasks {
         all().forEach {
-            it.plugins {
-                id("kotlin")
+            it.builtins {
+                id("kotlin") { option("lite") }
             }
         }
     }
@@ -53,8 +49,8 @@ sourceSets {
             srcDir("src/main/proto")
         }
 
-        java {
-            srcDir("build/generated/source/proto/main/kotlin")
+        kotlin {
+            srcDir("build/generated/sources/proto/main/kotlin")
         }
     }
 }

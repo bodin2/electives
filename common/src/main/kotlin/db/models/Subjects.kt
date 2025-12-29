@@ -1,6 +1,6 @@
 package th.ac.bodin2.electives.db.models
 
-import org.jetbrains.exposed.dao.id.IdTable
+import org.jetbrains.exposed.v1.core.dao.id.IdTable
 
 object Subjects : IdTable<Int>("subjects") {
     override val id = integer("id").entityId()

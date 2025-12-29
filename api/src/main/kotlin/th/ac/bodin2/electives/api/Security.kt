@@ -3,7 +3,7 @@ package th.ac.bodin2.electives.api
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.di.*
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.getEnv

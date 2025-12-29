@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.db.models
 
-import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.v1.core.dao.id.IdTable
+import org.jetbrains.exposed.v1.javatime.datetime
 
 /**
  * Electives are a collection of subjects that students can choose from.

@@ -1,6 +1,6 @@
 package th.ac.bodin2.electives.db.models
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 object TeacherSubjects : Table("teachers_to_subjects") {
     val teacher = reference("teacher_id", Teachers.id)

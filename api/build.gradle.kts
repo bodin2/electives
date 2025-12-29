@@ -1,10 +1,7 @@
-val kotlin_version: String by extra
-val logback_version: String by project
-
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
-    id("io.ktor.plugin") version "3.3.2"
+    alias(libs.plugins.ktor)
 }
 
 group = "th.ac.bodin2.electives.api"
@@ -19,31 +16,24 @@ tasks.test {
 }
 
 dependencies {
-    implementation("io.ktor:ktor-server-cors")
-    implementation("io.ktor:ktor-server-conditional-headers")
-    implementation("io.ktor:ktor-server-forwarded-header")
-    implementation("io.ktor:ktor-server-core")
-    implementation("io.ktor:ktor-server-sessions")
-    implementation("io.ktor:ktor-server-resources")
-    implementation("io.ktor:ktor-server-websockets")
-    implementation("io.ktor:ktor-server-body-limit")
-    implementation("io.ktor:ktor-server-auth")
-    implementation("io.ktor:ktor-server-cio")
-    implementation("io.ktor:ktor-server-di")
-    implementation("io.ktor:ktor-server-rate-limit")
-    implementation("ch.qos.logback:logback-classic:$logback_version")
-
     implementation(project(":common"))
+    implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.conditional.headers)
+    implementation(libs.ktor.server.forwarded.header)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.sessions)
+    implementation(libs.ktor.server.resources)
+    implementation(libs.ktor.server.websockets)
+    implementation(libs.ktor.server.body.limit)
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.server.di)
+    implementation(libs.ktor.server.rate.limit)
+    implementation(libs.logback.classic)
+    implementation(libs.kache)
 
-    implementation("com.mayakapps.kache:kache:2.1.1")
+    testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.mockk)
+}
 
-    testImplementation("io.ktor:ktor-server-test-host")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
-    testImplementation("io.mockk:mockk:1.14.7")
-}
-repositories {
-    maven {
-        url = uri("https://packages.confluent.io/maven")
-        name = "confluence"
-    }
-}

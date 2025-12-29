@@ -1,9 +1,10 @@
-import org.gradle.api.tasks.compile.JavaCompile
+
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") apply false
+    kotlin("jvm") version libs.versions.kotlin apply false
+    kotlin("plugin.serialization") version libs.versions.kotlin apply false
 }
 
 subprojects {

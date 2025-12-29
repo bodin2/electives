@@ -1,8 +1,9 @@
 package th.ac.bodin2.electives.api.services
 
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
@@ -32,7 +33,7 @@ class ElectiveSelectionServiceImpl(
     // SERIALIZABLE will ensure that if two transactions try to do this at the same time, one of them will be fail and be retried by Exposed
     @CreatesTransaction
     override fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int) =
-        transaction(TRANSACTION_SERIALIZABLE) {
+        transaction(transactionIsolation = TRANSACTION_SERIALIZABLE) {
             maxAttempts = 3
 
             try {

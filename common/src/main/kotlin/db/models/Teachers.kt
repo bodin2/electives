@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.db.models
 
-import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.ReferenceOption
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.dao.id.IdTable
 
 object Teachers : IdTable<Int>("teachers") {
     override val id = reference("id", Users, onDelete = ReferenceOption.CASCADE)
