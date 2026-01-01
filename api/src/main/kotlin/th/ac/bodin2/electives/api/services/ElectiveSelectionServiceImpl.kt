@@ -5,6 +5,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
+import org.sqlite.jdbc4.JDBC4Connection
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -27,6 +28,27 @@ class ElectiveSelectionServiceImpl(
 ) : ElectiveSelectionService {
     companion object {
         private val logger = LoggerFactory.getLogger(ElectiveSelectionServiceImpl::class.java)
+        private val INSERT_SELECTION_QUERY = """
+            INSERT INTO ${StudentElectives.tableName}(
+              ${StudentElectives.student.name},
+              ${StudentElectives.elective.name},
+              ${StudentElectives.subject.name}
+            )
+            SELECT ?, ?, ?
+            WHERE (
+              SELECT COUNT(*)
+              FROM ${StudentElectives.tableName}
+              WHERE ${StudentElectives.elective.name} = ? AND ${StudentElectives.subject.name} = ?
+            ) < (
+              SELECT ${Subjects.capacity.name}
+              FROM ${Subjects.tableName}
+              WHERE id = ?
+            )
+            RETURNING
+              ${StudentElectives.student.name},
+              ${StudentElectives.elective.name},
+              ${StudentElectives.subject.name};
+        """.trimIndent()
     }
 
     // We're currently using SQLite, but in case if we ever switch, adding this isolation will be required
@@ -35,8 +57,6 @@ class ElectiveSelectionServiceImpl(
     @CreatesTransaction
     override fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int) =
         transaction(transactionIsolation = TRANSACTION_SERIALIZABLE) {
-            maxAttempts = 3
-
             try {
                 val student = Student.require(userId)
                 val elective = Elective.require(electiveId)
@@ -53,16 +73,33 @@ class ElectiveSelectionServiceImpl(
                     }
                 }
 
-                // Acquire SQLite lock (will block instances of this transaction running in parallel)
-                exec("BEGIN IMMEDIATE")
-
                 when (val result = canEnrollInSubject(student, elective, subject)) {
                     CanEnrollStatus.CAN_ENROLL -> {}
 
                     else -> return@transaction ModifySelectionResult.CannotEnroll(result)
                 }
 
-                Student.setElectiveSelection(student, elective, subject)
+                (connection.connection as JDBC4Connection).prepareStatement(INSERT_SELECTION_QUERY).use { ps ->
+                    ps.setInt(1, userId)
+                    ps.setInt(2, electiveId)
+                    ps.setInt(3, subjectId)
+
+                    ps.setInt(4, electiveId)
+                    ps.setInt(5, subjectId)
+
+                    ps.setInt(6, subjectId)
+
+                    ps.executeQuery().use { rs ->
+                        if (!rs.next()) {
+                            logger.info("Student elective selection failed due to full subject, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
+
+                            // Not inserted, subject is full
+                            return@transaction ModifySelectionResult.CannotEnroll(
+                                CanEnrollStatus.SUBJECT_FULL
+                            )
+                        }
+                    }
+                }
 
                 logger.info("Student elective selected, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
 
@@ -72,7 +109,7 @@ class ElectiveSelectionServiceImpl(
                     Subject.getEnrolledCount(subject, elective)
                 )
 
-                ModifySelectionResult.Success
+                return@transaction ModifySelectionResult.Success
             } catch (e: NotFoundException) {
                 return@transaction e.tryHandling()
             }
@@ -147,9 +184,9 @@ class ElectiveSelectionServiceImpl(
      * 3. Checking if the student is already enrolled in another subject of the same elective.
      * 4. Checking if the student is part of the elective's team (if any).
      * 5. Checking if the student is part of the subject's team (if any).
-     * 6. Checking if the subject is full.
+     * ~~6. Checking if the subject is full.~~
      */
-    fun canEnrollInSubject(
+    private fun canEnrollInSubject(
         student: Reference,
         elective: Elective.Reference,
         subject: Subject.Reference
@@ -180,8 +217,8 @@ class ElectiveSelectionServiceImpl(
         if (subjectTeamId != null && !hasTeam(student, subjectTeamId))
             return CanEnrollStatus.NOT_IN_SUBJECT_TEAM
 
-        if (Subject.isFull(subject, elective))
-            return CanEnrollStatus.SUBJECT_FULL
+//        if (Subject.isFull(subject, elective))
+//            return CanEnrollStatus.SUBJECT_FULL
 
         return CanEnrollStatus.CAN_ENROLL
     }
