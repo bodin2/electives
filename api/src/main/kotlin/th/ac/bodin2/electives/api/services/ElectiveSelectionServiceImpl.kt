@@ -16,6 +16,7 @@ import th.ac.bodin2.electives.db.Student.Reference
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.models.StudentElectives
+import th.ac.bodin2.electives.db.models.Subjects
 import th.ac.bodin2.electives.proto.api.UserType
 import java.sql.Connection.TRANSACTION_SERIALIZABLE
 import java.time.LocalDateTime
@@ -98,7 +99,6 @@ class ElectiveSelectionServiceImpl(
                     }
                 }
 
-
                 Student.removeElectiveSelection(student, elective)
 
                 logger.info("Student elective removed, user: $userId, elective: $electiveId, executor: $executorId")
@@ -131,6 +131,12 @@ class ElectiveSelectionServiceImpl(
 
             else -> throw this
         }
+    }
+
+    @CreatesTransaction
+    override fun getStudentSelections(userId: Int): Map<Int, Subject> = transaction {
+        val student = Student.require(userId)
+        buildMap { Student.getAllElectiveSelections(student).forEach { put(it.first, it.second) } }
     }
 
     /**

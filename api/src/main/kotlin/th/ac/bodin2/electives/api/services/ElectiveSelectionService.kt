@@ -2,6 +2,7 @@ package th.ac.bodin2.electives.api.services
 
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.db.Subject
 
 interface ElectiveSelectionService {
     /**
@@ -19,6 +20,15 @@ interface ElectiveSelectionService {
      */
     @CreatesTransaction
     fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult
+
+    /**
+     * Gets all subject selections for a student.
+     *
+     * @param userId The ID of the student.
+     * @return A map of elective IDs to selected subject IDs.
+     */
+    @CreatesTransaction
+    fun getStudentSelections(userId: Int): Map<Int, Subject>
 
     enum class CanEnrollStatus {
         CAN_ENROLL,

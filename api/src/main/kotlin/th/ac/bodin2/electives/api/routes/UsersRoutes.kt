@@ -88,14 +88,19 @@ class UsersController(
 
     private suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
         val response = transaction {
-            val student = usersService.getStudentById(userId) ?: return@transaction null
+            try {
+                @OptIn(CreatesTransaction::class)
+                val selections = electiveSelectionService.getStudentSelections(userId)
 
-            getStudentSelectionsResponse {
-                student.selections.map { (elective, subject) ->
-                    subjects.put(elective.id.value, subject.toProto())
+                getStudentSelectionsResponse {
+                    subjects.putAll(selections.mapValues { it.value.toProto() })
                 }
+            } catch (_: NotFoundException) {
+                return@transaction null
             }
         } ?: return badRequest("Viewing selections for non-student users")
+        // @TODO: Return more specific error if user is not a student?
+        // But that requires an extra query and exposes unnecessary information...
 
         call.respond(response)
     }

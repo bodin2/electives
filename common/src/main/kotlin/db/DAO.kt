@@ -79,20 +79,13 @@ class Student(val reference: Reference, val user: User) {
                 .empty().not()
         }
 
-        fun getAllElectiveSelections(student: Reference): List<Pair<Elective, Subject>> {
+        fun getAllElectiveSelections(student: Reference): List<Pair<Int, Subject>> {
             return StudentElectives
                 .selectAll().where { StudentElectives.student eq student.id }
                 .map {
                     val electiveId = it[StudentElectives.elective]
                     val subjectId = it[StudentElectives.subject]
-
-                    val elective = Elective.findById(electiveId)
-                        ?: throw IllegalStateException("Elective doesn't exist: $electiveId")
-
-                    val subject = Subject.findById(subjectId)
-                        ?: throw IllegalStateException("Subject doesn't exist: $subjectId")
-
-                    elective to subject
+                    electiveId.value to Subject.findById(subjectId)!!
                 }
         }
 
@@ -154,9 +147,6 @@ class Student(val reference: Reference, val user: User) {
                 .selectAll().where { StudentTeams.student eq this@Student.id }
                 .map { Team.wrapRow(it) }
         }
-
-    val selections
-        get() = getAllElectiveSelections(reference)
 }
 
 class Teacher(val reference: Reference, val user: User, val avatar: ByteArray?) {
