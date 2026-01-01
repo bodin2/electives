@@ -28,9 +28,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         private val logger = LoggerFactory.getLogger(UsersServiceImpl::class.java)
     }
 
-    interface Config {
-        val sessionDurationSeconds: Long
-    }
+    class Config(val sessionDurationSeconds: Long)
 
     // 4 MB cache for user types
     private val userTypeCache = InMemoryKache<Int, UserType>(maxSize = 4 * 1024 * 1024) {
@@ -93,6 +91,11 @@ class UsersServiceImpl(val config: Config) : UsersService {
     override fun createSession(id: Int, password: String, aud: String): String {
         if (password.length > 4096) {
             throw IllegalArgumentException("Password too long for user: $id")
+        }
+
+        val aud = aud.trim().apply {
+            if (isEmpty()) throw IllegalArgumentException("Audience blank for user: $id")
+            if (length > 256) throw IllegalArgumentException("Audience string too long for user: $id (aud = ${slice(0..32)}...)")
         }
 
         val user = Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull()

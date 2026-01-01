@@ -28,15 +28,14 @@ import kotlin.time.Duration
 private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
 class NotificationsServiceImpl(val config: Config) : NotificationsService {
-    interface Config {
-        val maxSubjectSubscriptionsPerClient: Int
-        val bulkUpdateInterval: Duration
-
+    class Config(
+        val maxSubjectSubscriptionsPerClient: Int,
+        val bulkUpdateInterval: Duration,
         /**
          * Set to `false` to disable bulk updates (usually for testing purposes).
          */
         var bulkUpdatesEnabled: Boolean
-    }
+    )
 
     companion object {
         private val logger = LoggerFactory.getLogger(NotificationsService::class.java)
