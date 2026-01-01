@@ -5,7 +5,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
-import org.sqlite.jdbc4.JDBC4Connection
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -19,6 +18,7 @@ import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.models.StudentElectives
 import th.ac.bodin2.electives.db.models.Subjects
 import th.ac.bodin2.electives.proto.api.UserType
+import java.sql.Connection
 import java.sql.Connection.TRANSACTION_SERIALIZABLE
 import java.time.LocalDateTime
 
@@ -44,19 +44,21 @@ class ElectiveSelectionServiceImpl(
               FROM ${Subjects.tableName}
               WHERE id = ?
             )
-            RETURNING
-              ${StudentElectives.student.name},
-              ${StudentElectives.elective.name},
-              ${StudentElectives.subject.name};
         """.trimIndent()
     }
 
-    // We're currently using SQLite, but in case if we ever switch, adding this isolation will be required
+    // We're currently using SQLite, which locks during writes, so technically all of this code to prevent TOCTOU doesn't really matter.
+    // But in case if we ever switch databases, this will be useful.
+
     // We want to prevent overbooking: Thread A reads (29/30) -> Thread B reads (29/30) -> A inserts (30/30) -> B inserts (31/30)
-    // SERIALIZABLE will ensure that if two transactions try to do this at the same time, one of them will be fail and be retried by Exposed
+    // SERIALIZABLE will ensure that if two transactions try to do this at the same time, one of them will be fail.
     @CreatesTransaction
-    override fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int) =
-        transaction(transactionIsolation = TRANSACTION_SERIALIZABLE) {
+    override fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult {
+        var onSuccess: (() -> Unit)? = null
+
+        val result = transaction(transactionIsolation = TRANSACTION_SERIALIZABLE) {
+            maxAttempts = 3
+
             try {
                 val student = Student.require(userId)
                 val elective = Elective.require(electiveId)
@@ -79,7 +81,7 @@ class ElectiveSelectionServiceImpl(
                     else -> return@transaction ModifySelectionResult.CannotEnroll(result)
                 }
 
-                (connection.connection as JDBC4Connection).prepareStatement(INSERT_SELECTION_QUERY).use { ps ->
+                (connection.connection as Connection).prepareStatement(INSERT_SELECTION_QUERY).use { ps ->
                     ps.setInt(1, userId)
                     ps.setInt(2, electiveId)
                     ps.setInt(3, subjectId)
@@ -89,31 +91,37 @@ class ElectiveSelectionServiceImpl(
 
                     ps.setInt(6, subjectId)
 
-                    ps.executeQuery().use { rs ->
-                        if (!rs.next()) {
-                            logger.info("Student elective selection failed due to full subject, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
+                    val inserted = ps.executeUpdate()
+                    if (inserted == 0) {
+                        logger.info("Student elective selection failed due to full subject, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
 
-                            // Not inserted, subject is full
-                            return@transaction ModifySelectionResult.CannotEnroll(
-                                CanEnrollStatus.SUBJECT_FULL
-                            )
-                        }
+                        // Not inserted, subject is full
+                        return@transaction ModifySelectionResult.CannotEnroll(
+                            CanEnrollStatus.SUBJECT_FULL
+                        )
                     }
                 }
 
-                logger.info("Student elective selected, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
+                onSuccess = {
+                    logger.info("Student elective selected, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
 
-                notificationsService.notifySubjectSelectionUpdate(
-                    electiveId,
-                    subjectId,
-                    Subject.getEnrolledCount(subject, elective)
-                )
+                    notificationsService.notifySubjectSelectionUpdate(
+                        electiveId,
+                        subjectId,
+                        Subject.getEnrolledCount(subject, elective)
+                    )
+                }
 
                 return@transaction ModifySelectionResult.Success
             } catch (e: NotFoundException) {
                 return@transaction e.tryHandling()
             }
         }
+
+        onSuccess?.invoke()
+
+        return result
+    }
 
     @CreatesTransaction
     override fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult =
@@ -194,12 +202,13 @@ class ElectiveSelectionServiceImpl(
         // Check elective date range
         val (startDate, endDate) = Elective.getEnrollmentDateRange(elective)
         val now = LocalDateTime.now()
-        if (startDate != null && startDate.isBefore(now)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
-        if (endDate != null && endDate.isAfter(now)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
+        if (startDate != null && now.isBefore(startDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
+        if (endDate != null && now.isAfter(endDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
 
         if (!Subject.isPartOfElective(subject, elective)) return CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE
 
         // Check if the student is already enrolled in another subject of the same elective
+        // UNSAFE FROM TOCTOU by its own!!! This is handled by the unique index on (student, elective) in the StudentElectives table and the SERIALIZABLE transaction isolation level!
         val alreadyEnrolled = StudentElectives
             .selectAll()
             .where { (StudentElectives.student eq student.id) and (StudentElectives.elective eq elective.id) }
