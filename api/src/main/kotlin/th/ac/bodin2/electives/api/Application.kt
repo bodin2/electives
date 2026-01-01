@@ -7,6 +7,7 @@ import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.sqlite.jdbc4.JDBC4Connection
 import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.db.Database
@@ -52,7 +53,16 @@ fun Application.module() {
 
         if (TransactionManager.primaryDatabase == null) {
             val path = requireEnvNonBlank("DB_PATH")
-            Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC")
+            Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC").apply {
+                val conn = connector().connection as JDBC4Connection
+                conn.prepareStatement(
+                    """
+                        PRAGMA journal_mode=WAL;
+                        PRAGMA synchronous=NORMAL;
+                        PRAGMA busy_timeout=5000;
+                    """.trimIndent()
+                )
+            }
         } else {
             logger.warn("Database already initialized? If you're running this in production, this is not normal.")
         }
