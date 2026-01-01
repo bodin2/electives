@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.db.models
 
+import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.javatime.datetime
 
@@ -17,7 +18,7 @@ object Electives : IdTable<Int>("electives") {
      *
      * If set, only users who belong to this team can access this elective.
      */
-    val team = reference("team_id", Teams).nullable()
+    val team = reference("team_id", Teams, onDelete = ReferenceOption.RESTRICT, onUpdate = ReferenceOption.CASCADE).nullable()
 
     val startDate = datetime("start_date").nullable()
     val endDate = datetime("end_date").nullable()
