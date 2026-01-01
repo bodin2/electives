@@ -15,7 +15,7 @@ dependencies {
     api(libs.exposed.jdbc)
     api(libs.exposed.java.time)
 
-    implementation(libs.sqlite.jdbc)
+    api(libs.sqlite.jdbc)
     implementation(libs.dotenv.kotlin)
 
     // @TODO: Use the version without prebuilt binaries and include setup instructions
