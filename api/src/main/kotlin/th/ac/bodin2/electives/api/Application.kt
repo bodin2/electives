@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
+import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.slf4j.Logger
@@ -67,6 +68,8 @@ fun Application.module() {
             logger.warn("Database already initialized? If you're running this in production, this is not normal.")
         }
     }
+
+    install(CallLogging)
 
     configureHTTP()
     configureSecurity()

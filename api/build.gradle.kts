@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.ktor.server.cio)
     implementation(libs.ktor.server.di)
     implementation(libs.ktor.server.rate.limit)
+    implementation(libs.ktor.server.call.logging)
     implementation(libs.logback.classic)
     implementation(libs.kache)
 
