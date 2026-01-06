@@ -33,6 +33,6 @@ fun UsersService.toPrincipal(token: String): Int? =
     try {
         transaction { getSessionUserId(token) }
     } catch (e: Exception) {
-        println("Cannot authenticate user with token: $token, cause: $e")
+        logger.info("Cannot authenticate user with token: $token, cause: $e")
         null
     }
