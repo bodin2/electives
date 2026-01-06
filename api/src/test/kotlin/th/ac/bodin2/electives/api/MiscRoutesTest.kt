@@ -8,8 +8,7 @@ import kotlin.test.assertEquals
 class MiscRoutesTest : ApplicationTest() {
     @Test
     fun `status endpoint`() = runTest {
-        val response = client.head("/status")
-        assertEquals(HttpStatusCode.OK, response.status)
+        client.head("/status").assertOK()
     }
 
     @Test
@@ -20,7 +19,6 @@ class MiscRoutesTest : ApplicationTest() {
 
     @Test
     fun `non existent route`() = runTest {
-        val response = client.get("/nonexistent")
-        assertEquals(HttpStatusCode.NotFound, response.status)
+        client.get("/nonexistent").assertNotFound()
     }
 }

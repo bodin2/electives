@@ -5,37 +5,36 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.insert
+import io.ktor.server.application.*
+import io.ktor.server.plugins.di.*
+import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.getParser
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.db.models.*
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import th.ac.bodin2.electives.utils.Argon2
-import th.ac.bodin2.electives.utils.Paseto
-import java.security.Security
 
 fun setupTestEnvironment() {
     System.setProperty("APP_ENV", "test")
-
-    Security.addProvider(BouncyCastleProvider())
-
-    Paseto.init(
-        Paseto.loadPublicKey("MCowBQYDK2VwAyEAve+YNChVkaFQwynmkoR0K63Ep3Jtds7Ud//7aTg1Kec="),
-        Paseto.loadPrivateKey("MC4CAQAwBQYDK2VwBCIEIAdX5xpM5fLhFERZW9ASIatBKBVC2yT8ieZKkWZy2H6Z"),
-        "test-iss"
-    )
-
     Argon2.init(memory = 16384, iterations = 10)
 }
 
 object TestDatabase {
-    private lateinit var db: org.jetbrains.exposed.sql.Database
+    lateinit var db: org.jetbrains.exposed.v1.jdbc.Database
+        private set
 
     fun connect() {
-        db = Database.init("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1", "org.h2.Driver")
+        if (!::db.isInitialized) {
+            db = org.jetbrains.exposed.v1.jdbc.Database.connect(
+                "jdbc:sqlite:file:./build/tmp/test/db",
+                "org.sqlite.JDBC"
+            )
+        }
+
+        TransactionManager.defaultDatabase = db
     }
 
     fun reset() {
@@ -43,7 +42,9 @@ object TestDatabase {
         SchemaUtils.create(*Database.tables.toTypedArray())
     }
 
-    fun mockData() {
+    fun Application.mockData() {
+        val usersService: UsersService by dependencies
+
         Teams.insert {
             it[id] = TestConstants.Teams.TEAM_1_ID
             it[name] = TestConstants.Teams.TEAM_1_NAME
@@ -53,14 +54,14 @@ object TestDatabase {
             it[name] = TestConstants.Teams.TEAM_2_NAME
         }
 
-        UsersService.createStudent(
+        usersService.createStudent(
             TestConstants.Students.JOHN_ID,
             TestConstants.Students.JOHN_FIRST_NAME,
             TestConstants.Students.JOHN_MIDDLE_NAME,
             TestConstants.Students.JOHN_LAST_NAME,
             TestConstants.Students.JOHN_PASSWORD
         )
-        UsersService.createStudent(
+        usersService.createStudent(
             TestConstants.Students.JANE_ID,
             TestConstants.Students.JANE_FIRST_NAME,
             null,
@@ -77,14 +78,14 @@ object TestDatabase {
             it[team] = TestConstants.Teams.TEAM_2_ID
         }
 
-        UsersService.createTeacher(
+        usersService.createTeacher(
             TestConstants.Teachers.BOB_ID,
             TestConstants.Teachers.BOB_FIRST_NAME,
             null,
             TestConstants.Teachers.BOB_LAST_NAME,
             TestConstants.Teachers.BOB_PASSWORD
         )
-        UsersService.createTeacher(
+        usersService.createTeacher(
             TestConstants.Teachers.ALICE_ID,
             TestConstants.Teachers.ALICE_FIRST_NAME,
             TestConstants.Teachers.ALICE_MIDDLE_NAME,
@@ -185,7 +186,7 @@ suspend fun HttpClient.deleteWithAuth(url: String, token: String): HttpResponse 
     }
 }
 
-suspend inline fun <reified T : MessageLite> HttpResponse.parseProto(): T {
+suspend inline fun <reified T : MessageLite> HttpResponse.parse(): T {
     val parser = getParser(T::class.java)
     return parser.parseFrom(bodyAsBytes())
 }

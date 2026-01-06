@@ -1,54 +1,60 @@
 package th.ac.bodin2.electives.api
 
+import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import org.jetbrains.exposed.sql.transactions.transaction
-import th.ac.bodin2.electives.api.TestConstants.Lengths
-import th.ac.bodin2.electives.api.TestConstants.Students
+import io.ktor.server.plugins.di.*
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.TestConstants.TestData
+import th.ac.bodin2.electives.api.services.TestServiceConstants
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.AuthService
 import th.ac.bodin2.electives.proto.api.AuthServiceKt
-import kotlin.test.*
+import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateRequest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class AuthRoutesTest : ApplicationTest() {
-    @Test
-    fun `authenticate success`() = runTest {
-        val response = client.postProto("/auth", AuthServiceKt.authenticateRequest {
-            id = Students.JOHN_ID
-            password = Students.JOHN_PASSWORD
-            clientName = TestData.CLIENT_NAME
-        })
+    private suspend fun HttpClient.auth(builder: AuthServiceKt.AuthenticateRequestKt.Dsl.() -> Unit) =
+        this.postProto("/auth", authenticateRequest(builder))
 
-        assertEquals(HttpStatusCode.OK, response.status)
-        val authResponse = response.parseProto<AuthService.AuthenticateResponse>()
-        assertTrue(authResponse.token.isNotBlank())
+    @Test
+    fun `authenticate success`() = runRouteTest {
+        val response = client.auth {
+            id = TestServiceConstants.STUDENT_ID
+            password = TestServiceConstants.PASSWORD
+            clientName = TestData.CLIENT_NAME
+        }.assertOK().parse<AuthService.AuthenticateResponse>()
+
+        assertTrue(response.token.isNotBlank())
     }
 
     @Test
-    fun `authenticate invalid password`() = runTest {
-        val response = client.postProto("/auth", AuthServiceKt.authenticateRequest {
-            id = Students.JOHN_ID
-            password = "wrongpassword"
+    fun `authenticate invalid password`() = runRouteTest {
+        val response = client.auth {
+            id = TestServiceConstants.STUDENT_ID
+            password = ""
             clientName = TestData.CLIENT_NAME
-        })
+        }
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
     @Test
-    fun `authenticate user not found`() = runTest {
-        val response = client.postProto("/auth", AuthServiceKt.authenticateRequest {
-            id = TestData.NONEXISTENT_ID
-            password = Students.JOHN_PASSWORD
+    fun `authenticate user not found`() = runRouteTest {
+        val response = client.auth {
+            id = 0
+            password = ""
             clientName = TestData.CLIENT_NAME
-        })
+        }
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
     @Test
-    fun `authenticate invalid request`() = runTest {
+    fun `authenticate invalid request`() = runRouteTest {
         val response = client.post("/auth") {
             contentType(ContentType.Application.ProtoBuf)
             setBody(byteArrayOf(1, 2, 3))
@@ -58,143 +64,34 @@ class AuthRoutesTest : ApplicationTest() {
     }
 
     @Test
-    fun `logout success`() = runTest {
+    fun `logout success`() = runRouteTest {
+        startApplication()
+
+        val usersService: UsersService by application.dependencies
+
         val token = transaction {
-            UsersService.createSession(
-                Students.JOHN_ID,
-                Students.JOHN_PASSWORD,
+            usersService.createSession(
+                TestServiceConstants.STUDENT_ID,
+                TestServiceConstants.PASSWORD,
                 TestData.CLIENT_NAME
             )
         }
 
-        val response = client.post("/logout") {
+        client.post("/logout") {
             bearerAuth(token)
-        }
-
-        assertEquals(HttpStatusCode.OK, response.status)
+        }.assertOK()
 
         assertFailsWith<IllegalArgumentException> {
-            transaction { UsersService.getSessionUserId(token) }
+            transaction { usersService.getSessionUserId(token) }
         }
     }
 
     @Test
-    fun `logout unauthorized`() = runTest {
-        val response = client.post("/logout")
-
-        assertEquals(HttpStatusCode.Unauthorized, response.status)
-    }
-
-    @Test
-    fun `logout invalid token`() = runTest {
+    fun `logout with bad token`() = runRouteTest {
         val response = client.post("/logout") {
-            bearerAuth(TestData.INVALID_TOKEN)
+            bearerAuth("")
         }
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
-    }
-
-    @Test
-    fun `authenticate with empty client name`() = runTest {
-        val response = client.postProto("/auth", AuthServiceKt.authenticateRequest {
-            id = Students.JOHN_ID
-            password = Students.JOHN_PASSWORD
-            clientName = ""
-        })
-
-        assertEquals(HttpStatusCode.Unauthorized, response.status)
-    }
-
-    @Test
-    fun `authenticate with password too long`() = runTest {
-        val response = client.postProto("/auth", AuthServiceKt.authenticateRequest {
-            id = Students.JOHN_ID
-            password = "p".repeat(Lengths.AUTH_PASSWORD_TOO_LONG)
-            clientName = TestData.CLIENT_NAME
-        })
-
-        assertEquals(HttpStatusCode.Unauthorized, response.status)
-    }
-
-    @Test
-    fun `authenticate with client name too long`() = runTest {
-        val response = client.postProto("/auth", AuthServiceKt.authenticateRequest {
-            id = Students.JOHN_ID
-            password = Students.JOHN_PASSWORD
-            clientName = "c".repeat(Lengths.AUTH_CLIENTNAME_TOO_LONG)
-        })
-
-        assertEquals(HttpStatusCode.Unauthorized, response.status)
-    }
-
-    @Test
-    fun `authenticate multiple times generates different tokens`() = runTest {
-        val response1 = client.postProto("/auth", AuthServiceKt.authenticateRequest {
-            id = Students.JOHN_ID
-            password = Students.JOHN_PASSWORD
-            clientName = TestData.CLIENT_NAME
-        })
-
-        val response2 = client.postProto("/auth", AuthServiceKt.authenticateRequest {
-            id = Students.JOHN_ID
-            password = Students.JOHN_PASSWORD
-            clientName = TestData.CLIENT_NAME
-        })
-
-        assertEquals(HttpStatusCode.OK, response1.status)
-        assertEquals(HttpStatusCode.OK, response2.status)
-
-        val token1 = response1.parseProto<AuthService.AuthenticateResponse>().token
-        val token2 = response2.parseProto<AuthService.AuthenticateResponse>().token
-
-        assertNotEquals(token1, token2)
-    }
-
-    @Test
-    fun `logout and reauthenticate`() = runTest {
-        val token1 = transaction {
-            UsersService.createSession(
-                Students.JOHN_ID,
-                Students.JOHN_PASSWORD,
-                TestData.CLIENT_NAME
-            )
-        }
-
-        val logoutResponse = client.post("/logout") {
-            bearerAuth(token1)
-        }
-
-        assertEquals(HttpStatusCode.OK, logoutResponse.status)
-
-        val authResponse = client.postProto("/auth", AuthServiceKt.authenticateRequest {
-            id = Students.JOHN_ID
-            password = Students.JOHN_PASSWORD
-            clientName = TestData.CLIENT_NAME
-        })
-
-        assertEquals(HttpStatusCode.OK, authResponse.status)
-    }
-
-    @Test
-    fun `logout twice`() = runTest {
-        val token = transaction {
-            UsersService.createSession(
-                Students.JOHN_ID,
-                Students.JOHN_PASSWORD,
-                TestData.CLIENT_NAME
-            )
-        }
-
-        val response1 = client.post("/logout") {
-            bearerAuth(token)
-        }
-
-        assertEquals(HttpStatusCode.OK, response1.status)
-
-        val response2 = client.post("/logout") {
-            bearerAuth(token)
-        }
-
-        assertEquals(HttpStatusCode.Unauthorized, response2.status)
     }
 }

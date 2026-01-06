@@ -38,6 +38,9 @@ object TestConstants {
     object Electives {
         const val SCIENCE_ID = 1
         const val SCIENCE_NAME = "Science Elective"
+
+        const val OUT_OF_DATE_ID = 2
+        const val OUT_OF_DATE_NAME = "Outdated Elective"
     }
 
     object Subjects {
@@ -55,38 +58,15 @@ object TestConstants {
         const val CHEMISTRY_LOCATION = "Room A102"
         const val CHEMISTRY_CAPACITY = 25
 
-        // Subject ids used in tests for special cases
-        const val NO_TEACHER_ID = 103
         const val OTHER_ID = 999
     }
 
     object TestData {
         const val CLIENT_NAME = "test-client"
-        const val INVALID_TOKEN = "invalid-token"
-        const val NONEXISTENT_ID = 9999
-        const val VERY_LARGE_ID = 999999999
-        const val NEGATIVE_ID = -1
-        const val ZERO_ID = 0
-    }
-
-    object Query {
-        const val WITH_STUDENTS = "with_students"
-    }
-
-    // Lengths used for negative tests
-    object Lengths {
-        const val AUTH_PASSWORD_TOO_LONG = 1000
-        const val AUTH_CLIENTNAME_TOO_LONG = 300
-        const val USERS_PASSWORD_TOO_LONG = 4097
     }
 
     object Limits {
-        const val PASSWORD_MAX = 4096
-        const val CLIENTNAME_MAX = 256
-        const val CLIENTNAME_TOO_LONG = 257
-    }
-
-    object Avatar {
-        const val BYTES = 1024
+        const val PASSWORD_TOO_LONG = 4097
+        const val CLIENT_NAME_TOO_LONG = 257
     }
 }
