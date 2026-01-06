@@ -88,22 +88,27 @@ fun Application.provideDependencies() {
                 )
             )
         }
-        provide<NotificationsService> {
-            NotificationsServiceImpl(
-                NotificationsServiceImpl.Config(
-                    maxSubjectSubscriptionsPerClient =
-                        getEnv("NOTIFICATIONS_UPDATE_MAX_SUBSCRIPTIONS_PER_CLIENT")?.toIntOrNull() ?: 5,
-                    bulkUpdateInterval =
-                        getEnv("NOTIFICATIONS_BULK_UPDATE_INTERVAL")?.toIntOrNull()?.milliseconds ?: 5.seconds,
-                    bulkUpdatesEnabled = true
+
+        if (isTest && !contains(DependencyKey<NotificationsService>()))
+            provide<NotificationsService> {
+                NotificationsServiceImpl(
+                    NotificationsServiceImpl.Config(
+                        maxSubjectSubscriptionsPerClient =
+                            getEnv("NOTIFICATIONS_UPDATE_MAX_SUBSCRIPTIONS_PER_CLIENT")?.toIntOrNull() ?: 5,
+                        bulkUpdateInterval =
+                            getEnv("NOTIFICATIONS_BULK_UPDATE_INTERVAL")?.toIntOrNull()?.milliseconds ?: 5.seconds,
+                        bulkUpdatesEnabled = true
+                    ),
+                    resolve<UsersService>(),
                 )
-            )
-        }
+            }
+
         provide<ElectiveService> { ElectiveServiceImpl() }
         provide<ElectiveSelectionService> {
-            val notificationsService = resolve<NotificationsService>()
-            val usersService = resolve<UsersService>()
-            ElectiveSelectionServiceImpl(usersService, notificationsService)
+            ElectiveSelectionServiceImpl(
+                resolve<UsersService>(),
+                resolve<NotificationsService>()
+            )
         }
     }
 }

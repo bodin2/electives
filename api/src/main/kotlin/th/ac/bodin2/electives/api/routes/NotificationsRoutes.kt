@@ -7,8 +7,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import th.ac.bodin2.electives.api.RATE_LIMIT_NOTIFICATIONS
 import th.ac.bodin2.electives.api.services.NotificationsService
-import th.ac.bodin2.electives.api.utils.authenticated
-import th.ac.bodin2.electives.api.utils.authenticatedRoutes
 import th.ac.bodin2.electives.utils.KiB
 import kotlin.time.Duration.Companion.seconds
 
@@ -25,13 +23,9 @@ fun Application.registerNotificationsRoutes() {
     notificationsService.startBulkUpdateLoop()
 
     routing {
-        authenticatedRoutes {
-            rateLimit(RATE_LIMIT_NOTIFICATIONS) {
-                webSocket("/notifications") {
-                    authenticated { userId ->
-                        notificationsService.apply { handleConnection(userId) }
-                    }
-                }
+        rateLimit(RATE_LIMIT_NOTIFICATIONS) {
+            webSocket("/notifications") {
+                notificationsService.apply { handleConnection() }
             }
         }
     }

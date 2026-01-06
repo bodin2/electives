@@ -54,6 +54,7 @@ message NotificationsService {
       SUBJECT_ENROLLMENT_UPDATE = 1;
       BULK_SUBJECT_ENROLLMENT_UPDATE = 2;
       ACKNOWLEDGED = 3;
+      IDENTIFY = 4;
     }
 
     MessageType type = 1;
@@ -64,11 +65,16 @@ message NotificationsService {
       SubjectEnrollmentUpdate subject_enrollment_update = 4;
       BulkSubjectEnrollmentUpdate bulk_subject_enrollment_update = 5;
       Acknowledged acknowledged = 6;
+      Identify identify = 7;
     }
   }
 
   // Server acknowledges the client message with the given `message_id`.
   message Acknowledged {}
+
+  message Identify {
+    string token = 1;
+  }
 
   // Request to subscribe to updates for specific subjects
   message SubjectEnrollmentUpdateSubscriptionRequest {

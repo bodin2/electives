@@ -1,11 +1,10 @@
 package th.ac.bodin2.electives.api.utils
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.response.respondText
-import io.ktor.server.routing.RoutingContext
-import io.ktor.server.websocket.WebSocketServerSession
-import io.ktor.websocket.CloseReason
-import io.ktor.websocket.close
+import io.ktor.http.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.server.websocket.*
+import io.ktor.websocket.*
 
 suspend inline fun RoutingContext.badRequest(message: String? = null) {
     call.response.status(HttpStatusCode.BadRequest)
@@ -13,7 +12,11 @@ suspend inline fun RoutingContext.badRequest(message: String? = null) {
 }
 
 suspend inline fun WebSocketServerSession.badFrame(message: String? = null) {
-    close(CloseReason(CloseReason.Codes.PROTOCOL_ERROR, message ?: ""))
+    close(CloseReason(CloseReason.Codes.PROTOCOL_ERROR, message ?: "Bad Frame"))
+}
+
+suspend inline fun WebSocketServerSession.unauthorized(message: String? = null) {
+    close(CloseReason(CloseReason.Codes.PROTOCOL_ERROR, message ?: "Unauthorized"))
 }
 
 suspend inline fun RoutingContext.notFound(message: String? = null) {
@@ -24,12 +27,6 @@ suspend inline fun RoutingContext.notFound(message: String? = null) {
 suspend inline fun RoutingContext.unauthorized(message: String? = null) {
     call.response.status(HttpStatusCode.Unauthorized)
     message?.let { call.respondText(it) }
-}
-
-suspend inline fun WebSocketServerSession.unauthorized(message: String? = null) {
-    call.response.status(HttpStatusCode.Unauthorized)
-    message?.let { call.respondText(it) }
-    close()
 }
 
 suspend inline fun RoutingContext.forbidden(message: String? = null) {

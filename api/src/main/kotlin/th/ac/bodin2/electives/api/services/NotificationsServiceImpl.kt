@@ -10,9 +10,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
+import th.ac.bodin2.electives.api.toPrincipal
 import th.ac.bodin2.electives.api.utils.badFrame
 import th.ac.bodin2.electives.api.utils.parseOrNull
 import th.ac.bodin2.electives.api.utils.send
+import th.ac.bodin2.electives.api.utils.unauthorized
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope
 import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope.PayloadCase
@@ -27,7 +29,7 @@ import kotlin.time.Duration
 
 private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
-class NotificationsServiceImpl(val config: Config) : NotificationsService {
+class NotificationsServiceImpl(val config: Config, val usersService: UsersService) : NotificationsService {
     class Config(
         val maxSubjectSubscriptionsPerClient: Int,
         val bulkUpdateInterval: Duration,
@@ -38,6 +40,7 @@ class NotificationsServiceImpl(val config: Config) : NotificationsService {
     )
 
     companion object {
+        private const val AUTHENTICATION_TIMEOUT_MILLISECONDS = 10_000L
         private val logger = LoggerFactory.getLogger(NotificationsService::class.java)
     }
 
@@ -110,7 +113,17 @@ class NotificationsServiceImpl(val config: Config) : NotificationsService {
         }
     }
 
-    override suspend fun WebSocketServerSession.handleConnection(userId: Int) {
+    override suspend fun WebSocketServerSession.handleConnection() {
+        val userId = withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
+            (incoming.receive() as? Frame.Binary)?.let {
+                val token =
+                    it.parseOrNull<th.ac.bodin2.electives.proto.api.NotificationsService.Identify>()?.token
+                        ?: return@let null
+
+                usersService.toPrincipal(token)
+            }
+        } ?: return unauthorized()
+
         logger.info("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
         connections[userId]?.let {
@@ -181,7 +194,8 @@ class NotificationsServiceImpl(val config: Config) : NotificationsService {
                     return badFrame()
 
                 // Invalid payload
-                PayloadCase.PAYLOAD_NOT_SET -> return badFrame()
+                PayloadCase.PAYLOAD_NOT_SET,
+                PayloadCase.IDENTIFY -> return badFrame()
             }
 
             // Make sure it returns something

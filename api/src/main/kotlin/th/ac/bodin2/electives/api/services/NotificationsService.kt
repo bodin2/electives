@@ -21,5 +21,5 @@ interface NotificationsService {
     /**
      * Handles a new WebSocket connection for notifications.
      */
-    suspend fun WebSocketServerSession.handleConnection(userId: Int)
+    suspend fun WebSocketServerSession.handleConnection()
 }

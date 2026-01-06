@@ -24,14 +24,15 @@ fun Application.configureSecurity() {
 
     install(Authentication) {
         bearer(USER_AUTHENTICATION) {
-            authenticate { tokenCredential ->
-                try {
-                    transaction { usersService.getSessionUserId(tokenCredential.token) }
-                } catch (e: Exception) {
-                    println("Cannot authenticate user with token: ${tokenCredential.token}, cause: $e")
-                    null
-                }
-            }
+            authenticate { tokenCredential -> usersService.toPrincipal(tokenCredential.token) }
         }
     }
 }
+
+fun UsersService.toPrincipal(token: String): Int? =
+    try {
+        transaction { getSessionUserId(token) }
+    } catch (e: Exception) {
+        println("Cannot authenticate user with token: $token, cause: $e")
+        null
+    }
