@@ -108,7 +108,7 @@ class ElectiveSelectionServiceImpl(
                     notificationsService.notifySubjectSelectionUpdate(
                         electiveId,
                         subjectId,
-                        Subject.getEnrolledCount(subject, elective)
+                        transaction { Subject.getEnrolledCount(subject, elective) }
                     )
                 }
 
