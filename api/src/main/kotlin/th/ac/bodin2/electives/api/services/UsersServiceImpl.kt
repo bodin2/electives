@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.update
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
@@ -110,9 +111,9 @@ class UsersServiceImpl(val config: Config) : UsersService {
                     SecureRandom().nextBytes(this)
                 })
 
-            User.findByIdAndUpdate(id) {
-                it.sessionExpiry = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds)
-                it.sessionHash = Argon2.hash(session.toCharArray())
+            Users.update({ Users.id eq id }) {
+                it[Users.sessionExpiry] = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds)
+                it[Users.sessionHash] = Argon2.hash(session.toCharArray())
             }
 
             logger.info("New session created, user: $id, aud: $aud")
@@ -151,8 +152,9 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
 
     override fun clearSession(userId: Int) {
-        User.findByIdAndUpdate(userId) {
-            it.sessionHash = null
+        Users.update({ Users.id eq userId }) {
+            it[Users.sessionExpiry] = null
+            it[Users.sessionHash] = null
         }
 
         logger.info("Session cleared, user: $userId")

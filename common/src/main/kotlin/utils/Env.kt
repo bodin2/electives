@@ -37,6 +37,3 @@ var ENV_PREFIX = ""
  * Whether to get environment variables from the system environment variables.
  */
 var ENV_GET_FROM_SYSTEM = true
-
-val isTest by lazy { getEnv("APP_ENV") == "test" }
-val isDev by lazy { getEnv("APP_ENV") == "development" }

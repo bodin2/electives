@@ -14,42 +14,12 @@ import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.db.models.*
 import java.time.LocalDateTime
 
-@Suppress("NOTHING_TO_INLINE")
-private inline fun <T> Entity<Int>.getColumn(table: IdTable<Int>, column: Column<T>): T {
-    return table.select(column)
-        .where { table.id eq this@getColumn.id }
-        .single()[column]
-}
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun <T> Entity<Int>.setColumn(table: IdTable<Int>, column: Column<T>, value: T) {
-    table.update({ table.id eq this@setColumn.id }) {
-        it[column] = value
-    }
-}
-
 class User(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : EntityClass<Int, User>(Users)
 
     var firstName by Users.firstName
     var middleName by Users.middleName
     var lastName by Users.lastName
-
-    var passwordHash
-        get() = getColumn(Users, Users.passwordHash)
-        set(value) {
-            Users.update({ Users.id eq id.value }) {
-                it[passwordHash] = value
-            }
-        }
-
-    var sessionExpiry
-        get() = getColumn(Users, Users.sessionExpiry)
-        set(value) = setColumn(Users, Users.sessionExpiry, value)
-
-    var sessionHash
-        get() = getColumn(Users, Users.sessionHash)
-        set(value) = setColumn(Users, Users.sessionHash, value)
 }
 
 class Student(val reference: Reference, val user: User) {
@@ -177,7 +147,6 @@ class Teacher(val reference: Reference, val user: User, val avatar: ByteArray?) 
                 .map { Subject.wrapRow(it) }
         }
 
-        fun teachesSubject(teacher: Reference, subjectId: EntityID<Int>) = teachesSubject(teacher, subjectId.value)
         fun teachesSubject(teacher: Reference, subjectId: Int): Boolean {
             return TeacherSubjects
                 .selectAll()
@@ -307,8 +276,6 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
             ?.get(Subjects.team)
     }
 
-    fun getTeamId(subjectId: EntityID<Int>) = getTeamId(Subject.Reference(subjectId.value))
-
     /**
      * Gets teachers for the specified subject.
      */
@@ -317,8 +284,6 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
             .selectAll().where { (TeacherSubjects.subject eq subject.id) }
             .map { Teacher.findById(it[Teachers.id].value)!! }
     }
-
-    fun getTeachers(subjectId: EntityID<Int>) = getTeachers(Subject.Reference(subjectId.value))
 
     /**
      * Gets students for the specified subject of the specified elective.
@@ -399,11 +364,10 @@ class Subject(id: EntityID<Int>) : Entity<Int>(id) {
     fun getStudents(elective: Elective.Reference) = getStudents(this@Subject.id, elective)
     fun getEnrolledCount(elective: Elective.Reference) = getEnrolledCount(this@Subject.id, elective)
 
-    val teachers: List<Teacher>
-        get() = getTeachers(this@Subject.id)
-
     val description
-        get() = getColumn(Subjects, Subjects.description)
+        get() = Subjects.select(Subjects.description)
+            .where { Subjects.id eq id }
+            .single()[Subjects.description]
 
     var code by Subjects.code
     var tag by Subjects.tag

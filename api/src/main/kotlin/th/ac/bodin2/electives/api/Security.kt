@@ -7,7 +7,6 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.getEnv
-import th.ac.bodin2.electives.utils.isTest
 import kotlin.time.Duration.Companion.milliseconds
 
 const val USER_AUTHENTICATION = "user"
