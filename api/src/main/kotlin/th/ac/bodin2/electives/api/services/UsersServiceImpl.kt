@@ -104,7 +104,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         val passwordHash = user[Users.passwordHash]
 
         return if (Argon2.verify(passwordHash.toByteArray(), password.toCharArray())) {
-            val session = Base64.getEncoder()
+            val session = Base64.getUrlEncoder()
                 .withoutPadding()
                 .encodeToString(ByteArray(TOKEN_SIZE).apply {
                     SecureRandom().nextBytes(this)
