@@ -120,7 +120,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
                     it.parseOrNull<Envelope>()?.identify?.token
                         ?: return@let null
 
-                usersService.toPrincipal(token)
+                usersService.toPrincipal(token, call)
             }
         } ?: return unauthorized()
 
