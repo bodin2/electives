@@ -12,7 +12,9 @@ import org.sqlite.jdbc4.JDBC4Connection
 import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.db.Database
-import th.ac.bodin2.electives.utils.*
+import th.ac.bodin2.electives.utils.getEnv
+import th.ac.bodin2.electives.utils.loadDotEnv
+import th.ac.bodin2.electives.utils.requireEnvNonBlank
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -92,7 +94,7 @@ fun Application.provideDependencies() {
             )
         }
 
-        if (isTest && !contains(DependencyKey<NotificationsService>()))
+        if (!contains(DependencyKey<NotificationsService>()))
             provide<NotificationsService> {
                 NotificationsServiceImpl(
                     NotificationsServiceImpl.Config(
