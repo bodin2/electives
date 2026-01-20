@@ -4,7 +4,25 @@
             <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+    <appender name="APP_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{0} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="KTOR_CALL_LOGGING" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{userId:-anonymous} @ %X{ip:-???}] - %msg%n</pattern>
+        </encoder>
+    </appender>
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
+    <logger name="io.ktor.server.plugins.cors.CORS" level="WARN" />
+    <logger name="ElectivesAPI" level="DEBUG" />
+    <logger name="th.ac.bodin2.electives.api" level="DEBUG" additivity="false">
+        <appender-ref ref="APP_STDOUT"/>
+    </logger>
+    <logger name="CallLogging" additivity="false">
+        <appender-ref ref="KTOR_CALL_LOGGING"/>
+    </logger>
 </configuration>

@@ -116,7 +116,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
                 it[Users.sessionHash] = Argon2.hash(session.toCharArray())
             }
 
-            logger.info("New session created, user: $id, aud: $aud")
+            logger.debug("New session created, user: $id, aud: $aud")
 
             "$id.$session"
         } else {
@@ -145,7 +145,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         if (!Argon2.verify(sessionHash.toByteArray(), session.toCharArray()))
             throw IllegalArgumentException("Invalid session token for user: $userId")
 
-        logger.info("Validated session token, user: $userId")
+        logger.debug("Validated session token, user: $userId")
 
         return userId
     }
@@ -157,7 +157,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
             it[Users.sessionHash] = null
         }
 
-        logger.info("Session cleared, user: $userId")
+        logger.debug("Session cleared, user: $userId")
     }
 
     private fun createUser(

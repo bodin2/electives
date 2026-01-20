@@ -93,7 +93,7 @@ class ElectiveSelectionServiceImpl(
 
                     val inserted = ps.executeUpdate()
                     if (inserted == 0) {
-                        logger.info("Student elective selection failed due to full subject, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
+                        logger.debug("Student elective selection failed due to full subject, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
 
                         // Not inserted, subject is full
                         return@transaction ModifySelectionResult.CannotEnroll(
@@ -103,7 +103,7 @@ class ElectiveSelectionServiceImpl(
                 }
 
                 onSuccess = {
-                    logger.info("Student elective selected, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
+                    logger.debug("Student elective selected, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
 
                     notificationsService.notifySubjectSelectionUpdate(
                         electiveId,
@@ -146,7 +146,7 @@ class ElectiveSelectionServiceImpl(
 
                 Student.removeElectiveSelection(student, elective)
 
-                logger.info("Student elective removed, user: $userId, elective: $electiveId, executor: $executorId")
+                logger.debug("Student elective removed, user: $userId, elective: $electiveId, executor: $executorId")
 
                 notificationsService.notifySubjectSelectionUpdate(
                     electiveId,

@@ -67,7 +67,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
         subjectId: Int,
         enrolledCount: Int,
     ) {
-        logger.info("Notifying subject selection update, electiveId: $electiveId, subjectId: $subjectId, enrolledCount: $enrolledCount")
+        logger.debug("Notifying subject selection update, electiveId: $electiveId, subjectId: $subjectId, enrolledCount: $enrolledCount")
 
         val electiveSubscriptions = subjectSelectionSubscriptions[electiveId] ?: return
         val subjectListeners = electiveSubscriptions[subjectId] ?: return
@@ -90,7 +90,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
             }
 
             val startMs = System.currentTimeMillis()
-            logger.info("Sending bulk enrollment updates...")
+            logger.debug("Sending bulk enrollment updates...")
 
             val updates = transaction {
                 Elective.allReferences().map { elective ->
@@ -109,7 +109,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
                 current + updates.associateBy { it.bulkSubjectEnrollmentUpdate.electiveId }
             }
 
-            logger.info("Finished sending bulk updates in ${System.currentTimeMillis() - startMs}ms")
+            logger.debug("Finished sending bulk updates in ${System.currentTimeMillis() - startMs}ms")
         }
     }
 
@@ -124,10 +124,10 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
             }
         } ?: return unauthorized()
 
-        logger.info("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
+        logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
         connections[userId]?.let {
-            logger.info("Existing connection found for user: $userId, closing previous connection")
+            logger.warn("Existing connection found for user: $userId, closing previous connection")
             it.close()
         }
 
@@ -174,7 +174,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
                     }
 
                     acknowledge(envelope)
-                    logger.info("Client subscriptions updated, user: $userId")
+                    logger.debug("Client subscriptions updated, user: $userId")
 
                     // Cleanup previous enrollment updates
                     for (cleanup in cleanups) runCatching { cleanup() }.onFailure {

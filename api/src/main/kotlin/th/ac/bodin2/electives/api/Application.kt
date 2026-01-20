@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
+import io.ktor.server.plugins.*
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
@@ -11,6 +12,7 @@ import org.slf4j.LoggerFactory
 import org.sqlite.jdbc4.JDBC4Connection
 import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.api.services.*
+import th.ac.bodin2.electives.api.utils.authenticatedUserId
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.utils.getEnv
 import th.ac.bodin2.electives.utils.loadDotEnv
@@ -20,6 +22,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 internal val logger: Logger = LoggerFactory.getLogger("ElectivesAPI")
+internal val callLogger: Logger = LoggerFactory.getLogger("CallLogging")
 
 fun main() {
     if (isTest) {
@@ -71,7 +74,13 @@ fun Application.module() {
         }
     }
 
-    install(CallLogging)
+    install(CallLogging) {
+        logger = callLogger
+
+        mdc("ip") { it.request.origin.remoteAddress }
+        mdc("userAgent") { it.request.headers["User-Agent"] }
+        mdc("userId") { it.authenticatedUserId()?.toString() }
+    }
 
     configureHTTP()
     configureSecurity()

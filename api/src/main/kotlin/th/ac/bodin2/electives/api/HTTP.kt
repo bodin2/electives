@@ -59,7 +59,7 @@ fun Application.configureHTTP() {
     install(ConditionalHeaders)
 
     if (!getEnv("IS_BEHIND_PROXY").isNullOrBlank()) {
-        logger.info("IS_BEHIND_PROXY is set, respecting forwarded headers. This may be dangerous.")
+        logger.info("IS_BEHIND_PROXY is set, respecting forwarded headers.")
 
         install(ForwardedHeaders)
         install(XForwardedHeaders)

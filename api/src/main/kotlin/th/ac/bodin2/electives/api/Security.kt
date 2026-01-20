@@ -39,7 +39,7 @@ fun UsersService.toPrincipal(token: String, call: ApplicationCall): Int? =
 
         val hash = bytes.joinToString("") { "%02x".format(it) }
 
-        logger.info("Cannot authenticate user (address: ${call.request.origin.remoteAddress}, hash: $hash): ${e.message}")
+        logger.debug("Cannot authenticate user (address: ${call.request.origin.remoteAddress}, hash: $hash): ${e.message}")
         null
     }
 
