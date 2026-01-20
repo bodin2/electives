@@ -72,8 +72,10 @@ class NotificationsServiceImplTest : ApplicationTest() {
         block: suspend DefaultClientWebSocketSession.() -> Unit
     ) {
         createWSClient().webSocket("/notifications") {
-            send(identify {
-                this.token = token
+            send(envelope {
+                identify = identify {
+                    this.token = token
+                }
             })
 
             block()

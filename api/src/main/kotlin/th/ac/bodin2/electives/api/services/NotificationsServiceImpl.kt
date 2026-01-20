@@ -117,7 +117,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
         val userId = withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
             (incoming.receive() as? Frame.Binary)?.let {
                 val token =
-                    it.parseOrNull<th.ac.bodin2.electives.proto.api.NotificationsService.Identify>()?.token
+                    it.parseOrNull<Envelope>()?.identify?.token
                         ?: return@let null
 
                 usersService.toPrincipal(token)
