@@ -118,14 +118,14 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
             logger.info("New session created, user: $id, aud: $aud")
 
-            "$id:$session"
+            "$id.$session"
         } else {
             throw IllegalArgumentException("Invalid password for user: $id")
         }
     }
 
     override fun getSessionUserId(token: String): Int {
-        val (subject, session) = token.split(":", limit = 2).takeIf { it.size == 2 }
+        val (subject, session) = token.split(".", limit = 2).takeIf { it.size == 2 }
             ?: throw IllegalArgumentException("Invalid session token format")
 
         val userId = subject.toIntOrNull() ?: throw IllegalArgumentException("Invalid token subject: $subject")
