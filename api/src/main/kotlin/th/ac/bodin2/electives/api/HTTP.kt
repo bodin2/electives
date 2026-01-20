@@ -14,7 +14,9 @@ import io.ktor.server.resources.*
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.authenticatedUserId
 import th.ac.bodin2.electives.proto.api.UserType
-import th.ac.bodin2.electives.utils.*
+import th.ac.bodin2.electives.utils.KiB
+import th.ac.bodin2.electives.utils.getEnv
+import th.ac.bodin2.electives.utils.requireEnvNonBlank
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -39,6 +41,9 @@ fun Application.configureHTTP() {
         allowMethod(HttpMethod.Put)
         allowMethod(HttpMethod.Delete)
         allowMethod(HttpMethod.Patch)
+
+        allowHeader(HttpHeaders.Authorization)
+        allowHeader(HttpHeaders.ContentType)
 
         if (isDev || isTest) {
             anyHost()
