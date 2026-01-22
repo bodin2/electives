@@ -61,13 +61,11 @@ fun Application.module() {
             val path = requireEnvNonBlank("DB_PATH")
             Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC").apply {
                 val conn = connector().connection as JDBC4Connection
-                conn.prepareStatement(
-                    """
-                        PRAGMA journal_mode=WAL;
-                        PRAGMA synchronous=NORMAL;
-                        PRAGMA busy_timeout=5000;
-                    """.trimIndent()
-                )
+                conn.createStatement().use {
+                    it.execute("PRAGMA journal_mode=WAL;")
+                    it.execute("PRAGMA synchronous=NORMAL;")
+                    it.execute("PRAGMA busy_timeout=5000;")
+                }
             }
         } else {
             logger.warn("Database already initialized? If you're running this in production, this is not normal.")
