@@ -41,7 +41,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
 
     companion object {
         private const val AUTHENTICATION_TIMEOUT_MILLISECONDS = 10_000L
-        private val logger = LoggerFactory.getLogger(NotificationsService::class.java)
+        private val logger = LoggerFactory.getLogger(NotificationsServiceImpl::class.java)
     }
 
     /**
