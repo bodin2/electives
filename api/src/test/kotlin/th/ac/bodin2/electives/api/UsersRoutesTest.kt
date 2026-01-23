@@ -3,8 +3,8 @@ package th.ac.bodin2.electives.api
 import io.ktor.client.statement.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
 import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.PASSWORD
@@ -20,6 +20,7 @@ import th.ac.bodin2.electives.proto.api.UsersServiceKt.setStudentElectiveSelecti
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@OptIn(CreatesTransaction::class)
 class UsersRoutesTest : ApplicationTest() {
     private val ApplicationTestBuilder.usersService: UsersService
         get() {
@@ -29,24 +30,20 @@ class UsersRoutesTest : ApplicationTest() {
 
     private suspend fun ApplicationTestBuilder.studentToken(): String {
         startApplication()
-        return transaction {
-            usersService.createSession(
-                STUDENT_ID,
-                PASSWORD,
-                ""
-            )
-        }
+        return usersService.createSession(
+            STUDENT_ID,
+            PASSWORD,
+            ""
+        )
     }
 
     private suspend fun ApplicationTestBuilder.teacherToken(): String {
         startApplication()
-        return transaction {
-            usersService.createSession(
-                TEACHER_ID,
-                PASSWORD,
-                ""
-            )
-        }
+        return usersService.createSession(
+            TEACHER_ID,
+            PASSWORD,
+            ""
+        )
     }
 
     @Test

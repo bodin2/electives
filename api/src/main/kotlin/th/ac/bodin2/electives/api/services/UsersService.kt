@@ -1,6 +1,7 @@
 package th.ac.bodin2.electives.api.services
 
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.UserType
@@ -39,7 +40,8 @@ interface UsersService {
      * @throws NotFoundException if the user does not exist.
      * @throws IllegalArgumentException if the token or session is invalid.
      */
-    fun createSession(id: Int, password: String, aud: String): String
+    @CreatesTransaction
+    suspend fun createSession(id: Int, password: String, aud: String): String
 
     /**
      * Gets the user ID associated with the given session token.

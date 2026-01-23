@@ -58,13 +58,11 @@ class NotificationsServiceImplTest : ApplicationTest() {
 
     private suspend fun ApplicationTestBuilder.studentToken(): String {
         startApplication()
-        return transaction {
-            usersService.createSession(
-                Students.JOHN_ID,
-                Students.JOHN_PASSWORD,
-                CLIENT_NAME
-            )
-        }
+        return usersService.createSession(
+            Students.JOHN_ID,
+            Students.JOHN_PASSWORD,
+            CLIENT_NAME
+        )
     }
 
     private suspend fun ApplicationTestBuilder.webSocket(

@@ -2,6 +2,7 @@ package th.ac.bodin2.electives.api.services
 
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.MockUtils.mockStudent
 import th.ac.bodin2.electives.api.services.MockUtils.mockTeacher
 import th.ac.bodin2.electives.api.services.TestServiceConstants.PASSWORD
@@ -37,7 +38,8 @@ class TestUsersService : UsersService {
         else -> throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
     }
 
-    override fun createSession(id: Int, password: String, aud: String): String {
+    @CreatesTransaction
+    override suspend fun createSession(id: Int, password: String, aud: String): String {
         if (password != PASSWORD) {
             throw IllegalArgumentException("Invalid password for user ID: $id")
         }

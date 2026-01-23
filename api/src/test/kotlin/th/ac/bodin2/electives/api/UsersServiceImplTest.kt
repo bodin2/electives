@@ -8,12 +8,16 @@ import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.TestConstants.Students
 import th.ac.bodin2.electives.api.TestConstants.Teachers
 import th.ac.bodin2.electives.api.TestConstants.TestData
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.services.UsersServiceImpl
 import th.ac.bodin2.electives.proto.api.UserType
 import kotlin.test.*
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
 
+@OptIn(CreatesTransaction::class)
 class UsersServiceImplTest : ApplicationTest() {
     private val ApplicationTestBuilder.usersService: UsersService
         get() {
@@ -71,9 +75,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create user session`() = runTest {
-        val token = transaction {
-            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
-        }
+        val token = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
 
         assertNotNull(token)
         assertTrue(token.isNotBlank())
@@ -87,18 +89,14 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create user session with invalid password`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            transaction {
-                usersService.createSession(Students.JOHN_ID, "wrongpassword", TestData.CLIENT_NAME)
-            }
+            usersService.createSession(Students.JOHN_ID, "wrongpassword", TestData.CLIENT_NAME)
         }
     }
 
     @Test
     fun `create non existent user session`() = runTest {
         assertFailsWith<NotFoundException> {
-            transaction {
-                usersService.createSession(UNUSED_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
-            }
+            usersService.createSession(UNUSED_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
         }
     }
 
@@ -113,9 +111,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `clear session`() = runTest {
-        val token = transaction {
-            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
-        }
+        val token = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
 
         transaction {
             usersService.clearSession(Students.JOHN_ID)
@@ -169,59 +165,47 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create session with empty password`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            transaction {
-                usersService.createSession(
-                    Students.JOHN_ID,
-                    "",
-                    TestData.CLIENT_NAME
-                )
-            }
+            usersService.createSession(
+                Students.JOHN_ID,
+                "",
+                TestData.CLIENT_NAME
+            )
         }
     }
 
     @Test
     fun `create session with too long password`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            transaction {
-                usersService.createSession(
-                    Students.JOHN_ID,
-                    "p".repeat(TestConstants.Limits.PASSWORD_TOO_LONG),
-                    TestData.CLIENT_NAME
-                )
-            }
+            usersService.createSession(
+                Students.JOHN_ID,
+                "p".repeat(TestConstants.Limits.PASSWORD_TOO_LONG),
+                TestData.CLIENT_NAME
+            )
         }
     }
 
     @Test
     fun `create session with too long client name`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            transaction {
-                usersService.createSession(
-                    Students.JOHN_ID,
-                    Students.JOHN_PASSWORD,
-                    "c".repeat(TestConstants.Limits.CLIENT_NAME_TOO_LONG)
-                )
-            }
+            usersService.createSession(
+                Students.JOHN_ID,
+                Students.JOHN_PASSWORD,
+                "c".repeat(TestConstants.Limits.CLIENT_NAME_TOO_LONG)
+            )
         }
     }
 
     @Test
     fun `create session with empty client name`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            transaction {
-                usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "")
-            }
+            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "")
         }
     }
 
     @Test
     fun `session invalidates after multiple sessions created`() = runTest {
-        val token1 = transaction {
-            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client1")
-        }
-        val token2 = transaction {
-            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client2")
-        }
+        val token1 = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client1")
+        val token2 = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client2")
 
         assertNotEquals(token1, token2)
 
@@ -239,13 +223,8 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `generate unique session tokens`() = runTest {
-        val token1 = transaction {
-            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client1")
-        }
-
-        val token2 = transaction {
-            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client1")
-        }
+        val token1 = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client1")
+        val token2 = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client1")
 
         assertNotEquals(token1, token2)
     }
@@ -254,13 +233,12 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `session expires`() = runTest {
         val usersService = UsersServiceImpl(
             UsersServiceImpl.Config(
-                sessionDurationSeconds = 1
+                sessionDurationSeconds = 1,
+                minimumSessionCreationTime = 0.seconds
             )
         )
 
-        val token = transaction {
-            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
-        }
+        val token = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
 
         // Wait for session to expire
         delay(1001L)
@@ -268,5 +246,21 @@ class UsersServiceImplTest : ApplicationTest() {
         assertFailsWith<IllegalArgumentException> {
             transaction { usersService.getSessionUserId(token) }
         }
+    }
+
+    @Test
+    fun `session creation takes at least set minimum`() = runTest {
+        val usersService = UsersServiceImpl(
+            UsersServiceImpl.Config(
+                sessionDurationSeconds = 5,
+                minimumSessionCreationTime = 1.seconds
+            )
+        )
+
+        val time = measureTime {
+            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
+        }
+
+        assert(time >= 1.seconds) { "Session creation took less than minimum time" }
     }
 }

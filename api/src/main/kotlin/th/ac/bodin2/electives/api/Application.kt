@@ -96,7 +96,9 @@ fun Application.provideDependencies() {
             UsersServiceImpl(
                 UsersServiceImpl.Config(
                     sessionDurationSeconds =
-                        (getEnv("USER_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.days).inWholeSeconds
+                        (getEnv("USER_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.days).inWholeSeconds,
+                    minimumSessionCreationTime =
+                        (getEnv("USER_SESSION_CREATION_MINIMUM_TIME")?.toIntOrNull()?.milliseconds ?: 500.milliseconds)
                 )
             )
         }

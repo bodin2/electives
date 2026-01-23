@@ -6,10 +6,12 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.User
@@ -18,9 +20,11 @@ import th.ac.bodin2.electives.db.models.Teachers
 import th.ac.bodin2.electives.db.models.Users
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
+import th.ac.bodin2.electives.utils.withMinimumDelay
 import java.security.SecureRandom
 import java.time.LocalDateTime
 import java.util.*
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 class UsersServiceImpl(val config: Config) : UsersService {
@@ -29,7 +33,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         private val logger = LoggerFactory.getLogger(UsersServiceImpl::class.java)
     }
 
-    class Config(val sessionDurationSeconds: Long)
+    class Config(val sessionDurationSeconds: Long, val minimumSessionCreationTime: Duration)
 
     // 4 MB cache for user types
     private val userTypeCache = InMemoryKache<Int, UserType>(maxSize = 4 * 1024 * 1024) {
@@ -89,40 +93,45 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
     override fun getStudentById(id: Int): Student? = Student.findById(id)
 
-    override fun createSession(id: Int, password: String, aud: String): String {
-        if (password.length > 4096) {
-            throw IllegalArgumentException("Password too long for user: $id")
-        }
-
-        val aud = aud.trim().apply {
-            if (isEmpty()) throw IllegalArgumentException("Audience blank for user: $id")
-            if (length > 256) throw IllegalArgumentException("Audience string too long for user: $id (aud = ${slice(0..32)}...)")
-        }
-
-        val user = Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull()
-            ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
-
-        val passwordHash = user[Users.passwordHash]
-
-        return if (Argon2.verify(passwordHash.toByteArray(), password.toCharArray())) {
-            val session = Base64.getUrlEncoder()
-                .withoutPadding()
-                .encodeToString(ByteArray(TOKEN_SIZE).apply {
-                    SecureRandom().nextBytes(this)
-                })
-
-            Users.update({ Users.id eq id }) {
-                it[Users.sessionExpiry] = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds)
-                it[Users.sessionHash] = Argon2.hash(session.toCharArray())
+    @CreatesTransaction
+    override suspend fun createSession(id: Int, password: String, aud: String): String =
+        withMinimumDelay(config.minimumSessionCreationTime) {
+            if (password.length > 4096) {
+                throw IllegalArgumentException("Password too long for user: $id")
             }
 
-            logger.debug("New session created, user: $id, aud: $aud")
+            val aud = aud.trim().apply {
+                if (isEmpty()) throw IllegalArgumentException("Audience blank for user: $id")
+                if (length > 256)
+                    throw IllegalArgumentException("Audience string too long for user: $id (aud = ${slice(0..32)}...)")
+            }
 
-            "$id.$session"
-        } else {
-            throw IllegalArgumentException("Invalid password for user: $id")
+            transaction {
+                val user = Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull()
+                    ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
+
+                val passwordHash = user[Users.passwordHash]
+
+                if (Argon2.verify(passwordHash.toByteArray(), password.toCharArray())) {
+                    val session = Base64.getUrlEncoder()
+                        .withoutPadding()
+                        .encodeToString(ByteArray(TOKEN_SIZE).apply {
+                            SecureRandom().nextBytes(this)
+                        })
+
+                    Users.update({ Users.id eq id }) {
+                        it[Users.sessionExpiry] = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds)
+                        it[Users.sessionHash] = Argon2.hash(session.toCharArray())
+                    }
+
+                    logger.debug("New session created, user: $id, aud: $aud")
+
+                    "$id.$session"
+                } else {
+                    throw IllegalArgumentException("Invalid password for user: $id")
+                }
+            }
         }
-    }
 
     override fun getSessionUserId(token: String): Int {
         val (subject, session) = token.split(".", limit = 2).takeIf { it.size == 2 }

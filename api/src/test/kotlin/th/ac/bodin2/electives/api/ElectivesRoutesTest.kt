@@ -3,7 +3,7 @@ package th.ac.bodin2.electives.api
 import io.ktor.client.request.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.TestElectiveService
 import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_WITHOUT_SUBJECTS_ID
@@ -29,13 +29,12 @@ class ElectivesRoutesTest : ApplicationTest() {
 
     private suspend fun ApplicationTestBuilder.studentToken(): String {
         startApplication()
-        return transaction {
-            usersService.createSession(
-                STUDENT_ID,
-                PASSWORD,
-                ""
-            )
-        }
+        @OptIn(CreatesTransaction::class)
+        return usersService.createSession(
+            STUDENT_ID,
+            PASSWORD,
+            ""
+        )
     }
 
     @Test

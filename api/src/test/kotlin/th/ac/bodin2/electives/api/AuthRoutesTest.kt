@@ -6,6 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.TestConstants.TestData
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.TestServiceConstants
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.AuthService
@@ -69,13 +70,12 @@ class AuthRoutesTest : ApplicationTest() {
 
         val usersService: UsersService by application.dependencies
 
-        val token = transaction {
-            usersService.createSession(
-                TestServiceConstants.STUDENT_ID,
-                TestServiceConstants.PASSWORD,
-                TestData.CLIENT_NAME
-            )
-        }
+        @OptIn(CreatesTransaction::class)
+        val token = usersService.createSession(
+            TestServiceConstants.STUDENT_ID,
+            TestServiceConstants.PASSWORD,
+            TestData.CLIENT_NAME
+        )
 
         client.post("/logout") {
             bearerAuth(token)

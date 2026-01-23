@@ -2,6 +2,7 @@ package th.ac.bodin2.electives.utils
 
 import kotlinx.coroutines.*
 import kotlin.time.Duration
+import kotlin.time.TimeSource
 
 /**
  * Runs the given [action] every [delay].
@@ -43,6 +44,41 @@ fun CoroutineScope.setInterval(
         while (isActive) {
             action()
             delay(delay)
+        }
+    }
+}
+
+/**
+ * Ensures that the given [block] takes at least [minimumDelay] to complete.
+ *
+ * If the [block] completes in less time than [minimumDelay], this function will
+ * suspend for the remaining time.
+ *
+ * Example:
+ * ```
+ * withMinimumDelay(2.seconds) {
+ *   // Some quick operation
+ * }
+ * // This will take at least 2 seconds to complete
+ * ```
+ *
+ * @param minimumDelay The minimum duration that the [block] should take.
+ * @param block The suspend function to execute.
+ */
+suspend fun <T> withMinimumDelay(
+    minimumDelay: Duration,
+    block: suspend () -> T
+): T {
+    val start = TimeSource.Monotonic.markNow()
+
+    try {
+        return block()
+    } finally {
+        val elapsed = start.elapsedNow()
+
+        val remainingDelay = minimumDelay - elapsed
+        if (remainingDelay.isPositive()) {
+            delay(remainingDelay)
         }
     }
 }
