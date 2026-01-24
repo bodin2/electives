@@ -1,13 +1,13 @@
 [versions]
 kotlin = "2.3.0"
-exposed = "1.0.0-rc-4"
+exposed = "1.0.0"
 sqlite-jdbc = "3.51.1.0"
-protobuf = "4.33.2"
+protobuf = "4.33.4"
 protobuf-plugin = "0.9.6"
 dotenv = "6.5.1"
 argon2 = "2.12"
-ktor = "3.3.3"
-logback = "1.5.23"
+ktor = "3.4.0"
+logback = "1.5.25"
 
 [libraries]
 protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }
