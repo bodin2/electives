@@ -163,9 +163,10 @@ enum SubjectTag {
   SOCIAL_STUDIES = 3;
   ART = 4;
   PHYSICAL_EDUCATION = 5;
-  HOME_ECONOMICS = 6;
+  // การงานอาชีพ
+  CAREER = 6;
   FOREIGN_LANGUAGE = 7;
-  GUIDANCE_AND_CAREER = 8;
+  GUIDANCE = 8;
   ENGLISH_PROGRAM = 9;
   // กิจกรรมพัฒนาผู้เรียน
   ACTIVITIES = 10;
