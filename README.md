@@ -39,3 +39,5 @@ Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md).
 ## License
 
 This project is licensed under [CC BY-NC-SA 4.0](./LICENSE).
+
+Graphic assets (PNG, JPG, WEBP, ICO, etc.) in this project have all rights reserved by their respective owners.
