@@ -45,6 +45,9 @@ fun Application.configureHTTP() {
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
 
+        exposedHeaders += listOf("X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset")
+        exposedHeaders += HttpHeaders.RetryAfter
+
         if (isDev || isTest) {
             anyHost()
         } else {
