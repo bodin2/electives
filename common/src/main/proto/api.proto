@@ -113,11 +113,17 @@ message Team {
 message Elective {
   uint32 id = 1;
   string name = 2;
-  // Unix timestamp representing the start and end dates of the selection period
+  /**
+   * Unix timestamp representing the start date of the selection period.
+   * If not set, the selection period should be treated as started.
+   */
   optional uint64 start_date = 3;
-  // Unix timestamp representing the end date of the selection period
+  /**
+   * Unix timestamp representing the end date of the selection period.
+   * If not set, the selection period should be treated as indefinite.
+   */
   optional uint64 end_date = 4;
-  uint32 team_id = 5;
+  optional uint32 team_id = 5;
 }
 
 message Subject {
