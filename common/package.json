@@ -1,17 +1,20 @@
 {
-  "name": "@bodin2/electives-proto",
+  "name": "@bodin2/electives-common",
   "version": "1.0.0",
   "scripts": {
     "build": "bun run scripts/build.ts src/main/proto/api.proto",
     "dev": "bun run scripts/dev.ts"
   },
   "exports": {
-    "./api": {
+    "./proto/api": {
       "default": "./build/ts/main/proto/api.ts"
+    },
+    "./Logger": {
+      "default": "./src/main/ts/Logger.ts"
     }
   },
   "devDependencies": {
     "@protobuf-ts/protoc": "2.11.1",
-    "ts-proto": "2.8.3"
+    "ts-proto": "2.11.0"
   }
 }
