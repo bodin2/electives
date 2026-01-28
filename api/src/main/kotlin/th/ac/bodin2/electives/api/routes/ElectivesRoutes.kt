@@ -66,16 +66,19 @@ class ElectivesController(private val electiveService: ElectiveService) {
     }
 
     private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
-        val result = transaction { electiveService.getSubjects(electiveId) }
-        when (result) {
-            is QueryResult.ElectiveNotFound -> return electiveNotFoundError()
-            is QueryResult.Success ->
-                call.respond(listSubjectsResponse {
-                    subjects += result.value.map { it.toProto(withDescription = false) }
-                })
+        val response = transaction {
+            return@transaction when (val result = electiveService.getSubjects(electiveId)) {
+                is QueryResult.ElectiveNotFound -> null
+                is QueryResult.Success ->
+                    listSubjectsResponse {
+                        subjects += result.value.map { it.toProto(withDescription = false, electiveId = electiveId) }
+                    }
 
-            else -> throw IllegalStateException("Unreachable case: $result")
-        }
+                else -> throw IllegalStateException("Unreachable case: $result")
+            }
+        } ?: return electiveNotFoundError()
+
+        call.respond(response)
     }
 
     private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, subjectId: Int) {
