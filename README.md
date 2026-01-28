@@ -18,8 +18,8 @@ There are also other issues, such as students not being to view details of subje
 
 - Using [Ktor](https://ktor.io) allows us to ergonomically create a server that can handle high loads of traffic in a short amount of time.
 - [Protocol Buffers](https://protobuf.dev) provide a compact binary format for data exchange, making it efficient to send and receive data between the server and clients.
-- [SQLite](https://sqlite.org) allows us to manage data efficiently, ensuring that data is stored and retrieved quickly.  
-  We are using [SQLite JDBC](https://github.com/xerial/sqlite-jdbc) with [JetBrains Exposed](https://www.jetbrains.com/exposed), which binds fully-typed database schemas and data-access-objects to a high-performance native SQLite3 binding.
+- [SQLite](https://sqlite.org) allows us to easily store data without needing to set up a separate database server.
+  We are using [SQLite JDBC](https://github.com/xerial/sqlite-jdbc) with [JetBrains Exposed](https://www.jetbrains.com/exposed).
 - WebSockets allow students and teachers to get up-to-date information without needing to refresh.
 
 #### Frontend
