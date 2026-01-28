@@ -11,6 +11,7 @@ import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.resources.*
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.authenticatedUserId
 import th.ac.bodin2.electives.proto.api.UserType
@@ -111,7 +112,7 @@ private fun Application.configureRateLimits() {
             requestKey(authenticated)
             requestWeight { _, key ->
                 if (key is Int)
-                    return@requestWeight when (usersService.getUserType(key)) {
+                    return@requestWeight when (transaction { usersService.getUserType(key) }) {
                         // Teachers are not affected by elective selection limits
                         UserType.TEACHER -> 0
                         else -> 1

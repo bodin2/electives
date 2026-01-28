@@ -38,7 +38,7 @@ object MockUtils {
     fun mockSubject(id: Int): Subject {
         val mock = mockk<Subject>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Subjects)
-        every { mock.team } returns DaoEntityID(SUBJECT_TEAM_ID, Teams)
+        every { mock.teamId } returns DaoEntityID(SUBJECT_TEAM_ID, Teams)
 
         return mock
     }

@@ -1,9 +1,7 @@
 package th.ac.bodin2.electives.db
 
-import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.statements.api.ExposedBlob
 import org.jetbrains.exposed.v1.dao.Entity
@@ -371,7 +369,7 @@ class Subject(id: EntityID<Int>) : Entity<Int>(id) {
 
     var code by Subjects.code
     var tag by Subjects.tag
-    var team by Subjects.team
+    var teamId by Subjects.team
 
     var location by Subjects.location
     var capacity by Subjects.capacity

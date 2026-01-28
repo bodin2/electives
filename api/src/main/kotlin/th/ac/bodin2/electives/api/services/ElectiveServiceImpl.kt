@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
+import org.jetbrains.exposed.v1.dao.load
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
@@ -11,7 +12,7 @@ import th.ac.bodin2.electives.db.Teacher
 class ElectiveServiceImpl : ElectiveService {
     override fun getAll() = Elective.all().toList()
 
-    override fun getById(electiveId: Int) = Elective.findById(electiveId)
+    override fun getById(electiveId: Int) = Elective.findById(electiveId)?.load(Elective::team)
 
     override fun getSubjects(electiveId: Int): QueryResult<out List<Subject>> {
         try {

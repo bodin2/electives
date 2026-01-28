@@ -59,10 +59,10 @@ class ElectivesController(private val electiveService: ElectiveService) {
     }
 
     private suspend fun RoutingContext.handleGetElective(electiveId: Int) {
-        val elective = transaction { electiveService.getById(electiveId) }
+        val response = transaction { electiveService.getById(electiveId)?.toProto() }
             ?: return electiveNotFoundError()
 
-        call.respond(elective.toProto())
+        call.respond(response)
     }
 
     private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
