@@ -20,7 +20,8 @@ class TestUsersService : UsersService {
         firstName: String,
         middleName: String?,
         lastName: String?,
-        password: String
+        password: String,
+        avatarUrl: String?,
     ) = error("Not testable")
 
     override fun createTeacher(
@@ -29,7 +30,7 @@ class TestUsersService : UsersService {
         middleName: String?,
         lastName: String?,
         password: String,
-        avatar: ByteArray?
+        avatarUrl: String?,
     ) = error("Not testable")
 
     override fun getUserType(id: Int) = when (id) {

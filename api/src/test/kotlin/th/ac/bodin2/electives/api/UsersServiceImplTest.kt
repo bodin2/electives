@@ -65,7 +65,8 @@ class UsersServiceImplTest : ApplicationTest() {
                 null,
                 "Teacher",
                 "testpass",
-                ByteArray(1024) { it.toByte() })
+                ""
+            )
 
             assertNotNull(teacher)
             assertEquals(2010, teacher.id)

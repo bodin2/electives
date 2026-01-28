@@ -20,6 +20,7 @@ interface UsersService {
         middleName: String? = null,
         lastName: String? = null,
         password: String,
+        avatarUrl: String? = null,
     ): Student
 
     fun createTeacher(
@@ -28,7 +29,7 @@ interface UsersService {
         middleName: String? = null,
         lastName: String? = null,
         password: String,
-        avatar: ByteArray? = null,
+        avatarUrl: String? = null,
     ): Teacher
 
     fun getTeacherById(id: Int): Teacher?

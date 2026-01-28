@@ -1,6 +1,5 @@
 package th.ac.bodin2.electives.db
 
-import com.google.protobuf.kotlin.toByteString
 import th.ac.bodin2.electives.proto.api.*
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -15,6 +14,8 @@ fun Student.toProto(): th.ac.bodin2.electives.proto.api.User {
 
         user.middleName?.let { middleName = it }
         user.lastName?.let { lastName = it }
+
+        user.avatarUrl?.let { avatarUrl = it }
 
         teams.addAll(student.teams.map { it.toProto() })
     }
@@ -31,7 +32,7 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
         user.middleName?.let { middleName = it }
         user.lastName?.let { lastName = it }
 
-        teacher.avatar?.let { avatar = it.toByteString() }
+        user.avatarUrl?.let { avatarUrl = it }
     }
 }
 
@@ -57,6 +58,9 @@ fun Subject.toProto(
 
         subject.location?.let { location = it }
         subject.code?.let { code = it }
+
+        subject.thumbnailUrl?.let { thumbnailUrl = it }
+        subject.imageUrl?.let { imageUrl = it }
 
         if (withDescription) {
             subject.description?.let { description = it }

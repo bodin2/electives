@@ -138,6 +138,8 @@ message Subject {
   repeated User teachers = 9;
   // Only passed in ListSubjectsResponse
   optional uint32 enrolled_count = 10;
+  optional string thumbnail_url = 11;
+  optional string image_url = 12;
 }
 
 message User {
@@ -146,9 +148,9 @@ message User {
   optional string middle_name = 3;
   string last_name = 4; 
   UserType type = 5;
-  optional bytes avatar = 6;
   // Only passed for Students
   repeated Team teams = 7;
+  optional string avatar_url = 8;
 }
 
 enum UserType {

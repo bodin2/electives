@@ -3,7 +3,6 @@ package th.ac.bodin2.electives.db
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.statements.api.ExposedBlob
 import org.jetbrains.exposed.v1.dao.Entity
 import org.jetbrains.exposed.v1.dao.EntityClass
 import org.jetbrains.exposed.v1.jdbc.*
@@ -18,6 +17,8 @@ class User(id: EntityID<Int>) : Entity<Int>(id) {
     var firstName by Users.firstName
     var middleName by Users.middleName
     var lastName by Users.lastName
+
+    var avatarUrl by Users.avatarUrl
 }
 
 class Student(val reference: Reference, val user: User) {
@@ -117,18 +118,15 @@ class Student(val reference: Reference, val user: User) {
         }
 }
 
-class Teacher(val reference: Reference, val user: User, val avatar: ByteArray?) {
+class Teacher(val reference: Reference, val user: User) {
     class Reference internal constructor(val id: Int)
 
     companion object {
         fun findById(id: Int): Teacher? {
-            val resultRow = Teachers
-                .selectAll().where { Teachers.id eq id }
-                .singleOrNull()
-                ?: return null
+            if (!exists(id)) return null
 
             val user = User.findById(id) ?: return null
-            return Teacher(Reference(id), user, resultRow[Teachers.avatar]?.bytes)
+            return Teacher(Reference(id), user)
         }
 
         fun exists(id: Int): Boolean =
@@ -152,13 +150,12 @@ class Teacher(val reference: Reference, val user: User, val avatar: ByteArray?) 
                 .empty().not()
         }
 
-        fun new(id: Int, user: User, avatar: ByteArray? = null): Teacher {
+        fun new(id: Int, user: User): Teacher {
             Teachers.insert {
                 it[Teachers.id] = id
-                it[Teachers.avatar] = avatar?.let { bytes -> ExposedBlob(bytes) }
             }
 
-            return Teacher(Reference(id), user, avatar)
+            return Teacher(Reference(id), user)
         }
     }
 
@@ -373,4 +370,7 @@ class Subject(id: EntityID<Int>) : Entity<Int>(id) {
 
     var location by Subjects.location
     var capacity by Subjects.capacity
+
+    var imageUrl by Subjects.imageUrl
+    var thumbnailUrl by Subjects.thumbnailUrl
 }

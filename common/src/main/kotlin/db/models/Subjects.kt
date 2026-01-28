@@ -52,5 +52,8 @@ object Subjects : IdTable<Int>("subjects") {
     val location = varchar("location", 255).nullable()
     val capacity = integer("max_students")
 
+    val imageUrl = varchar("image_url", 1000).nullable()
+    val thumbnailUrl = varchar("thumbnail_url", 1000).nullable()
+
     override val primaryKey = PrimaryKey(id)
 }

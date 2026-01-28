@@ -10,6 +10,8 @@ object Users : IdTable<Int>("users") {
     val middleName = varchar("middle_name", 255).nullable()
     val lastName = varchar("last_name", 255).nullable()
 
+    val avatarUrl = varchar("avatar_url", 1000).nullable()
+
     val passwordHash = varchar("hash", 255)
 
     /**

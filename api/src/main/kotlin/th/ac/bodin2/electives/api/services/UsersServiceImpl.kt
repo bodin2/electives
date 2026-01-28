@@ -78,7 +78,8 @@ class UsersServiceImpl(val config: Config) : UsersService {
         middleName: String?,
         lastName: String?,
         password: String,
-    ): Student = Student.new(id, createUser(id, firstName, middleName, lastName, password))
+        avatarUrl: String?,
+    ): Student = Student.new(id, createUser(id, firstName, middleName, lastName, password, avatarUrl))
 
     override fun createTeacher(
         id: Int,
@@ -86,8 +87,8 @@ class UsersServiceImpl(val config: Config) : UsersService {
         middleName: String?,
         lastName: String?,
         password: String,
-        avatar: ByteArray?,
-    ): Teacher = Teacher.new(id, createUser(id, firstName, middleName, lastName, password), avatar)
+        avatarUrl: String?,
+    ): Teacher = Teacher.new(id, createUser(id, firstName, middleName, lastName, password, avatarUrl))
 
     override fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)
 
@@ -175,11 +176,13 @@ class UsersServiceImpl(val config: Config) : UsersService {
         middleName: String?,
         lastName: String?,
         password: String,
+        avatarUrl: String?,
     ) = User.wrapRow(Users.insert {
         it[Users.id] = id
         it[Users.firstName] = firstName
         it[Users.middleName] = middleName
         it[Users.lastName] = lastName
         it[Users.passwordHash] = Argon2.hash(password.toCharArray())
+        it[Users.avatarUrl] = avatarUrl
     }.resultedValues!!.first())
 }
