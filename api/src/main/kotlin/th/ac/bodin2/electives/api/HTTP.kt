@@ -108,7 +108,8 @@ private fun Application.configureRateLimits() {
         }
 
         register(RATE_LIMIT_USERS_SELECTIONS) {
-            rateLimiter(limit = 10, refillPeriod = 1.minutes)
+            // Prevent spammy requests
+            rateLimiter(limit = 5, refillPeriod = 1.minutes)
             requestKey(authenticated)
             requestWeight { _, key ->
                 if (key is Int)
