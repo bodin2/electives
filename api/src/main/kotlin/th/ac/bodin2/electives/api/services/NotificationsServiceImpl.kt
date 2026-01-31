@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
+import th.ac.bodin2.electives.api.isTest
 import th.ac.bodin2.electives.api.toPrincipal
 import th.ac.bodin2.electives.api.utils.badFrame
 import th.ac.bodin2.electives.api.utils.parseOrNull
@@ -81,7 +82,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
         logger.info("Starting bulk enrollment update loop with interval: ${config.bulkUpdateInterval.inWholeMilliseconds}ms")
 
         setInterval(config.bulkUpdateInterval) {
-            logger.debug("Bulk enrollment update loop tick, active connections: ${connections.size}")
+            if (!isTest) logger.debug("Bulk enrollment update loop tick, active connections: ${connections.size}")
             if (connections.isEmpty()) return@setInterval
 
             if (!isBulkUpdatesEnabled()) {

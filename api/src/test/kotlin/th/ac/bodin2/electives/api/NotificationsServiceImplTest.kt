@@ -29,10 +29,7 @@ import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.identify
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdateSubscription
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdateSubscriptionRequest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.*
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -550,11 +547,13 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 }
             }
 
-            electiveSelectionService.setStudentSelection(
-                Students.JANE_ID,
-                Students.JANE_ID,
-                Electives.SCIENCE_ID,
-                Subjects.PHYSICS_ID
+            assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
+                electiveSelectionService.setStudentSelection(
+                    Students.JANE_ID,
+                    Students.JANE_ID,
+                    Electives.SCIENCE_ID,
+                    Subjects.PHYSICS_ID
+                )
             )
 
             // Should receive an update notification
@@ -604,11 +603,13 @@ class NotificationsServiceImplTest : ApplicationTest() {
             assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
 
             // Enroll John in Physics
-            electiveSelectionService.setStudentSelection(
-                Students.JOHN_ID,
-                Students.JOHN_ID,
-                Electives.SCIENCE_ID,
-                Subjects.PHYSICS_ID
+            assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
+                electiveSelectionService.setStudentSelection(
+                    Students.JOHN_ID,
+                    Students.JOHN_ID,
+                    Electives.SCIENCE_ID,
+                    Subjects.PHYSICS_ID
+                )
             )
 
             // Should receive update for Physics
@@ -669,11 +670,13 @@ class NotificationsServiceImplTest : ApplicationTest() {
             assertTrue(Envelope.parseFrom(ack2.readBytes()).hasAcknowledged())
 
             // Trigger update for chemistry
-            electiveSelectionService.setStudentSelection(
-                Students.JOHN_ID,
-                Students.JOHN_ID,
-                Electives.SCIENCE_ID,
-                Subjects.CHEMISTRY_ID,
+            assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
+                electiveSelectionService.setStudentSelection(
+                    Students.JOHN_ID,
+                    Students.JOHN_ID,
+                    Electives.SCIENCE_ID,
+                    Subjects.CHEMISTRY_ID,
+                )
             )
 
             // Should receive update for chemistry
