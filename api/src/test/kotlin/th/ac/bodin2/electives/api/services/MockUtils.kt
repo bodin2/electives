@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api.services
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import org.jetbrains.exposed.v1.dao.DaoEntityID
 import org.jetbrains.exposed.v1.jdbc.EmptySizedIterable
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
@@ -17,10 +18,16 @@ import th.ac.bodin2.electives.db.models.Teams
 import th.ac.bodin2.electives.db.models.Users
 
 object MockUtils {
-    init {
-        // Makes sure handleGetElectiveSubjects -> Subject.toProto can call Elective.require without issues
+    /**
+     * Makes sure handleGetElectiveSubjects -> Subject.toProto() can call Elective.require() without issues
+     */
+    fun mockElectiveRequire() {
         mockkObject(Elective.Companion)
         every { Elective.require(any()) } answers { mockk(relaxed = true) }
+    }
+
+    fun unmockElectiveRequire() {
+        unmockkObject(Elective.Companion)
     }
 
     fun mockElective(id: Int): Elective {

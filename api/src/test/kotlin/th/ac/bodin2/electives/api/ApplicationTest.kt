@@ -10,6 +10,7 @@ import io.ktor.server.testing.*
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.TestDatabase.mockData
@@ -21,6 +22,7 @@ typealias TransactionBlock = JdbcTransaction.() -> Any?
 
 abstract class ApplicationTest {
     private fun mockTransactions() {
+        MockUtils.mockElectiveRequire()
         mockkStatic("org.jetbrains.exposed.v1.jdbc.transactions.TransactionsKt")
         every {
             transaction<Any?>(any(), any(), any(), any())
@@ -30,7 +32,8 @@ abstract class ApplicationTest {
     }
 
     private fun unmockTransactions() {
-        mockkStatic("org.jetbrains.exposed.v1.jdbc.transactions.TransactionsKt")
+        MockUtils.unmockElectiveRequire()
+        unmockkStatic("org.jetbrains.exposed.v1.jdbc.transactions.TransactionsKt")
     }
 
     fun Application.mockRateLimits() {
