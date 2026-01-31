@@ -15,7 +15,6 @@ fun Application.registerNotificationsRoutes() {
         pingPeriod = 15.seconds
         timeout = 15.seconds
         maxFrameSize = 16.KiB
-        masking = true
     }
 
     val notificationsService: NotificationsService by dependencies
