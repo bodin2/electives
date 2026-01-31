@@ -49,14 +49,6 @@ message UsersService {
 
 message NotificationsService {
   message Envelope {
-    enum MessageType {
-      SUBJECT_ENROLLMENT_UPDATE_SUBSCRIPTION_REQUEST = 0;
-      SUBJECT_ENROLLMENT_UPDATE = 1;
-      BULK_SUBJECT_ENROLLMENT_UPDATE = 2;
-      ACKNOWLEDGED = 3;
-      IDENTIFY = 4;
-    }
-
     optional uint64 message_id = 2;
 
     oneof payload {
