@@ -39,14 +39,14 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
 /**
  * Convert Subject DAO to Proto representation.
  *
- * **A transaction must be active when calling this function with `electiveId`.**
+ * **A transaction must be active when calling this function with `electiveId`, or `withDescription = true`**
  *
  * @param electiveId Optional elective ID to include enrolled count.
  * @param withDescription Whether to include the description field.
  */
 fun Subject.toProto(
     electiveId: Int? = null,
-    withDescription: Boolean = true
+    withDescription: Boolean = false
 ): th.ac.bodin2.electives.proto.api.Subject {
     val subject = this
 

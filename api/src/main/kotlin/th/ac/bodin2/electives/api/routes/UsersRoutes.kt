@@ -92,7 +92,7 @@ class UsersController(
             val selections = electiveSelectionService.getStudentSelections(userId)
 
             val response = getStudentSelectionsResponse {
-                subjects.putAll(selections.mapValues { it.value.toProto() })
+                subjects.putAll(selections.mapValues { it.value.toProto(withDescription = false) })
             }
 
             // @TODO: Return more specific error if user is not a student?
