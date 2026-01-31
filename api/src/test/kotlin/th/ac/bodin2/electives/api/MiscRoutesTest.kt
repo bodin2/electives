@@ -7,18 +7,18 @@ import kotlin.test.assertEquals
 
 class MiscRoutesTest : ApplicationTest() {
     @Test
-    fun `status endpoint`() = runTest {
+    fun `status endpoint`() = runRouteTest {
         client.head("/status").assertOK()
     }
 
     @Test
-    fun `status endpoint with get`() = runTest {
+    fun `status endpoint with get`() = runRouteTest {
         val response = client.get("/status")
         assertEquals(HttpStatusCode.MethodNotAllowed, response.status)
     }
 
     @Test
-    fun `non existent route`() = runTest {
+    fun `non existent route`() = runRouteTest {
         client.get("/nonexistent").assertNotFound()
     }
 }
