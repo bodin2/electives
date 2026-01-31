@@ -1,8 +1,7 @@
 package th.ac.bodin2.electives.db
 
-import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.dao.Entity
 import org.jetbrains.exposed.v1.dao.EntityClass
 import org.jetbrains.exposed.v1.jdbc.*
@@ -180,8 +179,14 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
         return Elective.Reference(id)
     }
 
-    fun allReferences(): List<Elective.Reference> {
-        return Electives.select(Electives.id).map { Elective.Reference(it[Electives.id].value) }
+    fun allActiveReferences(at: LocalDateTime = LocalDateTime.now()): List<Elective.Reference> {
+        return Electives
+            .selectAll()
+            .where {
+                ((Electives.startDate lessEq at) and (Electives.endDate greaterEq at)) or
+                        (Electives.startDate.isNull() and Electives.endDate.isNull())
+            }
+            .map { Elective.Reference(it[Electives.id].value) }
     }
 
     /**

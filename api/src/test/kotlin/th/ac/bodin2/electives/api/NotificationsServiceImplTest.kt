@@ -451,7 +451,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
         webSocket {
             serviceConfig.bulkUpdatesEnabled = true
 
-            val electives = transaction { Elective.allReferences() }
+            val electives = transaction { Elective.allActiveReferences() }
             assertTrue(electives.isNotEmpty(), "Test requires at least one elective")
 
             val received = mutableMapOf<Int, Envelope>()

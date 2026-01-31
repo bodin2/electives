@@ -93,7 +93,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
             logger.debug("Sending bulk enrollment updates...")
 
             val updates = transaction {
-                Elective.allReferences().map { elective ->
+                Elective.allActiveReferences().map { elective ->
                     val enrolledCounts = Elective.getSubjectsEnrolledCounts(elective)
 
                     envelope {
@@ -114,15 +114,29 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
     }
 
     override suspend fun WebSocketServerSession.handleConnection() {
-        val userId = withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
-            (incoming.receive() as? Frame.Binary)?.let {
-                val token =
-                    it.parseOrNull<Envelope>()?.identify?.token
-                        ?: return@let null
+        val userId = try {
+            withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
+                (incoming.receive() as? Frame.Binary)?.let {
+                    val token =
+                        it.parseOrNull<Envelope>()?.identify?.token
+                            ?: return@withTimeout null
 
-                usersService.toPrincipal(token, call)
+                    usersService.toPrincipal(token, call)
+                }
+            } ?: throw IllegalArgumentException()
+        } catch (e: Exception) {
+            when (e) {
+                // Client authentication failures
+                is IllegalArgumentException,
+                is TimeoutCancellationException,
+                is NotFoundException -> {
+                }
+
+                else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteHost}", e)
             }
-        } ?: return unauthorized()
+
+            return unauthorized()
+        }
 
         logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
