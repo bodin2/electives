@@ -69,7 +69,7 @@ class ElectivesController(private val electiveService: ElectiveService) {
                 is QueryResult.ElectiveNotFound -> null
                 is QueryResult.Success ->
                     listSubjectsResponse {
-                        subjects += result.value.map { it.toProto(withDescription = false, electiveId = electiveId) }
+                        subjects += result.value.map { it.toProto(withDescription = false, withTeachers = true, electiveId = electiveId) }
                     }
 
                 else -> throw IllegalStateException("Unreachable case: $result")
@@ -86,7 +86,7 @@ class ElectivesController(private val electiveService: ElectiveService) {
                 is QueryResult.SubjectNotFound -> Err(subjectNotFound)
                 is QueryResult.SubjectNotPartOfElective -> Err(subjectNotPartOfElective(electiveId, subjectId))
 
-                is QueryResult.Success -> Ok(result.value.toProto(withDescription = true))
+                is QueryResult.Success -> Ok(result.value.toProto(withDescription = true, withTeachers = true))
             }
         }
 

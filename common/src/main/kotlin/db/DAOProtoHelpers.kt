@@ -46,6 +46,7 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
  */
 fun Subject.toProto(
     electiveId: Int? = null,
+    withTeachers: Boolean = false,
     withDescription: Boolean = false
 ): th.ac.bodin2.electives.proto.api.Subject {
     val subject = this
@@ -64,6 +65,10 @@ fun Subject.toProto(
 
         if (withDescription) {
             subject.description?.let { description = it }
+        }
+
+        if (withTeachers) {
+            subject.teachers.forEach { teachers += it.toProto() }
         }
 
         this@toProto.teamId?.let { teamId = it.value }

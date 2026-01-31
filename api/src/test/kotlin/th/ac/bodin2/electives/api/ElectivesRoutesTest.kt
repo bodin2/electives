@@ -71,6 +71,7 @@ class ElectivesRoutesTest : ApplicationTest() {
             .parse<ElectivesService.ListSubjectsResponse>()
 
         assertEquals(SUBJECT_ID, response.subjectsList[0].id)
+        assertEquals(TEACHER_ID, response.subjectsList[0].teachersList[0].id)
     }
 
     @Test
@@ -85,6 +86,7 @@ class ElectivesRoutesTest : ApplicationTest() {
             .parse<Subject>()
 
         assertEquals(SUBJECT_ID, subject.id)
+        assertEquals(TEACHER_ID, subject.teachersList[0].id)
     }
 
     @Test

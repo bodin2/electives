@@ -11,6 +11,7 @@ import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_TEAM_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_WITHOUT_SUBJECTS_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_TEAM_ID
+import th.ac.bodin2.electives.api.services.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.Electives
 import th.ac.bodin2.electives.db.models.Subjects
@@ -53,6 +54,7 @@ object MockUtils {
         val mock = mockk<Subject>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Subjects)
         every { mock.teamId } returns DaoEntityID(SUBJECT_TEAM_ID, Teams)
+        every { mock.teachers } returns listOf(mockTeacher(TEACHER_ID, true))
 
         return mock
     }
@@ -64,12 +66,12 @@ object MockUtils {
         return mock
     }
 
-    fun mockTeacher(id: Int): Teacher {
+    fun mockTeacher(id: Int, noSubjects: Boolean = false): Teacher {
         val user = mockUser(id)
         val mock = mockk<Teacher>(relaxed = true)
         every { mock.user } returns user
         every { mock.id } returns id
-        every { mock.subjects } returns listOf(mockSubject(SUBJECT_ID))
+        if (!noSubjects) every { mock.subjects } returns listOf(mockSubject(SUBJECT_ID))
 
         return mock
     }

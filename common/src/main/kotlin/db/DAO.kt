@@ -364,6 +364,9 @@ class Subject(id: EntityID<Int>) : Entity<Int>(id) {
     fun getStudents(elective: Elective.Reference) = getStudents(this@Subject.id, elective)
     fun getEnrolledCount(elective: Elective.Reference) = getEnrolledCount(this@Subject.id, elective)
 
+    val teachers
+        get() = getTeachers(Reference(id.value))
+
     val description
         get() = Subjects.select(Subjects.description)
             .where { Subjects.id eq id }
