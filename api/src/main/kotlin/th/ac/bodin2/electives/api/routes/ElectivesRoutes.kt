@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.routes
 
+import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.di.*
@@ -11,10 +12,7 @@ import th.ac.bodin2.electives.api.RATE_LIMIT_ELECTIVES
 import th.ac.bodin2.electives.api.RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS
 import th.ac.bodin2.electives.api.services.ElectiveService
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
-import th.ac.bodin2.electives.api.utils.authenticatedRoutes
-import th.ac.bodin2.electives.api.utils.badRequest
-import th.ac.bodin2.electives.api.utils.notFound
-import th.ac.bodin2.electives.api.utils.respond
+import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listResponse
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectMembersResponse
@@ -82,14 +80,19 @@ class ElectivesController(private val electiveService: ElectiveService) {
     }
 
     private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, subjectId: Int) {
-        val result = transaction { electiveService.getSubject(electiveId, subjectId) }
-        when (result) {
-            is QueryResult.ElectiveNotFound -> return electiveNotFoundError()
-            is QueryResult.SubjectNotFound -> return subjectNotFoundError()
-            is QueryResult.SubjectNotPartOfElective -> return badRequest("Subject ${result.subjectId} is not part of elective ${result.electiveId}")
-            is QueryResult.Success -> call.respond(listSubjectMembersResponse {
-                call.respond(result.value.toProto(withDescription = true))
-            })
+        val response = transaction<RouteResponse> {
+            when (val result = electiveService.getSubject(electiveId, subjectId)) {
+                is QueryResult.ElectiveNotFound -> Err(electiveNotFound)
+                is QueryResult.SubjectNotFound -> Err(subjectNotFound)
+                is QueryResult.SubjectNotPartOfElective -> Err(subjectNotPartOfElective(electiveId, subjectId))
+
+                is QueryResult.Success -> Ok(result.value.toProto(withDescription = true))
+            }
+        }
+
+        when (response) {
+            is Err -> return error(response.response)
+            is Ok -> call.respond(response.response)
         }
     }
 
@@ -98,17 +101,24 @@ class ElectivesController(private val electiveService: ElectiveService) {
         subjectId: Int,
         withStudents: Boolean,
     ) {
-        val result = transaction { electiveService.getSubjectMembers(electiveId, subjectId, withStudents) }
-        when (result) {
-            is QueryResult.ElectiveNotFound -> return electiveNotFoundError()
-            is QueryResult.SubjectNotFound -> return subjectNotFoundError()
-            is QueryResult.SubjectNotPartOfElective -> return badRequest("Subject ${result.subjectId} is not part of elective ${result.electiveId}")
-            is QueryResult.Success -> call.respond(listSubjectMembersResponse {
-                val (teachers, students) = result.value
+        val response = transaction<RouteResponse> {
+            when (val result = electiveService.getSubjectMembers(electiveId, subjectId, withStudents)) {
+                is QueryResult.ElectiveNotFound -> Err(electiveNotFound)
+                is QueryResult.SubjectNotFound -> Err(subjectNotFound)
+                is QueryResult.SubjectNotPartOfElective -> Err(subjectNotPartOfElective(electiveId, subjectId))
 
-                this.teachers += teachers.map { it.toProto() }
-                this.students += students.map { it.toProto() }
-            })
+                is QueryResult.Success -> Ok(listSubjectMembersResponse {
+                    val (teachers, students) = result.value
+
+                    this.teachers += teachers.map { it.toProto() }
+                    this.students += students.map { it.toProto() }
+                })
+            }
+        }
+
+        when (response) {
+            is Err -> return error(response.response)
+            is Ok -> call.respond(response.response)
         }
     }
 
@@ -129,5 +139,21 @@ class ElectivesController(private val electiveService: ElectiveService) {
     }
 }
 
-private suspend inline fun RoutingContext.electiveNotFoundError() = notFound("Elective not found")
-private suspend inline fun RoutingContext.subjectNotFoundError() = notFound("Subject not found")
+private val electiveNotFound: ErrorResponse
+    get() = ErrorResponse(
+        status = HttpStatusCode.NotFound,
+        message = "Elective not found",
+    )
+
+private val subjectNotFound: ErrorResponse
+    get() = ErrorResponse(
+        status = HttpStatusCode.NotFound,
+        message = "Subject not found",
+    )
+
+private fun subjectNotPartOfElective(subjectId: Int, electiveId: Int) = ErrorResponse(
+    status = HttpStatusCode.BadRequest,
+    message = "Subject $subjectId is not part of elective $electiveId",
+)
+
+private suspend inline fun RoutingContext.electiveNotFoundError() = error(electiveNotFound)
