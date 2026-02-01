@@ -1,12 +1,13 @@
 import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
 import { useRouter } from '@tanstack/solid-router'
-import { createMemo, createSignal, Match, Switch } from 'solid-js'
+import { createMemo, createSignal, Match, Show, Switch } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import useElectiveOpen from '../../hooks/useElectiveOpen'
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
+import { formatCountdown } from '../../utils/date'
 import { Button } from '../Button'
 import UnenrollDialog from '../dialogs/UnenrollDialog'
 import type { Elective, Subject } from '../../api'
@@ -21,9 +22,13 @@ export default function DynamicEnrollButton(props: {
     const router = useRouter()
     const { string } = useI18n()
     const enrollment = useEnrollmentCounts()
-    const electiveOpen = useElectiveOpen(props.elective)
 
     const [dialogOpen, setDialogOpen] = createSignal(false)
+    const [countdown, setCountdown] = createSignal<number | null>(null)
+
+    const electiveOpen = useElectiveOpen(props.elective, {
+        onCountdown: timeRemaining => setCountdown(timeRemaining),
+    })
 
     const enrolledCount = () => enrollment.getElectiveCounts(props.elective.id)[props.subject.id] ?? 0
     const isFull = () => enrolledCount() >= props.subject.capacity
@@ -88,7 +93,16 @@ export default function DynamicEnrollButton(props: {
             />
             <Switch>
                 <Match when={!electiveOpen()}>
-                    <p class="m3-body-small text-error">{string.ELECTIVE_CLOSED_HINT()}</p>
+                    <Show
+                        when={formatCountdown(countdown())}
+                        fallback={<p class="m3-body-small text-error">{string.ENROLLMENT_CLOSED()}</p>}
+                    >
+                        {time => (
+                            <p class="m3-body-small text-error">
+                                {string.ENROLLMENT_CLOSED_OPENING_IN({ time: time() })}
+                            </p>
+                        )}
+                    </Show>
                 </Match>
                 <Match when={isFull()}>
                     <p class="m3-body-small text-error">{string.SUBJECT_FULL_HINT()}</p>

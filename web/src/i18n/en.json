@@ -16,6 +16,8 @@
   "ENROLLMENT_OPEN": "Tap to enroll",
   "ENROLLMENT_CLOSED": "Enrollment not open yet",
   "ENROLLMENT_CLOSED_OPENING_IN": "Enrollment will open in {{ time }}",
+  "ENROLLMENT_OPENS_AT": "Opens at {{ duration }}",
+  "ENROLLMENT_CLOSES_AT": "Closes at {{ duration }}",
   "ENROLLMENT_EDIT": "Edit enrollment",
   "ENROLLMENT_CANCEL": "Cancel enrollment",
   "ENROLL": "Enroll",
@@ -66,6 +68,5 @@
   "SUBJECT_MEMBERS_COUNT": "Members: {{ count }}/{{ total }}",
   "SETTINGS": "Settings",
   "ADD_STUDENT_TO_SUBJECT": "Add student to subject",
-  "REMOVE_STUDENT_FROM_SUBJECT": "Remove student from subject",
-  "ELECTIVE_CLOSED_HINT": "Enrollment is currently not open."
+  "REMOVE_STUDENT_FROM_SUBJECT": "Remove student from subject"
 }

@@ -1,15 +1,18 @@
 import { createSignal, onCleanup, onMount } from 'solid-js'
 import type { Elective } from '../api'
 
-// hopefully no one stays on a page for more than 24.8 days...
-const MAX_TIMEOUT = (1 << 31) - 1
+const MAX_TIMEOUT = 2147483647
+const FIVE_MINUTES = 5 * 60 * 1000
 
-export default function useElectiveOpen(elective: Elective) {
+interface UseElectiveOpenOptions {
+    onCountdown?: (timeRemaining: number) => void
+}
+
+export default function useElectiveOpen(elective: Elective, options?: UseElectiveOpenOptions) {
     const [electiveOpen, setElectiveOpen] = createSignal(false)
 
     onMount(() => {
         const timeUntilClose = elective.getTimeUntilClose()
-        // never closes
         if (timeUntilClose === null || timeUntilClose > MAX_TIMEOUT) return
         if (timeUntilClose === 0) return setElectiveOpen(false)
 
@@ -24,16 +27,30 @@ export default function useElectiveOpen(elective: Elective) {
 
     onMount(() => {
         const timeUntilOpen = elective.getTimeUntilOpen()
-        // null means always open, 0 means already open
         if (timeUntilOpen === null || timeUntilOpen === 0) return setElectiveOpen(true)
         if (timeUntilOpen > MAX_TIMEOUT) return
 
-        const openInterval = setInterval(() => {
+        const openTimeout = setTimeout(() => {
             setElectiveOpen(true)
         }, timeUntilOpen)
 
+        if (options?.onCountdown && timeUntilOpen <= FIVE_MINUTES) {
+            options.onCountdown(timeUntilOpen)
+
+            const countdownInterval = setInterval(() => {
+                const remaining = elective.getTimeUntilOpen()
+                if (remaining !== null && remaining > 0 && remaining <= FIVE_MINUTES) {
+                    options.onCountdown?.(remaining)
+                } else {
+                    clearInterval(countdownInterval)
+                }
+            }, 1000)
+
+            onCleanup(() => clearInterval(countdownInterval))
+        }
+
         onCleanup(() => {
-            clearInterval(openInterval)
+            clearTimeout(openTimeout)
         })
     })
 

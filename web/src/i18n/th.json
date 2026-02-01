@@ -16,6 +16,8 @@
   "ENROLLMENT_OPEN": "แตะเพื่อลงทะเบียน",
   "ENROLLMENT_CLOSED": "ยังไม่เปิดการลงทะเบียน",
   "ENROLLMENT_CLOSED_OPENING_IN": "การลงทะเบียนจะเปิดในอีก {{ time }}",
+  "ENROLLMENT_OPENS_AT": "การลงทะเบียนเปิด {{ duration }}",
+  "ENROLLMENT_CLOSES_AT": "การลงทะเบียนปิด {{ duration }}",
   "ENROLLMENT_EDIT": "แก้ไขการลงทะเบียน",
   "ENROLLMENT_CANCEL": "ยกเลิกการลงทะเบียน",
   "ENROLL": "ลงทะเบียนเรียน",
@@ -66,6 +68,5 @@
   "SUBJECT_MEMBERS_COUNT": "สมาชิก: {{ count }}/{{ total }} คน",
   "SETTINGS": "ตั้งค่า",
   "ADD_STUDENT_TO_SUBJECT": "เพิ่มนักเรียนเข้าเรียนวิชา",
-  "REMOVE_STUDENT_FROM_SUBJECT": "ลบนักเรียนออกจากวิชา",
-  "ELECTIVE_CLOSED_HINT": "ยังไม่เปิดให้ลงทะเบียนเรียนในขณะนี้"
+  "REMOVE_STUDENT_FROM_SUBJECT": "ลบนักเรียนออกจากวิชา"
 }
