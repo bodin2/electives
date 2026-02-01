@@ -2,6 +2,7 @@
   "name": "@bodin2/electives-api",
   "version": "1.0.0",
   "scripts": {
-    "build": "./gradlew build"
+    "build": "./gradlew :api:build",
+    "dev": "APP_ENV=development ./gradlew :api:run"
   }
 }
