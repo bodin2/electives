@@ -22,14 +22,11 @@ export default function ElectiveCard(props: ElectiveCardProps) {
             variant={isOpen() ? 'elevated' : 'outlined'}
             data-open={isOpen()}
             class={props.cardClass}
-            onClick={
-                isOpen()
-                    ? () =>
-                          navigate({
-                              to: '/enroll/$electiveId',
-                              params: { electiveId: props.elective.id },
-                          })
-                    : undefined
+            onClick={() =>
+                navigate({
+                    to: '/enroll/$electiveId',
+                    params: { electiveId: props.elective.id },
+                })
             }
         >
             <HStack alignHorizontal="space-between" alignVertical="center" gap={16}>
