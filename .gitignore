@@ -49,3 +49,7 @@ package-lock.json
 build
 .gradle
 .kotlin
+
+# TanStack Router
+.tanstack
+routeTree.gen.ts

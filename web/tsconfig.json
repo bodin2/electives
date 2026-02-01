@@ -1,19 +1,22 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
+    // General
+    "module": "esnext",
+    "target": "es2022",
     "jsx": "preserve",
+    "moduleResolution": "bundler",
     "jsxImportSource": "solid-js",
-    "allowJs": true,
-    "strict": true,
-    "noEmit": true,
-    "types": ["vinxi/types/client"],
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+
+    // Modules
+    "esModuleInterop": true,
     "isolatedModules": true,
-    "paths": {
-      "~/*": ["./src/*"]
-    }
-  }
+    "resolveJsonModule": true,
+
+    // Type Checking & Safety
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "exclude": ["node_modules", "dist", "src/api/**", "**/m3-solid/**"],
+  "include": ["src"]
 }

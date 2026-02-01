@@ -1,0 +1,25 @@
+.loading {
+    height: 28px;
+    width: 28px; 
+    position: absolute;
+    inset: 0;
+    animation: growIn var(--m3-easing-slow);
+
+    --m3-loading-indicator-active-indicator-color: currentcolor;
+}
+
+.tonalError {
+    --m3-button-container-color: var(--m3c-error-container);
+    color: var(--m3c-on-error-container);
+}
+
+@keyframes growIn {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}

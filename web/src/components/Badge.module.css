@@ -1,0 +1,15 @@
+.badge {
+    border-radius: calc(infinity * 1px);
+    padding: 4px 8px;
+    /* user-select: none; */
+}
+
+.error {
+    background: var(--m3c-error);
+    color: var(--m3c-on-error);
+}
+
+.tonal {
+    background: var(--m3c-primary-container);
+    color: var(--m3c-on-primary-container);
+}

@@ -1,0 +1,3 @@
+.backdrop {
+    z-index: var(--layer-dialog);
+}

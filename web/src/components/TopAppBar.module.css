@@ -1,0 +1,28 @@
+.container {
+	top: 0;
+	position: sticky;
+	height: 64px;
+	align-items: center;
+
+	background-color: var(--m3c-surface);
+	transition: background-color 200ms;
+
+	padding-inline: 4px;
+	padding-block: 8px;
+
+	z-index: var(--layer-nav);
+
+	&.scrolled {
+		background-color: var(--m3c-surface-container);
+	}
+}
+
+.compressible {
+	padding-inline: 16px;
+	padding-block-end: 24px;
+
+	&.large {
+		padding-block-start: 40px;
+		padding-block-end: 28px;
+	}
+}

@@ -1,0 +1,12 @@
+.stack {
+    display: flex;
+    gap: 8px;
+}
+
+.vert {
+    flex-direction: column;
+}
+
+.wrap {
+    flex-wrap: wrap;
+}
