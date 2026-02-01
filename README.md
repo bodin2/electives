@@ -24,7 +24,7 @@ There are also other issues, such as students not being to view details of subje
 
 #### Frontend
 
-- Built with [SolidStart](https://start.solidjs.com), fully client-sided. We provide a small-sized, responsive, and interactive user interface for students to view and select subjects easier and faster.  
+- Built with [SolidJS](https://www.solidjs.com) and [TanStack Router](https://tanstack.com/router), fully client-sided. We provide a small-sized, responsive, and interactive user interface for students to view and select subjects easier and faster.  
   Being fully client-sided also means the frontend can be fully cached through services like Cloudflare to prevent downtime from too many requests hitting the server at once!  
   Serving content manually was one of the bottlenecks with the previous system, so we intend to serve the frontend through Cloudflare instead, which should fix slow loads on clients.
 
