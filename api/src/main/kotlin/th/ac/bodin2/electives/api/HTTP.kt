@@ -91,25 +91,25 @@ private fun Application.configureRateLimits() {
         }
 
         register(RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS) {
-            // Really expensive operation, so lower limit
-            rateLimiter(limit = 15, refillPeriod = 1.minutes)
+            // Somewhat an expensive operation
+            rateLimiter(limit = 30, refillPeriod = 1.minutes)
             requestKey(authenticated)
         }
 
         register(RATE_LIMIT_NOTIFICATIONS) {
-            // 5 connection attempts every 10 seconds
-            rateLimiter(limit = 5, refillPeriod = 10.seconds)
+            // 10 connection attempts every 10 seconds
+            rateLimiter(limit = 10, refillPeriod = 10.seconds)
             requestKey(authenticated)
         }
 
         register(RATE_LIMIT_USERS) {
-            rateLimiter(limit = 30, refillPeriod = 1.minutes)
+            rateLimiter(limit = 60, refillPeriod = 1.minutes)
             requestKey(authenticated)
         }
 
         register(RATE_LIMIT_USERS_SELECTIONS) {
             // Prevent spammy requests
-            rateLimiter(limit = 5, refillPeriod = 1.minutes)
+            rateLimiter(limit = 15, refillPeriod = 1.minutes)
             requestKey(authenticated)
             requestWeight { _, key ->
                 if (key is Int)
