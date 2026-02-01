@@ -1,7 +1,7 @@
 import { type Accessor, createEffect, createResource, onCleanup } from 'solid-js'
 
 interface UseAutoRefreshResourceOptions {
-    shouldAutoRefetch: Accessor<boolean>
+    shouldFetch: Accessor<boolean>
     getVersion: () => number | undefined
     interval?: number
 }
@@ -9,28 +9,30 @@ interface UseAutoRefreshResourceOptions {
 export function useAutoRefreshResource<T>(fetcher: () => Promise<T>, options: UseAutoRefreshResourceOptions) {
     let lastFetchedVersion: number | undefined
 
-    const [resource, { refetch }] = createResource(
-        async () => {
-            const result = await fetcher()
-            lastFetchedVersion = options.getVersion()
-            return result
-        },
-        { initialValue: undefined },
-    )
+    const [resource, { refetch }] = createResource(async () => {
+        if (!options.shouldFetch()) return
+
+        const result = await fetcher()
+        lastFetchedVersion = options.getVersion()
+        return result
+    })
 
     let hasInterval = false
 
     createEffect(() => {
-        if (!options.shouldAutoRefetch() || hasInterval) return
+        if (!options.shouldFetch() || hasInterval) return
 
-        const intervalId = setInterval(() => {
+        const handler = () => {
             const currentVersion = options.getVersion()
             if (currentVersion !== lastFetchedVersion) {
                 refetch()
             }
-        }, options.interval ?? 5000)
+        }
 
+        const intervalId = setInterval(handler, options.interval ?? 5000)
         hasInterval = true
+
+        handler()
 
         onCleanup(() => {
             clearInterval(intervalId)

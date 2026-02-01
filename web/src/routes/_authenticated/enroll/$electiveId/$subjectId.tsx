@@ -97,7 +97,7 @@ function RouteComponent() {
                 withStudents: true,
             }),
         {
-            shouldAutoRefetch: membersTabOpened,
+            shouldFetch: membersTabOpened,
             getVersion: () => enrollment.getVersion(data().elective.id),
         },
     )
