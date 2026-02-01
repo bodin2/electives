@@ -367,4 +367,32 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(result3)
     }
+
+    @Test
+    fun `teachers bypass date range checks`() = runTest {
+        transaction {
+            Electives.insert {
+                it[id] = TestConstants.Electives.OUT_OF_DATE_ID
+                it[name] = TestConstants.Electives.OUT_OF_DATE_NAME
+                it[startDate] = LocalDateTime.now().minusDays(2)
+                it[endDate] = LocalDateTime.now().minusDays(1)
+            }
+
+            ElectiveSubjects.insert {
+                it[elective] = TestConstants.Electives.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+
+            // TeacherSubjects inserted in mocks
+        }
+
+        val result = electiveSelectionService.setStudentSelection(
+            TestConstants.Teachers.BOB_ID,
+            TestConstants.Students.JOHN_ID,
+            TestConstants.Electives.OUT_OF_DATE_ID,
+            TestConstants.Subjects.PHYSICS_ID,
+        )
+
+        assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(result)
+    }
 }

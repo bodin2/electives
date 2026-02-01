@@ -64,7 +64,8 @@ class ElectiveSelectionServiceImpl(
                 val elective = Elective.require(electiveId)
                 val subject = Subject.require(subjectId)
 
-                if (student.id != executorId) {
+                val executorIsSomeoneElse = student.id != executorId
+                if (executorIsSomeoneElse) {
                     if (usersService.getUserType(executorId) == UserType.TEACHER) {
                         val teacher = Teacher.require(executorId)
                         if (!Teacher.teachesSubject(teacher, subjectId)) {
@@ -75,7 +76,8 @@ class ElectiveSelectionServiceImpl(
                     }
                 }
 
-                when (val result = canEnrollInSubject(student, elective, subject)) {
+                // By the time we reach here, bypassDateCheck will only be true if the executor is a teacher
+                when (val result = canEnrollInSubject(student, elective, subject, executorIsSomeoneElse)) {
                     CanEnrollStatus.CAN_ENROLL -> {}
 
                     else -> return@transaction ModifySelectionResult.CannotEnroll(result)
@@ -197,13 +199,16 @@ class ElectiveSelectionServiceImpl(
     private fun canEnrollInSubject(
         student: Reference,
         elective: Elective.Reference,
-        subject: Subject.Reference
+        subject: Subject.Reference,
+        bypassDateCheck: Boolean,
     ): CanEnrollStatus {
         // Check elective date range
         val (startDate, endDate) = Elective.getEnrollmentDateRange(elective)
         val now = LocalDateTime.now()
-        if (startDate != null && now.isBefore(startDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
-        if (endDate != null && now.isAfter(endDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
+        if (!bypassDateCheck) {
+            if (startDate != null && now.isBefore(startDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
+            if (endDate != null && now.isAfter(endDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
+        }
 
         if (!Subject.isPartOfElective(subject, elective)) return CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE
 
