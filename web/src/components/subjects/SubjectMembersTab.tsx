@@ -3,8 +3,10 @@ import { ListItem } from 'm3-solid'
 import { For, Show, Suspense } from 'solid-js'
 import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
 import { useI18n } from '../../providers/I18nProvider'
+import Badge from '../Badge'
 import { Button } from '../Button'
 import LoadingPage from '../pages/LoadingPage'
+import { HStack } from '../Stack'
 import styles from './SubjectMembersTab.module.css'
 import type { User } from '../../api'
 
@@ -99,7 +101,14 @@ export function SubjectMemberListItem(props: SubjectMemberListItemProps) {
             leading={
                 <img class={styles.avatar} src={props.user.avatarUrl || AvatarPlaceholder} alt={string.AVATAR()} />
             }
-            headline={props.user.fullName}
+            headline={
+                <HStack alignVertical="center">
+                    {props.user.fullName}
+                    <HStack gap={4}>
+                        <For each={props.user.teams}>{team => <Badge variant="tonal">{team.name}</Badge>}</For>
+                    </HStack>
+                </HStack>
+            }
             supporting={props.user.id}
             trailing={
                 <Show when={props.onRemove}>
