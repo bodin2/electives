@@ -31,8 +31,10 @@ export type ClientEventMap = {
     gatewayDisconnect: string
     /** Fired when the gateway is rate limited */
     gatewayRateLimited: number
-    /** Fired when a subject enrollment count updates */
+    /** Fired when a subscribed subject enrollment count updates */
     subjectEnrollmentUpdate: SubjectEnrollmentUpdateEvent
+    /** Fired when a bulk subject enrollment count update occurs */
+    bulkSubjectEnrollmentUpdate: { electiveId: number; subjectEnrolledCounts: Record<string, number> }
     /** Fired on any error */
     error: Error
     /** Fired when an unauthorized error occurs (HTTP 401) */
@@ -302,14 +304,10 @@ export class Client {
         })
 
         this.gateway.on('bulkSubjectEnrollmentUpdate', update => {
-            for (const [subjectIdStr, count] of Object.entries(update.subjectEnrolledCounts)) {
-                const subjectId = Number.parseInt(subjectIdStr, 10)
-                this.emitter.emit('subjectEnrollmentUpdate', {
-                    electiveId: update.electiveId,
-                    subjectId: subjectId,
-                    enrolledCount: count,
-                })
-            }
+            this.emitter.emit('bulkSubjectEnrollmentUpdate', {
+                electiveId: update.electiveId,
+                subjectEnrolledCounts: update.subjectEnrolledCounts,
+            })
         })
     }
 
