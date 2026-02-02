@@ -62,11 +62,14 @@
   "CANCEL": "ยกเลิก",
   "ENROLLMENT_CANCEL_DESCRIPTION": "คุณกำลังจะยกเลิกการลงทะเบียนจาก: {{ subjectName }}\n\nคุณแน่ใจหรือไม่ว่าต้องการดำเนินการต่อ?",
   "NO_X_YET": "ยังไม่มี{{ object }}ในขณะนี้...",
-  "MEMBERS_COUNT": "สมาชิก {{ count }}/{{ total }} คน",
+  "MEMBERS_COUNT": "{{ count }}/{{ total }} ลงทะเบียนแล้ว",
   "AVATAR": "รูปประจำตัว",
   "SUBJECT_CODE": "รหัสวิชา",
-  "SUBJECT_MEMBERS_COUNT": "สมาชิก: {{ count }}/{{ total }} คน",
+  "SUBJECT_MEMBERS_COUNT": "นักเรียน: {{ count }}/{{ total }} คน",
   "SETTINGS": "ตั้งค่า",
   "ADD_STUDENT_TO_SUBJECT": "เพิ่มนักเรียนเข้าเรียนวิชา",
-  "REMOVE_STUDENT_FROM_SUBJECT": "ลบนักเรียนออกจากวิชา"
+  "REMOVE_STUDENT_FROM_SUBJECT": "ลบนักเรียนออกจากวิชา",
+  "YOU": "คุณ",
+  "SETTING_THAI": "Thai language",
+  "SETTING_THAI_DESCRIPTION": "แสดงแอปในภาษาไทย"
 }

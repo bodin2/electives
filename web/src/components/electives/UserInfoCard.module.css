@@ -1,6 +1,7 @@
 .avatar {
     width: 48px;
     height: 48px;
+    background-color: var(--m3c-surface-container-lowest);
     border-radius: var(--m3-shape-full);
     object-fit: cover;
 }

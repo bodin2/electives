@@ -62,11 +62,14 @@
   "CANCEL": "Cancel",
   "ENROLLMENT_CANCEL_DESCRIPTION": "You are about to unenroll from: {{ subjectName }}\n\nAre you sure you want to proceed?",
   "NO_X_YET": "No {{ object }} yet...",
-  "MEMBERS_COUNT": "{{ count }}/{{ total }} members",
+  "MEMBERS_COUNT": "{{ count }}/{{ total }} enrolled",
   "AVATAR": "Avatar",
   "SUBJECT_CODE": "Subject code",
-  "SUBJECT_MEMBERS_COUNT": "Members: {{ count }}/{{ total }}",
+  "SUBJECT_MEMBERS_COUNT": "Students: {{ count }}/{{ total }}",
   "SETTINGS": "Settings",
   "ADD_STUDENT_TO_SUBJECT": "Add student to subject",
-  "REMOVE_STUDENT_FROM_SUBJECT": "Remove student from subject"
+  "REMOVE_STUDENT_FROM_SUBJECT": "Remove student from subject",
+  "YOU": "You",
+  "SETTING_THAI": "ภาษาไทย",
+  "SETTING_THAI_DESCRIPTION": "Display the app in Thai language"
 }
