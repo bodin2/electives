@@ -17,27 +17,30 @@ export function useAutoRefreshResource<T>(fetcher: () => Promise<T>, options: Us
         return result
     })
 
-    let hasInterval = false
+    let intervalId: ReturnType<typeof setInterval> | undefined
+
+    const handler = () => {
+        const currentVersion = options.getVersion()
+        if (currentVersion !== lastFetchedVersion) {
+            refetch()
+        }
+    }
 
     createEffect(() => {
-        if (!options.shouldFetch() || hasInterval) return
+        if (!options.shouldFetch() || intervalId !== undefined) return
+        intervalId = setInterval(handler, options.interval ?? 5000)
+    })
 
-        const handler = () => {
-            const currentVersion = options.getVersion()
-            if (currentVersion !== lastFetchedVersion) {
-                refetch()
-            }
+    // Handle initial fetch
+    createEffect(() => {
+        if (options.shouldFetch() && !resource.latest) {
+            handler()
         }
+    })
 
-        const intervalId = setInterval(handler, options.interval ?? 5000)
-        hasInterval = true
-
-        handler()
-
-        onCleanup(() => {
-            clearInterval(intervalId)
-            hasInterval = false
-        })
+    onCleanup(() => {
+        clearInterval(intervalId)
+        intervalId = undefined
     })
 
     return [resource, { refetch }] as const
