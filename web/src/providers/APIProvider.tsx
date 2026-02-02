@@ -9,6 +9,7 @@ import {
     useContext,
 } from 'solid-js'
 import { APIError, Client, UnauthorizedError } from '../api'
+import { NetworkError } from '../api/types'
 import { Route } from '../routes/__root'
 
 export enum AuthenticationState {
@@ -102,6 +103,10 @@ const APIProvider: ParentComponent<{ client: Client }> = props => {
                 setAuthState(AuthenticationState.LoggedIn)
             })
 
+            client.on('error', err => {
+                log.error('Client error occurred:', err)
+            })
+
             client.on('networkError', err => {
                 log.error('Network error occurred', err)
                 if (authState() !== AuthenticationState.LoggedOut) setAuthState(AuthenticationState.NetworkError)
@@ -111,8 +116,8 @@ const APIProvider: ParentComponent<{ client: Client }> = props => {
                 log.info('Connected to gateway')
             })
 
-            client.on('gatewayDisconnect', () => {
-                log.warn('Disconnected from gateway')
+            client.on('gatewayDisconnect', reason => {
+                log.warn('Disconnected from gateway:', reason)
             })
 
             client.on('gatewayRateLimited', retryAfter => {
