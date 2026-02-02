@@ -140,7 +140,7 @@ function RouteComponent() {
                         <SubjectMembersTab
                             members={members()}
                             onStudentRemove={
-                                data().user.isTeacher()
+                                data().user.isTeacher() && data().subject.isUserTeaching(data().user)
                                     ? async stud => {
                                           await api.client.selections.delete(stud.id, data().elective.id)
                                           await router.invalidate({
@@ -178,12 +178,7 @@ function RouteComponent() {
                         selectedSubject={data().selectedSubject}
                     />
                 </Show>
-                <Show
-                    when={
-                        data().user.isTeacher() &&
-                        data().subject.teachers.findIndex(t => t.id === data().user.id) !== -1
-                    }
-                >
+                <Show when={data().user.isTeacher() && data().subject.isUserTeaching(data().user)}>
                     <AddStudentToSubjectButton
                         class={styles.actionButton}
                         electiveId={data().elective.id}

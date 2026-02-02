@@ -29,7 +29,8 @@ export const Route = createFileRoute('/_authenticated/')({
                     })
                     .sort(electiveSorter),
             ),
-            context.client.selections.fetch('@me'),
+            // Prefetch student's selections
+            user.isStudent() ? context.client.selections.fetch('@me') : null,
         ])
 
         return { electives, user }
