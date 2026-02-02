@@ -90,12 +90,18 @@ function RouteComponent() {
     )
 
     const [members] = useAutoRefreshResource(
-        () =>
-            api.client.subjects.fetchMembers({
+        async () => {
+            let { students, teachers } = await api.client.subjects.fetchMembers({
                 electiveId: data().elective.id,
                 subjectId: data().subject.id,
                 withStudents: true,
-            }),
+            })
+
+            students = [...students].sort((a, b) => a.fullName.localeCompare(b.fullName))
+            teachers = [...teachers].sort((a, b) => a.fullName.localeCompare(b.fullName))
+
+            return { students, teachers }
+        },
         {
             shouldFetch: membersTabOpened,
             getVersion: () => enrollment.getVersion(data().elective.id),
