@@ -51,7 +51,7 @@ export const initAuth = (client: Client): Promise<AuthenticationState> => {
         e => {
             log.error('Failed to login with stored token:', e)
 
-            if (e instanceof APIError) {
+            if (e instanceof APIError && !(e instanceof NetworkError)) {
                 return AuthenticationState.LoggedOut
             }
 
