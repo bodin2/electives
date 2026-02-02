@@ -2,15 +2,15 @@ import TrashIcon from '@iconify-icons/mdi/trash-can-outline'
 import { ListItem } from 'm3-solid'
 import { For, Show, Suspense } from 'solid-js'
 import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
+import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
+import { nonNull } from '../../utils'
 import Badge from '../Badge'
 import { Button } from '../Button'
 import LoadingPage from '../pages/LoadingPage'
 import { HStack } from '../Stack'
 import styles from './SubjectMembersTab.module.css'
 import type { User } from '../../api'
-import { useAPI } from '../../providers/APIProvider'
-import { nonNull } from '../../utils'
 
 interface SubjectMembersTabProps {
     members: { teachers: User[]; students: User[] } | undefined
@@ -117,7 +117,7 @@ export function SubjectMemberListItem(props: SubjectMemberListItemProps) {
                     </HStack>
                 </HStack>
             }
-            supporting={props.user.id}
+            supporting={props.user.isStudent() && props.user.id}
             trailing={
                 <Show when={props.onRemove}>
                     {onRemove => (
