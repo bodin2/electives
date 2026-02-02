@@ -1,6 +1,7 @@
 import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
 import { useRouter } from '@tanstack/solid-router'
 import { Icon } from 'm3-solid'
+import { createEffect } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'
@@ -17,6 +18,13 @@ export default function UnenrollDialog(props: {
     const api = useAPI()
     const router = useRouter()
     const { string, t } = useI18n()
+
+    createEffect(() => {
+        // Close the dialog once the state is invalidated
+        if (!props.selectedSubject && props.open) {
+            props.onClose()
+        }
+    })
 
     return (
         <Dialog
