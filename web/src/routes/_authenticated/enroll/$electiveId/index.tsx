@@ -8,7 +8,6 @@ import Page from '../../../../components/Page'
 import { NotFoundPageContent } from '../../../../components/pages/NotFoundPage'
 import { VStack } from '../../../../components/Stack'
 import SubjectCategorySection from '../../../../components/subjects/SubjectCategorySection'
-import { useAPI } from '../../../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { debounce, groupItems, nonNull } from '../../../../utils'
@@ -29,7 +28,6 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/')({
         const [elective, subjects] = await Promise.all([
             context.client.electives.fetch(electiveId),
             context.client.electives.fetchSubjects(electiveId),
-            context.client.electives.resolveAllEnrolledCounts(electiveId),
         ])
 
         const initialEnrolledCounts = context.client.electives.resolveAllEnrolledCounts(electiveId)
@@ -40,7 +38,6 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/')({
 })
 
 function RouteComponent() {
-    const api = useAPI()
     const enrollment = useEnrollmentCounts()
     const data = Route.useLoaderData()
     const params = Route.useParams()
@@ -77,7 +74,7 @@ function RouteComponent() {
 
         const filtered: Record<string, Subject[]> = {}
         for (const [category, subjectList] of Object.entries(subjects())) {
-            const matchedSubjects = subjectList.filter(
+            const matchedSubjects = subjectList!.filter(
                 subject =>
                     subject.name.toLowerCase().includes(q) ||
                     subject.teachers.some(teacher => new User(teacher).fullName.toLowerCase().includes(q)) ||

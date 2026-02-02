@@ -6,12 +6,14 @@ interface IconLabelProps {
     icon: IconifyIcon
     text: string
     class?: string
+    iconSize?: number
 }
 
 export default function IconLabel(props: IconLabelProps) {
+    const size = () => props.iconSize ?? 20
     return (
         <HStack alignVertical="center" gap={4} class={props.class}>
-            <Icon icon={props.icon} width={20} height={20} />
+            <Icon icon={props.icon} width={size()} height={size()} />
             <span>{props.text}</span>
         </HStack>
     )

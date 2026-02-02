@@ -1,4 +1,9 @@
-export function groupItems<T, K extends PropertyKey>(list: T[], by: (item: T) => K): Record<K, T[]> {
+export function groupItems<const T, const K extends PropertyKey>(
+    list: T[],
+    by: (item: T) => K,
+): {
+    [key in K]?: T[]
+} {
     return list.reduce(
         (acc, item) => {
             const key = by(item)

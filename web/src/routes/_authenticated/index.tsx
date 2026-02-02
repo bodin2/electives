@@ -1,6 +1,6 @@
 import SettingsIcon from '@iconify-icons/mdi/cog'
 import { createFileRoute } from '@tanstack/solid-router'
-import { createSignal, For } from 'solid-js'
+import { createSignal, For, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { Button } from '../../components/Button'
 import SettingsDialog from '../../components/dialogs/SettingsDialog'
@@ -10,11 +10,30 @@ import Page from '../../components/Page'
 import { HStack, VStack } from '../../components/Stack'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import { electiveSorter, nonNull } from '../../utils'
+import { electiveSorter, groupItems, nonNull } from '../../utils'
 import styles from './index.module.css'
 
 export const Route = createFileRoute('/_authenticated/')({
-    loader: ({ context }) => context.client.electives.fetchAll().then(electives => electives.sort(electiveSorter)),
+    loader: async ({ context }) => {
+        const user = nonNull(context.client.user)
+
+        const [electives] = await Promise.all([
+            context.client.electives.fetchAll().then(electives =>
+                electives
+                    .filter(e => {
+                        // Teachers can see all electives
+                        if (user.isTeacher()) return true
+
+                        if (e.teamId != null) return user.hasTeam(e.teamId)
+                        return true
+                    })
+                    .sort(electiveSorter),
+            ),
+            context.client.selections.fetch('@me'),
+        ])
+
+        return { electives, user }
+    },
     component: Home,
 })
 
@@ -22,15 +41,15 @@ function Home() {
     const api = useAPI()
     const { string } = useI18n()
     const data = Route.useLoaderData()
-    const electives = () =>
-        data().filter(e => {
-            // Teachers can see all electives
-            if (nonNull(api.client.user).isTeacher()) return true
 
-            if (e.teamId != null) return nonNull(api.client.user).hasTeam(e.teamId)
-            return true
-        })
     const [settingsOpen, setSettingsOpen] = createSignal(false)
+
+    const electives = () =>
+        groupItems(data().electives, elective => {
+            if (api.client.selections.resolveSelection(nonNull(api.client.user).id, elective.id))
+                return 'selected' as const
+            return 'unselected' as const
+        })
 
     return (
         <Page
@@ -48,13 +67,22 @@ function Home() {
             }
         >
             <VStack gap={16} class="padded">
-                <UserInfoCard cardClass={styles.card} avatarClass={styles.avatar} />
+                <UserInfoCard class={styles.card} />
             </VStack>
-            <HStack gap={16} class="padded" wrap>
-                <For each={electives()}>
-                    {elective => <ElectiveCard elective={elective} cardClass={styles.electiveCard} />}
-                </For>
-            </HStack>
+            <Show when={electives().unselected?.length}>
+                <HStack gap={16} class="padded" wrap>
+                    <For each={electives().unselected}>
+                        {elective => <ElectiveCard elective={elective} class={styles.card} />}
+                    </For>
+                </HStack>
+            </Show>
+            <Show when={electives().selected?.length}>
+                <HStack gap={16} class="padded" wrap>
+                    <For each={electives().selected}>
+                        {elective => <ElectiveCard elective={elective} class={styles.card} />}
+                    </For>
+                </HStack>
+            </Show>
             <Portal>
                 <SettingsDialog open={settingsOpen()} onClose={() => setSettingsOpen(false)} />
             </Portal>

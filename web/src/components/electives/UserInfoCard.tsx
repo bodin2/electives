@@ -8,10 +8,10 @@ import { nonNull } from '../../utils'
 import Badge from '../Badge'
 import { Button } from '../Button'
 import { HStack, VStack } from '../Stack'
+import styles from './UserInfoCard.module.css'
 
 interface UserInfoCardProps {
-    cardClass?: string
-    avatarClass?: string
+    class?: string
 }
 
 export default function UserInfoCard(props: UserInfoCardProps) {
@@ -20,7 +20,7 @@ export default function UserInfoCard(props: UserInfoCardProps) {
     const user = () => nonNull(api.client.user)
 
     return (
-        <Card variant="outlined" class={props.cardClass}>
+        <Card variant="outlined" class={props.class}>
             <VStack gap={16}>
                 <HStack alignHorizontal="space-between">
                     <VStack>
@@ -35,7 +35,7 @@ export default function UserInfoCard(props: UserInfoCardProps) {
                             </For>
                         </HStack>
                     </VStack>
-                    <img src={user().avatarUrl || AvatarPlaceholder} class={props.avatarClass} alt={string.AVATAR()} />
+                    <img src={user().avatarUrl || AvatarPlaceholder} class={styles.avatar} alt={string.AVATAR()} />
                 </HStack>
                 <Button icon={LogOutIcon} variant="tonal-error" onClick={() => api.logout()}>
                     {string.LOGOUT()}
