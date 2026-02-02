@@ -11,7 +11,7 @@ import { usePageData } from '../providers/PageProvider'
 
 export const Route = createFileRoute('/_authenticated')({
     beforeLoad: async ({ context }) => {
-        await context.authReady
+        await context.authState
     },
     component: AuthenticatedLayout,
 })

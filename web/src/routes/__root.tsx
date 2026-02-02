@@ -2,7 +2,7 @@ import { Title } from '@solidjs/meta'
 import { createRootRouteWithContext, Outlet, useRouteContext } from '@tanstack/solid-router'
 import { TanStackRouterDevtools } from '@tanstack/solid-router-devtools'
 import { Show } from 'solid-js'
-import APIProvider from '../providers/APIProvider'
+import APIProvider, { type AuthenticationState } from '../providers/APIProvider'
 import { EnrollmentCountsProvider } from '../providers/EnrollmentCountsProvider'
 import { useI18n } from '../providers/I18nProvider'
 import PageDataProvider from '../providers/PageProvider'
@@ -11,7 +11,7 @@ import type { Client } from '../api'
 
 export interface RouterContext {
     client: Client
-    authReady: Promise<boolean>
+    authState: Promise<AuthenticationState>
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({

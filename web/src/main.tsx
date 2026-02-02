@@ -29,7 +29,7 @@ const router = createRouter({
     defaultErrorComponent: ErrorPage,
     defaultNotFoundComponent: NotFoundPage,
     scrollRestoration: true,
-    context: { client, authReady: defer(authReady) } satisfies RouterContext,
+    context: { client, authState: defer(authReady) } satisfies RouterContext,
 })
 
 declare module '@tanstack/solid-router' {

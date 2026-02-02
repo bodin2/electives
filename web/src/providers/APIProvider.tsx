@@ -8,7 +8,8 @@ import {
     type ParentComponent,
     useContext,
 } from 'solid-js'
-import { Client, UnauthorizedError } from '../api'
+import { APIError, Client, UnauthorizedError } from '../api'
+import { Route } from '../routes/__root'
 
 export enum AuthenticationState {
     Loading = 0,
@@ -39,29 +40,32 @@ export const createClient = () =>
         },
     })
 
-export const initAuth = (client: Client): Promise<boolean> => {
+export const initAuth = (client: Client): Promise<AuthenticationState> => {
     const token = localStorage.getItem(TOKEN_KEY)
-    if (!token) return Promise.resolve(false)
+    if (!token) return Promise.resolve(AuthenticationState.LoggedOut)
 
     log.info('Got token!')
 
     return client.login(token).then(
-        () => true,
+        () => AuthenticationState.LoggedIn,
         e => {
             log.error('Failed to login with stored token:', e)
-            return false
+
+            if (e instanceof APIError) {
+                return AuthenticationState.LoggedOut
+            }
+
+            return AuthenticationState.NetworkError
         },
     )
 }
 
 const APIProvider: ParentComponent<{ client: Client }> = props => {
     const client = props.client
+    const ctx = Route.useRouteContext()
 
-    const initialState = client.isLoggedIn() ? AuthenticationState.LoggedIn : AuthenticationState.Loading
-    const [authState, setAuthState] = createSignal(initialState)
-    const [loginPromise, setLoginPromise] = createSignal<Promise<void>>(
-        initialState === AuthenticationState.LoggedIn ? Promise.resolve() : newLoginPromise(),
-    )
+    const [authState, setAuthState] = createSignal(AuthenticationState.Loading)
+    const [loginPromise, setLoginPromise] = createSignal<Promise<void>>(newLoginPromise())
 
     function newLoginPromise() {
         return new Promise<void>(resolve => {
@@ -73,6 +77,13 @@ const APIProvider: ParentComponent<{ client: Client }> = props => {
 
     createEffect(() => {
         log.debug('Authentication state changed to:', AuthenticationState[authState()])
+    })
+
+    createEffect(() => {
+        ctx().authState.then(state => {
+            log.info('Syncing router auth state:', AuthenticationState[state])
+            setAuthState(state)
+        })
     })
 
     createEffect(
