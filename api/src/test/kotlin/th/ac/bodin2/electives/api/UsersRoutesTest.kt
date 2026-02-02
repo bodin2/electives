@@ -101,6 +101,7 @@ class UsersRoutesTest : ApplicationTest() {
             .parse<th.ac.bodin2.electives.proto.api.UsersService.GetStudentSelectionsResponse>()
 
         assertEquals(SUBJECT_ID, selections.subjectsMap[ELECTIVE_ID]?.id)
+        assertEquals(TEACHER_ID, selections.subjectsMap[ELECTIVE_ID]?.teachersList?.first()?.id)
     }
 
     @Test

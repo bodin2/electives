@@ -88,11 +88,14 @@ class UsersController(
 
     private suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
         try {
-            @OptIn(CreatesTransaction::class)
-            val selections = electiveSelectionService.getStudentSelections(userId)
+            val response = transaction {
+                val selections = electiveSelectionService.getStudentSelections(userId)
 
-            val response = getStudentSelectionsResponse {
-                subjects.putAll(selections.mapValues { it.value.toProto(withDescription = false) })
+                getStudentSelectionsResponse {
+                    subjects.putAll(selections.mapValues {
+                        it.value.toProto(withDescription = false, withTeachers = true)
+                    })
+                }
             }
 
             // @TODO: Return more specific error if user is not a student?

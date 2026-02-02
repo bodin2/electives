@@ -180,10 +180,9 @@ class ElectiveSelectionServiceImpl(
         }
     }
 
-    @CreatesTransaction
-    override fun getStudentSelections(userId: Int): Map<Int, Subject> = transaction {
+    override fun getStudentSelections(userId: Int): Map<Int, Subject> {
         val student = Student.require(userId)
-        buildMap { Student.getAllElectiveSelections(student).forEach { put(it.first, it.second) } }
+        return buildMap { Student.getAllElectiveSelections(student).forEach { put(it.first, it.second) } }
     }
 
     /**

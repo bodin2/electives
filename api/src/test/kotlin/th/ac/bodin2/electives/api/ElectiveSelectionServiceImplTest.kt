@@ -37,9 +37,11 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
             TestConstants.Subjects.PHYSICS_ID
         )
 
-        electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID).apply {
-            val selectedSubject = this[TestConstants.Electives.SCIENCE_ID]
-            assertEquals(TestConstants.Subjects.PHYSICS_ID, selectedSubject?.id?.value)
+        transaction {
+            electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID).apply {
+                val selectedSubject = this[TestConstants.Electives.SCIENCE_ID]
+                assertEquals(TestConstants.Subjects.PHYSICS_ID, selectedSubject?.id?.value)
+            }
         }
     }
 
@@ -112,7 +114,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(result)
 
-        val selections = electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
+        val selections = transaction { electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID) }
         assertTrue(selections.isEmpty())
     }
 
@@ -210,7 +212,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(result)
 
-        val selections = electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
+        val selections = transaction { electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID) }
         assertTrue(selections.isEmpty())
     }
 
