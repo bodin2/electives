@@ -16,8 +16,6 @@ export function build(filename: string): Promise<void> {
     mkdirSync(join(process.cwd(), 'build', 'ts'), { recursive: true })
 
     const protoPath = join(
-        '..',
-        '..',
         'node_modules',
         '.bin',
         platform() === 'win32' ? 'protoc-gen-ts_proto.exe' : 'protoc-gen-ts_proto',
