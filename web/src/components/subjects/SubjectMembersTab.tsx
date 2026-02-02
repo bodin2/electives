@@ -9,6 +9,8 @@ import LoadingPage from '../pages/LoadingPage'
 import { HStack } from '../Stack'
 import styles from './SubjectMembersTab.module.css'
 import type { User } from '../../api'
+import { useAPI } from '../../providers/APIProvider'
+import { nonNull } from '../../utils'
 
 interface SubjectMembersTabProps {
     members: { teachers: User[]; students: User[] } | undefined
@@ -60,6 +62,7 @@ interface SubjectMembersSectionProps {
 
 function SubjectMembersSection(props: SubjectMembersSectionProps) {
     const { string } = useI18n()
+    const currentUser = () => nonNull(useAPI().client.user)
 
     return (
         <section>
@@ -76,6 +79,7 @@ function SubjectMembersSection(props: SubjectMembersSectionProps) {
                     {user => (
                         <SubjectMemberListItem
                             user={user}
+                            currentUser={currentUser()}
                             onRemove={props.onRemove && (() => props.onRemove?.(user))}
                         />
                     )}
@@ -87,6 +91,7 @@ function SubjectMembersSection(props: SubjectMembersSectionProps) {
 
 interface SubjectMemberListItemProps {
     user: User
+    currentUser?: User
     /**
      * Pass to show a remove button on the right side of the item
      */
@@ -106,6 +111,9 @@ export function SubjectMemberListItem(props: SubjectMemberListItemProps) {
                     {props.user.fullName}
                     <HStack gap={4}>
                         <For each={props.user.teams}>{team => <Badge variant="tonal">{team.name}</Badge>}</For>
+                        <Show when={props.user.id === props.currentUser?.id}>
+                            <Badge variant="tertiary">{string.YOU()}</Badge>
+                        </Show>
                     </HStack>
                 </HStack>
             }

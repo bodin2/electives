@@ -9,6 +9,11 @@
     color: var(--m3c-on-error);
 }
 
+.tertiary {
+    background: var(--m3c-tertiary);
+    color: var(--m3c-on-tertiary);
+}
+
 .tonal {
     background: var(--m3c-primary-container);
     color: var(--m3c-on-primary-container);

@@ -3,7 +3,7 @@ import styles from './Badge.module.css'
 import type { ComponentProps } from 'solid-js'
 
 interface BadgeProps extends ComponentProps<'span'> {
-    variant?: 'error' | 'tonal'
+    variant?: 'error' | 'tonal' | 'tertiary'
 }
 
 export default function Badge(props: BadgeProps) {
