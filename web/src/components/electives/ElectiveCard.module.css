@@ -7,37 +7,43 @@
 }
 
 .card {
-    p {
-        color: var(--m3c-error);
+    @media (max-width: 448px) {
+        .subjectInfo {
+            flex-direction: column-reverse;
+            align-items: flex-start;
+        }
     }
-
+    
     &[data-open='true'] {
         color: var(--m3c-primary);
-
+        
         &:not([data-has-selection='true']) {
             background-color: var(--m3c-primary-container);
         }
-
+        
         h1,
         p {
             color: var(--m3c-on-surface);
         }
-
+        
         svg {
             color: var(--m3c-on-surface-variant);
         }
     }
-
+    
     &[data-has-selection='true'] {
         color: var(--m3c-on-surface-variant);
-
+        
         h1,
         p {
             color: var(--m3c-on-surface);
         }
     }
-
+    
     &:not([data-open='true']):not([data-has-selection='true']) {
+        p {
+            color: var(--m3c-error);
+        }
 
         h1,
         p {

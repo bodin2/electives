@@ -22,7 +22,7 @@ export default function UserInfoCard(props: UserInfoCardProps) {
     return (
         <Card variant="outlined" class={props.class}>
             <VStack gap={16}>
-                <HStack alignHorizontal="space-between">
+                <HStack alignHorizontal="space-between" class={styles.userInfo}>
                     <VStack>
                         <p class="m3-title-large">{user().fullName}</p>
                         <HStack alignVertical="center" gap={4} style={{ 'row-gap': '2px' }} wrap>

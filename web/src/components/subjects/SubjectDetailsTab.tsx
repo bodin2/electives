@@ -26,7 +26,7 @@ export default function SubjectDetailsTab(props: SubjectDetailsTabProps) {
 
     const teachersText = () => {
         const teachers = props.subject.teachers.map(t => new User(t).fullName).join(', ') || '-'
-        return `${string.TEACHER()} (${props.subject.teachers.length}): ${teachers}`
+        return `${string.TEACHER()}: ${teachers}`
     }
 
     return (
@@ -42,6 +42,9 @@ export default function SubjectDetailsTab(props: SubjectDetailsTabProps) {
                     <HStack gap={16} wrap>
                         <IconLabel icon={HashTagBoxOutlineIcon} text={props.subject.code} class={props.labelClass} />
                         <IconLabel icon={LocationIcon} text={props.subject.location} class={props.labelClass} />
+                    </HStack>
+                    <HStack gap={16} wrap>
+                        <IconLabel icon={TeachIcon} text={teachersText()} class={props.labelClass} />
                         <IconLabel
                             icon={AccountCircleIcon}
                             text={string.SUBJECT_MEMBERS_COUNT({
@@ -51,7 +54,6 @@ export default function SubjectDetailsTab(props: SubjectDetailsTabProps) {
                             class={props.labelClass}
                         />
                     </HStack>
-                    <IconLabel icon={TeachIcon} text={teachersText()} class={props.labelClass} />
                 </VStack>
             </VStack>
             <p class={props.descriptionClass}>{props.subject.description}</p>

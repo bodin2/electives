@@ -5,3 +5,10 @@
     border-radius: var(--m3-shape-full);
     object-fit: cover;
 }
+
+@media (max-width: 384px) {
+    .userInfo {
+        flex-direction: column-reverse;
+        align-items: flex-start;
+    }
+}

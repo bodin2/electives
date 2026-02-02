@@ -89,7 +89,7 @@ export default function ElectiveCard(props: ElectiveCardProps) {
                 fallback={
                     <HStack alignHorizontal="space-between" alignVertical="center" gap={16} grow>
                         <VStack gap={4}>
-                            <h1 class="m3-title-large">{props.elective.name}</h1>
+                            <h1 class="m3-title-large text-balance">{props.elective.name}</h1>
                             <VStack gap={2}>
                                 <p class="m3-body-medium">
                                     {isOpen() ? string.ENROLLMENT_OPEN() : string.ENROLLMENT_CLOSED()}
@@ -106,9 +106,9 @@ export default function ElectiveCard(props: ElectiveCardProps) {
                 }
             >
                 <VStack gap={16} alignVertical="space-between" grow>
-                    <HStack alignHorizontal="space-between">
+                    <HStack alignHorizontal="space-between" class={styles.subjectInfo} gap={16}>
                         <VStack>
-                            <p class="m3-title-large">{props.elective.name}</p>
+                            <p class="m3-title-large text-balance">{props.elective.name}</p>
                             <VStack gap={2} style={{ 'margin-top': '4px', color: 'var(--m3c-on-surface-variant)' }}>
                                 <IconLabel
                                     icon={BookIcon}
@@ -120,13 +120,13 @@ export default function ElectiveCard(props: ElectiveCardProps) {
                                     icon={LocationIcon}
                                     text={`${selectedSubject()?.location}`}
                                     iconSize={16}
-                                    class="m3-body-small"
+                                    class="m3-body-medium"
                                 />
                                 <IconLabel
                                     icon={TeachIcon}
-                                    text={`${string.TEACHER()} (${selectedSubject()?.teachers.length}): ${teacherNames()}`}
+                                    text={`${string.TEACHER()}: ${teacherNames()}`}
                                     iconSize={16}
-                                    class="m3-body-small"
+                                    class="m3-body-medium"
                                 />
                             </VStack>
                         </VStack>
