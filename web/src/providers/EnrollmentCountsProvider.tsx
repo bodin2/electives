@@ -28,9 +28,12 @@ const EnrollmentContext = createContext<EnrollmentContextValue>()
 export function EnrollmentCountsProvider(props: ParentProps<{ client: Client }>) {
     const [store, setStore] = createStore<EnrollmentStore>({ counts: {}, versions: {} })
 
+    // @ts-expect-error: Exposing to DEV
+    if (import.meta.env.DEV) globalThis.$ecp = store
+
     const handleUpdate = (event: { electiveId: number; subjectId: number; enrolledCount: number }) => {
         log.info('Received subject enrollment update:', event)
-        setStore('counts', event.electiveId, event.subjectId, event.enrolledCount)
+        setStore('counts', event.electiveId, { [event.subjectId]: event.enrolledCount })
         setStore('versions', event.electiveId, v => (v ?? 0) + 1)
     }
 
