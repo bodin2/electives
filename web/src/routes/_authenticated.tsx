@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, useLocation, useNavigate, useRouter } from '@tanstack/solid-router'
 import { createEffect, Match, on, Switch } from 'solid-js'
+import { UnauthorizedError } from '../api'
 import SchoolLogo from '../components/images/SchoolLogo'
 import ErrorPage from '../components/pages/ErrorPage'
 import LoadingPage from '../components/pages/LoadingPage'
@@ -14,6 +15,10 @@ export const Route = createFileRoute('/_authenticated')({
         await context.authState
     },
     component: AuthenticatedLayout,
+    errorComponent: props => {
+        if (props.error instanceof UnauthorizedError) return null
+        throw props.error
+    },
 })
 
 function AuthenticatedLayout() {
@@ -23,21 +28,19 @@ function AuthenticatedLayout() {
     const pageData = usePageData()
 
     createEffect(
-        on(
-            () => api.$authState(),
-            authState => {
-                if (authState === AuthenticationState.LoggedOut) {
-                    navigate({
-                        to: '/login',
-                        replace: true,
-                        search: {
-                            to: location().pathname,
-                            search: location().searchStr || undefined,
-                        },
-                    })
-                }
-            },
-        ),
+        on(api.$authState, authState => {
+            if (authState === AuthenticationState.LoggedOut) {
+                const loc = location()
+                navigate({
+                    to: '/login',
+                    replace: true,
+                    search: {
+                        to: loc.pathname,
+                        search: loc.searchStr || undefined,
+                    },
+                })
+            }
+        }),
     )
 
     return (

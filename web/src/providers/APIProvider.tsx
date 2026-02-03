@@ -141,6 +141,9 @@ const APIProvider: ParentComponent<{ client: Client }> = props => {
 
             client.on('logout', () => {
                 client.destroy()
+
+                log.info('Logged out')
+
                 localStorage.removeItem(TOKEN_KEY)
                 setAuthState(AuthenticationState.LoggedOut)
                 setLoginPromise(newLoginPromise())

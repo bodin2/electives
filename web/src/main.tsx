@@ -1,7 +1,7 @@
 import { render } from 'solid-js/web'
 import 'solid-devtools'
 
-import { createRouter, defer, RouterProvider } from '@tanstack/solid-router'
+import { createRouter, RouterProvider } from '@tanstack/solid-router'
 import { routeTree } from './routeTree.gen'
 
 import 'm3-solid/styles.css'
@@ -17,7 +17,7 @@ import I18nProvider from './providers/I18nProvider'
 import type { RouterContext } from './routes/__root'
 
 const client = createClient()
-const authReady = initAuth(client)
+const authState = initAuth(client)
 
 const router = createRouter({
     routeTree,
@@ -29,7 +29,7 @@ const router = createRouter({
     defaultErrorComponent: ErrorPage,
     defaultNotFoundComponent: NotFoundPage,
     scrollRestoration: true,
-    context: { client, authState: defer(authReady) } satisfies RouterContext,
+    context: { client, authState } satisfies RouterContext,
 })
 
 declare module '@tanstack/solid-router' {
