@@ -1,7 +1,7 @@
 import Logger from '@bodin2/electives-common/Logger'
-import { createFileRoute, useNavigate, useSearch } from '@tanstack/solid-router'
+import { createFileRoute, useNavigate, useRouter, useSearch } from '@tanstack/solid-router'
 import { Dialog, TextField, type TextFieldProps } from 'm3-solid'
-import { createEffect, createSignal } from 'solid-js'
+import { createEffect, createSignal, untrack } from 'solid-js'
 import { UnauthorizedError } from '../api'
 import { Button } from '../components/Button'
 import SchoolLogo from '../components/images/SchoolLogo'
@@ -30,6 +30,7 @@ function Login() {
     const { string } = useI18n()
     const api = useAPI()
     const navigate = useNavigate()
+    const router = useRouter()
     const search = useSearch({ from: '/login' }) as () => LoginSearch
 
     const [loading, setLoading] = createSignal(false)
@@ -39,6 +40,13 @@ function Login() {
     createEffect(() => {
         if (api.$authState() === AuthenticationState.LoggedIn) {
             log.info('Logged in, redirecting to home')
+
+            // Clear router cache to prevent showing previous user's data
+            untrack(() => {
+                router.clearCache({ filter: () => true })
+                router.invalidate({ sync: true, filter: () => true })
+            })
+
             setTimeout(() => {
                 const s = search()
                 const url = s.to ? `${s.to}${s.search ? `?${decodeURIComponent(s.search)}` : ''}` : '/'

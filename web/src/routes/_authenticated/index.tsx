@@ -47,8 +47,7 @@ function Home() {
 
     const electives = () =>
         groupItems(data().electives, elective => {
-            if (api.client.selections.resolveSelection(nonNull(api.client.user).id, elective.id))
-                return 'selected' as const
+            if (api.client.selections.resolveSelection(data().user.id, elective.id)) return 'selected' as const
             return 'unselected' as const
         })
 

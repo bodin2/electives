@@ -221,10 +221,10 @@ export class Client {
      * Clear all caches
      */
     clearCaches(): void {
-        this.users.cache.clear()
-        this.electives.cache.clear()
-        this.subjects.cache.clear()
-        this.selections.cache.clear()
+        this.users.clearCache()
+        this.subjects.clearCache()
+        this.electives.clearCache()
+        this.selections.clearCache()
     }
 
     /**

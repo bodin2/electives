@@ -13,6 +13,7 @@ import {
 } from '../types'
 import type { Cache } from '../cache'
 import type { RESTClient } from '../rest'
+import type { CacheableManager } from '.'
 import type { FetchOptions } from './UserManager'
 
 export interface SubjectMembersResult {
@@ -20,7 +21,7 @@ export interface SubjectMembersResult {
     students: User[]
 }
 
-export class ElectiveManager {
+export class ElectiveManager implements CacheableManager {
     /** Cache of fetched electives */
     readonly cache: Cache<number, Elective>
     /** Whether all electives have been cached via {@link fetchAll} */
@@ -32,6 +33,11 @@ export class ElectiveManager {
         private readonly subjectManager: SubjectManager,
     ) {
         this.cache = cache
+    }
+
+    clearCache(): void {
+        this.cache.clear()
+        this.cachedAll = false
     }
 
     /**
@@ -154,7 +160,7 @@ export interface EnrolledCountFetchOptions extends FetchOptions {
     subjectId: number
 }
 
-export class SubjectManager {
+export class SubjectManager implements CacheableManager {
     /** Cache of fetched subjects (key: "electiveId:subjectId") */
     readonly cache: Cache<string, Subject>
     /** Cache of enrolled counts (key: "electiveId:subjectId") */
@@ -168,6 +174,12 @@ export class SubjectManager {
     ) {
         this.cache = cache
         this.enrolledCountCache = enrolledCountCache
+    }
+
+    clearCache() {
+        this.cache.clear()
+        this.enrolledCountCache.clear()
+        this.electiveSubjectIds.clear()
     }
 
     getCacheKey(electiveId: number, subjectId: number): string {

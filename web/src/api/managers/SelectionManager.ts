@@ -12,6 +12,7 @@ import {
 } from '../types'
 import type { Cache } from '../cache'
 import type { Client } from '../client'
+import type { CacheableManager } from '.'
 
 export interface SelectionFetchOptions {
     /** Skip cache and fetch from API */
@@ -26,7 +27,7 @@ export interface SelectionFetchOptions {
 /**
  * Manages student elective selections
  */
-export class SelectionManager {
+export class SelectionManager implements CacheableManager {
     /** Cache of student selections: `Map<UserID, Map<ElectiveID, Subject>>` */
     readonly cache: Cache<number, Map<number, Subject>>
 
@@ -35,6 +36,10 @@ export class SelectionManager {
         cache: Cache<number, Map<number, Subject>>,
     ) {
         this.cache = cache
+    }
+
+    clearCache(): void {
+        this.cache.clear()
     }
 
     /**

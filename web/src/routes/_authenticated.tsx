@@ -85,7 +85,9 @@ function NetworkErrorPage() {
             error={navigator.onLine ? string.ERROR_API_UNREACHABLE() : string.ERROR_OFFLINE()}
             reset={async () => {
                 await api.client.login()
-                router.invalidate()
+                await router.invalidate({
+                    sync: true,
+                })
             }}
         />
     )

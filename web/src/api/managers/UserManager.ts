@@ -7,6 +7,7 @@ import { User } from '../structures'
 import { type RawUser, RawUserCodec } from '../types'
 import type { Cache } from '../cache'
 import type { RESTClient } from '../rest'
+import type { CacheableManager } from '.'
 
 export interface FetchOptions {
     /** Skip cache and fetch from API */
@@ -15,7 +16,7 @@ export interface FetchOptions {
     cache?: boolean
 }
 
-export class UserManager {
+export class UserManager implements CacheableManager {
     /** Cache of fetched users */
     readonly cache: Cache<number, User>
 
@@ -24,6 +25,10 @@ export class UserManager {
         cache: Cache<number, User>,
     ) {
         this.cache = cache
+    }
+
+    clearCache(): void {
+        this.cache.clear()
     }
 
     /**
