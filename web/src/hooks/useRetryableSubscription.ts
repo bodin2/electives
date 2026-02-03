@@ -6,9 +6,9 @@ export function useRetryableSubscription(
     maxRetries = 5,
     retryDelay = 5000,
 ) {
-    createEffect(() => {
-        let cleanedUp = false
+    let cleanedUp = false
 
+    createEffect(() => {
         const attemptSubscribe = (attempts = 0) => {
             try {
                 subscribe()
@@ -26,10 +26,10 @@ export function useRetryableSubscription(
         }
 
         attemptSubscribe()
+    })
 
-        onCleanup(() => {
-            cleanedUp = true
-            unsubscribe()
-        })
+    onCleanup(() => {
+        cleanedUp = true
+        unsubscribe()
     })
 }
