@@ -26,7 +26,6 @@ function RootComponent() {
             <ScrollDataProvider>
                 <APIProvider client={context().client}>
                     <EnrollmentCountsProvider client={context().client}>
-                        <Title>Bodindecha 2 Electives</Title>
                         <I18nReadyOutlet />
                         <TanStackRouterDevtools position="bottom-left" />
                     </EnrollmentCountsProvider>
@@ -41,6 +40,7 @@ function I18nReadyOutlet() {
 
     return (
         <Show when={i18n.ready}>
+            <Title>{i18n.string.ELECTIVES_SYSTEM()}</Title>
             <Outlet />
         </Show>
     )

@@ -76,8 +76,14 @@ const I18nProvider: ParentComponent = props => {
 
             if (++fetchAttempts > 3) {
                 log.warn('Max i18n fetch attempts reached, giving up')
-                setValue({ ready: true })
-            } else mutateDict.refetch()
+                setValue({
+                    ready: true,
+                    string: new Proxy({}, { get: (_, key) => () => key }) as I18nApi['string'],
+                })
+                return
+            }
+
+            mutateDict.refetch()
         }
 
         if (dict.latest) {
