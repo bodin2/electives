@@ -5,6 +5,7 @@ import {
     createEffect,
     createResource,
     createSignal,
+    on,
     onMount,
     type ParentComponent,
     useContext,
@@ -70,29 +71,34 @@ const I18nProvider: ParentComponent = props => {
         { defer: true },
     )
 
-    createEffect(() => {
-        if (dict.error) {
-            log.error(`Failed to load i18n dictionary (attempt ${fetchAttempts}):`, dict.error)
+    createEffect(
+        on(
+            () => [dict.latest, dict.error],
+            ([latest, error]) => {
+                if (error) {
+                    log.error(`Failed to load i18n dictionary (attempt ${fetchAttempts}):`, error)
 
-            if (++fetchAttempts > 3) {
-                log.warn('Max i18n fetch attempts reached, giving up')
-                setValue({
-                    ready: true,
-                    string: new Proxy({}, { get: (_, key) => () => key }) as I18nApi['string'],
-                })
-                return
-            }
+                    if (++fetchAttempts > 3) {
+                        log.warn('Max i18n fetch attempts reached, giving up')
+                        setValue({
+                            ready: true,
+                            string: new Proxy({}, { get: (_, key) => () => key }) as I18nApi['string'],
+                        })
+                        return
+                    }
 
-            mutateDict.refetch()
-        }
+                    mutateDict.refetch()
+                }
 
-        if (dict.latest) {
-            fetchAttempts = 0
+                if (latest) {
+                    fetchAttempts = 0
 
-            log.info('Loaded i18n dictionary for locale:', locale())
-            setValue({ ready: true, string: i18n.chainedTranslator(dict.latest, tr) })
-        }
-    })
+                    log.info('Loaded i18n dictionary for locale:', locale())
+                    setValue({ ready: true, string: i18n.chainedTranslator(latest, tr) })
+                }
+            },
+        ),
+    )
 
     const [dict, mutateDict] = createResource(locale, fetchDictionary)
     const tr = i18n.translator(dict, i18n.resolveTemplate) as i18n.Translator<Dict, string>
