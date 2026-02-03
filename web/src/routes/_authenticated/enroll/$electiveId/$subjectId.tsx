@@ -1,3 +1,4 @@
+import Logger from '@bodin2/electives-common/Logger'
 import { createFileRoute, useRouter } from '@tanstack/solid-router'
 import { Tabs } from 'm3-solid'
 import { createEffect, createSignal, Match, Show, Switch } from 'solid-js'
@@ -58,6 +59,8 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
     component: RouteComponent,
 })
 
+const log = new Logger('routes/$electiveId/$subjectId')
+
 function RouteComponent() {
     const { string } = useI18n()
     const scrollData = useScrollData()
@@ -81,12 +84,17 @@ function RouteComponent() {
     })
 
     useRetryableSubscription(
-        () =>
+        () => {
             api.client.gateway.subscribeToElective(
                 data().elective.id,
                 [data().subject.id, data().selectedSubject?.id].filter(Boolean) as number[],
-            ),
-        () => api.client.gateway.subscribeToElective(data().elective.id, []),
+            )
+        },
+        () => {
+            if (api.client.isGatewayConnected()) {
+                api.client.gateway.subscribeToElective(data().elective.id, [])
+            } else log.warn('WebSocket not connected, skipping unsubscription')
+        },
     )
 
     const [members] = useAutoRefreshResource(
