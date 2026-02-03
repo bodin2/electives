@@ -308,6 +308,11 @@ export class Gateway {
     }
 
     private scheduleReconnect(customDelay?: number): void {
+        if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING) {
+            console.warn('WebSocket is already connected or connecting; aborting reconnect attempt')
+            return
+        }
+
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout)
         }
