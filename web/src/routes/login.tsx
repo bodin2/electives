@@ -38,7 +38,7 @@ function Login() {
     const [inputExtraProps, setInputExtraProps] = createSignal<Partial<TextFieldProps>>({})
 
     createEffect(() => {
-        if (api.$authState() === AuthenticationState.LoggedIn) {
+        if (api.authState() === AuthenticationState.LoggedIn) {
             log.info('Logged in, redirecting to home')
 
             // Clear router cache to prevent showing previous user's data
@@ -77,7 +77,7 @@ function Login() {
                         {string.LOGIN()}
                     </Button>
                 }
-                open={api.$authState() !== AuthenticationState.LoggedIn}
+                open={api.authState() !== AuthenticationState.LoggedIn}
             >
                 <VStack
                     gap={24}

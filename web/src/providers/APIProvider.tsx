@@ -5,10 +5,11 @@ import {
     createEffect,
     createSignal,
     on,
+    onCleanup,
     type ParentComponent,
     useContext,
 } from 'solid-js'
-import { APIError, Client, UnauthorizedError } from '../api'
+import { APIError, Client, type ClientEventMap, UnauthorizedError } from '../api'
 import { NetworkError } from '../api/types'
 import { Route } from '../routes/__root'
 
@@ -21,8 +22,7 @@ export enum AuthenticationState {
 
 interface APIApi {
     client: Client
-    $authState: Accessor<AuthenticationState>
-    $loginPromise: Accessor<Promise<void>>
+    authState: Accessor<AuthenticationState>
     login(id: number, password: string): Promise<void>
     logout: () => Promise<void>
 }
@@ -66,15 +66,7 @@ const APIProvider: ParentComponent<{ client: Client }> = props => {
     const ctx = Route.useRouteContext()
 
     const [authState, setAuthState] = createSignal(AuthenticationState.Loading)
-    const [loginPromise, setLoginPromise] = createSignal<Promise<void>>(newLoginPromise())
-
-    function newLoginPromise() {
-        return new Promise<void>(resolve => {
-            client.once('ready', () => {
-                resolve()
-            })
-        })
-    }
+    const [updater, setUpdater] = createSignal(0)
 
     createEffect(() => {
         log.debug('Authentication state changed to:', AuthenticationState[authState()])
@@ -82,49 +74,40 @@ const APIProvider: ParentComponent<{ client: Client }> = props => {
 
     createEffect(() => {
         ctx().authState.then(state => {
-            log.info('Syncing router auth state:', AuthenticationState[state])
+            log.debug('Syncing router auth state:', AuthenticationState[state])
             setAuthState(state)
         })
     })
 
     createEffect(
-        on(loginPromise, () => {
-            if (client.isLoggedIn()) {
-                client.connectGateway()
-            } else {
-                const token = localStorage.getItem(TOKEN_KEY)
-                if (!token) {
-                    setAuthState(AuthenticationState.LoggedOut)
-                }
-            }
-
-            client.on('ready', user => {
+        on(updater, () => {
+            const onReady = (user: ClientEventMap['ready']) => {
                 log.info('Logged in as:', user)
                 setAuthState(AuthenticationState.LoggedIn)
-            })
+            }
 
-            client.on('error', err => {
+            const onError = (err: ClientEventMap['error']) => {
                 log.error('Client error occurred:', err)
-            })
+            }
 
-            client.on('networkError', err => {
+            const onNetworkError = (err: ClientEventMap['networkError']) => {
                 log.error('Network error occurred', err)
                 if (authState() !== AuthenticationState.LoggedOut) setAuthState(AuthenticationState.NetworkError)
-            })
+            }
 
-            client.on('gatewayConnect', () => {
+            const onGatewayConnect = () => {
                 log.info('Connected to gateway')
-            })
+            }
 
-            client.on('gatewayDisconnect', reason => {
+            const onGatewayDisconnect = (reason: ClientEventMap['gatewayDisconnect']) => {
                 log.warn('Disconnected from gateway:', reason)
-            })
+            }
 
-            client.on('gatewayRateLimited', retryAfter => {
+            const onGatewayRateLimited = (retryAfter: ClientEventMap['gatewayRateLimited']) => {
                 log.warn('Gateway rate limited, retrying after:', retryAfter, 'ms')
-            })
+            }
 
-            client.once('unauthorized', error => {
+            const onUnauthorized = (error: ClientEventMap['unauthorized']) => {
                 if (authState() === AuthenticationState.LoggedOut) {
                     log.warn('Received unauthorized event while logged out, likely a bad session.')
                     api.logout()
@@ -137,26 +120,43 @@ const APIProvider: ParentComponent<{ client: Client }> = props => {
                         return client.logout()
                     }
                 })
-            })
+            }
 
-            client.on('logout', () => {
+            const onLogout = () => {
                 client.destroy()
-
-                log.info('Logged out')
 
                 localStorage.removeItem(TOKEN_KEY)
                 setAuthState(AuthenticationState.LoggedOut)
-                setLoginPromise(newLoginPromise())
-            })
+                setUpdater(~updater())
 
-            // TODO: onCleanup
+                log.info('Logged out')
+            }
+
+            client.on('ready', onReady)
+            client.on('error', onError)
+            client.on('networkError', onNetworkError)
+            client.on('gatewayConnect', onGatewayConnect)
+            client.on('gatewayDisconnect', onGatewayDisconnect)
+            client.on('gatewayRateLimited', onGatewayRateLimited)
+            client.once('unauthorized', onUnauthorized)
+            client.on('logout', onLogout)
+
+            onCleanup(() => {
+                client.off('ready', onReady)
+                client.off('error', onError)
+                client.off('networkError', onNetworkError)
+                client.off('gatewayConnect', onGatewayConnect)
+                client.off('gatewayDisconnect', onGatewayDisconnect)
+                client.off('gatewayRateLimited', onGatewayRateLimited)
+                client.off('unauthorized', onUnauthorized)
+                client.off('logout', onLogout)
+            })
         }),
     )
 
     const api: APIApi = {
         client,
-        $authState: authState,
-        $loginPromise: loginPromise,
+        authState: authState,
         login: async (id: number, password: string) => {
             const token = await client.authenticate({ id, password, clientName: `web@${process.env.APP_VERSION}` })
             localStorage.setItem(TOKEN_KEY, token)

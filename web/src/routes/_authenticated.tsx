@@ -28,7 +28,7 @@ function AuthenticatedLayout() {
     const pageData = usePageData()
 
     createEffect(
-        on(api.$authState, authState => {
+        on(api.authState, authState => {
             if (authState === AuthenticationState.LoggedOut) {
                 const loc = location()
                 navigate({
@@ -45,7 +45,7 @@ function AuthenticatedLayout() {
 
     return (
         <Switch>
-            <Match when={api.$authState() === AuthenticationState.LoggedIn}>
+            <Match when={api.authState() === AuthenticationState.LoggedIn}>
                 <TopAppBar
                     variant="small"
                     headline={() => (
@@ -65,10 +65,10 @@ function AuthenticatedLayout() {
                 />
                 <Outlet />
             </Match>
-            <Match when={api.$authState() === AuthenticationState.Loading}>
+            <Match when={api.authState() === AuthenticationState.Loading}>
                 <LoadingPage />
             </Match>
-            <Match when={api.$authState() === AuthenticationState.NetworkError}>
+            <Match when={api.authState() === AuthenticationState.NetworkError}>
                 <NetworkErrorPage />
             </Match>
         </Switch>
