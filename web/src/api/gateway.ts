@@ -13,7 +13,7 @@ export type GatewayEventMap = {
     /** Fired when the gateway connects */
     connect: undefined
     /** Fired when the gateway disconnects */
-    disconnect: string
+    disconnect: { code: number; reason: string }
     /** Fired when the gateway encounters an error */
     error: Error
     /** Fired when the gateway is rate limited (HTTP 429) */
@@ -233,7 +233,7 @@ export class Gateway {
                     break
             }
 
-            this.emitter.emit('disconnect', reason)
+            this.emitter.emit('disconnect', { code: event.code, reason })
 
             if (this.autoReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
                 this.scheduleReconnect()
