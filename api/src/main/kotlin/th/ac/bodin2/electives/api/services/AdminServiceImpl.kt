@@ -1,5 +1,11 @@
 package th.ac.bodin2.electives.api.services
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.utils.CIDR
 import th.ac.bodin2.electives.api.services.AdminService.CreateSessionResult
@@ -18,10 +24,13 @@ import kotlin.time.Duration
 
 class AdminServiceImpl(val config: Config) : AdminService {
     companion object {
+        private const val CHALLENGE_DURATION_MILLIS = 60000L // 1 minute
         private const val CHALLENGE_SIZE = 128
         private const val TOKEN_SIZE = 64
         private val logger = LoggerFactory.getLogger(AdminServiceImpl::class.java)
     }
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     @Volatile
     private var currentChallenge: ByteArray? = null
@@ -40,7 +49,6 @@ class AdminServiceImpl(val config: Config) : AdminService {
     )
 
     init {
-        newChallenge()
         logger.warn("AdminService is running!")
     }
 
@@ -68,6 +76,15 @@ class AdminServiceImpl(val config: Config) : AdminService {
     override fun newChallenge(): String {
         currentChallenge = ByteArray(CHALLENGE_SIZE).apply {
             SecureRandom().nextBytes(this)
+        }
+
+        // Clear the challenge after duration
+        val copy = currentChallenge
+        scope.launch {
+            delay(CHALLENGE_DURATION_MILLIS)
+            if (copy === currentChallenge) {
+                currentChallenge = null
+            }
         }
 
         return Base64.getUrlEncoder()
