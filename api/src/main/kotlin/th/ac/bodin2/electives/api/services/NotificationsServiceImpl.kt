@@ -12,10 +12,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.isTest
 import th.ac.bodin2.electives.api.toPrincipal
-import th.ac.bodin2.electives.api.utils.badFrame
-import th.ac.bodin2.electives.api.utils.parseOrNull
-import th.ac.bodin2.electives.api.utils.send
-import th.ac.bodin2.electives.api.utils.unauthorized
+import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope
 import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope.PayloadCase
@@ -28,9 +25,12 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 
+// Fake ID for admin sessions
+private const val ADMIN_PSEUDO_ID = -1
+
 private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
-class NotificationsServiceImpl(val config: Config, val usersService: UsersService) : NotificationsService {
+class NotificationsServiceImpl(val config: Config, val usersService: UsersService, val adminService: AdminService? = null) : NotificationsService {
     class Config(
         val maxSubjectSubscriptionsPerClient: Int,
         val bulkUpdateInterval: Duration,
@@ -114,6 +114,34 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
         }
     }
 
+    private suspend fun WebSocketServerSession.handleSession(userId: Int) {
+        logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
+
+        connections[userId]?.let {
+            logger.warn("Existing connection found for user: $userId, closing previous connection")
+            it.close()
+        }
+
+        val connection = ClientConnection(
+            this@NotificationsServiceImpl,
+            userId = userId,
+            session = this,
+            subscriptions = ConcurrentHashMap(),
+            cleanups = ConcurrentHashMap.newKeySet(),
+            parentScope = updateScope,
+        )
+
+        connections[userId] = connection
+
+        try {
+            for (frame in incoming) connection.handleFrame(frame)
+        } finally {
+            connection.close()
+            connections.remove(userId)
+            logger.debug("Client disconnected, user: $userId")
+        }
+    }
+
     override suspend fun WebSocketServerSession.handleConnection() {
         val userId = try {
             withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
@@ -139,30 +167,34 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
             return unauthorized()
         }
 
-        logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
+        handleSession(userId)
+    }
 
-        connections[userId]?.let {
-            logger.warn("Existing connection found for user: $userId, closing previous connection")
-            it.close()
-        }
-
-        val connection = ClientConnection(
-            this@NotificationsServiceImpl,
-            userId = userId,
-            session = this,
-            subscriptions = ConcurrentHashMap(),
-            cleanups = ConcurrentHashMap.newKeySet(),
-            parentScope = updateScope,
-        )
-
-        connections[userId] = connection
+    override suspend fun WebSocketServerSession.handleAdminConnection() {
+        adminService ?: throw IllegalStateException("Cannot get AdminService")
 
         try {
-            for (frame in incoming) connection.handleFrame(frame)
-        } finally {
-            connection.close()
-            connections.remove(userId)
+            withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
+                (incoming.receive() as? Frame.Binary)?.let {
+                    val token =
+                        it.parseOrNull<Envelope>()?.identify?.token
+                            ?: return@withTimeout null
+
+                    adminService.hasSession(token, call.request.connectingAddress)
+                }
+            } ?: throw IllegalArgumentException()
+        } catch (e: Exception) {
+            when (e) {
+                // Client authentication failures
+                is TimeoutCancellationException -> {}
+
+                else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteHost}", e)
+            }
+
+            return unauthorized()
         }
+
+        handleSession(ADMIN_PSEUDO_ID)
     }
 
     private suspend fun ClientConnection.handleFrame(frame: Frame) {
