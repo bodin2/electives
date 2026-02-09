@@ -26,6 +26,11 @@ class Student(val reference: Reference, val user: User) {
     val id = reference.id
 
     companion object {
+        fun from(user: ResultRow): Student {
+            val id = user.getOrNull(Students.id)?.value ?: throw IllegalArgumentException("ResultRow does not contain student ID")
+            return Student(Reference(id), User.wrapRow(user))
+        }
+
         fun exists(id: Int): Boolean = Students.selectAll().where { Students.id eq id }.empty().not()
 
         fun require(id: Int): Reference {
@@ -121,6 +126,11 @@ class Teacher(val reference: Reference, val user: User) {
     class Reference internal constructor(val id: Int)
 
     companion object {
+        fun from(user: ResultRow): Teacher {
+            val id = user.getOrNull(Teachers.id)?.value ?: throw IllegalArgumentException("ResultRow does not contain teacher ID")
+            return Teacher(Reference(id), User.wrapRow(user))
+        }
+
         fun findById(id: Int): Teacher? {
             if (!exists(id)) return null
 

@@ -92,6 +92,7 @@ fun Application.module() {
     registerUsersRoutes()
     registerMiscRoutes()
     registerNotificationsRoutes()
+    registerAdminRoutes()
 }
 
 fun Application.provideDependencies() {
@@ -118,6 +119,9 @@ fun Application.provideDependencies() {
                         bulkUpdatesEnabled = true
                     ),
                     resolve<UsersService>(),
+                    DependencyKey<AdminService>().let {
+                        if (contains(it)) get(it) else null
+                    }
                 )
             }
 
