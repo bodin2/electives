@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.sqlite.jdbc4.JDBC4Connection
+import th.ac.bodin2.electives.utils.CIDR
 import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.utils.authenticatedUserId
@@ -17,7 +18,10 @@ import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.utils.getEnv
 import th.ac.bodin2.electives.utils.loadDotEnv
 import th.ac.bodin2.electives.utils.requireEnvNonBlank
+import java.security.spec.X509EncodedKeySpec
+import java.util.*
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -124,5 +128,29 @@ fun Application.provideDependencies() {
                 resolve<NotificationsService>()
             )
         }
+
+        if (!getEnv("ADMIN_ENABLED").isNullOrEmpty())
+            provide<AdminService> {
+                AdminServiceImpl(
+                AdminServiceImpl.Config(
+                    sessionDurationSeconds = 1.hours.inWholeSeconds,
+                    minimumSessionCreationTime = 3.seconds,
+                    allowedIPs = getEnv("ADMIN_ALLOWED_IPS").let { ipString ->
+                        val ips = ipString.let {
+                            if (it == null) {
+                                this@provideDependencies.log.warn("ADMIN_ALLOWED_IPS is not set, defaulting to only allow localhost access.")
+                                return@let "127.0.0.1"
+                            }
+
+                            return@let it
+                        }
+                        if (ips.isBlank()) null
+                        else ips.split(",").map { CIDR.parse(it.trim()) }
+                    },
+                    publicKey = X509EncodedKeySpec(
+                        Base64.getDecoder().decode(requireEnvNonBlank("ADMIN_PUBLIC_KEY"))
+                    )
+                ))
+            }
     }
 }

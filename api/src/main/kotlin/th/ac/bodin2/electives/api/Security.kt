@@ -5,13 +5,16 @@ import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.api.services.AdminService
 import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.api.utils.connectingAddress
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.getEnv
 import java.security.MessageDigest
 import kotlin.time.Duration.Companion.milliseconds
 
 const val USER_AUTHENTICATION = "user"
+const val ADMIN_AUTHENTICATION = "admin"
 
 fun Application.configureSecurity() {
     if (!isTest) {
@@ -27,6 +30,15 @@ fun Application.configureSecurity() {
         bearer(USER_AUTHENTICATION) {
             authenticate { tokenCredential -> usersService.toPrincipal(tokenCredential.token, this) }
         }
+
+        if (this@configureSecurity.dependencies.contains(DependencyKey<AdminService>()))
+            bearer(ADMIN_AUTHENTICATION) {
+                val adminService: AdminService by this@configureSecurity.dependencies
+                authenticate { tokenCredential ->
+                    if (adminService.hasSession(tokenCredential.token, request.connectingAddress)) return@authenticate true
+                    return@authenticate null
+                }
+            }
     }
 }
 

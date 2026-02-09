@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api.utils
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.di.*
+import io.ktor.server.request.ApplicationRequest
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -79,3 +80,10 @@ fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
 fun ApplicationCall.authenticatedUserId(): Int? {
     return principal<Int>()
 }
+
+/**
+ * Returns the IP address of the client actually connecting to the server.
+ * If you are behind a proxy, this would return the proxy server's address.
+ */
+val ApplicationRequest.connectingAddress
+    get() = this.local.remoteAddress
