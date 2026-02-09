@@ -45,9 +45,7 @@ class AdminServiceImpl(val config: Config) : AdminService {
     }
 
     private fun permitsIP(ip: String) =
-        config.allowedIPs?.let {
-            return ip in it
-        } ?: true
+        config.allowedIPs?.let { ip in it } ?: true
 
     private fun verifySignature(signature: String, challenge: ByteArray): Boolean {
         val sigBytes = Base64.getUrlDecoder().decode(signature)

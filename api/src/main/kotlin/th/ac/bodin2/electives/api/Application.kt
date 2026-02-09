@@ -92,7 +92,7 @@ fun Application.module() {
     registerUsersRoutes()
     registerMiscRoutes()
     registerNotificationsRoutes()
-    registerAdminRoutes()
+    if (dependencies.contains(DependencyKey<AdminService>())) registerAdminRoutes()
 }
 
 fun Application.provideDependencies() {
@@ -143,7 +143,7 @@ fun Application.provideDependencies() {
                         val ips = ipString.let {
                             if (it == null) {
                                 this@provideDependencies.log.warn("ADMIN_ALLOWED_IPS is not set, defaulting to only allow localhost access.")
-                                return@let "127.0.0.1"
+                                return@let "127.0.0.0/8,::1/128"
                             }
 
                             return@let it
