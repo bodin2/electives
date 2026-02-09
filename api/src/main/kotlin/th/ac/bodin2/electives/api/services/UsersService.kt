@@ -36,7 +36,7 @@ interface UsersService {
     fun getStudentById(id: Int): Student?
 
     /**
-     * Gets the user ID associated with the given session token.
+     * Validates password and creates a new session for the given user ID.
      *
      * @throws NotFoundException if the user does not exist.
      * @throws IllegalArgumentException if the token or session is invalid.

@@ -22,7 +22,7 @@ import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
-import th.ac.bodin2.electives.proto.api.UsersServiceKt.getStudentSelectionsResponse
+import th.ac.bodin2.electives.proto.api.UsersServiceKt.studentSelections
 
 fun Application.registerUsersRoutes() {
     val usersService: UsersService by dependencies
@@ -91,7 +91,7 @@ class UsersController(
             val response = transaction {
                 val selections = electiveSelectionService.getStudentSelections(userId)
 
-                getStudentSelectionsResponse {
+                studentSelections {
                     subjects.putAll(selections.mapValues {
                         it.value.toProto(withDescription = false, withTeachers = true)
                     })
