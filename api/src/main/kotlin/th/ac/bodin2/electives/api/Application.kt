@@ -66,6 +66,7 @@ fun Application.module() {
             Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC").apply {
                 val conn = connector().connection as JDBC4Connection
                 conn.createStatement().use {
+                    it.execute("PRAGMA foreign_keys=ON;")
                     it.execute("PRAGMA journal_mode=WAL;")
                     it.execute("PRAGMA synchronous=NORMAL;")
                     it.execute("PRAGMA busy_timeout=5000;")
