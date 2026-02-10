@@ -3,13 +3,28 @@ package th.ac.bodin2.electives.api.services
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Subject
-import th.ac.bodin2.electives.db.Teacher
 
 interface ElectiveSelectionService {
+    /**
+     * Sets all subject selections for a student. No permission or seat checks are performed.
+     *
+     * @param userId The ID of the student.
+     * @param selections A map of elective IDs to selected subject IDs.
+     *
+     * @throws th.ac.bodin2.electives.NotFoundException if the student, elective, or subject does not exist.
+     */
+    @CreatesTransaction
+    fun forceSetAllStudentSelections(
+        userId: Int,
+        selections: Map<Int, Int>,
+    )
+
     /**
      * Sets the subject selection for a student in a given elective.
      *
      * @param executorId The ID of the user performing the operation.
+     *
+     * @throws th.ac.bodin2.electives.NotFoundException if the student, elective, or subject does not exist.
      */
     @CreatesTransaction
     fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult
@@ -18,6 +33,8 @@ interface ElectiveSelectionService {
      * Deletes the subject selection for a student in a given elective.
      *
      * @param executorId The ID of the user performing the operation.
+     *
+     * @throws th.ac.bodin2.electives.NotFoundException if the student or elective does not exist.
      */
     @CreatesTransaction
     fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult
@@ -27,6 +44,8 @@ interface ElectiveSelectionService {
      *
      * @param userId The ID of the student.
      * @return A map of elective IDs to selected subject IDs.
+     *
+     * @throws th.ac.bodin2.electives.NotFoundException if the student does not exist.
      */
     fun getStudentSelections(userId: Int): Map<Int, Subject>
 

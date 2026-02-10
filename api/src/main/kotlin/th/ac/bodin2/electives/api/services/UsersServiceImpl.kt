@@ -4,6 +4,8 @@ import com.mayakapps.kache.InMemoryKache
 import com.mayakapps.kache.KacheStrategy
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.batchInsert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -14,10 +16,14 @@ import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.Team
 import th.ac.bodin2.electives.db.User
+import th.ac.bodin2.electives.db.exists
+import th.ac.bodin2.electives.db.models.StudentTeams
 import th.ac.bodin2.electives.db.models.Students
 import th.ac.bodin2.electives.db.models.Teachers
 import th.ac.bodin2.electives.db.models.Users
+import th.ac.bodin2.electives.proto.api.AdminService
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.withMinimumDelay
@@ -90,6 +96,73 @@ class UsersServiceImpl(val config: Config) : UsersService {
         avatarUrl: String?,
     ): Teacher = Teacher.new(id, createUser(id, firstName, middleName, lastName, password, avatarUrl))
 
+    @CreatesTransaction
+    override fun deleteUser(id: Int) {
+        val rows = transaction { Users.deleteWhere { Users.id eq id } }
+        if (rows == 0) {
+            throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
+        }
+
+        runBlocking {
+            val lastKnownType = userTypeCache.remove(id)
+            logger.info("Deleted user (type: ${lastKnownType ?: "<not cached>"}): $id")
+        }
+    }
+
+    @CreatesTransaction
+    override fun updateStudent(id: Int, update: UsersService.StudentUpdate) {
+        transaction {
+            Student.require(id)
+
+            updateUser(id, update.update)
+
+            if (update.teams != null) {
+                StudentTeams.deleteWhere { StudentTeams.student eq id }
+                StudentTeams.batchInsert(update.teams) { teamId ->
+                    if (!Team.exists(id)) throw NotFoundException(NotFoundEntity.TEAM)
+
+                    this[StudentTeams.student] = id
+                    this[StudentTeams.team] = teamId
+                }
+            }
+        }
+    }
+
+    @CreatesTransaction
+    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) {
+        transaction {
+            Teacher.require(id)
+
+            updateUser(id, update.update)
+        }
+    }
+
+    private fun updateUser(id: Int, update: UsersService.UserUpdate) {
+        Users.update(where = { Users.id eq id }) {
+            with(update) {
+                if (firstName != null) it[Users.firstName] = firstName
+                if (setMiddleName) it[Users.middleName] = middleName
+                if (lastName != null) it[Users.lastName] = lastName
+                if (setAvatarUrl) it[Users.avatarUrl] = avatarUrl
+            }
+        }
+    }
+
+    @CreatesTransaction
+    override fun setPassword(id: Int, newPassword: String) {
+        val password = newPassword.trim()
+        require(password.length > 4) { "Password must be more than 4 characters once trimmed" }
+        require(password.length <= 4096) { "Password must have less or equal to 4096 characters" }
+
+        val rows = transaction {
+            Users.update(where = { Users.id eq id }) {
+                it[Users.passwordHash] = Argon2.hash(password.toCharArray())
+            }
+        }
+
+        if (rows == 0) throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
+    }
+
     override fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)
 
     override fun getStudentById(id: Int): Student? = Student.findById(id)
@@ -97,14 +170,11 @@ class UsersServiceImpl(val config: Config) : UsersService {
     @CreatesTransaction
     override suspend fun createSession(id: Int, password: String, aud: String): String =
         withMinimumDelay(config.minimumSessionCreationTime) {
-            if (password.length > 4096) {
-                throw IllegalArgumentException("Password too long for user: $id")
-            }
+            require(password.length <= 4096) { "Password too long for user: $id" }
 
             val aud = aud.trim().apply {
-                if (isEmpty()) throw IllegalArgumentException("Audience blank for user: $id")
-                if (length > 256)
-                    throw IllegalArgumentException("Audience string too long for user: $id (aud = ${slice(0..32)}...)")
+                require(!isEmpty()) { "Audience blank for user: $id" }
+                require(length <= 256) { "Audience string too long for user: $id (aud = ${slice(0..32)}...)" }
             }
 
             transaction {
@@ -113,24 +183,24 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
                 val passwordHash = user[Users.passwordHash]
 
-                if (Argon2.verify(passwordHash.toByteArray(), password.toCharArray())) {
-                    val session = Base64.getUrlEncoder()
-                        .withoutPadding()
-                        .encodeToString(ByteArray(TOKEN_SIZE).apply {
-                            SecureRandom().nextBytes(this)
-                        })
+                require(
+                    Argon2.verify(passwordHash.toByteArray(), password.toCharArray())
+                ) { "Invalid password for user: $id" }
 
-                    Users.update({ Users.id eq id }) {
-                        it[Users.sessionExpiry] = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds)
-                        it[Users.sessionHash] = Argon2.hash(session.toCharArray())
-                    }
+                val session = Base64.getUrlEncoder()
+                    .withoutPadding()
+                    .encodeToString(ByteArray(TOKEN_SIZE).apply {
+                        SecureRandom().nextBytes(this)
+                    })
 
-                    logger.debug("New session created, user: $id, aud: $aud")
-
-                    "$id.$session"
-                } else {
-                    throw IllegalArgumentException("Invalid password for user: $id")
+                Users.update({ Users.id eq id }) {
+                    it[Users.sessionExpiry] = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds)
+                    it[Users.sessionHash] = Argon2.hash(session.toCharArray())
                 }
+
+                logger.debug("New session created, user: $id, aud: $aud")
+
+                "$id.$session"
             }
         }
 

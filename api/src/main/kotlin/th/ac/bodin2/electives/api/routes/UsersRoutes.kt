@@ -41,13 +41,15 @@ class UsersController(
                 rateLimit(RATE_LIMIT_USERS) {
                     get<Users.Id> {
                         resolveUserIdEnforced(it.id) { userId, _ ->
-                            handleGetUser(userId)
+                            context(usersService) { handleGetUser(userId) }
                         }
                     }
 
                     get<Users.Id.Selections> {
                         resolveUserIdEnforced(it.parent.id) { userId, _ ->
-                            handleGetStudentSelections(userId)
+                            context(electiveSelectionService) {
+                                handleGetStudentSelections(userId)
+                            }
                         }
                     }
                 }
@@ -67,45 +69,6 @@ class UsersController(
                 }
             }
         }
-    }
-
-    private suspend fun RoutingContext.handleGetUser(userId: Int) {
-        val userProto = transaction {
-            try {
-                when (val type = usersService.getUserType(userId)) {
-                    UserType.STUDENT -> usersService.getStudentById(userId)?.toProto() ?: return@transaction null
-                    UserType.TEACHER -> usersService.getTeacherById(userId)?.toProto() ?: return@transaction null
-
-                    else -> throw IllegalStateException("Unknown user type: $type (id: $userId)")
-                }
-            } catch (_: NotFoundException) {
-                return@transaction null
-            }
-        } ?: return userNotFoundError()
-
-        call.respond(userProto)
-    }
-
-    private suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
-        try {
-            val response = transaction {
-                val selections = electiveSelectionService.getStudentSelections(userId)
-
-                studentSelections {
-                    subjects.putAll(selections.mapValues {
-                        it.value.toProto(withDescription = false, withTeachers = true)
-                    })
-                }
-            }
-
-            // @TODO: Return more specific error if user is not a student?
-            // But that requires an extra query and exposes unnecessary information...
-
-            call.respond(response)
-        } catch (_: NotFoundException) {
-            return badRequest("Viewing selections for non-student users")
-        }
-
     }
 
     private suspend fun RoutingContext.handlePutStudentElectiveSelection(
@@ -204,6 +167,46 @@ class UsersController(
             }
         }
     }
+}
+
+context(electiveSelectionService: ElectiveSelectionService)
+suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
+    try {
+        val response = transaction {
+            val selections = electiveSelectionService.getStudentSelections(userId)
+
+            studentSelections {
+                subjects.putAll(selections.mapValues {
+                    it.value.toProto(withDescription = false, withTeachers = true)
+                })
+            }
+        }
+
+        // @TODO: Return more specific error if user is not a student?
+        // But that requires an extra query and exposes unnecessary information...
+
+        call.respond(response)
+    } catch (_: NotFoundException) {
+        return badRequest("Viewing selections for non-student users")
+    }
+}
+
+context(usersService: UsersService)
+suspend fun RoutingContext.handleGetUser(userId: Int) {
+    val userProto = transaction {
+        try {
+            when (val type = usersService.getUserType(userId)) {
+                UserType.STUDENT -> usersService.getStudentById(userId)?.toProto() ?: return@transaction null
+                UserType.TEACHER -> usersService.getTeacherById(userId)?.toProto() ?: return@transaction null
+
+                else -> throw IllegalStateException("Unknown user type: $type (id: $userId)")
+            }
+        } catch (_: NotFoundException) {
+            return@transaction null
+        }
+    } ?: return userNotFoundError()
+
+    call.respond(userProto)
 }
 
 

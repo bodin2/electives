@@ -47,6 +47,20 @@ class ElectiveSelectionServiceImpl(
         """.trimIndent()
     }
 
+    @CreatesTransaction
+    override fun forceSetAllStudentSelections(userId: Int, selections: Map<Int, Int>) {
+        transaction {
+            val student = Student.require(userId)
+
+            for ((electiveId, subjectId) in selections) {
+                val elective = Elective.require(electiveId)
+                val subject = Subject.require(subjectId)
+
+                Student.setElectiveSelection(student, elective, subject)
+            }
+        }
+    }
+
     // We're currently using SQLite, which locks during writes, so technically all of this code to prevent TOCTOU doesn't really matter.
     // But in case if we ever switch databases, this will be useful.
 

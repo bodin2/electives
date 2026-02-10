@@ -8,4 +8,5 @@ enum class NotFoundEntity {
     STUDENT,
     TEACHER,
     ELECTIVE_SELECTION,
+    TEAM,
 }

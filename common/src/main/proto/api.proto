@@ -35,6 +35,11 @@ message AdminService {
     string password = 2;
   }
 
+  message SetStudentSelectionsRequest {
+    // Elective ID -> Subject ID
+    map<uint32, uint32> selections = 1;
+  }
+
   message UserPatch {
     optional string first_name = 1;
     optional string middle_name = 2;
@@ -45,6 +50,10 @@ message AdminService {
 
     // Whether the `teams` field should be considered during patching.
     bool patch_teams = 7;
+    // Whether the `middle_name` field should be considered during patching.
+    bool patch_middle_name = 8;
+    // Whether the `avatar_url` field should be considered during patching.
+    bool patch_avatar_url = 9;
   }
 
   message TeamPatch {

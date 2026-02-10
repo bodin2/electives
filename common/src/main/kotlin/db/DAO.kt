@@ -392,3 +392,6 @@ class Subject(id: EntityID<Int>) : Entity<Int>(id) {
     var imageUrl by Subjects.imageUrl
     var thumbnailUrl by Subjects.thumbnailUrl
 }
+
+fun <T : Any, U : Entity<T>> EntityClass<T, U>.exists(id: T): Boolean =
+    this.table.selectAll().where { this.table.id eq id }.empty().not()
