@@ -81,7 +81,7 @@ class UsersController(
         @OptIn(CreatesTransaction::class)
         when (val result =
             electiveSelectionService.setStudentSelection(authenticatedUserId, userId, electiveId, req.subjectId)) {
-            ModifySelectionResult.Success -> call.response.status(HttpStatusCode.OK)
+            ModifySelectionResult.Success -> ok()
 
             is ModifySelectionResult.NotFound -> {
                 /**
@@ -133,7 +133,7 @@ class UsersController(
     ) {
         @OptIn(CreatesTransaction::class)
         when (val result = electiveSelectionService.deleteStudentSelection(authenticatedUserId, userId, electiveId)) {
-            ModifySelectionResult.Success -> call.response.status(HttpStatusCode.OK)
+            ModifySelectionResult.Success -> ok()
 
             is ModifySelectionResult.CannotModify -> {
                 return when (result.status) {

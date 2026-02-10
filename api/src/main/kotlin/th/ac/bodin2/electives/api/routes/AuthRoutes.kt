@@ -44,7 +44,7 @@ fun Application.registerAuthRoutes() {
             post("/logout") {
                 authenticated { userId ->
                     transaction { usersService.clearSession(userId) }
-                    call.response.status(HttpStatusCode.OK)
+                    ok()
                 }
             }
         }
