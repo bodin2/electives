@@ -30,7 +30,7 @@ private const val ADMIN_PSEUDO_ID = -1
 
 private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
-class NotificationsServiceImpl(val config: Config, val usersService: UsersService, val adminService: AdminService? = null) : NotificationsService {
+class NotificationsServiceImpl(val config: Config, val usersService: UsersService, val adminAuthService: AdminAuthService? = null) : NotificationsService {
     class Config(
         val maxSubjectSubscriptionsPerClient: Int,
         val bulkUpdateInterval: Duration,
@@ -171,7 +171,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
     }
 
     override suspend fun WebSocketServerSession.handleAdminConnection() {
-        adminService ?: throw IllegalStateException("Cannot get AdminService")
+        adminAuthService ?: throw IllegalStateException("Cannot get AdminAuthService")
 
         try {
             withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
@@ -180,7 +180,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
                         it.parseOrNull<Envelope>()?.identify?.token
                             ?: return@withTimeout null
 
-                    adminService.hasSession(token, call.request.connectingAddress)
+                    adminAuthService.hasSession(token, call.request.connectingAddress)
                 }
             } ?: throw IllegalArgumentException()
         } catch (e: Exception) {

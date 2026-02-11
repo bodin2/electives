@@ -10,11 +10,11 @@ import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.sqlite.jdbc4.JDBC4Connection
-import th.ac.bodin2.electives.utils.CIDR
 import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.utils.authenticatedUserId
 import th.ac.bodin2.electives.db.Database
+import th.ac.bodin2.electives.utils.CIDR
 import th.ac.bodin2.electives.utils.getEnv
 import th.ac.bodin2.electives.utils.loadDotEnv
 import th.ac.bodin2.electives.utils.requireEnvNonBlank
@@ -93,7 +93,7 @@ fun Application.module() {
     registerUsersRoutes()
     registerMiscRoutes()
     registerNotificationsRoutes()
-    if (dependencies.contains(DependencyKey<AdminService>())) registerAdminRoutes()
+    if (dependencies.contains(DependencyKey<AdminAuthService>())) registerAdminRoutes()
 }
 
 fun Application.provideDependencies() {
@@ -120,7 +120,7 @@ fun Application.provideDependencies() {
                         bulkUpdatesEnabled = true
                     ),
                     resolve<UsersService>(),
-                    DependencyKey<AdminService>().let {
+                    DependencyKey<AdminAuthService>().let {
                         if (contains(it)) get(it) else null
                     }
                 )
@@ -135,9 +135,9 @@ fun Application.provideDependencies() {
         }
 
         if (!getEnv("ADMIN_ENABLED").isNullOrEmpty())
-            provide<AdminService> {
-                AdminServiceImpl(
-                AdminServiceImpl.Config(
+            provide<AdminAuthService> {
+                AdminAuthServiceImpl(
+                AdminAuthServiceImpl.Config(
                     sessionDurationSeconds = 1.hours.inWholeSeconds,
                     minimumSessionCreationTime = 3.seconds,
                     allowedIPs = getEnv("ADMIN_ALLOWED_IPS").let { ipString ->

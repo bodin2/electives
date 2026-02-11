@@ -1,13 +1,12 @@
 package th.ac.bodin2.electives.api.routes
 
-import io.ktor.http.HttpStatusCode
 import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import th.ac.bodin2.electives.NotFoundException
 import io.ktor.server.plugins.di.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
+import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -15,19 +14,12 @@ import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.ADMIN_AUTHENTICATION
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.AdminService
-import th.ac.bodin2.electives.api.services.AdminService.CreateSessionResult
-import th.ac.bodin2.electives.api.services.ElectiveSelectionService
-import th.ac.bodin2.electives.api.services.NotificationsService
-import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.utils.badRequest
-import th.ac.bodin2.electives.api.utils.connectingAddress
-import th.ac.bodin2.electives.api.utils.notFound
-import th.ac.bodin2.electives.api.utils.ok
-import th.ac.bodin2.electives.api.utils.parseOrNull
-import th.ac.bodin2.electives.api.utils.respond
+import th.ac.bodin2.electives.api.services.*
+import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
+import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.api.utils.unauthorized
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
@@ -42,19 +34,61 @@ import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
 import th.ac.bodin2.electives.proto.api.UserType
 
 fun Application.registerAdminRoutes() {
-    val adminService: AdminService by dependencies
+    val adminAuthService: AdminAuthService by dependencies
     val notificationsService: NotificationsService by dependencies
     val usersService: UsersService by dependencies
     val electiveSelectionService: ElectiveSelectionService by dependencies
 
-    AdminController(adminService, notificationsService, usersService, electiveSelectionService).apply { register() }
+    AdminAuthController(adminAuthService).apply { register() }
+    AdminUsersController(usersService).apply { register() }
+    AdminUsersSelectionsController(electiveSelectionService).apply { register() }
+
+    routing {
+        resource<Admin.Notifications> {
+            webSocket {
+                notificationsService.apply { handleAdminConnection() }
+            }
+        }
+    }
 }
 
-class AdminController(
-    private val adminService: AdminService,
-    private val notificationsService: NotificationsService,
+class AdminAuthController(private val adminAuthService: AdminAuthService) {
+    fun Application.register() {
+        routing {
+            get<Admin.Challenge> {
+                call.respond(challengeResponse {
+                    challenge = adminAuthService.newChallenge()
+                })
+            }
+
+            post<Admin.Auth> {
+                val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post notFound()
+
+                try {
+                    when (val result = adminAuthService.createSession(req.password, call.request.connectingAddress)) {
+                        is CreateSessionResult.Success -> {
+                            call.respond(authenticateResponse {
+                                token = result.token
+                            })
+                        }
+
+                        is CreateSessionResult.NoChallenge,
+                        is CreateSessionResult.IPNotAllowed -> notFound()
+
+                        is CreateSessionResult.InvalidSignature -> unauthorized()
+                    }
+
+                } catch (e: Exception) {
+                    application.log.error("Attempt create admin session failed: ${e.message}")
+                    unauthorized()
+                }
+            }
+        }
+    }
+}
+
+class AdminUsersController(
     private val usersService: UsersService,
-    private val electiveSelectionService: ElectiveSelectionService
 ) {
     companion object {
         private const val PAGE_SIZE = 50
@@ -71,173 +105,103 @@ class AdminController(
                     handleGetUsers(Teachers, Teacher::from, Teacher::toProto, params.page)
                 }
 
-                get<Admin.Users.Id> { params ->
-                    context(usersService) {
-                        handleGetUser(params.id)
-                    }
-                }
+                get<Admin.Users.Id> { params -> context(usersService) { handleGetUser(params.id) } }
 
-                put<Admin.Users.Id> { params ->
-                    val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.AddUserRequest>()
-                        ?: return@put badRequest()
-                    val user = req.user
-                    if (user.id != params.id) return@put badRequest("ID in URL does not match body")
+                put<Admin.Users.Id> { params -> handlePutUser(params.id) }
 
-                    val userOrNull = transaction {
-                        when (user.type) {
-                            UserType.STUDENT -> usersService.createStudent(
-                                id = user.id,
-                                firstName = user.firstName,
-                                middleName = user.middleName,
-                                lastName = user.lastName,
-                                password = req.password,
-                                avatarUrl = user.avatarUrl
-                            )
+                patch<Admin.Users.Id> { params -> handlePatchUser(params.id) }
 
-                            UserType.TEACHER -> usersService.createTeacher(
-                                id = user.id,
-                                firstName = user.firstName,
-                                middleName = user.middleName,
-                                lastName = user.lastName,
-                                password = req.password,
-                                avatarUrl = user.avatarUrl
-                            )
+                delete<Admin.Users.Id> { params -> handleDeleteUser(params.id) }
+            }
+        }
+    }
 
-                            else -> null
-                        }
-                    }
+    private suspend fun RoutingContext.handlePutUser(id: Int) {
+        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.AddUserRequest>()
+            ?: return badRequest()
+        val user = req.user
+        if (user.id != id) return badRequest("ID in URL does not match body")
 
-                    when (userOrNull) {
-                        is Student -> call.respond(userOrNull.toProto())
-                        is Teacher -> call.respond(userOrNull.toProto())
+        val userOrNull = transaction {
+            when (user.type) {
+                UserType.STUDENT -> usersService.createStudent(
+                    id = user.id,
+                    firstName = user.firstName,
+                    middleName = user.middleName,
+                    lastName = user.lastName,
+                    password = req.password,
+                    avatarUrl = user.avatarUrl
+                )
 
-                        else -> badRequest()
-                    }
-                }
+                UserType.TEACHER -> usersService.createTeacher(
+                    id = user.id,
+                    firstName = user.firstName,
+                    middleName = user.middleName,
+                    lastName = user.lastName,
+                    password = req.password,
+                    avatarUrl = user.avatarUrl
+                )
 
-                patch<Admin.Users.Id> { params ->
-                    val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.UserPatch>()
-                        ?: return@patch badRequest()
+                else -> null
+            }
+        }
 
-                    val update = UsersService.UserUpdate(
-                        firstName = if (req.hasFirstName()) req.firstName else null,
-                        middleName = if (req.hasMiddleName()) req.middleName else null,
-                        lastName = if (req.hasLastName()) req.lastName else null,
-                        avatarUrl = if (req.hasAvatarUrl()) req.avatarUrl else null,
-                        setMiddleName = req.patchMiddleName,
-                        setAvatarUrl = req.patchAvatarUrl,
-                    )
+        when (userOrNull) {
+            is Student -> call.respond(userOrNull.toProto())
+            is Teacher -> call.respond(userOrNull.toProto())
 
-                    try {
-                        @OptIn(CreatesTransaction::class)
-                        when (val type = usersService.getUserType(params.id)) {
-                            UserType.STUDENT -> {
-                                usersService.updateStudent(
-                                    params.id,
-                                    UsersService.StudentUpdate(update)
-                                )
-                            }
+            else -> badRequest()
+        }
+    }
 
-                            UserType.TEACHER -> {
-                                usersService.updateTeacher(
-                                    params.id,
-                                    UsersService.TeacherUpdate(update)
-                                )
-                            }
+    private suspend fun RoutingContext.handlePatchUser(id: Int) {
+        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.UserPatch>()
+            ?: return badRequest()
 
-                            else -> throw IllegalStateException("Unreachable case: $type")
-                        }
+        val update = UsersService.UserUpdate(
+            firstName = if (req.hasFirstName()) req.firstName else null,
+            middleName = if (req.hasMiddleName()) req.middleName else null,
+            lastName = if (req.hasLastName()) req.lastName else null,
+            avatarUrl = if (req.hasAvatarUrl()) req.avatarUrl else null,
+            setMiddleName = req.patchMiddleName,
+            setAvatarUrl = req.patchAvatarUrl,
+        )
 
-                        if (req.hasNewPassword()) {
-                            @OptIn(CreatesTransaction::class)
-                            usersService.setPassword(params.id, req.newPassword)
-                        }
+        try {
+            @OptIn(CreatesTransaction::class)
+            when (val type = usersService.getUserType(id)) {
+                UserType.STUDENT -> usersService.updateStudent(id, UsersService.StudentUpdate(update))
+                UserType.TEACHER -> usersService.updateTeacher(id, UsersService.TeacherUpdate(update))
 
-                        ok()
-                    } catch (e: NotFoundException) {
-                        when (e.entity) {
-                            NotFoundEntity.USER,
-                            NotFoundEntity.TEACHER,
-                            NotFoundEntity.STUDENT -> return@patch badRequest("User not found")
-
-                            NotFoundEntity.TEAM -> return@patch badRequest("One or more teams not found")
-
-                            else -> throw e
-                        }
-                    }
-                }
-
-                delete<Admin.Users.Id> { params ->
-                    try {
-                        @OptIn(CreatesTransaction::class)
-                        usersService.deleteUser(params.id)
-                        ok()
-                    } catch (_: NotFoundException) {
-                        return@delete badRequest("User not found")
-                    }
-                }
-
-                get<Admin.Users.Id.Selections> { params ->
-                    context(electiveSelectionService) {
-                        handleGetStudentSelections(params.parent.id)
-                    }
-                }
-
-                put<Admin.Users.Id.Selections> { params ->
-                    val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.SetStudentSelectionsRequest>()
-                        ?: return@put badRequest()
-
-                    try {
-                        @OptIn(CreatesTransaction::class)
-                        electiveSelectionService.forceSetAllStudentSelections(params.parent.id, req.selectionsMap)
-
-                        ok()
-                    } catch (e: NotFoundException) {
-                        when (e.entity) {
-                            NotFoundEntity.STUDENT -> return@put badRequest("Student not found")
-                            NotFoundEntity.ELECTIVE -> return@put badRequest("One or more electives not found")
-                            NotFoundEntity.SUBJECT -> return@put badRequest("One or more subjects not found")
-
-                            else -> throw e
-                        }
-                    }
-                }
+                else -> throw IllegalStateException("Unreachable case: $type")
             }
 
-            get<Admin.Challenge> {
-                call.respond(challengeResponse {
-                    challenge = adminService.newChallenge()
-                })
+            if (req.hasNewPassword()) {
+                @OptIn(CreatesTransaction::class)
+                usersService.setPassword(id, req.newPassword)
             }
 
-            post<Admin.Auth> {
-                val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post notFound()
+            ok()
+        } catch (e: NotFoundException) {
+            return when (e.entity) {
+                NotFoundEntity.USER,
+                NotFoundEntity.TEACHER,
+                NotFoundEntity.STUDENT -> badRequest("User not found")
 
-                try {
-                    when (val result = adminService.createSession(req.password, call.request.connectingAddress)) {
-                        is CreateSessionResult.Success -> {
-                            call.respond(authenticateResponse {
-                                token = result.token
-                            })
-                        }
+                NotFoundEntity.TEAM -> badRequest("One or more teams not found")
 
-                        is CreateSessionResult.NoChallenge,
-                        is CreateSessionResult.IPNotAllowed -> notFound()
-
-                        is CreateSessionResult.InvalidSignature -> unauthorized()
-                    }
-
-                } catch (e: Exception) {
-                    log.error("Attempt create admin session failed: ${e.message}")
-                    unauthorized()
-                }
+                else -> throw e
             }
+        }
+    }
 
-            resource<Admin.Notifications> {
-                webSocket {
-                    notificationsService.apply { handleAdminConnection() }
-                }
-            }
+    private suspend fun RoutingContext.handleDeleteUser(id: Int) {
+        try {
+            @OptIn(CreatesTransaction::class)
+            usersService.deleteUser(id)
+            ok()
+        } catch (_: NotFoundException) {
+            return badRequest("User not found")
         }
     }
 
@@ -268,64 +232,102 @@ class AdminController(
             users += list.map { it.protoTransformer() }
         })
     }
+}
 
-    @Suppress("UNUSED")
-    @Resource("/admin")
-    class Admin {
-        @Resource("challenge")
-        class Challenge(val parent: Admin)
+class AdminUsersSelectionsController(
+    private val electiveSelectionService: ElectiveSelectionService,
+) {
+    fun Application.register() {
+        routing {
+            authenticate(ADMIN_AUTHENTICATION) {
+                get<Admin.Users.Id.Selections> { params ->
+                    context(electiveSelectionService) {
+                        handleGetStudentSelections(params.parent.id)
+                    }
+                }
 
-        @Resource("auth")
-        class Auth(val parent: Admin)
-
-        @Resource("notifications")
-        class Notifications(val parent: Admin)
-
-        @Resource("users")
-        class Users(val parent: Admin) {
-            // GET: ListUsersResponse
-            @Resource("students")
-            class Students(val parent: Users, val page: Int = 1)
-
-            // GET: ListUsersResponse
-            @Resource("teachers")
-            class Teachers(val parent: Users, val page: Int = 1)
-
-            // GET: User, DELETE, PATCH: UserPatch
-            @Resource("{id}")
-            class Id(val parent: Users, val id: Int) {
-                // GET: UsersService.StudentSelections, PUT: UsersService.StudentSelections
-                @Resource("selections")
-                class Selections(val parent: Id)
+                put<Admin.Users.Id.Selections> { params -> handlePutStudentSelections(params.parent.id) }
             }
         }
+    }
 
-        // GET: ElectivesService.ListResponse
-        @Resource("electives")
-        class Electives(val parent: Admin) {
-            // PUT: Elective, GET: Elective, DELETE, PATCH: ElectivePatch
-            @Resource("{id}")
-            class Id(val parent: Electives, val id: Int) {
-                // GET, PUT
-                @Resource("subjects")
-                class Subjects(val parent: Id)
+    private suspend fun RoutingContext.handlePutStudentSelections(id: Int) {
+        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.SetStudentSelectionsRequest>()
+            ?: return badRequest()
+
+        try {
+            @OptIn(CreatesTransaction::class)
+            electiveSelectionService.forceSetAllStudentSelections(id, req.selectionsMap)
+
+            ok()
+        } catch (e: NotFoundException) {
+            return when (e.entity) {
+                NotFoundEntity.STUDENT -> badRequest("Student not found")
+                NotFoundEntity.ELECTIVE -> badRequest("One or more electives not found")
+                NotFoundEntity.SUBJECT -> badRequest("One or more subjects not found")
+
+                else -> throw e
             }
         }
+    }
+}
 
-        // GET: ElectivesService.ListSubjectsResponse
-        @Resource("subjects")
-        class Subjects(val parent: Admin) {
-            // PUT: Subject, GET: Subject, DELETE, PATCH: SubjectPatch
-            @Resource("{id}")
-            class Id(val parent: Electives, val id: Int)
-        }
+@Suppress("UNUSED")
+@Resource("/admin")
+class Admin {
+    @Resource("challenge")
+    class Challenge(val parent: Admin)
 
-        // GET: ListTeamsResponse
-        @Resource("teams")
-        class Teams(val parent: Admin) {
-            // PUT: Team, GET: Team, DELETE, PATCH: TeamPatch
-            @Resource("{id}")
-            class Id(val parent: Teams, val id: Int)
+    @Resource("auth")
+    class Auth(val parent: Admin)
+
+    @Resource("notifications")
+    class Notifications(val parent: Admin)
+
+    @Resource("users")
+    class Users(val parent: Admin) {
+        // GET: ListUsersResponse
+        @Resource("students")
+        class Students(val parent: Users, val page: Int = 1)
+
+        // GET: ListUsersResponse
+        @Resource("teachers")
+        class Teachers(val parent: Users, val page: Int = 1)
+
+        // GET: User, DELETE, PATCH: UserPatch, PUT: AddUserRequest
+        @Resource("{id}")
+        class Id(val parent: Users, val id: Int) {
+            // GET: UsersService.StudentSelections, PUT: SetStudentSelectionsRequest
+            @Resource("selections")
+            class Selections(val parent: Id)
         }
+    }
+
+    // GET: ElectivesService.ListResponse
+    @Resource("electives")
+    class Electives(val parent: Admin) {
+        // PUT: Elective, GET: Elective, DELETE, PATCH: ElectivePatch
+        @Resource("{id}")
+        class Id(val parent: Electives, val id: Int) {
+            // GET, PUT
+            @Resource("subjects")
+            class Subjects(val parent: Id)
+        }
+    }
+
+    // GET: ElectivesService.ListSubjectsResponse
+    @Resource("subjects")
+    class Subjects(val parent: Admin) {
+        // PUT: Subject, GET: Subject, DELETE, PATCH: SubjectPatch
+        @Resource("{id}")
+        class Id(val parent: Electives, val id: Int)
+    }
+
+    // GET: ListTeamsResponse
+    @Resource("teams")
+    class Teams(val parent: Admin) {
+        // PUT: Team, GET: Team, DELETE, PATCH: TeamPatch
+        @Resource("{id}")
+        class Id(val parent: Teams, val id: Int)
     }
 }

@@ -1,14 +1,13 @@
 package th.ac.bodin2.electives.api.services
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.utils.CIDR
-import th.ac.bodin2.electives.api.services.AdminService.CreateSessionResult
+import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
 import th.ac.bodin2.electives.utils.contains
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.withMinimumDelay
@@ -22,12 +21,12 @@ import java.util.*
 import kotlin.concurrent.Volatile
 import kotlin.time.Duration
 
-class AdminServiceImpl(val config: Config) : AdminService {
+class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
     companion object {
         private const val CHALLENGE_DURATION_MILLIS = 60000L // 1 minute
         private const val CHALLENGE_SIZE = 128
         private const val TOKEN_SIZE = 64
-        private val logger = LoggerFactory.getLogger(AdminServiceImpl::class.java)
+        private val logger = LoggerFactory.getLogger(AdminAuthServiceImpl::class.java)
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -49,7 +48,7 @@ class AdminServiceImpl(val config: Config) : AdminService {
     )
 
     init {
-        logger.warn("AdminService is running!")
+        logger.warn("AdminAuthService is running!")
     }
 
     private fun permitsIP(ip: String) =

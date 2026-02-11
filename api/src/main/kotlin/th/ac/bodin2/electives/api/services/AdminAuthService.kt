@@ -1,6 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
-interface AdminService {
+interface AdminAuthService {
     /**
      * Creates and returns a random challenge for authentication.
      */
