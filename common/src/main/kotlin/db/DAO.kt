@@ -258,7 +258,7 @@ class Elective(id: EntityID<Int>) : Entity<Int>(id) {
     class Reference internal constructor(val id: Int)
 
     var name by Electives.name
-    val team by Team optionalReferencedOn Electives.team
+    var team by Team optionalReferencedOn Electives.team
 
     val subjects by Subject via ElectiveSubjects
 

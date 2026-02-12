@@ -32,16 +32,21 @@ import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
 import th.ac.bodin2.electives.proto.api.AuthService
 import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
 import th.ac.bodin2.electives.proto.api.UserType
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 fun Application.registerAdminRoutes() {
     val adminAuthService: AdminAuthService by dependencies
     val notificationsService: NotificationsService by dependencies
     val usersService: UsersService by dependencies
     val electiveSelectionService: ElectiveSelectionService by dependencies
+    val electiveService: ElectiveService by dependencies
 
     AdminAuthController(adminAuthService).apply { register() }
     AdminUsersController(usersService).apply { register() }
     AdminUsersSelectionsController(electiveSelectionService).apply { register() }
+    AdminElectivesController(electiveService).apply { register() }
 
     routing {
         resource<Admin.Notifications> {
@@ -271,6 +276,89 @@ class AdminUsersSelectionsController(
         }
     }
 }
+
+class AdminElectivesController(
+    private val electiveService: ElectiveService,
+) {
+    fun Application.register() {
+        routing {
+            authenticate(ADMIN_AUTHENTICATION) {
+                context(electiveService) {
+                    get<Admin.Electives> { handleGetElectives() }
+
+                    get<Admin.Electives.Id> { params -> handleGetElective(params.id) }
+
+                    put<Admin.Electives.Id> { params -> handlePutElective(params.id) }
+
+                    delete<Admin.Electives.Id> { params -> handleDeleteElective(params.id) }
+
+                    patch<Admin.Electives.Id> { params -> handlePatchElective(params.id) }
+                }
+            }
+        }
+    }
+
+    private suspend fun RoutingContext.handlePutElective(id: Int) {
+        val elective = call.parseOrNull<th.ac.bodin2.electives.proto.api.Elective>()
+            ?: return badRequest()
+
+        if (elective.id != id) return badRequest("ID in URL does not match body")
+
+        @OptIn(CreatesTransaction::class)
+        electiveService.create(
+            id = elective.id,
+            name = elective.name,
+            team = if (elective.hasTeamId()) elective.teamId else null,
+            startDate = if (elective.hasStartDate()) elective.startDate.inLocalDateTimeBySeconds else null,
+            endDate = if (elective.hasEndDate()) elective.endDate.inLocalDateTimeBySeconds else null
+        )
+
+        ok()
+    }
+
+    private suspend fun RoutingContext.handleDeleteElective(id: Int) {
+        try {
+            @OptIn(CreatesTransaction::class)
+            electiveService.delete(id)
+            ok()
+        } catch (_: NotFoundException) {
+            badRequest("Elective not found")
+        }
+    }
+
+    private suspend fun RoutingContext.handlePatchElective(id: Int) {
+        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.ElectivePatch>()
+            ?: return badRequest()
+
+        val update = ElectiveService.ElectiveUpdate(
+            name = if (req.hasName()) req.name else null,
+            team = if (req.hasTeamId()) req.teamId else null,
+            startDate = if (req.hasStartDate()) req.startDate.inLocalDateTimeBySeconds else null,
+            endDate = if (req.hasEndDate()) req.endDate.inLocalDateTimeBySeconds else null,
+            setTeam = req.patchTeamId,
+            setStartDate = req.patchStartDate,
+            setEndDate = req.patchEndDate,
+        )
+
+        try {
+            @OptIn(CreatesTransaction::class)
+            electiveService.update(id, update)
+            ok()
+        } catch (e: NotFoundException) {
+            return when (e.entity) {
+                NotFoundEntity.ELECTIVE -> badRequest("Elective not found")
+                NotFoundEntity.TEAM -> badRequest("Team not found")
+
+                else -> throw e
+            }
+        }
+    }
+}
+
+private val Long.inLocalDateTimeBySeconds: LocalDateTime
+    get() = Instant.ofEpochSecond(this)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDateTime()
 
 @Suppress("UNUSED")
 @Resource("/admin")

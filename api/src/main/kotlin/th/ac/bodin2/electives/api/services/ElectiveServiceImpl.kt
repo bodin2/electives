@@ -1,15 +1,62 @@
 package th.ac.bodin2.electives.api.services
 
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.dao.load
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.models.Electives
+import java.time.LocalDateTime
 
 class ElectiveServiceImpl : ElectiveService {
+    @CreatesTransaction
+    override fun create(
+        id: Int,
+        name: String,
+        team: Int?,
+        startDate: LocalDateTime?,
+        endDate: LocalDateTime?
+    ) = transaction {
+        Elective.wrapRow(Electives.insert {
+            it[this.id] = id
+            it[this.name] = name
+            it[this.team] = team
+            it[this.startDate] = startDate
+            it[this.endDate] = endDate
+        }.resultedValues!!.first())
+    }
+
+
+    @CreatesTransaction
+    override fun delete(id: Int) {
+        val rows = Electives.deleteWhere { Electives.id eq id }
+        if (rows == 0) {
+            throw NotFoundException(NotFoundEntity.ELECTIVE)
+        }
+    }
+
+    @CreatesTransaction
+    override fun update(id: Int, update: ElectiveService.ElectiveUpdate) {
+        transaction {
+            Elective.require(id)
+            Electives.update({ Electives.id eq id }) {
+                update.name?.let { name -> it[this.name] = name }
+                if (update.setTeam) it[this.team] = update.team
+                if (update.setStartDate) it[this.startDate] = update.startDate
+                if (update.setEndDate) it[this.endDate] = update.endDate
+            }
+        }
+    }
+
     override fun getAll() = Elective.all().toList()
 
     override fun getById(electiveId: Int) = Elective.findById(electiveId)?.load(Elective::team)

@@ -73,6 +73,13 @@ message AdminService {
      */
     optional uint64 end_date = 3;
     optional uint32 team_id = 4;
+
+    // Whether the `start_date` field should be considered during patching.
+    bool patch_start_date = 5;
+    // Whether the `end_date` field should be considered during patching.
+    bool patch_end_date = 6;
+    // Whether the `team_id` field should be considered during patching.
+    bool patch_team_id = 7;
   }
 
   message SubjectPatch {
