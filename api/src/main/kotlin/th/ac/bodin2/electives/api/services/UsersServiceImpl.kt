@@ -3,27 +3,20 @@ package th.ac.bodin2.electives.api.services
 import com.mayakapps.kache.InMemoryKache
 import com.mayakapps.kache.KacheStrategy
 import kotlinx.coroutines.runBlocking
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.batchInsert
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.db.Student
-import th.ac.bodin2.electives.db.Teacher
-import th.ac.bodin2.electives.db.Team
-import th.ac.bodin2.electives.db.User
-import th.ac.bodin2.electives.db.exists
+import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.StudentTeams
 import th.ac.bodin2.electives.db.models.Students
 import th.ac.bodin2.electives.db.models.Teachers
 import th.ac.bodin2.electives.db.models.Users
-import th.ac.bodin2.electives.proto.api.AdminService
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.withMinimumDelay
@@ -35,6 +28,7 @@ import kotlin.time.Duration.Companion.minutes
 
 class UsersServiceImpl(val config: Config) : UsersService {
     companion object {
+        private const val PAGE_SIZE = 50
         private const val TOKEN_SIZE = 32
         private val logger = LoggerFactory.getLogger(UsersServiceImpl::class.java)
     }
@@ -166,6 +160,37 @@ class UsersServiceImpl(val config: Config) : UsersService {
     override fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)
 
     override fun getStudentById(id: Int): Student? = Student.findById(id)
+
+    override fun getStudents(page: Int): List<Student> =
+        getUsers(Students, Student::from, page)
+
+    override fun getTeachers(page: Int): List<Teacher> =
+        getUsers(Teachers, Teacher::from, page)
+
+    private fun <T> getUsers(
+        table: IdTable<Int>,
+        transformer: (row: ResultRow) -> T,
+        page: Int
+    ): List<T> {
+        val offset = ((page - 1) * PAGE_SIZE).toLong()
+        val list = transaction {
+            table
+                .select(
+                    table.columns + listOf(
+                        Users.id,
+                        Users.avatarUrl,
+                        Users.firstName,
+                        Users.middleName,
+                        Users.lastName
+                    )
+                )
+                .limit(PAGE_SIZE)
+                .offset(offset)
+                .map { transformer(it) }
+        }
+
+        return list
+    }
 
     @CreatesTransaction
     override suspend fun createSession(id: Int, password: String, aud: String): String =

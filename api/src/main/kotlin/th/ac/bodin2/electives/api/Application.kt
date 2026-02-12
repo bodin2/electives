@@ -127,6 +127,8 @@ fun Application.provideDependencies() {
             }
 
         provide<ElectiveService> { ElectiveServiceImpl() }
+        provide<SubjectService> { SubjectServiceImpl() }
+        provide<TeamService> { TeamServiceImpl() }
         provide<ElectiveSelectionService> {
             ElectiveSelectionServiceImpl(
                 resolve<UsersService>(),

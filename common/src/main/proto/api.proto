@@ -35,6 +35,10 @@ message AdminService {
     string password = 2;
   }
 
+  message SetElectiveSubjectsRequest {
+    repeated uint32 subject_ids = 2;
+  }
+
   message SetStudentSelectionsRequest {
     // Elective ID -> Subject ID
     map<uint32, uint32> selections = 1;

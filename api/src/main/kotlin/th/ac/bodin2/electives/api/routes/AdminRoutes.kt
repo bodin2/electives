@@ -9,9 +9,6 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.*
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.dao.id.IdTable
-import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
@@ -23,14 +20,13 @@ import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.api.utils.unauthorized
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
-import th.ac.bodin2.electives.db.models.Students
-import th.ac.bodin2.electives.db.models.Teachers
-import th.ac.bodin2.electives.db.models.Users
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.challengeResponse
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.listTeamsResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
 import th.ac.bodin2.electives.proto.api.AuthService
 import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
+import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
 import th.ac.bodin2.electives.proto.api.UserType
 import java.time.Instant
 import java.time.LocalDateTime
@@ -42,11 +38,16 @@ fun Application.registerAdminRoutes() {
     val usersService: UsersService by dependencies
     val electiveSelectionService: ElectiveSelectionService by dependencies
     val electiveService: ElectiveService by dependencies
+    val subjectService: SubjectService by dependencies
+    val teamService: TeamService by dependencies
 
     AdminAuthController(adminAuthService).apply { register() }
     AdminUsersController(usersService).apply { register() }
     AdminUsersSelectionsController(electiveSelectionService).apply { register() }
     AdminElectivesController(electiveService).apply { register() }
+    AdminElectivesSubjectsController(electiveService).apply { register() }
+    AdminSubjectsController(subjectService).apply { register() }
+    AdminTeamsController(teamService).apply { register() }
 
     routing {
         resource<Admin.Notifications> {
@@ -95,19 +96,19 @@ class AdminAuthController(private val adminAuthService: AdminAuthService) {
 class AdminUsersController(
     private val usersService: UsersService,
 ) {
-    companion object {
-        private const val PAGE_SIZE = 50
-    }
-
     fun Application.register() {
         routing {
             authenticate(ADMIN_AUTHENTICATION) {
                 get<Admin.Users.Students> { params ->
-                    handleGetUsers(Students, Student::from, Student::toProto, params.page)
+                    call.respond(listUsersResponse {
+                        users += usersService.getStudents(params.page).map { it.toProto() }
+                    })
                 }
 
                 get<Admin.Users.Teachers> { params ->
-                    handleGetUsers(Teachers, Teacher::from, Teacher::toProto, params.page)
+                    call.respond(listUsersResponse {
+                        users += usersService.getTeachers(params.page).map { it.toProto() }
+                    })
                 }
 
                 get<Admin.Users.Id> { params -> context(usersService) { handleGetUser(params.id) } }
@@ -208,34 +209,6 @@ class AdminUsersController(
         } catch (_: NotFoundException) {
             return badRequest("User not found")
         }
-    }
-
-    private suspend fun <T> RoutingContext.handleGetUsers(
-        table: IdTable<Int>,
-        transformer: (row: ResultRow) -> T,
-        protoTransformer: T.() -> th.ac.bodin2.electives.proto.api.User,
-        page: Int
-    ) {
-        val offset = ((page - 1) * PAGE_SIZE).toLong()
-        val list = transaction {
-            table
-                .select(
-                    table.columns + listOf(
-                        Users.id,
-                        Users.avatarUrl,
-                        Users.firstName,
-                        Users.middleName,
-                        Users.lastName
-                    )
-                )
-                .limit(PAGE_SIZE)
-                .offset(offset)
-                .map { transformer(it) }
-        }
-
-        call.respond(listUsersResponse {
-            users += list.map { it.protoTransformer() }
-        })
     }
 }
 
@@ -355,6 +328,215 @@ class AdminElectivesController(
     }
 }
 
+class AdminElectivesSubjectsController(private val electiveService: ElectiveService) {
+    fun Application.register() {
+        routing {
+            authenticate(ADMIN_AUTHENTICATION) {
+                context(electiveService) {
+                    get<Admin.Electives.Id.Subjects> { params -> handleGetElectiveSubjects(params.parent.id) }
+
+                    put<Admin.Electives.Id.Subjects> { params -> handlePutElectiveSubjects(params.parent.id) }
+                }
+            }
+        }
+    }
+
+    private suspend fun RoutingContext.handlePutElectiveSubjects(electiveId: Int) {
+        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.SetElectiveSubjectsRequest>()
+            ?: return badRequest()
+
+        try {
+            @OptIn(CreatesTransaction::class)
+            electiveService.setSubjects(electiveId, req.subjectIdsList)
+
+            ok()
+        } catch (e: NotFoundException) {
+            return when (e.entity) {
+                NotFoundEntity.ELECTIVE -> badRequest("Elective not found")
+                NotFoundEntity.SUBJECT -> badRequest("One or more subjects not found")
+
+                else -> throw e
+            }
+        }
+    }
+}
+
+class AdminSubjectsController(private val subjectService: SubjectService) {
+    fun Application.register() {
+        routing {
+            authenticate(ADMIN_AUTHENTICATION) {
+                get<Admin.Subjects> { handleGetSubjects() }
+
+                get<Admin.Subjects.Id> { params -> handleGetSubject(params.id) }
+
+                put<Admin.Subjects.Id> { params -> handlePutSubject(params.id) }
+
+                delete<Admin.Subjects.Id> { params -> handleDeleteSubject(params.id) }
+
+                patch<Admin.Subjects.Id> { params -> handlePatchSubject(params.id) }
+            }
+        }
+    }
+
+    private suspend fun RoutingContext.handleGetSubjects() {
+        call.respond(listSubjectsResponse {
+            transaction {
+                subjects += subjectService.getAll().map { it.toProto(withDescription = false, withTeachers = true) }
+            }
+        })
+    }
+
+    private suspend fun RoutingContext.handleGetSubject(id: Int) {
+        val response = transaction { subjectService.getById(id)?.toProto(withDescription = true, withTeachers = true) }
+            ?: return notFound()
+
+        call.respond(response)
+    }
+
+    private suspend fun RoutingContext.handlePutSubject(id: Int) {
+        val subject = call.parseOrNull<th.ac.bodin2.electives.proto.api.Subject>()
+            ?: return badRequest()
+
+        if (subject.id != id) return badRequest("ID in URL does not match body")
+
+        @OptIn(CreatesTransaction::class)
+        subjectService.create(
+            id = subject.id,
+            name = subject.name,
+            description = if (subject.hasDescription()) subject.description else null,
+            code = subject.code,
+            tag = subject.tag,
+            location = subject.location,
+            capacity = subject.capacity,
+            team = if (subject.hasTeamId()) subject.teamId else null,
+            teacherIds = subject.teachersList.map { it.id },
+            thumbnailUrl = if (subject.hasThumbnailUrl()) subject.thumbnailUrl else null,
+            imageUrl = if (subject.hasImageUrl()) subject.imageUrl else null,
+        )
+
+        ok()
+    }
+
+    private suspend fun RoutingContext.handleDeleteSubject(id: Int) {
+        try {
+            @OptIn(CreatesTransaction::class)
+            subjectService.delete(id)
+            ok()
+        } catch (_: NotFoundException) {
+            badRequest("Subject not found")
+        }
+    }
+
+    private suspend fun RoutingContext.handlePatchSubject(id: Int) {
+        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.SubjectPatch>()
+            ?: return badRequest()
+
+        val update = SubjectService.SubjectUpdate(
+            name = if (req.hasName()) req.name else null,
+            description = if (req.hasDescription()) req.description else null,
+            code = if (req.hasCode()) req.code else null,
+            tag = if (req.hasTag()) req.tag else null,
+            location = if (req.hasLocation()) req.location else null,
+            capacity = if (req.hasCapacity()) req.capacity else null,
+            team = if (req.hasTeamId()) req.teamId else null,
+            teacherIds = req.teachersList.map { it.id },
+            thumbnailUrl = if (req.hasThumbnailUrl()) req.thumbnailUrl else null,
+            imageUrl = if (req.hasImageUrl()) req.imageUrl else null,
+            patchTeachers = req.patchTeachers,
+        )
+
+        try {
+            @OptIn(CreatesTransaction::class)
+            subjectService.update(id, update)
+            ok()
+        } catch (e: NotFoundException) {
+            return when (e.entity) {
+                NotFoundEntity.SUBJECT -> badRequest("Subject not found")
+                NotFoundEntity.TEACHER -> badRequest("One or more teachers not found")
+                NotFoundEntity.TEAM -> badRequest("Team not found")
+
+                else -> throw e
+            }
+        }
+    }
+}
+
+class AdminTeamsController(private val teamService: TeamService) {
+    fun Application.register() {
+        routing {
+            authenticate(ADMIN_AUTHENTICATION) {
+                get<Admin.Teams> { handleGetTeams() }
+
+                get<Admin.Teams.Id> { params -> handleGetTeam(params.id) }
+
+                put<Admin.Teams.Id> { params -> handlePutTeam(params.id) }
+
+                delete<Admin.Teams.Id> { params -> handleDeleteTeam(params.id) }
+
+                patch<Admin.Teams.Id> { params -> handlePatchTeam(params.id) }
+            }
+        }
+    }
+
+    private suspend fun RoutingContext.handleGetTeams() {
+        call.respond(listTeamsResponse {
+            transaction {
+                teams += teamService.getAll().map { it.toProto() }
+            }
+        })
+    }
+
+    private suspend fun RoutingContext.handleGetTeam(id: Int) {
+        val response = transaction { teamService.getById(id)?.toProto() }
+            ?: return notFound()
+
+        call.respond(response)
+    }
+
+    private suspend fun RoutingContext.handlePutTeam(id: Int) {
+        val team = call.parseOrNull<th.ac.bodin2.electives.proto.api.Team>()
+            ?: return badRequest()
+
+        if (team.id != id) return badRequest("ID in URL does not match body")
+
+        @OptIn(CreatesTransaction::class)
+        teamService.create(team.id, team.name)
+
+        ok()
+    }
+
+    private suspend fun RoutingContext.handleDeleteTeam(id: Int) {
+        try {
+            @OptIn(CreatesTransaction::class)
+            teamService.delete(id)
+            ok()
+        } catch (_: NotFoundException) {
+            badRequest("Team not found")
+        }
+    }
+
+    private suspend fun RoutingContext.handlePatchTeam(id: Int) {
+        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.TeamPatch>()
+            ?: return badRequest()
+
+        val update = TeamService.TeamUpdate(
+            name = if (req.hasName()) req.name else null,
+        )
+
+        try {
+            @OptIn(CreatesTransaction::class)
+            teamService.update(id, update)
+            ok()
+        } catch (e: NotFoundException) {
+            return when (e.entity) {
+                NotFoundEntity.TEAM -> badRequest("Team not found")
+
+                else -> throw e
+            }
+        }
+    }
+}
+
 private val Long.inLocalDateTimeBySeconds: LocalDateTime
     get() = Instant.ofEpochSecond(this)
         .atZone(ZoneId.systemDefault())
@@ -408,7 +590,7 @@ class Admin {
     class Subjects(val parent: Admin) {
         // PUT: Subject, GET: Subject, DELETE, PATCH: SubjectPatch
         @Resource("{id}")
-        class Id(val parent: Electives, val id: Int)
+        class Id(val parent: Subjects, val id: Int)
     }
 
     // GET: ListTeamsResponse

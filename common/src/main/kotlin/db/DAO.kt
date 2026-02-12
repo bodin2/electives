@@ -20,7 +20,7 @@ class User(id: EntityID<Int>) : Entity<Int>(id) {
     var avatarUrl by Users.avatarUrl
 }
 
-class Student(val reference: Reference, val user: User) {
+class Student(val reference: Reference, val user: User, val teams: List<Team>) {
     class Reference internal constructor(val id: Int)
 
     val id = reference.id
@@ -28,7 +28,8 @@ class Student(val reference: Reference, val user: User) {
     companion object {
         fun from(user: ResultRow): Student {
             val id = user.getOrNull(Students.id)?.value ?: throw IllegalArgumentException("ResultRow does not contain student ID")
-            return Student(Reference(id), User.wrapRow(user))
+            val ref = Reference(id)
+            return Student(ref, User.wrapRow(user), getTeams(ref))
         }
 
         fun exists(id: Int): Boolean = Students.selectAll().where { Students.id eq id }.empty().not()
@@ -42,7 +43,8 @@ class Student(val reference: Reference, val user: User) {
             if (!exists(id)) return null
 
             val user = User.findById(id) ?: return null
-            return Student(Reference(id), user)
+            val ref = Reference(id)
+            return Student(ref, user, getTeams(ref))
         }
 
         fun hasTeam(student: Reference, teamId: EntityID<Int>) = hasTeam(student, teamId.value)
@@ -103,23 +105,20 @@ class Student(val reference: Reference, val user: User) {
             if (count == 0) throw NotFoundException(NotFoundEntity.ELECTIVE_SELECTION)
         }
 
+        fun getTeams(student: Reference): List<Team> {
+            return (StudentTeams innerJoin Teams)
+                .selectAll().where { StudentTeams.student eq student.id }
+                .map { Team.wrapRow(it) }
+        }
+
         fun new(id: Int, user: User): Student {
             Students.insert {
                 it[Students.id] = id
             }
 
-            return Student(Reference(id), user)
+            return Student(Reference(id), user, emptyList())
         }
     }
-
-    val teams
-        get(): List<Team> {
-            if (!exists(this@Student.id)) throw NotFoundException(NotFoundEntity.STUDENT)
-
-            return (StudentTeams innerJoin Teams)
-                .selectAll().where { StudentTeams.student eq this@Student.id }
-                .map { Team.wrapRow(it) }
-        }
 }
 
 class Teacher(val reference: Reference, val user: User) {

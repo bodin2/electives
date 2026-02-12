@@ -2,6 +2,7 @@ package th.ac.bodin2.electives.api.services
 
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.dao.load
+import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -14,6 +15,7 @@ import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.models.ElectiveSubjects
 import th.ac.bodin2.electives.db.models.Electives
 import java.time.LocalDateTime
 
@@ -38,9 +40,11 @@ class ElectiveServiceImpl : ElectiveService {
 
     @CreatesTransaction
     override fun delete(id: Int) {
-        val rows = Electives.deleteWhere { Electives.id eq id }
-        if (rows == 0) {
-            throw NotFoundException(NotFoundEntity.ELECTIVE)
+        transaction {
+            val rows = Electives.deleteWhere { Electives.id eq id }
+            if (rows == 0) {
+                throw NotFoundException(NotFoundEntity.ELECTIVE)
+            }
         }
     }
 
@@ -53,6 +57,22 @@ class ElectiveServiceImpl : ElectiveService {
                 if (update.setTeam) it[this.team] = update.team
                 if (update.setStartDate) it[this.startDate] = update.startDate
                 if (update.setEndDate) it[this.endDate] = update.endDate
+            }
+        }
+    }
+
+    @CreatesTransaction
+    override fun setSubjects(electiveId: Int, subjectIds: List<Int>) {
+        transaction {
+            Elective.require(electiveId)
+
+            ElectiveSubjects.deleteWhere { ElectiveSubjects.elective eq electiveId }
+
+            ElectiveSubjects.batchInsert(subjectIds) { subjectId ->
+                Subject.require(subjectId)
+
+                this[ElectiveSubjects.elective] = electiveId
+                this[ElectiveSubjects.subject] = subjectId
             }
         }
     }

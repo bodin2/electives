@@ -31,6 +31,12 @@ interface ElectiveService {
     @CreatesTransaction
     fun update(id: Int, update: ElectiveUpdate)
 
+    /**
+     * Sets the subjects that are part of the elective.
+     */
+    @CreatesTransaction
+    fun setSubjects(electiveId: Int, subjectIds: List<Int>)
+
     data class ElectiveUpdate(
         val name: String? = null,
         val team: Int? = null,

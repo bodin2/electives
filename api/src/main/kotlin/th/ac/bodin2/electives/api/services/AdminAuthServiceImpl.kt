@@ -1,15 +1,11 @@
 package th.ac.bodin2.electives.api.services
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
-import th.ac.bodin2.electives.utils.CIDR
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
-import th.ac.bodin2.electives.utils.contains
 import th.ac.bodin2.electives.utils.Argon2
+import th.ac.bodin2.electives.utils.CIDR
+import th.ac.bodin2.electives.utils.contains
 import th.ac.bodin2.electives.utils.withMinimumDelay
 import java.security.KeyFactory
 import java.security.SecureRandom
@@ -55,19 +51,21 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
         config.allowedIPs?.let { ip in it } ?: true
 
     private fun verifySignature(signature: String, challenge: ByteArray): Boolean {
-        val sigBytes = Base64.getUrlDecoder().decode(signature)
-
-        val keyFactory = KeyFactory.getInstance("RSA")
-        val publicKey = keyFactory.generatePublic(config.publicKey)
-
-        val sig = Signature.getInstance("SHA256withRSA")
-        sig.initVerify(publicKey)
-        sig.update(challenge)
-
         return try {
+            val sigBytes = Base64.getUrlDecoder().decode(signature)
+
+            val keyFactory = KeyFactory.getInstance("RSA")
+            val publicKey = keyFactory.generatePublic(config.publicKey)
+
+            val sig = Signature.getInstance("SHA256withRSA")
+            sig.initVerify(publicKey)
+            sig.update(challenge)
+
             sig.verify(sigBytes)
         } catch (e: SignatureException) {
             logger.error("Error verifying signature", e)
+            false
+        } catch (_: IllegalArgumentException) {
             false
         }
     }

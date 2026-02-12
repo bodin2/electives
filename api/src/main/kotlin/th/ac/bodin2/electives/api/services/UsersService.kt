@@ -101,6 +101,9 @@ interface UsersService {
     fun getTeacherById(id: Int): Teacher?
     fun getStudentById(id: Int): Student?
 
+    fun getStudents(page: Int = 1): List<Student>
+    fun getTeachers(page: Int = 1): List<Teacher>
+
     /**
      * Validates password and creates a new session for the given user ID.
      *
