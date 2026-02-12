@@ -139,25 +139,26 @@ fun Application.provideDependencies() {
         if (!getEnv("ADMIN_ENABLED").isNullOrEmpty())
             provide<AdminAuthService> {
                 AdminAuthServiceImpl(
-                AdminAuthServiceImpl.Config(
-                    sessionDurationSeconds = 1.hours.inWholeSeconds,
-                    minimumSessionCreationTime = 3.seconds,
-                    allowedIPs = getEnv("ADMIN_ALLOWED_IPS").let { ipString ->
-                        val ips = ipString.let {
-                            if (it == null) {
-                                this@provideDependencies.log.warn("ADMIN_ALLOWED_IPS is not set, defaulting to only allow localhost access.")
-                                return@let "127.0.0.0/8,::1/128"
-                            }
+                    AdminAuthServiceImpl.Config(
+                        sessionDurationSeconds = 1.hours.inWholeSeconds,
+                        minimumSessionCreationTime = 3.seconds,
+                        allowedIPs = getEnv("ADMIN_ALLOWED_IPS").let { ipString ->
+                            val ips = ipString.let {
+                                if (it == null) {
+                                    this@provideDependencies.log.warn("ADMIN_ALLOWED_IPS is not set, defaulting to only allow localhost access.")
+                                    return@let "127.0.0.0/8,::1/128"
+                                }
 
-                            return@let it
-                        }
-                        if (ips.isBlank()) null
-                        else ips.split(",").map { CIDR.parse(it.trim()) }
-                    },
-                    publicKey = X509EncodedKeySpec(
-                        Base64.getDecoder().decode(requireEnvNonBlank("ADMIN_PUBLIC_KEY"))
+                                return@let it
+                            }
+                            if (ips.isBlank()) null
+                            else ips.split(",").map { CIDR.parse(it.trim()) }
+                        },
+                        publicKey = X509EncodedKeySpec(
+                            Base64.getDecoder().decode(requireEnvNonBlank("ADMIN_PUBLIC_KEY"))
+                        )
                     )
-                ))
+                )
             }
     }
 }

@@ -8,14 +8,10 @@ import io.ktor.server.testing.*
 import io.mockk.every
 import th.ac.bodin2.electives.api.services.AdminAuthService
 import th.ac.bodin2.electives.api.services.TestServiceConstants.STUDENT_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.AdminService
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.addUserRequest
 import th.ac.bodin2.electives.proto.api.User
-import th.ac.bodin2.electives.proto.api.UserType
-import th.ac.bodin2.electives.proto.api.user
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

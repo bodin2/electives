@@ -3,7 +3,7 @@ package th.ac.bodin2.electives.api.utils
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.di.*
-import io.ktor.server.request.ApplicationRequest
+import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction

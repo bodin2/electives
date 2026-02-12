@@ -35,7 +35,9 @@ fun Application.configureSecurity() {
             bearer(ADMIN_AUTHENTICATION) {
                 val adminAuthService: AdminAuthService by this@configureSecurity.dependencies
                 authenticate { tokenCredential ->
-                    if (adminAuthService.hasSession(tokenCredential.token, request.connectingAddress)) return@authenticate true
+                    if (adminAuthService.hasSession(tokenCredential.token, request.connectingAddress))
+                        return@authenticate true
+
                     return@authenticate null
                 }
             }

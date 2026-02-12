@@ -69,14 +69,14 @@ interface UsersService {
      * If [setAvatarUrl] is true, the avatar URL is updated to the given value (which may be null).
      * If false, the avatar URL is left unchanged.
      */
-     data class UserUpdate(
+    data class UserUpdate(
         val firstName: String?,
         val middleName: String?,
         val lastName: String?,
         val avatarUrl: String?,
         val setMiddleName: Boolean = false,
         val setAvatarUrl: Boolean = false,
-     )
+    )
 
     data class StudentUpdate(
         val update: UserUpdate,

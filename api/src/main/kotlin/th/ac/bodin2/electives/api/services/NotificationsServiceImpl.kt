@@ -30,7 +30,11 @@ private const val ADMIN_PSEUDO_ID = -1
 
 private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
-class NotificationsServiceImpl(val config: Config, val usersService: UsersService, val adminAuthService: AdminAuthService? = null) : NotificationsService {
+class NotificationsServiceImpl(
+    val config: Config,
+    val usersService: UsersService,
+    val adminAuthService: AdminAuthService? = null
+) : NotificationsService {
     class Config(
         val maxSubjectSubscriptionsPerClient: Int,
         val bulkUpdateInterval: Duration,

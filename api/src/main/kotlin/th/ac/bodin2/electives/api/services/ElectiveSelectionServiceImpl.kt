@@ -67,7 +67,12 @@ class ElectiveSelectionServiceImpl(
     // We want to prevent overbooking: Thread A reads (29/30) -> Thread B reads (29/30) -> A inserts (30/30) -> B inserts (31/30)
     // SERIALIZABLE will ensure that if two transactions try to do this at the same time, one of them will be fail.
     @CreatesTransaction
-    override fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult {
+    override fun setStudentSelection(
+        executorId: Int,
+        userId: Int,
+        electiveId: Int,
+        subjectId: Int
+    ): ModifySelectionResult {
         var onSuccess: (() -> Unit)? = null
 
         val result = transaction(transactionIsolation = TRANSACTION_SERIALIZABLE) {

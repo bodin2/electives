@@ -14,7 +14,6 @@ import th.ac.bodin2.electives.proto.api.ElectivesService
 import th.ac.bodin2.electives.proto.api.Subject
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class AdminSubjectsRoutesTest : ApplicationTest() {
     private val ApplicationTestBuilder.adminAuthService: AdminAuthService
