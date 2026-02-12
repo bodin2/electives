@@ -15,6 +15,9 @@ var testElectiveSelectionServiceResponse: ModifySelectionResult = ModifySelectio
 
 class TestElectiveSelectionService : ElectiveSelectionService {
     @CreatesTransaction
+    override fun forceSetAllStudentSelections(userId: Int, selections: Map<Int, Int>) = error("Not testable")
+
+    @CreatesTransaction
     override fun setStudentSelection(
         executorId: Int,
         userId: Int,

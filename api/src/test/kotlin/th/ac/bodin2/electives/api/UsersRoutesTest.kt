@@ -98,7 +98,7 @@ class UsersRoutesTest : ApplicationTest() {
     fun `get student selections`() = runRouteTest {
         val selections = client.getWithAuth("/users/@me/selections", studentToken())
             .assertOK()
-            .parse<th.ac.bodin2.electives.proto.api.UsersService.GetStudentSelectionsResponse>()
+            .parse<th.ac.bodin2.electives.proto.api.UsersService.StudentSelections>()
 
         assertEquals(SUBJECT_ID, selections.subjectsMap[ELECTIVE_ID]?.id)
         assertEquals(TEACHER_ID, selections.subjectsMap[ELECTIVE_ID]?.teachersList?.first()?.id)

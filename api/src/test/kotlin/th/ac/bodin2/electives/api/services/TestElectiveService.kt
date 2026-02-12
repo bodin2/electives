@@ -1,15 +1,36 @@
 package th.ac.bodin2.electives.api.services
 
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_WITHOUT_SUBJECTS_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.STUDENT_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.TestServiceConstants.TEACHER_ID
+import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
+import java.time.LocalDateTime
 
 class TestElectiveService : ElectiveService {
+
+    @CreatesTransaction
+    override fun create(
+        id: Int,
+        name: String,
+        team: Int?,
+        startDate: LocalDateTime?,
+        endDate: LocalDateTime?
+    ): Elective = error("Not testable")
+
+    @CreatesTransaction
+    override fun delete(id: Int) = error("Not testable")
+
+    @CreatesTransaction
+    override fun update(id: Int, update: ElectiveService.ElectiveUpdate) = error("Not testable")
+
+    @CreatesTransaction
+    override fun setSubjects(electiveId: Int, subjectIds: List<Int>) = error("Not testable")
     companion object {
         val ELECTIVE_IDS = listOf(
             ELECTIVE_ID,

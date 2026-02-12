@@ -7,6 +7,7 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService
 import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
@@ -15,10 +16,7 @@ import th.ac.bodin2.electives.db.models.Electives
 import th.ac.bodin2.electives.db.models.Subjects
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import java.time.LocalDateTime
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @OptIn(CreatesTransaction::class)
 class ElectiveSelectionServiceImplTest : ApplicationTest() {
@@ -396,5 +394,90 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         )
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(result)
+    }
+
+    @Test
+    fun `force set all student selections`() = runTest {
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.PHYSICS_ID)
+        )
+
+        val selections = transaction {
+            electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
+        }
+
+        assertEquals(TestConstants.Subjects.PHYSICS_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id?.value)
+    }
+
+    @Test
+    fun `force set all student selections replaces existing`() = runTest {
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.PHYSICS_ID)
+        )
+
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.CHEMISTRY_ID)
+        )
+
+        val selections = transaction {
+            electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
+        }
+
+        assertEquals(TestConstants.Subjects.CHEMISTRY_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id?.value)
+    }
+
+    @Test
+    fun `force set all student selections with invalid student`() = runTest {
+        assertFailsWith<NotFoundException> {
+            electiveSelectionService.forceSetAllStudentSelections(
+                UNUSED_ID,
+                mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.PHYSICS_ID)
+            )
+        }
+    }
+
+    @Test
+    fun `force set all student selections with invalid elective`() = runTest {
+        assertFailsWith<NotFoundException> {
+            electiveSelectionService.forceSetAllStudentSelections(
+                TestConstants.Students.JOHN_ID,
+                mapOf(UNUSED_ID to TestConstants.Subjects.PHYSICS_ID)
+            )
+        }
+    }
+
+    @Test
+    fun `force set all student selections with invalid subject`() = runTest {
+        assertFailsWith<NotFoundException> {
+            electiveSelectionService.forceSetAllStudentSelections(
+                TestConstants.Students.JOHN_ID,
+                mapOf(TestConstants.Electives.SCIENCE_ID to UNUSED_ID)
+            )
+        }
+    }
+
+    @Test
+    fun `force set all student selections empty map`() = runTest {
+        // First set a selection
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.PHYSICS_ID)
+        )
+
+        // Then force set with empty map (should not clear existing)
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            emptyMap()
+        )
+
+        val selections = transaction {
+            electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
+        }
+
+        // The existing selection should still be there since empty map means no changes
+        assertEquals(TestConstants.Subjects.PHYSICS_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id?.value)
     }
 }

@@ -186,6 +186,14 @@ suspend fun HttpClient.deleteWithAuth(url: String, token: String): HttpResponse 
     }
 }
 
+suspend fun HttpClient.patchProtoWithAuth(url: String, message: MessageLite, token: String): HttpResponse {
+    return patch(url) {
+        bearerAuth(token)
+        contentType(ContentType.Application.ProtoBuf)
+        setBody(message.toByteArray())
+    }
+}
+
 suspend inline fun <reified T : MessageLite> HttpResponse.parse(): T {
     val parser = getParser(T::class.java)
     return parser.parseFrom(bodyAsBytes())

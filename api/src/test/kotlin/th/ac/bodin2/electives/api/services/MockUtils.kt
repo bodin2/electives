@@ -22,12 +22,12 @@ object MockUtils {
     /**
      * Makes sure handleGetElectiveSubjects -> Subject.toProto() can call Elective.require() without issues
      */
-    fun mockElectiveRequire() {
+    fun mockDAOHelpers() {
         mockkObject(Elective.Companion)
         every { Elective.require(any()) } answers { mockk(relaxed = true) }
     }
 
-    fun unmockElectiveRequire() {
+    fun unmockDAOHelpers() {
         unmockkObject(Elective.Companion)
     }
 

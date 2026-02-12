@@ -264,4 +264,119 @@ class UsersServiceImplTest : ApplicationTest() {
 
         assert(time >= 1.seconds) { "Session creation took less than minimum time" }
     }
+
+    @Test
+    fun `delete user`() = runTest {
+        usersService.deleteUser(Students.JOHN_ID)
+
+        val student = transaction { usersService.getStudentById(Students.JOHN_ID) }
+        assertNull(student)
+    }
+
+    @Test
+    fun `delete non existent user`() = runTest {
+        assertFailsWith<NotFoundException> {
+            usersService.deleteUser(UNUSED_ID)
+        }
+    }
+
+    @Test
+    fun `update student name`() = runTest {
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                update = UsersService.UserUpdate(
+                    firstName = "Updated",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                )
+            )
+        )
+
+        val student = transaction { usersService.getStudentById(Students.JOHN_ID) }
+        assertNotNull(student)
+        assertEquals("Updated", student.user.firstName)
+    }
+
+    @Test
+    fun `update non existent student`() = runTest {
+        assertFailsWith<NotFoundException> {
+            usersService.updateStudent(
+                UNUSED_ID,
+                UsersService.StudentUpdate(
+                    update = UsersService.UserUpdate(
+                        firstName = "Nope",
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `update teacher name`() = runTest {
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                update = UsersService.UserUpdate(
+                    firstName = "Robert",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                )
+            )
+        )
+
+        val teacher = transaction { usersService.getTeacherById(Teachers.BOB_ID) }
+        assertNotNull(teacher)
+        assertEquals("Robert", teacher.user.firstName)
+    }
+
+    @Test
+    fun `update non existent teacher`() = runTest {
+        assertFailsWith<NotFoundException> {
+            usersService.updateTeacher(
+                UNUSED_ID,
+                UsersService.TeacherUpdate(
+                    update = UsersService.UserUpdate(
+                        firstName = "Nope",
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `set password`() = runTest {
+        usersService.setPassword(Students.JOHN_ID, "newpassword123")
+
+        // Old password should fail
+        assertFailsWith<IllegalArgumentException> {
+            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
+        }
+
+        // New password should work
+        val token = usersService.createSession(Students.JOHN_ID, "newpassword123", TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
+
+    @Test
+    fun `set password too short`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.setPassword(Students.JOHN_ID, "abc")
+        }
+    }
+
+    @Test
+    fun `set password non existent user`() = runTest {
+        assertFailsWith<NotFoundException> {
+            usersService.setPassword(UNUSED_ID, "newpassword123")
+        }
+    }
 }

@@ -33,6 +33,18 @@ class TestUsersService : UsersService {
         avatarUrl: String?,
     ) = error("Not testable")
 
+    @CreatesTransaction
+    override fun deleteUser(id: Int) = error("Not testable")
+
+    @CreatesTransaction
+    override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = error("Not testable")
+
+    @CreatesTransaction
+    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = error("Not testable")
+
+    @CreatesTransaction
+    override fun setPassword(id: Int, newPassword: String) = error("Not testable")
+
     override fun getUserType(id: Int) = when (id) {
         TEACHER_ID -> UserType.TEACHER
         STUDENT_ID -> UserType.STUDENT
@@ -77,4 +89,19 @@ class TestUsersService : UsersService {
         }
     }
 
+    override fun getStudents(page: Int): List<Student> {
+        return if (page == 1) {
+            listOf(mockStudent(STUDENT_ID))
+        } else {
+            emptyList()
+        }
+    }
+
+    override fun getTeachers(page: Int): List<Teacher> {
+        return if (page == 1) {
+            listOf(mockTeacher(TEACHER_ID))
+        } else {
+            emptyList()
+        }
+    }
 }
