@@ -11,6 +11,7 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.*
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
@@ -524,6 +525,8 @@ class AdminTeamsController(private val teamService: TeamService) {
             ok()
         } catch (_: NotFoundException) {
             badRequest("Team not found")
+        } catch (e: ExposedSQLException) {
+            badRequest(e.message ?: "SQL exception occurred")
         }
     }
 
