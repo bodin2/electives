@@ -164,27 +164,31 @@ class AdminUsersController(
         val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.UserPatch>()
             ?: return badRequest()
 
-        val update = UsersService.UserUpdate(
-            firstName = if (req.hasFirstName()) req.firstName else null,
-            middleName = if (req.hasMiddleName()) req.middleName else null,
-            lastName = if (req.hasLastName()) req.lastName else null,
-            avatarUrl = if (req.hasAvatarUrl()) req.avatarUrl else null,
-            setMiddleName = req.patchMiddleName,
-            setAvatarUrl = req.patchAvatarUrl,
-        )
-
         try {
-            @OptIn(CreatesTransaction::class)
-            when (val type = usersService.getUserType(id)) {
-                UserType.STUDENT -> usersService.updateStudent(id, UsersService.StudentUpdate(update))
-                UserType.TEACHER -> usersService.updateTeacher(id, UsersService.TeacherUpdate(update))
+            transaction {
+                val type = usersService.getUserType(id)
 
-                else -> throw IllegalStateException("Unreachable case: $type")
-            }
+                val update = UsersService.UserUpdate(
+                    firstName = if (req.hasFirstName()) req.firstName else null,
+                    middleName = if (req.hasMiddleName()) req.middleName else null,
+                    lastName = if (req.hasLastName()) req.lastName else null,
+                    avatarUrl = if (req.hasAvatarUrl()) req.avatarUrl else null,
+                    setMiddleName = req.patchMiddleName,
+                    setAvatarUrl = req.patchAvatarUrl,
+                )
 
-            if (req.hasNewPassword()) {
                 @OptIn(CreatesTransaction::class)
-                usersService.setPassword(id, req.newPassword)
+                when (type) {
+                    UserType.STUDENT -> usersService.updateStudent(id, UsersService.StudentUpdate(update))
+                    UserType.TEACHER -> usersService.updateTeacher(id, UsersService.TeacherUpdate(update))
+
+                    else -> throw IllegalStateException("Unreachable case: $type")
+                }
+
+                if (req.hasNewPassword()) {
+                    @OptIn(CreatesTransaction::class)
+                    usersService.setPassword(id, req.newPassword)
+                }
             }
 
             ok()
