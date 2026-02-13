@@ -154,7 +154,7 @@ class NotificationsServiceImpl(
                         it.parseOrNull<Envelope>()?.identify?.token
                             ?: return@withTimeout null
 
-                    usersService.toPrincipal(token, call)
+                    usersService.toPrincipal(token, call)?.userId
                 }
             } ?: throw IllegalArgumentException()
         } catch (e: Exception) {

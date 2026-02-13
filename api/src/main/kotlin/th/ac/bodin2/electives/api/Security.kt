@@ -16,6 +16,9 @@ import kotlin.time.Duration.Companion.milliseconds
 const val USER_AUTHENTICATION = "user"
 const val ADMIN_AUTHENTICATION = "admin"
 
+class UserPrincipal(val userId: Int)
+class AdminPrincipal
+
 fun Application.configureSecurity() {
     if (!isTest) {
         Argon2.init(
@@ -36,7 +39,7 @@ fun Application.configureSecurity() {
                 val adminAuthService: AdminAuthService by this@configureSecurity.dependencies
                 authenticate { tokenCredential ->
                     if (adminAuthService.hasSession(tokenCredential.token, request.connectingAddress))
-                        return@authenticate true
+                        return@authenticate AdminPrincipal()
 
                     return@authenticate null
                 }
@@ -44,9 +47,9 @@ fun Application.configureSecurity() {
     }
 }
 
-fun UsersService.toPrincipal(token: String, call: ApplicationCall): Int? =
+fun UsersService.toPrincipal(token: String, call: ApplicationCall): UserPrincipal? =
     try {
-        transaction { getSessionUserId(token) }
+        UserPrincipal(transaction { getSessionUserId(token) })
     } catch (e: Exception) {
         val bytes = sha256Digest.get().apply { reset() }
             .digest(token.toByteArray(Charsets.UTF_8))

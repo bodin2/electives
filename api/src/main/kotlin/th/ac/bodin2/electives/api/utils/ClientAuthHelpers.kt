@@ -8,6 +8,7 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.USER_AUTHENTICATION
+import th.ac.bodin2.electives.api.UserPrincipal
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.UserType
 
@@ -78,7 +79,7 @@ fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
 }
 
 fun ApplicationCall.authenticatedUserId(): Int? {
-    return principal<Int>()
+    return principal<UserPrincipal>()?.userId
 }
 
 /**
