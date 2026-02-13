@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api.routes
 import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.plugins.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
@@ -71,7 +72,8 @@ class AdminAuthController(private val adminAuthService: AdminAuthService) {
                 val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post notFound()
 
                 try {
-                    when (val result = adminAuthService.createSession(req.password, call.request.connectingAddress)) {
+                    when (val result =
+                        adminAuthService.createSession(req.password, call.request.origin.remoteAddress)) {
                         is CreateSessionResult.Success -> {
                             call.respond(authenticateResponse {
                                 token = result.token
@@ -101,12 +103,14 @@ class AdminUsersController(
             authenticate(ADMIN_AUTHENTICATION) {
                 get<Admin.Users.Students> { params ->
                     call.respond(listUsersResponse {
+                        @OptIn(CreatesTransaction::class)
                         users += usersService.getStudents(params.page).map { it.toProto() }
                     })
                 }
 
                 get<Admin.Users.Teachers> { params ->
                     call.respond(listUsersResponse {
+                        @OptIn(CreatesTransaction::class)
                         users += usersService.getTeachers(params.page).map { it.toProto() }
                     })
                 }

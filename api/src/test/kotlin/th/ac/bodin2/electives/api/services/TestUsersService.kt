@@ -89,6 +89,7 @@ class TestUsersService : UsersService {
         }
     }
 
+    @CreatesTransaction
     override fun getStudents(page: Int): List<Student> {
         return if (page == 1) {
             listOf(mockStudent(STUDENT_ID))
@@ -97,6 +98,7 @@ class TestUsersService : UsersService {
         }
     }
 
+    @CreatesTransaction
     override fun getTeachers(page: Int): List<Teacher> {
         return if (page == 1) {
             listOf(mockTeacher(TEACHER_ID))

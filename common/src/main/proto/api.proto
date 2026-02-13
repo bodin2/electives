@@ -36,7 +36,7 @@ message AdminService {
   }
 
   message SetElectiveSubjectsRequest {
-    repeated uint32 subject_ids = 2;
+    repeated uint32 subject_ids = 1;
   }
 
   message SetStudentSelectionsRequest {

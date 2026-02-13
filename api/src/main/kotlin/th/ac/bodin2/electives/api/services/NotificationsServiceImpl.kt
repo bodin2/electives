@@ -12,7 +12,10 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.isTest
 import th.ac.bodin2.electives.api.toPrincipal
-import th.ac.bodin2.electives.api.utils.*
+import th.ac.bodin2.electives.api.utils.badFrame
+import th.ac.bodin2.electives.api.utils.parseOrNull
+import th.ac.bodin2.electives.api.utils.send
+import th.ac.bodin2.electives.api.utils.unauthorized
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope
 import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope.PayloadCase
@@ -184,7 +187,7 @@ class NotificationsServiceImpl(
                         it.parseOrNull<Envelope>()?.identify?.token
                             ?: return@withTimeout null
 
-                    adminAuthService.hasSession(token, call.request.connectingAddress)
+                    adminAuthService.hasSession(token, call.request.origin.remoteAddress)
                 }
 
                 if (authenticated != true) throw IllegalArgumentException()

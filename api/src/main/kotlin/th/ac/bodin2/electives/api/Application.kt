@@ -144,14 +144,14 @@ fun Application.provideDependencies() {
                         minimumSessionCreationTime = 3.seconds,
                         allowedIPs = getEnv("ADMIN_ALLOWED_IPS").let { ipString ->
                             val ips = ipString.let {
-                                if (it == null) {
+                                if (it == null || it.isBlank()) {
                                     this@provideDependencies.log.warn("ADMIN_ALLOWED_IPS is not set, defaulting to only allow localhost access.")
                                     return@let "127.0.0.0/8,::1/128"
                                 }
 
                                 return@let it
                             }
-                            if (ips.isBlank()) null
+                            if (ips == "*") null
                             else ips.split(",").map { CIDR.parse(it.trim()) }
                         },
                         publicKey = X509EncodedKeySpec(

@@ -21,17 +21,18 @@ class User(id: EntityID<Int>) : Entity<Int>(id) {
 }
 
 class Student(val reference: Reference, val user: User, val teams: List<Team>) {
-    class Reference internal constructor(val id: Int)
+    class Reference internal constructor(val id: Int) {
+        companion object {
+            fun from(row: ResultRow): Reference {
+                val entityId = row.getOrNull(Students.id) ?: throw IllegalArgumentException("ResultRow does not contain student ID")
+                return Reference(entityId.value)
+            }
+        }
+    }
 
     val id = reference.id
 
     companion object {
-        fun from(user: ResultRow): Student {
-            val id = user.getOrNull(Students.id)?.value ?: throw IllegalArgumentException("ResultRow does not contain student ID")
-            val ref = Reference(id)
-            return Student(ref, User.wrapRow(user), getTeams(ref))
-        }
-
         fun exists(id: Int): Boolean = Students.selectAll().where { Students.id eq id }.empty().not()
 
         fun require(id: Int): Reference {

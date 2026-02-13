@@ -101,7 +101,20 @@ interface UsersService {
     fun getTeacherById(id: Int): Teacher?
     fun getStudentById(id: Int): Student?
 
+    /**
+     * Gets a paginated list of students.
+     *
+     * @throws IllegalArgumentException if the page number is less than 1.
+     */
+    @CreatesTransaction
     fun getStudents(page: Int = 1): List<Student>
+
+    /**
+     * Gets a paginated list of teachers.
+     *
+     * @throws IllegalArgumentException if the page number is less than 1.
+     */
+    @CreatesTransaction
     fun getTeachers(page: Int = 1): List<Teacher>
 
     /**

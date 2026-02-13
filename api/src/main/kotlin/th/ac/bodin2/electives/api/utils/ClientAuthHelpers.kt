@@ -3,9 +3,7 @@ package th.ac.bodin2.electives.api.utils
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.di.*
-import io.ktor.server.request.*
 import io.ktor.server.routing.*
-import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.USER_AUTHENTICATION
 import th.ac.bodin2.electives.api.UserPrincipal
@@ -51,20 +49,6 @@ suspend fun RoutingContext.authenticated(
     block(userId)
 }
 
-/**
- * [RoutingContext.authenticated], but for WebSocket sessions.
- */
-suspend fun WebSocketServerSession.authenticated(
-    types: List<UserType> = ALL_USER_TYPES,
-    block: suspend WebSocketServerSession.(userId: Int) -> Unit
-) {
-    val userId = call.authenticatedUserId() ?: return unauthorized()
-    val usersService: UsersService by call.application.dependencies
-    if (usersService.missingType(userId, types)) return unauthorized()
-
-    block(userId)
-}
-
 @Suppress("NOTHING_TO_INLINE")
 inline fun UsersService.missingType(userId: Int, types: List<UserType>): Boolean {
     return transaction { getUserType(userId) } !in types
@@ -81,10 +65,3 @@ fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
 fun ApplicationCall.authenticatedUserId(): Int? {
     return principal<UserPrincipal>()?.userId
 }
-
-/**
- * Returns the IP address of the client actually connecting to the server.
- * If you are behind a proxy, this would return the proxy server's address.
- */
-val ApplicationRequest.connectingAddress
-    get() = this.local.remoteAddress

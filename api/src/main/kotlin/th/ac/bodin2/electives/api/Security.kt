@@ -7,7 +7,6 @@ import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.services.AdminAuthService
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.utils.connectingAddress
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.getEnv
 import java.security.MessageDigest
@@ -38,7 +37,7 @@ fun Application.configureSecurity() {
             bearer(ADMIN_AUTHENTICATION) {
                 val adminAuthService: AdminAuthService by this@configureSecurity.dependencies
                 authenticate { tokenCredential ->
-                    if (adminAuthService.hasSession(tokenCredential.token, request.connectingAddress))
+                    if (adminAuthService.hasSession(tokenCredential.token, request.origin.remoteAddress))
                         return@authenticate AdminPrincipal()
 
                     return@authenticate null
