@@ -10,7 +10,7 @@ import th.ac.bodin2.electives.utils.CIDR
 import java.security.Signature
 import java.util.*
 import kotlin.test.*
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 class AdminAuthServiceImplTest : ApplicationTest() {
     companion object {
@@ -30,7 +30,7 @@ class AdminAuthServiceImplTest : ApplicationTest() {
         }
 
     override fun runTest(block: suspend ApplicationTestBuilder.() -> Unit) {
-        super.runTest(block)
+        runTestWithCustomConfig(block = block)
     }
 
     private fun runTestWithCustomConfig(
@@ -46,7 +46,7 @@ class AdminAuthServiceImplTest : ApplicationTest() {
                         AdminAuthServiceImpl(
                             AdminAuthServiceImpl.Config(
                                 sessionDurationSeconds = sessionDurationSeconds,
-                                minimumSessionCreationTime = 0.seconds,
+                                minimumSessionCreationTime = 0.milliseconds,
                                 publicKey = java.security.spec.X509EncodedKeySpec(adminKeyPair.public.encoded),
                                 allowedIPs = allowedIPs,
                                 challengeTimeoutMillis = challengeTimeoutMillis
@@ -196,8 +196,7 @@ class AdminAuthServiceImplTest : ApplicationTest() {
         val result = adminAuthService.createSession(signature, "127.0.0.1")
         assertIs<CreateSessionResult.Success>(result)
 
-        // Wait for expiry
-        kotlinx.coroutines.delay(1001L)
+        delay(1000)
 
         assertFalse(adminAuthService.hasSession(result.token, "127.0.0.1"))
     }
@@ -245,9 +244,9 @@ class AdminAuthServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `challenge clears after timeout`(): Unit = runTestWithCustomConfig(challengeTimeoutMillis = 1000) {
+    fun `challenge clears after timeout`(): Unit = runTestWithCustomConfig(challengeTimeoutMillis = 100) {
         val challenge = adminAuthService.newChallenge()
-        delay(1000)
+        delay(100)
 
         val signature = sign(challenge)
         val result = adminAuthService.createSession(signature, "127.0.0.1")
