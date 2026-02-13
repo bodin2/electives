@@ -5,6 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.di.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.application
@@ -14,6 +15,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.ADMIN_AUTHENTICATION
+import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN_AUTH
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
@@ -62,33 +64,35 @@ fun Application.registerAdminRoutes() {
 class AdminAuthController(private val adminAuthService: AdminAuthService) {
     fun Application.register() {
         routing {
-            get<Admin.Challenge> {
-                call.respond(challengeResponse {
-                    challenge = adminAuthService.newChallenge()
-                })
-            }
+            rateLimit(RATE_LIMIT_ADMIN_AUTH) {
+                get<Admin.Challenge> {
+                    call.respond(challengeResponse {
+                        challenge = adminAuthService.newChallenge()
+                    })
+                }
 
-            post<Admin.Auth> {
-                val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post notFound()
+                post<Admin.Auth> {
+                    val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post notFound()
 
-                try {
-                    when (val result =
-                        adminAuthService.createSession(req.password, call.request.origin.remoteAddress)) {
-                        is CreateSessionResult.Success -> {
-                            call.respond(authenticateResponse {
-                                token = result.token
-                            })
+                    try {
+                        when (val result =
+                            adminAuthService.createSession(req.password, call.request.origin.remoteAddress)) {
+                            is CreateSessionResult.Success -> {
+                                call.respond(authenticateResponse {
+                                    token = result.token
+                                })
+                            }
+
+                            is CreateSessionResult.NoChallenge,
+                            is CreateSessionResult.IPNotAllowed -> notFound()
+
+                            is CreateSessionResult.InvalidSignature -> unauthorized()
                         }
 
-                        is CreateSessionResult.NoChallenge,
-                        is CreateSessionResult.IPNotAllowed -> notFound()
-
-                        is CreateSessionResult.InvalidSignature -> unauthorized()
+                    } catch (e: Exception) {
+                        application.log.error("Attempt create admin session failed: ${e.message}")
+                        unauthorized()
                     }
-
-                } catch (e: Exception) {
-                    application.log.error("Attempt create admin session failed: ${e.message}")
-                    unauthorized()
                 }
             }
         }

@@ -40,6 +40,7 @@ abstract class ApplicationTest {
                 rateLimiter(Int.MAX_VALUE, 0.seconds)
             }
 
+            register(RATE_LIMIT_ADMIN_AUTH, mock)
             register(RATE_LIMIT_AUTH, mock)
             register(RATE_LIMIT_ELECTIVES, mock)
             register(RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS, mock)

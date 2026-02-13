@@ -123,6 +123,7 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
 
                     CreateSessionResult.Success(session)
                 } else {
+                    currentChallenge = null
                     CreateSessionResult.InvalidSignature
                 }
             }

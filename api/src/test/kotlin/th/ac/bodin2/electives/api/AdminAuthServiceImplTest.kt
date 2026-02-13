@@ -91,6 +91,17 @@ class AdminAuthServiceImplTest : ApplicationTest() {
     }
 
     @Test
+    fun `create session with invalid signature should clear challenge`(): Unit = runTest {
+        adminAuthService.newChallenge()
+
+        val result = adminAuthService.createSession("invalid-signature", "127.0.0.1")
+        assertIs<CreateSessionResult.InvalidSignature>(result)
+
+        val result2 = adminAuthService.createSession("invalid-signature", "127.0.0.1")
+        assertIs<CreateSessionResult.NoChallenge>(result2)
+    }
+
+    @Test
     fun `create session without challenge`(): Unit = runTest {
         // Don't call newChallenge()
 

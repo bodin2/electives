@@ -81,6 +81,12 @@ private fun Application.configureRateLimits() {
     install(RateLimit) {
         val authenticated: suspend (ApplicationCall) -> Any = { it.authenticatedUserId() ?: Unit }
 
+        register(RATE_LIMIT_ADMIN_AUTH) {
+            // Includes creating a challenge
+            rateLimiter(limit = 10, refillPeriod = 1.minutes)
+            requestKey { it.request.origin.remoteAddress }
+        }
+
         register(RATE_LIMIT_AUTH) {
             rateLimiter(limit = 10, refillPeriod = 1.minutes)
             requestKey { it.request.origin.remoteAddress }
@@ -126,6 +132,7 @@ private fun Application.configureRateLimits() {
     }
 }
 
+val RATE_LIMIT_ADMIN_AUTH = RateLimitName("admin.auth")
 val RATE_LIMIT_AUTH = RateLimitName("auth")
 val RATE_LIMIT_ELECTIVES = RateLimitName("electives")
 val RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS = RateLimitName("electives.subject.members")
