@@ -108,12 +108,14 @@ class UsersServiceImpl(val config: Config) : UsersService {
         transaction {
             Student.require(id)
 
-            updateUser(id, update.update)
+            try {
+                updateUser(id, update.update)
+            } catch (_: NothingToUpdateException) {}
 
             if (update.teams != null) {
                 StudentTeams.deleteWhere { StudentTeams.student eq id }
                 StudentTeams.batchInsert(update.teams) { teamId ->
-                    if (!Team.exists(id)) throw NotFoundException(NotFoundEntity.TEAM)
+                    if (!Team.exists(teamId)) throw NotFoundException(NotFoundEntity.TEAM)
 
                     this[StudentTeams.student] = id
                     this[StudentTeams.team] = teamId
@@ -127,9 +129,13 @@ class UsersServiceImpl(val config: Config) : UsersService {
         transaction {
             Teacher.require(id)
 
-            updateUser(id, update.update)
+            try {
+                updateUser(id, update.update)
+            } catch (_: NothingToUpdateException) {}
         }
     }
+
+    private class NothingToUpdateException : IllegalArgumentException("Nothing to update")
 
     private fun updateUser(id: Int, update: UsersService.UserUpdate) {
         Users.update(where = { Users.id eq id }) {
@@ -139,14 +145,14 @@ class UsersServiceImpl(val config: Config) : UsersService {
                 if (lastName != null) it[Users.lastName] = lastName
                 if (setAvatarUrl) it[Users.avatarUrl] = avatarUrl
             }
+
+            if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
         }
     }
 
     @CreatesTransaction
     override fun setPassword(id: Int, newPassword: String) {
-        val password = newPassword.trim()
-        require(password.length > 4) { "Password must be more than 4 characters once trimmed" }
-        require(password.length <= 4096) { "Password must have less or equal to 4096 characters" }
+        val password = newPassword.assertPasswordRequirements()
 
         val rows = transaction {
             Users.update(where = { Users.id eq id }) {
@@ -175,6 +181,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         val offset = ((page - 1) * PAGE_SIZE).toLong()
         val list = transaction {
             table
+                .innerJoin(Users)
                 .select(
                     table.columns + listOf(
                         Users.id,
@@ -195,7 +202,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
     @CreatesTransaction
     override suspend fun createSession(id: Int, password: String, aud: String): String =
         withMinimumDelay(config.minimumSessionCreationTime) {
-            require(password.length <= 4096) { "Password too long for user: $id" }
+            val password = password.assertPasswordRequirements()
 
             val aud = aud.trim().apply {
                 require(!isEmpty()) { "Audience blank for user: $id" }
@@ -272,12 +279,25 @@ class UsersServiceImpl(val config: Config) : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
-    ) = User.wrapRow(Users.insert {
-        it[Users.id] = id
-        it[Users.firstName] = firstName
-        it[Users.middleName] = middleName
-        it[Users.lastName] = lastName
-        it[Users.passwordHash] = Argon2.hash(password.toCharArray())
-        it[Users.avatarUrl] = avatarUrl
-    }.resultedValues!!.first())
+    ): User {
+        val password = password.assertPasswordRequirements()
+
+        return User.wrapRow(Users.insert {
+            it[Users.id] = id
+            it[Users.firstName] = firstName
+            it[Users.middleName] = middleName
+            it[Users.lastName] = lastName
+            it[Users.passwordHash] = Argon2.hash(password.toCharArray())
+            it[Users.avatarUrl] = avatarUrl
+        }.resultedValues!!.first())
+    }
+
+    private fun String.assertPasswordRequirements(): String {
+        val pwd = this.trim()
+
+        require(pwd.length >= 4) { "Password must be at least 4 characters once trimmed" }
+        require(pwd.length <= 4096) { "Password must have less or equal to 4096 characters" }
+
+        return pwd
+    }
 }

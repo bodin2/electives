@@ -281,7 +281,7 @@ class UsersServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `update student name`() = runTest {
+    fun `update student`() = runTest {
         usersService.updateStudent(
             Students.JOHN_ID,
             UsersService.StudentUpdate(
@@ -290,13 +290,32 @@ class UsersServiceImplTest : ApplicationTest() {
                     middleName = null,
                     lastName = null,
                     avatarUrl = null,
-                )
+                ),
+                teams = listOf(TestConstants.Teams.TEAM_1_ID)
             )
         )
 
         val student = transaction { usersService.getStudentById(Students.JOHN_ID) }
         assertNotNull(student)
         assertEquals("Updated", student.user.firstName)
+    }
+
+    @Test
+    fun `update student nonexistent team`() = runTest {
+        assertFailsWith<NotFoundException> {
+            usersService.updateStudent(
+                Students.JOHN_ID,
+                UsersService.StudentUpdate(
+                    update = UsersService.UserUpdate(
+                        firstName = null,
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    ),
+                    teams = listOf(UNUSED_ID)
+                )
+            )
+        }
     }
 
     @Test
@@ -379,4 +398,135 @@ class UsersServiceImplTest : ApplicationTest() {
             usersService.setPassword(UNUSED_ID, "newpassword123")
         }
     }
+
+    @Test
+    fun `list students`() = runTest {
+        val students = usersService.getStudents()
+
+        assertTrue(students.isNotEmpty())
+        assertTrue(students.any { it.id == Students.JOHN_ID })
+    }
+
+    @Test
+    fun `list teachers`() = runTest {
+        val teachers = usersService.getTeachers()
+
+        assertTrue(teachers.isNotEmpty())
+        assertTrue(teachers.any { it.id == Teachers.BOB_ID })
+    }
+
+    @Test
+    fun `create student with short password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            transaction {
+                usersService.createStudent(
+                    id = UNUSED_ID,
+                    firstName = "Test",
+                    middleName = null,
+                    lastName = "User",
+                    password = "abc",
+                    avatarUrl = null
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create student with long password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            transaction {
+                usersService.createStudent(
+                    id = UNUSED_ID,
+                    firstName = "Test",
+                    middleName = null,
+                    lastName = "User",
+                    password = "a".repeat(4097),
+                    avatarUrl = null
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create teacher with short password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            transaction {
+                usersService.createTeacher(
+                    id = UNUSED_ID,
+                    firstName = "Test",
+                    middleName = null,
+                    lastName = "Teacher",
+                    password = "abc",
+                    avatarUrl = null
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create teacher with long password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            transaction {
+                usersService.createTeacher(
+                    id = UNUSED_ID,
+                    firstName = "Test",
+                    middleName = null,
+                    lastName = "Teacher",
+                    password = "a".repeat(4097),
+                    avatarUrl = null
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create session with long password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.createSession(
+                Students.JOHN_ID,
+                "a".repeat(4097),
+                TestData.CLIENT_NAME
+            )
+        }
+    }
+
+    @Test
+    fun `set password with long password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.setPassword(Students.JOHN_ID, "a".repeat(4097))
+        }
+    }
+
+    @Test
+    fun `password trimming works for create session`() = runTest {
+        usersService.setPassword(Students.JOHN_ID, "  testpass  ")
+
+        val token = usersService.createSession(Students.JOHN_ID, "  testpass  ", TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
+
+    @Test
+    fun `password trimming works for set password`() = runTest {
+        usersService.setPassword(Students.JOHN_ID, "   newpass   ")
+
+        val token = usersService.createSession(Students.JOHN_ID, "   newpass   ", TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
+
+    @Test
+    fun `password with exactly 4 chars works`() = runTest {
+        usersService.setPassword(Students.JOHN_ID, "1234")
+        val token = usersService.createSession(Students.JOHN_ID, "1234", TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
+
+    @Test
+    fun `password with exactly 4096 chars works`() = runTest {
+        val longPassword = "a".repeat(4096)
+        usersService.setPassword(Students.JOHN_ID, longPassword)
+        val token = usersService.createSession(Students.JOHN_ID, longPassword, TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
 }
+
+

@@ -179,17 +179,20 @@ class NotificationsServiceImpl(
 
         try {
             withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
-                (incoming.receive() as? Frame.Binary)?.let {
+                val authenticated = (incoming.receive() as? Frame.Binary)?.let {
                     val token =
                         it.parseOrNull<Envelope>()?.identify?.token
                             ?: return@withTimeout null
 
                     adminAuthService.hasSession(token, call.request.connectingAddress)
                 }
-            } ?: throw IllegalArgumentException()
+
+                if (authenticated != true) throw IllegalArgumentException()
+            }
         } catch (e: Exception) {
             when (e) {
                 // Client authentication failures
+                is IllegalArgumentException,
                 is TimeoutCancellationException -> {}
 
                 else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteHost}", e)

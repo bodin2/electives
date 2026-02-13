@@ -4,6 +4,7 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.withTimeout
@@ -732,6 +733,37 @@ class NotificationsServiceImplTest : ApplicationTest() {
             assertTrue(Envelope.parseFrom(ack2.readBytes()).hasAcknowledged())
 
             close()
+        }
+    }
+
+    @Test
+    fun `admin websocket connection fails with invalid token`() = runTest {
+        assertFailsWith<CancellationException> {
+            try {
+                createWSClient().webSocket("/admin/notifications") {
+                    send(envelope {
+                        identify = identify {
+                            token = "invalid-token"
+                        }
+                    })
+
+                    // Connection should be closed due to authentication failure
+                    incoming.receive()
+                }
+            } catch (e: ClosedReceiveChannelException) {
+                throw CancellationException("Connection closed by server", e)
+            }
+        }
+    }
+
+    @Test
+    fun `admin websocket connection fails without identify message`() = runTest {
+        assertFailsWith<ClosedReceiveChannelException> {
+            createWSClient().webSocket("/admin/notifications") {
+                withTimeout(15.seconds) {
+                    incoming.receive()
+                }
+            }
         }
     }
 }

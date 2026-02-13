@@ -19,7 +19,6 @@ import kotlin.time.Duration
 
 class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
     companion object {
-        private const val CHALLENGE_DURATION_MILLIS = 60000L // 1 minute
         private const val CHALLENGE_SIZE = 128
         private const val TOKEN_SIZE = 64
         private val logger = LoggerFactory.getLogger(AdminAuthServiceImpl::class.java)
@@ -40,7 +39,8 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
         val sessionDurationSeconds: Long,
         val minimumSessionCreationTime: Duration,
         val publicKey: X509EncodedKeySpec,
-        val allowedIPs: List<CIDR>?
+        val allowedIPs: List<CIDR>?,
+        val challengeTimeoutMillis: Long,
     )
 
     init {
@@ -71,15 +71,16 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
     }
 
     override fun newChallenge(): String {
-        currentChallenge = ByteArray(CHALLENGE_SIZE).apply {
+        val challenge = ByteArray(CHALLENGE_SIZE).apply {
             SecureRandom().nextBytes(this)
         }
 
+        currentChallenge = challenge
+
         // Clear the challenge after duration
-        val copy = currentChallenge
         scope.launch {
-            delay(CHALLENGE_DURATION_MILLIS)
-            if (copy === currentChallenge) {
+            delay(config.challengeTimeoutMillis)
+            if (currentChallenge === challenge) {
                 currentChallenge = null
             }
         }

@@ -136,7 +136,7 @@ fun Application.provideDependencies() {
             )
         }
 
-        if (!getEnv("ADMIN_ENABLED").isNullOrEmpty())
+        if (!getEnv("ADMIN_ENABLED").isNullOrEmpty() && !contains(DependencyKey<AdminAuthService>()))
             provide<AdminAuthService> {
                 AdminAuthServiceImpl(
                     AdminAuthServiceImpl.Config(
@@ -156,7 +156,8 @@ fun Application.provideDependencies() {
                         },
                         publicKey = X509EncodedKeySpec(
                             Base64.getDecoder().decode(requireEnvNonBlank("ADMIN_PUBLIC_KEY"))
-                        )
+                        ),
+                        challengeTimeoutMillis = 60000L
                     )
                 )
             }
