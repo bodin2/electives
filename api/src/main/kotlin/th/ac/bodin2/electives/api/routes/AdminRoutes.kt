@@ -109,15 +109,23 @@ class AdminUsersController(
         adminRoutes {
             get<Admin.Users.Students> { params ->
                 call.respond(listUsersResponse {
-                    @OptIn(CreatesTransaction::class)
-                    users += usersService.getStudents(params.page).map { it.toProto() }
+                    val (students, count) =
+                        @OptIn(CreatesTransaction::class)
+                        usersService.getStudents(params.page)
+
+                    users += students.map { it.toProto() }
+                    total = count.toInt()
                 })
             }
 
             get<Admin.Users.Teachers> { params ->
                 call.respond(listUsersResponse {
-                    @OptIn(CreatesTransaction::class)
-                    users += usersService.getTeachers(params.page).map { it.toProto() }
+                    val (teachers, count) =
+                        @OptIn(CreatesTransaction::class)
+                        usersService.getTeachers(params.page)
+
+                    users += teachers.map { it.toProto() }
+                    total = count.toInt()
                 })
             }
 

@@ -114,7 +114,8 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
             try {
                 updateUser(id, update.update)
-            } catch (_: NothingToUpdateException) {}
+            } catch (_: NothingToUpdateException) {
+            }
 
             if (update.teams != null) {
                 StudentTeams.deleteWhere { StudentTeams.student eq id }
@@ -135,7 +136,8 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
             try {
                 updateUser(id, update.update)
-            } catch (_: NothingToUpdateException) {}
+            } catch (_: NothingToUpdateException) {
+            }
         }
     }
 
@@ -172,7 +174,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
     override fun getStudentById(id: Int): Student? = Student.findById(id)
 
     @CreatesTransaction
-    override fun getStudents(page: Int): List<Student> {
+    override fun getStudents(page: Int): Pair<List<Student>, Long> {
         require(page >= 1) { "Page must be at least 1" }
 
         val offset = ((page - 1) * PAGE_SIZE).toLong()
@@ -184,14 +186,14 @@ class UsersServiceImpl(val config: Config) : UsersService {
                 .offset(offset)
                 .map { it[Students.id].value }
 
-            if (studentIds.isEmpty()) return@transaction emptyList()
+            if (studentIds.isEmpty()) return@transaction (emptyList<Student>() to 0)
 
             val teamsMap = (StudentTeams innerJoin Teams)
                 .selectAll()
                 .where { StudentTeams.student inList studentIds }
                 .groupBy({ it[StudentTeams.student].value }, { Team.wrapRow(it) })
 
-            (Students innerJoin Users)
+            ((Students innerJoin Users)
                 .select(Students.columns + userInfoFields)
                 .where { Students.id inList studentIds }
                 .map { row ->
@@ -200,21 +202,21 @@ class UsersServiceImpl(val config: Config) : UsersService {
                         User.wrapRow(row),
                         teamsMap[row[Students.id].value] ?: emptyList()
                     )
-                }
+                }) to (Students.selectAll().count())
         }
     }
 
     @CreatesTransaction
-    override fun getTeachers(page: Int): List<Teacher> {
+    override fun getTeachers(page: Int): Pair<List<Teacher>, Long> {
         require(page >= 1) { "Page must be at least 1" }
 
         val offset = ((page - 1) * PAGE_SIZE).toLong()
         return transaction {
-            (Teachers innerJoin Users)
+            ((Teachers innerJoin Users)
                 .select(Teachers.columns + userInfoFields)
                 .limit(PAGE_SIZE)
                 .offset(offset)
-                .map { Teacher.from(it) }
+                .map { Teacher.from(it) }) to (Teachers.selectAll().count())
         }
     }
 

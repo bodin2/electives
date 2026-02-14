@@ -401,18 +401,36 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `list students`() = runTest {
-        val students = usersService.getStudents()
+        val (students, total) = usersService.getStudents()
 
         assertTrue(students.isNotEmpty())
+        // In tests, we should have students < PAGE_SIZE
+        assertEquals(total, students.size.toLong())
         assertTrue(students.any { it.id == Students.JOHN_ID })
     }
 
     @Test
     fun `list teachers`() = runTest {
-        val teachers = usersService.getTeachers()
+        val (teachers, total) = usersService.getTeachers()
 
         assertTrue(teachers.isNotEmpty())
+        // In tests, we should have students < PAGE_SIZE
+        assertEquals(total, teachers.size.toLong())
         assertTrue(teachers.any { it.id == Teachers.BOB_ID })
+    }
+
+    @Test
+    fun `list students on invalid page fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.getStudents(page = 0)
+        }
+    }
+
+    @Test
+    fun `list teachers on invalid page fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.getTeachers(page = 0)
+        }
     }
 
     @Test

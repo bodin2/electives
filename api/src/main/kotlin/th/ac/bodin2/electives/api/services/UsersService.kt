@@ -105,17 +105,20 @@ interface UsersService {
      * Gets a paginated list of students.
      *
      * @throws IllegalArgumentException if the page number is less than 1.
+     *
+     * @return A pair of the list of students and the total number of students (for pagination purposes).
      */
     @CreatesTransaction
-    fun getStudents(page: Int = 1): List<Student>
-
+    fun getStudents(page: Int = 1): Pair<List<Student>, Long>
     /**
      * Gets a paginated list of teachers.
      *
      * @throws IllegalArgumentException if the page number is less than 1.
+     *
+     * @return A pair of the list of teachers and the total number of teachers (for pagination purposes).
      */
     @CreatesTransaction
-    fun getTeachers(page: Int = 1): List<Teacher>
+    fun getTeachers(page: Int = 1): Pair<List<Teacher>, Long>
 
     /**
      * Validates password and creates a new session for the given user ID.
