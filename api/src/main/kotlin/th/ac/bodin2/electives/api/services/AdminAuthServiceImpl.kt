@@ -7,14 +7,13 @@ import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.CIDR
 import th.ac.bodin2.electives.utils.contains
 import th.ac.bodin2.electives.utils.withMinimumDelay
-import java.security.KeyFactory
+import java.security.PublicKey
 import java.security.SecureRandom
 import java.security.Signature
 import java.security.SignatureException
-import java.security.spec.X509EncodedKeySpec
 import java.time.LocalDateTime
 import java.util.*
-import kotlin.concurrent.Volatile
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 
 class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
@@ -31,16 +30,13 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    @Volatile
-    private var currentChallenge: ByteArray? = null
-
-    @Volatile
-    private var sessionData: SessionData? = null
+    private val currentChallenge: AtomicReference<ByteArray?> = AtomicReference(null)
+    private val sessionData: AtomicReference<SessionData> = AtomicReference(null)
 
     class Config(
         val sessionDurationSeconds: Long,
         val minimumSessionCreationTime: Duration,
-        val publicKey: X509EncodedKeySpec,
+        val publicKey: PublicKey,
         val allowedIPs: List<CIDR>?,
         val challengeTimeoutMillis: Long,
     )
@@ -56,11 +52,8 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
         return try {
             val sigBytes = Base64.getUrlDecoder().decode(signature)
 
-            val keyFactory = KeyFactory.getInstance("RSA")
-            val publicKey = keyFactory.generatePublic(config.publicKey)
-
             val sig = Signature.getInstance("SHA256withRSA")
-            sig.initVerify(publicKey)
+            sig.initVerify(config.publicKey)
             sig.update(challenge)
 
             sig.verify(sigBytes)
@@ -77,16 +70,12 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
             SecureRandom().nextBytes(this)
         }
 
-        synchronized(this) {
-            currentChallenge = challenge
-        }
+        currentChallenge.set(challenge)
 
         // Clear the challenge after duration
         scope.launch {
             delay(config.challengeTimeoutMillis)
-            if (currentChallenge === challenge) {
-                currentChallenge = null
-            }
+            currentChallenge.compareAndSet(challenge, null)
         }
 
         return Base64.getUrlEncoder()
@@ -100,32 +89,30 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
         }
 
         return withMinimumDelay(config.minimumSessionCreationTime) {
-            synchronized(this@AdminAuthServiceImpl) {
-                val challenge = currentChallenge
-                challenge ?: return@withMinimumDelay CreateSessionResult.NoChallenge
+            val challenge = currentChallenge.get()
+            challenge ?: return@withMinimumDelay CreateSessionResult.NoChallenge
 
-                if (verifySignature(signature, challenge)) {
-                    val session = Base64.getUrlEncoder()
-                        .withoutPadding()
-                        .encodeToString(ByteArray(TOKEN_SIZE).apply {
-                            SecureRandom().nextBytes(this)
-                        })
+            if (verifySignature(signature, challenge)) {
+                val session = Base64.getUrlEncoder()
+                    .withoutPadding()
+                    .encodeToString(ByteArray(TOKEN_SIZE).apply {
+                        SecureRandom().nextBytes(this)
+                    })
 
-                    val data = SessionData(
-                        hash = Argon2.hash(session.toCharArray()),
-                        expires = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds),
-                    )
+                val data = SessionData(
+                    hash = Argon2.hash(session.toCharArray()),
+                    expires = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds),
+                )
 
-                    sessionData = data
-                    currentChallenge = null
+                sessionData.set(data)
+                currentChallenge.set(null)
 
-                    logger.warn("New admin session created (IP: $ip)")
+                logger.warn("New admin session created (IP: $ip)")
 
-                    CreateSessionResult.Success(session)
-                } else {
-                    currentChallenge = null
-                    CreateSessionResult.InvalidSignature
-                }
+                CreateSessionResult.Success(session)
+            } else {
+                currentChallenge.set(null)
+                CreateSessionResult.InvalidSignature
             }
         }
     }
@@ -135,7 +122,7 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
             return false
         }
 
-        val session = sessionData
+        val session = sessionData.get()
         session ?: return false
 
         if (session.expires.isBefore(LocalDateTime.now())) {
@@ -146,6 +133,6 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
     }
 
     override fun clearSession() {
-        sessionData = null
+        sessionData.set(null)
     }
 }

@@ -47,7 +47,7 @@ class AdminAuthServiceImplTest : ApplicationTest() {
                             AdminAuthServiceImpl.Config(
                                 sessionDurationSeconds = sessionDurationSeconds,
                                 minimumSessionCreationTime = 0.milliseconds,
-                                publicKey = java.security.spec.X509EncodedKeySpec(adminKeyPair.public.encoded),
+                                publicKey = adminKeyPair.public,
                                 allowedIPs = allowedIPs,
                                 challengeTimeoutMillis = challengeTimeoutMillis
                             )

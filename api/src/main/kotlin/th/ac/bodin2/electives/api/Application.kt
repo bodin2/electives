@@ -18,6 +18,7 @@ import th.ac.bodin2.electives.utils.CIDR
 import th.ac.bodin2.electives.utils.getEnv
 import th.ac.bodin2.electives.utils.loadDotEnv
 import th.ac.bodin2.electives.utils.requireEnvNonBlank
+import java.security.KeyFactory
 import java.security.spec.X509EncodedKeySpec
 import java.util.*
 import kotlin.time.Duration.Companion.days
@@ -136,7 +137,14 @@ fun Application.provideDependencies() {
             )
         }
 
-        if (!getEnv("ADMIN_ENABLED").isNullOrEmpty() && !contains(DependencyKey<AdminAuthService>()))
+        if (!getEnv("ADMIN_ENABLED").isNullOrEmpty() && !contains(DependencyKey<AdminAuthService>())) {
+            val keyFactory = KeyFactory.getInstance("RSA")
+            val publicKey = keyFactory.generatePublic(
+                X509EncodedKeySpec(
+                    Base64.getDecoder().decode(requireEnvNonBlank("ADMIN_PUBLIC_KEY"))
+                )
+            )
+
             provide<AdminAuthService> {
                 AdminAuthServiceImpl(
                     AdminAuthServiceImpl.Config(
@@ -144,7 +152,7 @@ fun Application.provideDependencies() {
                         minimumSessionCreationTime = 3.seconds,
                         allowedIPs = getEnv("ADMIN_ALLOWED_IPS").let { ipString ->
                             val ips = ipString.let {
-                                if (it == null || it.isBlank()) {
+                                if (it.isNullOrBlank()) {
                                     this@provideDependencies.log.warn("ADMIN_ALLOWED_IPS is not set, defaulting to only allow localhost access.")
                                     return@let "127.0.0.0/8,::1/128"
                                 }
@@ -154,12 +162,11 @@ fun Application.provideDependencies() {
                             if (ips == "*") null
                             else ips.split(",").map { CIDR.parse(it.trim()) }
                         },
-                        publicKey = X509EncodedKeySpec(
-                            Base64.getDecoder().decode(requireEnvNonBlank("ADMIN_PUBLIC_KEY"))
-                        ),
+                        publicKey = publicKey,
                         challengeTimeoutMillis = 60000L
                     )
                 )
             }
+        }
     }
 }
