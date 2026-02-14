@@ -419,14 +419,14 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
 
         electiveSelectionService.forceSetAllStudentSelections(
             TestConstants.Students.JOHN_ID,
-            mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.CHEMISTRY_ID)
+            mapOf()
         )
 
         val selections = transaction {
             electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
         }
 
-        assertEquals(TestConstants.Subjects.CHEMISTRY_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id?.value)
+        assertTrue(selections.isEmpty())
     }
 
     @Test

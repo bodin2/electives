@@ -2,6 +2,8 @@ package th.ac.bodin2.electives.api.services
 
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.batchInsert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
@@ -50,13 +52,11 @@ class ElectiveSelectionServiceImpl(
     @CreatesTransaction
     override fun forceSetAllStudentSelections(userId: Int, selections: Map<Int, Int>) {
         transaction {
-            val student = Student.require(userId)
-
-            for ((electiveId, subjectId) in selections) {
-                val elective = Elective.require(electiveId)
-                val subject = Subject.require(subjectId)
-
-                Student.setElectiveSelection(student, elective, subject)
+            StudentElectives.deleteWhere { StudentElectives.student eq userId }
+            StudentElectives.batchInsert(selections.toList()) { (electiveId, subjectId) ->
+                this[StudentElectives.student] = userId
+                this[StudentElectives.elective] = electiveId
+                this[StudentElectives.subject] = subjectId
             }
         }
     }
