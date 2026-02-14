@@ -145,35 +145,39 @@ class AdminUsersController(
         val user = req.user
         if (user.id != id) return badRequest("ID in URL does not match body")
 
-        val userOrNull = transaction {
-            when (user.type) {
-                UserType.STUDENT -> usersService.createStudent(
-                    id = user.id,
-                    firstName = user.firstName,
-                    middleName = user.middleName,
-                    lastName = user.lastName,
-                    password = req.password,
-                    avatarUrl = user.avatarUrl
-                )
+        try {
+            val userOrNull = transaction {
+                when (user.type) {
+                    UserType.STUDENT -> usersService.createStudent(
+                        id = user.id,
+                        firstName = user.firstName,
+                        middleName = user.middleName,
+                        lastName = user.lastName,
+                        password = req.password,
+                        avatarUrl = user.avatarUrl
+                    )
 
-                UserType.TEACHER -> usersService.createTeacher(
-                    id = user.id,
-                    firstName = user.firstName,
-                    middleName = user.middleName,
-                    lastName = user.lastName,
-                    password = req.password,
-                    avatarUrl = user.avatarUrl
-                )
+                    UserType.TEACHER -> usersService.createTeacher(
+                        id = user.id,
+                        firstName = user.firstName,
+                        middleName = user.middleName,
+                        lastName = user.lastName,
+                        password = req.password,
+                        avatarUrl = user.avatarUrl
+                    )
 
-                else -> null
+                    else -> null
+                }
             }
-        }
 
-        when (userOrNull) {
-            is Student -> call.respond(userOrNull.toProto())
-            is Teacher -> call.respond(userOrNull.toProto())
+            when (userOrNull) {
+                is Student -> call.respond(userOrNull.toProto())
+                is Teacher -> call.respond(userOrNull.toProto())
 
-            else -> badRequest()
+                else -> badRequest()
+            }
+        } catch (e: ExposedSQLException) {
+            badRequest(e.message ?: "SQL exception occurred")
         }
     }
 
@@ -236,6 +240,8 @@ class AdminUsersController(
             ok()
         } catch (_: NotFoundException) {
             return badRequest("User not found")
+        } catch (e: ExposedSQLException) {
+            badRequest(e.message ?: "SQL exception occurred")
         }
     }
 }
@@ -320,6 +326,8 @@ class AdminElectivesController(
             ok()
         } catch (_: NotFoundException) {
             badRequest("Elective not found")
+        } catch (e: ExposedSQLException) {
+            badRequest(e.message ?: "SQL exception occurred")
         }
     }
 
@@ -419,22 +427,26 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
 
         if (subject.id != id) return badRequest("ID in URL does not match body")
 
-        @OptIn(CreatesTransaction::class)
-        subjectService.create(
-            id = subject.id,
-            name = subject.name,
-            description = if (subject.hasDescription()) subject.description else null,
-            code = subject.code,
-            tag = subject.tag,
-            location = subject.location,
-            capacity = subject.capacity,
-            team = if (subject.hasTeamId()) subject.teamId else null,
-            teacherIds = subject.teachersList.map { it.id },
-            thumbnailUrl = if (subject.hasThumbnailUrl()) subject.thumbnailUrl else null,
-            imageUrl = if (subject.hasImageUrl()) subject.imageUrl else null,
-        )
+        try {
+            @OptIn(CreatesTransaction::class)
+            subjectService.create(
+                id = subject.id,
+                name = subject.name,
+                description = if (subject.hasDescription()) subject.description else null,
+                code = subject.code,
+                tag = subject.tag,
+                location = subject.location,
+                capacity = subject.capacity,
+                team = if (subject.hasTeamId()) subject.teamId else null,
+                teacherIds = subject.teachersList.map { it.id },
+                thumbnailUrl = if (subject.hasThumbnailUrl()) subject.thumbnailUrl else null,
+                imageUrl = if (subject.hasImageUrl()) subject.imageUrl else null,
+            )
 
-        ok()
+            ok()
+        } catch (e: ExposedSQLException) {
+            badRequest(e.message ?: "SQL exception occurred")
+        }
     }
 
     private suspend fun RoutingContext.handleDeleteSubject(id: Int) {
@@ -444,6 +456,8 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
             ok()
         } catch (_: NotFoundException) {
             badRequest("Subject not found")
+        } catch (e: ExposedSQLException) {
+            badRequest(e.message ?: "SQL exception occurred")
         }
     }
 
@@ -517,10 +531,14 @@ class AdminTeamsController(private val teamService: TeamService) {
 
         if (team.id != id) return badRequest("ID in URL does not match body")
 
-        @OptIn(CreatesTransaction::class)
-        teamService.create(team.id, team.name)
+        try {
+            @OptIn(CreatesTransaction::class)
+            teamService.create(team.id, team.name)
+            ok()
+        } catch (e: ExposedSQLException) {
+            badRequest(e.message ?: "SQL exception occurred")
+        }
 
-        ok()
     }
 
     private suspend fun RoutingContext.handleDeleteTeam(id: Int) {
