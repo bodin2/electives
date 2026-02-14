@@ -7,6 +7,7 @@ import io.ktor.server.plugins.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
+import io.ktor.server.routing.Routing
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
@@ -16,6 +17,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.ADMIN_AUTHENTICATION
+import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN
 import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN_AUTH
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.*
@@ -104,30 +106,28 @@ class AdminUsersController(
     private val usersService: UsersService,
 ) {
     fun Application.register() {
-        routing {
-            authenticate(ADMIN_AUTHENTICATION) {
-                get<Admin.Users.Students> { params ->
-                    call.respond(listUsersResponse {
-                        @OptIn(CreatesTransaction::class)
-                        users += usersService.getStudents(params.page).map { it.toProto() }
-                    })
-                }
-
-                get<Admin.Users.Teachers> { params ->
-                    call.respond(listUsersResponse {
-                        @OptIn(CreatesTransaction::class)
-                        users += usersService.getTeachers(params.page).map { it.toProto() }
-                    })
-                }
-
-                get<Admin.Users.Id> { params -> context(usersService) { handleGetUser(params.id) } }
-
-                put<Admin.Users.Id> { params -> handlePutUser(params.id) }
-
-                patch<Admin.Users.Id> { params -> handlePatchUser(params.id) }
-
-                delete<Admin.Users.Id> { params -> handleDeleteUser(params.id) }
+        adminRoutes {
+            get<Admin.Users.Students> { params ->
+                call.respond(listUsersResponse {
+                    @OptIn(CreatesTransaction::class)
+                    users += usersService.getStudents(params.page).map { it.toProto() }
+                })
             }
+
+            get<Admin.Users.Teachers> { params ->
+                call.respond(listUsersResponse {
+                    @OptIn(CreatesTransaction::class)
+                    users += usersService.getTeachers(params.page).map { it.toProto() }
+                })
+            }
+
+            get<Admin.Users.Id> { params -> context(usersService) { handleGetUser(params.id) } }
+
+            put<Admin.Users.Id> { params -> handlePutUser(params.id) }
+
+            patch<Admin.Users.Id> { params -> handlePatchUser(params.id) }
+
+            delete<Admin.Users.Id> { params -> handleDeleteUser(params.id) }
         }
     }
 
@@ -236,16 +236,14 @@ class AdminUsersSelectionsController(
     private val electiveSelectionService: ElectiveSelectionService,
 ) {
     fun Application.register() {
-        routing {
-            authenticate(ADMIN_AUTHENTICATION) {
-                get<Admin.Users.Id.Selections> { params ->
-                    context(electiveSelectionService) {
-                        handleGetStudentSelections(params.parent.id)
-                    }
+        adminRoutes {
+            get<Admin.Users.Id.Selections> { params ->
+                context(electiveSelectionService) {
+                    handleGetStudentSelections(params.parent.id)
                 }
-
-                put<Admin.Users.Id.Selections> { params -> handlePutStudentSelections(params.parent.id) }
             }
+
+            put<Admin.Users.Id.Selections> { params -> handlePutStudentSelections(params.parent.id) }
         }
     }
 
@@ -274,19 +272,17 @@ class AdminElectivesController(
     private val electiveService: ElectiveService,
 ) {
     fun Application.register() {
-        routing {
-            authenticate(ADMIN_AUTHENTICATION) {
-                context(electiveService) {
-                    get<Admin.Electives> { handleGetElectives() }
+        adminRoutes {
+            context(electiveService) {
+                get<Admin.Electives> { handleGetElectives() }
 
-                    get<Admin.Electives.Id> { params -> handleGetElective(params.id) }
+                get<Admin.Electives.Id> { params -> handleGetElective(params.id) }
 
-                    put<Admin.Electives.Id> { params -> handlePutElective(params.id) }
+                put<Admin.Electives.Id> { params -> handlePutElective(params.id) }
 
-                    delete<Admin.Electives.Id> { params -> handleDeleteElective(params.id) }
+                delete<Admin.Electives.Id> { params -> handleDeleteElective(params.id) }
 
-                    patch<Admin.Electives.Id> { params -> handlePatchElective(params.id) }
-                }
+                patch<Admin.Electives.Id> { params -> handlePatchElective(params.id) }
             }
         }
     }
@@ -350,13 +346,11 @@ class AdminElectivesController(
 
 class AdminElectivesSubjectsController(private val electiveService: ElectiveService) {
     fun Application.register() {
-        routing {
-            authenticate(ADMIN_AUTHENTICATION) {
-                context(electiveService) {
-                    get<Admin.Electives.Id.Subjects> { params -> handleGetElectiveSubjects(params.parent.id) }
+        adminRoutes {
+            context(electiveService) {
+                get<Admin.Electives.Id.Subjects> { params -> handleGetElectiveSubjects(params.parent.id) }
 
-                    put<Admin.Electives.Id.Subjects> { params -> handlePutElectiveSubjects(params.parent.id) }
-                }
+                put<Admin.Electives.Id.Subjects> { params -> handlePutElectiveSubjects(params.parent.id) }
             }
         }
     }
@@ -383,18 +377,16 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
 
 class AdminSubjectsController(private val subjectService: SubjectService) {
     fun Application.register() {
-        routing {
-            authenticate(ADMIN_AUTHENTICATION) {
-                get<Admin.Subjects> { handleGetSubjects() }
+        adminRoutes {
+            get<Admin.Subjects> { handleGetSubjects() }
 
-                get<Admin.Subjects.Id> { params -> handleGetSubject(params.id) }
+            get<Admin.Subjects.Id> { params -> handleGetSubject(params.id) }
 
-                put<Admin.Subjects.Id> { params -> handlePutSubject(params.id) }
+            put<Admin.Subjects.Id> { params -> handlePutSubject(params.id) }
 
-                delete<Admin.Subjects.Id> { params -> handleDeleteSubject(params.id) }
+            delete<Admin.Subjects.Id> { params -> handleDeleteSubject(params.id) }
 
-                patch<Admin.Subjects.Id> { params -> handlePatchSubject(params.id) }
-            }
+            patch<Admin.Subjects.Id> { params -> handlePatchSubject(params.id) }
         }
     }
 
@@ -483,18 +475,16 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
 
 class AdminTeamsController(private val teamService: TeamService) {
     fun Application.register() {
-        routing {
-            authenticate(ADMIN_AUTHENTICATION) {
-                get<Admin.Teams> { handleGetTeams() }
+        adminRoutes {
+            get<Admin.Teams> { handleGetTeams() }
 
-                get<Admin.Teams.Id> { params -> handleGetTeam(params.id) }
+            get<Admin.Teams.Id> { params -> handleGetTeam(params.id) }
 
-                put<Admin.Teams.Id> { params -> handlePutTeam(params.id) }
+            put<Admin.Teams.Id> { params -> handlePutTeam(params.id) }
 
-                delete<Admin.Teams.Id> { params -> handleDeleteTeam(params.id) }
+            delete<Admin.Teams.Id> { params -> handleDeleteTeam(params.id) }
 
-                patch<Admin.Teams.Id> { params -> handlePatchTeam(params.id) }
-            }
+            patch<Admin.Teams.Id> { params -> handlePatchTeam(params.id) }
         }
     }
 
@@ -621,5 +611,15 @@ class Admin {
         // PUT: Team, GET: Team, DELETE, PATCH: TeamPatch
         @Resource("{id}")
         class Id(val parent: Teams, val id: Int)
+    }
+}
+
+private fun Application.adminRoutes(block: Routing.() -> Unit) {
+    routing {
+        authenticate(ADMIN_AUTHENTICATION) {
+            rateLimit(RATE_LIMIT_ADMIN) {
+                block()
+            }
+        }
     }
 }
