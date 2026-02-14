@@ -188,7 +188,14 @@ class AdminUsersController(
 
                 @OptIn(CreatesTransaction::class)
                 when (type) {
-                    UserType.STUDENT -> usersService.updateStudent(id, UsersService.StudentUpdate(update))
+                    UserType.STUDENT -> usersService.updateStudent(
+                        id,
+                        UsersService.StudentUpdate(
+                            update,
+                            teams = if (req.patchTeams) req.teamsList else null
+                        )
+                    )
+
                     UserType.TEACHER -> usersService.updateTeacher(id, UsersService.TeacherUpdate(update))
 
                     else -> throw IllegalStateException("Unreachable case: $type")
