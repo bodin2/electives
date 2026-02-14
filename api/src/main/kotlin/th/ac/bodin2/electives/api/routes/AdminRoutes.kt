@@ -559,7 +559,7 @@ class AdminTeamsController(private val teamService: TeamService) {
 
 private val Long.inLocalDateTimeBySeconds: LocalDateTime
     get() = Instant.ofEpochSecond(this)
-        .atZone(ZoneId.systemDefault())
+        .atZone(ZoneId.of("UTC"))
         .toLocalDateTime()
 
 @Suppress("UNUSED")
