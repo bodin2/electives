@@ -90,20 +90,20 @@ class TestUsersService : UsersService {
     }
 
     @CreatesTransaction
-    override fun getStudents(page: Int): List<Student> {
+    override fun getStudents(page: Int): Pair<List<Student>, Long> {
         return if (page == 1) {
-            listOf(mockStudent(STUDENT_ID))
+            listOf(mockStudent(STUDENT_ID)) to 1
         } else {
-            emptyList()
+            emptyList<Student>() to 0
         }
     }
 
     @CreatesTransaction
-    override fun getTeachers(page: Int): List<Teacher> {
+    override fun getTeachers(page: Int): Pair<List<Teacher>, Long> {
         return if (page == 1) {
-            listOf(mockTeacher(TEACHER_ID))
+            listOf(mockTeacher(TEACHER_ID)) to 1
         } else {
-            emptyList()
+            emptyList<Teacher>() to 0
         }
     }
 }

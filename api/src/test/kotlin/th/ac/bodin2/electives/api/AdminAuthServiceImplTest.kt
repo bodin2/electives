@@ -265,18 +265,14 @@ class AdminAuthServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `multiple challenges don't interfere`(): Unit = runTest {
-        val challenge1 = adminAuthService.newChallenge()
-        val challenge2 = adminAuthService.newChallenge()
+    fun `challenges clear after failed creation`(): Unit = runTest {
+        val challenge = adminAuthService.newChallenge()
 
-        // First challenge should no longer work
-        val signature1 = sign(challenge1)
-        val result1 = adminAuthService.createSession(signature1, "127.0.0.1")
+        val result1 = adminAuthService.createSession("invalid-signature", "127.0.0.1")
         assertIs<CreateSessionResult.InvalidSignature>(result1)
 
-        // Second challenge should work
-        val signature2 = sign(challenge2)
-        val result2 = adminAuthService.createSession(signature2, "127.0.0.1")
-        assertIs<CreateSessionResult.Success>(result2)
+        val signature = sign(challenge)
+        val result2 = adminAuthService.createSession(signature, "127.0.0.1")
+        assertIs<CreateSessionResult.NoChallenge>(result2)
     }
 }
