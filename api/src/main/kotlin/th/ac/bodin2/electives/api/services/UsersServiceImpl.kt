@@ -115,7 +115,8 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
             try {
                 updateUser(id, update.update)
-            } catch (_: NothingToUpdateException) {
+            } catch (e: NothingToUpdateException) {
+                update.teams ?: throw e
             }
 
             if (update.teams != null) {
@@ -135,10 +136,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         transaction {
             Teacher.require(id)
 
-            try {
-                updateUser(id, update.update)
-            } catch (_: NothingToUpdateException) {
-            }
+            updateUser(id, update.update)
         }
     }
 
