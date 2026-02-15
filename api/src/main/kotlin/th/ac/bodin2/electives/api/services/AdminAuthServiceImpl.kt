@@ -89,7 +89,7 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
         }
 
         return withMinimumDelay(config.minimumSessionCreationTime) {
-            val challenge = currentChallenge.get()
+            val challenge = currentChallenge.getAndSet(null)
             challenge ?: return@withMinimumDelay CreateSessionResult.NoChallenge
 
             if (verifySignature(signature, challenge)) {
@@ -105,13 +105,11 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
                 )
 
                 sessionData.set(data)
-                currentChallenge.set(null)
 
                 logger.warn("New admin session created (IP: $ip)")
 
                 CreateSessionResult.Success(session)
             } else {
-                currentChallenge.set(null)
                 CreateSessionResult.InvalidSignature
             }
         }
