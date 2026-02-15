@@ -1,6 +1,5 @@
 package th.ac.bodin2.electives.api.services
 
-import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
 import th.ac.bodin2.electives.utils.Argon2
@@ -22,16 +21,20 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
         val expires: LocalDateTime,
     )
 
+    private class Challenge(
+        val bytes: ByteArray,
+        val expires: LocalDateTime,
+    )
+
     companion object {
         private const val CHALLENGE_SIZE = 128
         private const val TOKEN_SIZE = 64
         private val logger = LoggerFactory.getLogger(AdminAuthServiceImpl::class.java)
+        private val secureRand = SecureRandom()
     }
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    private val currentChallenge: AtomicReference<ByteArray?> = AtomicReference(null)
-    private val sessionData: AtomicReference<SessionData> = AtomicReference(null)
+    private val currentChallenge: AtomicReference<Challenge?> = AtomicReference(null)
+    private val sessionData: AtomicReference<SessionData?> = AtomicReference(null)
 
     class Config(
         val sessionDurationSeconds: Long,
@@ -66,21 +69,17 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
     }
 
     override fun newChallenge(): String {
-        val challenge = ByteArray(CHALLENGE_SIZE).apply {
-            SecureRandom().nextBytes(this)
-        }
+        val challengeBytes = ByteArray(CHALLENGE_SIZE).apply { secureRand.nextBytes(this) }
+        val challenge = Challenge(
+            bytes = challengeBytes,
+            expires = LocalDateTime.now().plusSeconds(config.challengeTimeoutMillis.div(1000)),
+        )
 
         currentChallenge.set(challenge)
 
-        // Clear the challenge after duration
-        scope.launch {
-            delay(config.challengeTimeoutMillis)
-            currentChallenge.compareAndSet(challenge, null)
-        }
-
         return Base64.getUrlEncoder()
             .withoutPadding()
-            .encodeToString(challenge)
+            .encodeToString(challengeBytes)
     }
 
     override suspend fun createSession(signature: String, ip: String): CreateSessionResult {
@@ -90,14 +89,13 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
 
         return withMinimumDelay(config.minimumSessionCreationTime) {
             val challenge = currentChallenge.getAndSet(null)
-            challenge ?: return@withMinimumDelay CreateSessionResult.NoChallenge
+            if (challenge == null || challenge.expires.isBefore(LocalDateTime.now()))
+                return@withMinimumDelay CreateSessionResult.NoChallenge
 
-            if (verifySignature(signature, challenge)) {
+            if (verifySignature(signature, challenge.bytes)) {
                 val session = Base64.getUrlEncoder()
                     .withoutPadding()
-                    .encodeToString(ByteArray(TOKEN_SIZE).apply {
-                        SecureRandom().nextBytes(this)
-                    })
+                    .encodeToString(ByteArray(TOKEN_SIZE).apply { secureRand.nextBytes(this) })
 
                 val data = SessionData(
                     hash = Argon2.hash(session.toCharArray()),
@@ -127,7 +125,7 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
             return false
         }
 
-        return Argon2.verify(session.hash.toByteArray(), token.toCharArray())
+        return Argon2.verify(session.hash, token.toCharArray())
     }
 
     override fun clearSession() {
