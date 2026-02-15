@@ -1,5 +1,7 @@
 package th.ac.bodin2.electives.api.services
 
+import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.Student
@@ -20,13 +22,16 @@ interface ElectiveService {
     /**
      * Deletes an elective by its ID.
      *
-     * @throws th.ac.bodin2.electives.NotFoundException if the elective does not exist.
+     * @throws NotFoundException if the elective does not exist.
      */
     @CreatesTransaction
     fun delete(id: Int)
 
     /**
      * Updates an elective's information.
+     *
+     * @throws NotFoundException if the elective does not exist.
+     * @throws NothingToUpdateException if there's nothing to update.
      */
     @CreatesTransaction
     fun update(id: Int, update: ElectiveUpdate)

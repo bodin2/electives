@@ -8,6 +8,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
@@ -79,6 +80,8 @@ class SubjectServiceImpl : SubjectService {
                 update.team?.let { team -> it[this.team] = team }
                 update.thumbnailUrl?.let { thumbnailUrl -> it[this.thumbnailUrl] = thumbnailUrl }
                 update.imageUrl?.let { imageUrl -> it[this.imageUrl] = imageUrl }
+
+                if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
             }
 
             if (update.patchTeachers && update.teacherIds != null) {

@@ -4,6 +4,7 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveService
 import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
@@ -156,6 +157,17 @@ class ElectiveServiceImplTest : ApplicationTest() {
         val fetched = transaction { electiveService.getById(TestConstants.Electives.SCIENCE_ID) }
         assertNotNull(fetched)
         assertEquals("Updated Science", fetched.name)
+    }
+
+    @Test
+    fun `update elective with nothing`() = runTest {
+        assertFailsWith<NothingToUpdateException> {
+            @OptIn(CreatesTransaction::class)
+            electiveService.update(
+                TestConstants.Electives.SCIENCE_ID,
+                ElectiveService.ElectiveUpdate()
+            )
+        }
     }
 
     @Test

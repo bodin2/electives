@@ -10,3 +10,5 @@ enum class NotFoundEntity {
     ELECTIVE_SELECTION,
     TEAM,
 }
+
+class NothingToUpdateException : IllegalArgumentException("Nothing to update")

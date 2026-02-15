@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.*
@@ -140,8 +141,6 @@ class UsersServiceImpl(val config: Config) : UsersService {
             }
         }
     }
-
-    private class NothingToUpdateException : IllegalArgumentException("Nothing to update")
 
     private fun updateUser(id: Int, update: UsersService.UserUpdate) {
         Users.update(where = { Users.id eq id }) {

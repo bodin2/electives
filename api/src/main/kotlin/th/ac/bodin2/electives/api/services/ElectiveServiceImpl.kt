@@ -9,6 +9,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
 import th.ac.bodin2.electives.db.Elective
@@ -57,6 +58,8 @@ class ElectiveServiceImpl : ElectiveService {
                 if (update.setTeam) it[this.team] = update.team
                 if (update.setStartDate) it[this.startDate] = update.startDate
                 if (update.setEndDate) it[this.endDate] = update.endDate
+
+                if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
             }
         }
     }

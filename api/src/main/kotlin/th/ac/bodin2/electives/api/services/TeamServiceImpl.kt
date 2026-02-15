@@ -7,6 +7,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Team
 import th.ac.bodin2.electives.db.models.Teams
@@ -39,6 +40,8 @@ class TeamServiceImpl : TeamService {
             Team.findById(id) ?: throw NotFoundException(NotFoundEntity.TEAM)
             Teams.update({ Teams.id eq id }) {
                 update.name?.let { name -> it[this.name] = name }
+
+                if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
             }
         }
     }

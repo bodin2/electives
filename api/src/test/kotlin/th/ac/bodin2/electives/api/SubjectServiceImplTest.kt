@@ -4,15 +4,12 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.SubjectService
 import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.proto.api.SubjectTag
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertFailsWith
+import kotlin.test.*
 
 class SubjectServiceImplTest : ApplicationTest() {
     private val ApplicationTestBuilder.subjectService: SubjectService
@@ -91,6 +88,17 @@ class SubjectServiceImplTest : ApplicationTest() {
         val fetched = transaction { subjectService.getById(TestConstants.Subjects.PHYSICS_ID) }
         assertNotNull(fetched)
         assertEquals("Advanced Physics", fetched.name)
+    }
+
+    @Test
+    fun `update subject with nothing`() = runTest {
+        assertFailsWith<NothingToUpdateException> {
+            @OptIn(CreatesTransaction::class)
+            subjectService.update(
+                TestConstants.Subjects.PHYSICS_ID,
+                SubjectService.SubjectUpdate()
+            )
+        }
     }
 
     @Test

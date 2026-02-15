@@ -1,5 +1,7 @@
 package th.ac.bodin2.electives.api.services
 
+import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.proto.api.SubjectTag
@@ -23,7 +25,7 @@ interface SubjectService {
     /**
      * Deletes a subject by its ID.
      *
-     * @throws th.ac.bodin2.electives.NotFoundException if the subject does not exist.
+     * @throws NotFoundException if the subject does not exist.
      */
     @CreatesTransaction
     fun delete(id: Int)
@@ -31,7 +33,8 @@ interface SubjectService {
     /**
      * Updates a subject's information.
      *
-     * @throws th.ac.bodin2.electives.NotFoundException if the subject or team does not exist.
+     * @throws NotFoundException if the subject or team does not exist.
+     * @throws NothingToUpdateException if there's nothing to update.
      */
     @CreatesTransaction
     fun update(id: Int, update: SubjectUpdate)

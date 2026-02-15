@@ -16,6 +16,7 @@ import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ADMIN_AUTHENTICATION
 import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN
 import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN_AUTH
@@ -230,6 +231,8 @@ class AdminUsersController(
 
                 else -> throw e
             }
+        } catch (_: NothingToUpdateException) {
+            badRequest("Nothing to update")
         }
     }
 
@@ -356,6 +359,8 @@ class AdminElectivesController(
 
                 else -> throw e
             }
+        } catch (_: NothingToUpdateException) {
+            badRequest("Nothing to update")
         }
     }
 }
@@ -491,6 +496,8 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
 
                 else -> throw e
             }
+        } catch (_: NothingToUpdateException) {
+            badRequest("Nothing to update")
         }
     }
 }
@@ -571,6 +578,8 @@ class AdminTeamsController(private val teamService: TeamService) {
 
                 else -> throw e
             }
+        } catch (_: NothingToUpdateException) {
+            badRequest("Nothing to update")
         }
     }
 }

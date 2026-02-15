@@ -4,14 +4,11 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.NothingToUpdateException
+import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.TeamService
 import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertFailsWith
+import kotlin.test.*
 
 class TeamServiceImplTest : ApplicationTest() {
     private val ApplicationTestBuilder.teamService: TeamService
@@ -85,6 +82,17 @@ class TeamServiceImplTest : ApplicationTest() {
         val fetched = transaction { teamService.getById(TestConstants.Teams.TEAM_1_ID) }
         assertNotNull(fetched)
         assertEquals("Updated Team", fetched.name)
+    }
+
+    @Test
+    fun `update team nothing to update`() = runTest {
+        assertFailsWith<NothingToUpdateException> {
+            @OptIn(CreatesTransaction::class)
+            teamService.update(
+                TestConstants.Teams.TEAM_1_ID,
+                TeamService.TeamUpdate()
+            )
+        }
     }
 
     @Test
