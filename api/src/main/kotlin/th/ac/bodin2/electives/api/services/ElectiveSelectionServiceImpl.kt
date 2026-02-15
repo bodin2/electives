@@ -54,6 +54,9 @@ class ElectiveSelectionServiceImpl(
         transaction {
             StudentElectives.deleteWhere { StudentElectives.student eq userId }
             StudentElectives.batchInsert(selections.toList()) { (electiveId, subjectId) ->
+                Elective.require(electiveId)
+                Subject.require(subjectId)
+
                 this[StudentElectives.student] = userId
                 this[StudentElectives.elective] = electiveId
                 this[StudentElectives.subject] = subjectId
