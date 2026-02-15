@@ -185,7 +185,9 @@ class UsersServiceImpl(val config: Config) : UsersService {
                 .offset(offset)
                 .map { it[Students.id].value }
 
-            if (studentIds.isEmpty()) return@transaction (emptyList<Student>() to 0)
+            val count = Students.selectAll().count()
+
+            if (studentIds.isEmpty()) return@transaction (emptyList<Student>() to count)
 
             val teamsMap = (StudentTeams innerJoin Teams)
                 .selectAll()
@@ -201,7 +203,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
                         User.wrapRow(row),
                         teamsMap[row[Students.id].value] ?: emptyList()
                     )
-                }) to (Students.selectAll().count())
+                }) to (count)
         }
     }
 

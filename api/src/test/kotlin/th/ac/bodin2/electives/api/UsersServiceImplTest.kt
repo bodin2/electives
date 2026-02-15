@@ -420,6 +420,14 @@ class UsersServiceImplTest : ApplicationTest() {
     }
 
     @Test
+    fun `list students on empty page`() = runTest {
+        val (students, total) = usersService.getStudents(page = 100)
+
+        assertTrue(students.isEmpty())
+        assertTrue(total >= 0)
+    }
+
+    @Test
     fun `list students on invalid page fails`() = runTest {
         assertFailsWith<IllegalArgumentException> {
             usersService.getStudents(page = 0)
