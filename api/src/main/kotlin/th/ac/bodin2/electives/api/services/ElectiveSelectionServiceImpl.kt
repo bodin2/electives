@@ -7,7 +7,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
@@ -188,17 +188,17 @@ class ElectiveSelectionServiceImpl(
 
     private fun NotFoundException.tryHandling(): ModifySelectionResult {
         return when (entity) {
-            NotFoundEntity.ELECTIVE,
-            NotFoundEntity.SUBJECT,
-            NotFoundEntity.STUDENT -> {
+            ExceptionEntity.ELECTIVE,
+            ExceptionEntity.SUBJECT,
+            ExceptionEntity.STUDENT -> {
                 ModifySelectionResult.NotFound(entity)
             }
 
             // Should never throw, we already check teacher existence in setStudentSelection
-            NotFoundEntity.TEACHER -> throw IllegalStateException("Unreachable TEACHER NotFoundException")
+            ExceptionEntity.TEACHER -> throw IllegalStateException("Unreachable TEACHER NotFoundException")
 
             // Should never throw, we already try to get the selection above in deleteStudentSelection
-            NotFoundEntity.ELECTIVE_SELECTION -> throw IllegalStateException("Unreachable ELECTIVE_SELECTION NotFoundException")
+            ExceptionEntity.ELECTIVE_SELECTION -> throw IllegalStateException("Unreachable ELECTIVE_SELECTION NotFoundException")
 
             else -> throw this
         }

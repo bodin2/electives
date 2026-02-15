@@ -4,10 +4,11 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.dao.load
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ConflictException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -26,17 +27,20 @@ class ElectiveServiceImpl : ElectiveService {
         startDate: LocalDateTime?,
         endDate: LocalDateTime?
     ) = transaction {
-        Elective.wrapRow(Electives.insert {
+        val stmt = Electives.insertIgnore {
             it[this.id] = id
             it[this.name] = name
             it[this.startDate] = startDate
             it[this.endDate] = endDate
 
             if (team != null) {
-                Team.exists(team)
+                if (!Team.exists(team)) throw NotFoundException(ExceptionEntity.TEAM)
                 it[this.team] = team
             }
-        }.resultedValues!!.first())
+        }
+
+        if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.ELECTIVE)
+        Elective.wrapRow(stmt.resultedValues!!.first())
     }
 
 
@@ -45,7 +49,7 @@ class ElectiveServiceImpl : ElectiveService {
         transaction {
             val rows = Electives.deleteWhere { Electives.id eq id }
             if (rows == 0) {
-                throw NotFoundException(NotFoundEntity.ELECTIVE)
+                throw NotFoundException(ExceptionEntity.ELECTIVE)
             }
         }
     }
@@ -60,7 +64,7 @@ class ElectiveServiceImpl : ElectiveService {
                 if (update.setStartDate) it[this.startDate] = update.startDate
                 if (update.setEndDate) it[this.endDate] = update.endDate
                 if (update.setTeam) {
-                    if (update.team != null) Team.exists(update.team)
+                    if (update.team != null && !Team.exists(update.team)) throw NotFoundException(ExceptionEntity.TEAM)
                     it[this.team] = update.team
                 }
 
@@ -95,7 +99,7 @@ class ElectiveServiceImpl : ElectiveService {
             return QueryResult.Success(Elective.getSubjects(elective))
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.ELECTIVE -> QueryResult.ElectiveNotFound
+                ExceptionEntity.ELECTIVE -> QueryResult.ElectiveNotFound
                 else -> throw e
             }
         }
@@ -113,8 +117,8 @@ class ElectiveServiceImpl : ElectiveService {
             return QueryResult.Success(Subject.findById(subject.id)!!)
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.SUBJECT -> QueryResult.SubjectNotFound
-                NotFoundEntity.ELECTIVE -> QueryResult.ElectiveNotFound
+                ExceptionEntity.SUBJECT -> QueryResult.SubjectNotFound
+                ExceptionEntity.ELECTIVE -> QueryResult.ElectiveNotFound
                 else -> throw e
             }
         }
@@ -139,8 +143,8 @@ class ElectiveServiceImpl : ElectiveService {
             return QueryResult.Success(teachers to students)
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.SUBJECT -> QueryResult.SubjectNotFound
-                NotFoundEntity.ELECTIVE -> QueryResult.ElectiveNotFound
+                ExceptionEntity.SUBJECT -> QueryResult.SubjectNotFound
+                ExceptionEntity.ELECTIVE -> QueryResult.ElectiveNotFound
                 else -> throw e
             }
         }

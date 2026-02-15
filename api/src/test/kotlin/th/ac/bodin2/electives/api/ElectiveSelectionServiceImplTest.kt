@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService
@@ -141,7 +141,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         )
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.NotFound>(result)
-        assertEquals(NotFoundEntity.ELECTIVE, result.entity)
+        assertEquals(ExceptionEntity.ELECTIVE, result.entity)
     }
 
     @Test
@@ -154,7 +154,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         )
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.NotFound>(result)
-        assertEquals(NotFoundEntity.SUBJECT, result.entity)
+        assertEquals(ExceptionEntity.SUBJECT, result.entity)
     }
 
     @Test
@@ -245,7 +245,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         )
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.NotFound>(result)
-        assertEquals(NotFoundEntity.ELECTIVE, result.entity)
+        assertEquals(ExceptionEntity.ELECTIVE, result.entity)
     }
 
     @Test

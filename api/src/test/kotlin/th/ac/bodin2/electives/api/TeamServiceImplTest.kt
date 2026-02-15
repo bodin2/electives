@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -47,6 +48,14 @@ class TeamServiceImplTest : ApplicationTest() {
         val fetched = transaction { teamService.getById(newId) }
         assertNotNull(fetched)
         assertEquals("New Team", fetched.name)
+    }
+
+    @Test
+    fun `create team with duplicate id throws conflict`() = runTest {
+        assertFailsWith<ConflictException> {
+            @OptIn(CreatesTransaction::class)
+            teamService.create(TestConstants.Teams.TEAM_1_ID, "Duplicate Team")
+        }
     }
 
     @Test

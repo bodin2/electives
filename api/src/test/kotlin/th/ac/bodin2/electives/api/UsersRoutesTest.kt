@@ -3,7 +3,7 @@ package th.ac.bodin2.electives.api
 import io.ktor.client.statement.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
 import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_ID
@@ -139,19 +139,19 @@ class UsersRoutesTest : ApplicationTest() {
 
     @Test
     fun `modify selection on not found elective`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.NotFound(NotFoundEntity.ELECTIVE))
+        modifySelectionWithResult(ModifySelectionResult.NotFound(ExceptionEntity.ELECTIVE))
             .assertNotFound("Elective not found")
     }
 
     @Test
     fun `modify selection on not found subject`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.NotFound(NotFoundEntity.SUBJECT))
+        modifySelectionWithResult(ModifySelectionResult.NotFound(ExceptionEntity.SUBJECT))
             .assertBadRequest("Subject does not exist")
     }
 
     @Test
     fun `modify selection on non-student user`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.NotFound(NotFoundEntity.STUDENT))
+        modifySelectionWithResult(ModifySelectionResult.NotFound(ExceptionEntity.STUDENT))
             .assertBadRequest("Modifying selections for non-student users")
     }
 

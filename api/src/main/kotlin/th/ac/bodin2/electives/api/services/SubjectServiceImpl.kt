@@ -3,10 +3,11 @@ package th.ac.bodin2.electives.api.services
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ConflictException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -33,7 +34,7 @@ class SubjectServiceImpl : SubjectService {
         thumbnailUrl: String?,
         imageUrl: String?,
     ) = transaction {
-        val subject = Subject.wrapRow(Subjects.insert {
+        val stmt = Subjects.insertIgnore {
             it[this.id] = id
             it[this.name] = name
             it[this.capacity] = capacity
@@ -44,10 +45,12 @@ class SubjectServiceImpl : SubjectService {
             if (thumbnailUrl != null) it[this.thumbnailUrl] = thumbnailUrl
             if (imageUrl != null) it[this.imageUrl] = imageUrl
             if (team != null) {
-                Team.exists(team)
+                if (!Team.exists(team)) throw NotFoundException(ExceptionEntity.TEAM)
                 it[this.team] = team
             }
-        }.resultedValues!!.first())
+        }
+
+        if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.SUBJECT)
 
         if (teacherIds.isNotEmpty()) {
             TeacherSubjects.batchInsert(teacherIds) { teacherId ->
@@ -58,7 +61,7 @@ class SubjectServiceImpl : SubjectService {
             }
         }
 
-        subject
+        Subject.wrapRow(stmt.resultedValues!!.first())
     }
 
     @CreatesTransaction
@@ -66,7 +69,7 @@ class SubjectServiceImpl : SubjectService {
         transaction {
             val rows = Subjects.deleteWhere { Subjects.id eq id }
             if (rows == 0) {
-                throw NotFoundException(NotFoundEntity.SUBJECT)
+                throw NotFoundException(ExceptionEntity.SUBJECT)
             }
         }
     }
@@ -75,23 +78,28 @@ class SubjectServiceImpl : SubjectService {
     override fun update(id: Int, update: SubjectService.SubjectUpdate) {
         transaction {
             Subject.require(id)
-            Subjects.update({ Subjects.id eq id }) {
-                if (update.setTeam) {
-                    if (update.team != null) Team.exists(update.team)
-                    it[team] = update.team
+
+            try {
+                Subjects.update({ Subjects.id eq id }) {
+                    if (update.setTeam) {
+                        if (update.team != null && !Team.exists(update.team)) throw NotFoundException(ExceptionEntity.TEAM)
+                        it[team] = update.team
+                    }
+
+                    update.name?.let { name -> it[this.name] = name }
+                    update.tag?.let { tag -> it[this.tag] = tag.number }
+                    update.capacity?.let { capacity -> it[this.capacity] = capacity }
+
+                    if (update.setDescription) it[description] = update.description
+                    if (update.setCode) it[code] = update.code
+                    if (update.setLocation) it[location] = update.location
+                    if (update.setThumbnailUrl) it[thumbnailUrl] = update.thumbnailUrl
+                    if (update.setImageUrl) it[imageUrl] = update.imageUrl
+
+                    if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
                 }
-
-                update.name?.let { name -> it[this.name] = name }
-                update.tag?.let { tag -> it[this.tag] = tag.number }
-                update.capacity?.let { capacity -> it[this.capacity] = capacity }
-
-                if (update.setDescription) it[description] = update.description
-                if (update.setCode) it[code] = update.code
-                if (update.setLocation) it[location] = update.location
-                if (update.setThumbnailUrl) it[thumbnailUrl] = update.thumbnailUrl
-                if (update.setImageUrl) it[imageUrl] = update.imageUrl
-
-                if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
+            } catch (e: NothingToUpdateException) {
+                update.teacherIds ?: throw e
             }
 
             if (update.teacherIds != null) {

@@ -66,7 +66,7 @@ class NotificationsServiceImpl(
     private val connections = ConcurrentHashMap<Int, ClientConnection>()
 
     private val subjectSelectionSubscriptions =
-        mutableMapOf<Int, MutableMap<Int, MutableList<SubjectSelectionUpdateListener>>>()
+        ConcurrentHashMap<Int, MutableMap<Int, MutableList<SubjectSelectionUpdateListener>>>()
 
     internal fun isBulkUpdatesEnabled() = config.bulkUpdatesEnabled
 

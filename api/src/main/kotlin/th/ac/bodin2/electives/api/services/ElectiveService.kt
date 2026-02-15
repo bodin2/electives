@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
+import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -14,6 +15,7 @@ interface ElectiveService {
      * Creates a new elective with the given information.
      *
      * @throws NotFoundException if the specified team does not exist.
+     * @throws ConflictException if an elective with the same ID already exists.
      */
     @CreatesTransaction
     fun create(

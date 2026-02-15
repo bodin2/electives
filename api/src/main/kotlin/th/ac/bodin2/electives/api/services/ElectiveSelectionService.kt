@@ -1,6 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Subject
 
@@ -86,7 +86,7 @@ interface ElectiveSelectionService {
     sealed class ModifySelectionResult {
         data object Success : ModifySelectionResult()
 
-        data class NotFound(val entity: NotFoundEntity) : ModifySelectionResult()
+        data class NotFound(val entity: ExceptionEntity) : ModifySelectionResult()
         data class CannotEnroll(val status: CanEnrollStatus) : ModifySelectionResult()
         data class CannotModify(val status: ModifySelectionStatus) : ModifySelectionResult()
     }

@@ -8,7 +8,7 @@ import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.routing
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_USERS
 import th.ac.bodin2.electives.api.RATE_LIMIT_USERS_SELECTIONS
@@ -87,9 +87,9 @@ class UsersController(
                  * See [th.ac.bodin2.electives.api.services.ElectiveSelectionServiceImpl.tryHandling]
                  */
                 return when (result.entity) {
-                    NotFoundEntity.ELECTIVE -> notFound("Elective not found")
-                    NotFoundEntity.SUBJECT -> badRequest("Subject does not exist")
-                    NotFoundEntity.STUDENT -> modifyingNonStudentUserSelectionError()
+                    ExceptionEntity.ELECTIVE -> notFound("Elective not found")
+                    ExceptionEntity.SUBJECT -> badRequest("Subject does not exist")
+                    ExceptionEntity.STUDENT -> modifyingNonStudentUserSelectionError()
 
                     else -> throw IllegalStateException("Unreachable case: ${result.entity}")
                 }
@@ -143,8 +143,8 @@ class UsersController(
 
             is ModifySelectionResult.NotFound -> {
                 return when (result.entity) {
-                    NotFoundEntity.ELECTIVE -> notFound("Elective not found")
-                    NotFoundEntity.STUDENT -> modifyingNonStudentUserSelectionError()
+                    ExceptionEntity.ELECTIVE -> notFound("Elective not found")
+                    ExceptionEntity.STUDENT -> modifyingNonStudentUserSelectionError()
 
                     else -> throw IllegalStateException("Unreachable case: ${result.entity}")
                 }

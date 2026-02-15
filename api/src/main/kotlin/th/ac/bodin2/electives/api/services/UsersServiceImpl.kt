@@ -8,7 +8,8 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ConflictException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -71,7 +72,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
                 }
             }.firstOrNull()
 
-        query ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
+        query ?: throw NotFoundException(ExceptionEntity.USER, "User does not exist: $id")
 
         runBlocking { userTypeCache.put(id, query) }
         return query
@@ -99,7 +100,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
     override fun deleteUser(id: Int) {
         val rows = transaction { Users.deleteWhere { Users.id eq id } }
         if (rows == 0) {
-            throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
+            throw NotFoundException(ExceptionEntity.USER, "User does not exist: $id")
         }
 
         runBlocking {
@@ -122,7 +123,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
             if (update.teams != null) {
                 StudentTeams.deleteWhere { StudentTeams.student eq id }
                 StudentTeams.batchInsert(update.teams) { teamId ->
-                    if (!Team.exists(teamId)) throw NotFoundException(NotFoundEntity.TEAM)
+                    if (!Team.exists(teamId)) throw NotFoundException(ExceptionEntity.TEAM)
 
                     this[StudentTeams.student] = id
                     this[StudentTeams.team] = teamId
@@ -163,7 +164,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
             }
         }
 
-        if (rows == 0) throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
+        if (rows == 0) throw NotFoundException(ExceptionEntity.USER, "User does not exist: $id")
     }
 
     override fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)
@@ -233,7 +234,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
             transaction {
                 val user = Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull()
-                    ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
+                    ?: throw NotFoundException(ExceptionEntity.USER, "User does not exist: $id")
 
                 val passwordHash = user[Users.passwordHash]
 
@@ -265,7 +266,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         val userId = subject.toIntOrNull() ?: throw IllegalArgumentException("Invalid token subject: $subject")
 
         val user = Users.select(Users.sessionHash, Users.sessionExpiry).where { Users.id eq userId }.singleOrNull()
-            ?: throw NotFoundException(NotFoundEntity.USER, "User does not exist: $userId")
+            ?: throw NotFoundException(ExceptionEntity.USER, "User does not exist: $userId")
 
         val sessionExpiry = user[Users.sessionExpiry]
             ?: throw IllegalArgumentException("No active session for user: $userId")
@@ -304,14 +305,17 @@ class UsersServiceImpl(val config: Config) : UsersService {
     ): User {
         val password = password.assertPasswordRequirements()
 
-        return User.wrapRow(Users.insert {
+        val stmt = Users.insertIgnore {
             it[Users.id] = id
             it[Users.firstName] = firstName
             it[Users.middleName] = middleName
             it[Users.lastName] = lastName
             it[Users.passwordHash] = Argon2.hash(password.toCharArray())
             it[Users.avatarUrl] = avatarUrl
-        }.resultedValues!!.first())
+        }
+
+        if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.USER)
+        return User.wrapRow(stmt.resultedValues!!.first())
     }
 
     private fun String.assertPasswordRequirements(): String {

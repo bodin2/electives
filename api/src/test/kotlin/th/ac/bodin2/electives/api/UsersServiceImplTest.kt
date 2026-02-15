@@ -4,6 +4,7 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import kotlinx.coroutines.delay
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.TestConstants.Students
 import th.ac.bodin2.electives.api.TestConstants.Teachers
@@ -71,6 +72,38 @@ class UsersServiceImplTest : ApplicationTest() {
             assertNotNull(teacher)
             assertEquals(2010, teacher.id)
             assertEquals("New", teacher.user.firstName)
+        }
+    }
+
+    @Test
+    fun `create student with duplicate id throws conflict`() = runTest {
+        assertFailsWith<ConflictException> {
+            transaction {
+                usersService.createStudent(
+                    Students.JOHN_ID,
+                    "Duplicate",
+                    null,
+                    "Student",
+                    "testpass",
+                    null
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create teacher with duplicate id throws conflict`() = runTest {
+        assertFailsWith<ConflictException> {
+            transaction {
+                usersService.createTeacher(
+                    Teachers.BOB_ID,
+                    "Duplicate",
+                    null,
+                    "Teacher",
+                    "testpass",
+                    null
+                )
+            }
         }
     }
 

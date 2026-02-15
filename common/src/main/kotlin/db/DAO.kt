@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.Entity
 import org.jetbrains.exposed.v1.dao.EntityClass
 import org.jetbrains.exposed.v1.jdbc.*
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.db.models.*
 import java.time.LocalDateTime
@@ -36,7 +36,7 @@ class Student(val reference: Reference, val user: User, val teams: List<Team>) {
         fun exists(id: Int): Boolean = Students.selectAll().where { Students.id eq id }.empty().not()
 
         fun require(id: Int): Reference {
-            if (!exists(id)) throw NotFoundException(NotFoundEntity.STUDENT)
+            if (!exists(id)) throw NotFoundException(ExceptionEntity.STUDENT)
             return Reference(id)
         }
 
@@ -103,7 +103,7 @@ class Student(val reference: Reference, val user: User, val teams: List<Team>) {
                 (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId)
             }
 
-            if (count == 0) throw NotFoundException(NotFoundEntity.ELECTIVE_SELECTION)
+            if (count == 0) throw NotFoundException(ExceptionEntity.ELECTIVE_SELECTION)
         }
 
         fun getTeams(student: Reference): List<Team> {
@@ -142,7 +142,7 @@ class Teacher(val reference: Reference, val user: User) {
             Teachers.selectAll().where { Teachers.id eq id }.empty().not()
 
         fun require(id: Int): Reference {
-            if (!exists(id)) throw NotFoundException(NotFoundEntity.TEACHER)
+            if (!exists(id)) throw NotFoundException(ExceptionEntity.TEACHER)
             return Reference(id)
         }
 
@@ -185,7 +185,7 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
         Electives.selectAll().where { Electives.id eq id }.empty().not()
 
     fun require(id: Int): Elective.Reference {
-        if (!exists(id)) throw NotFoundException(NotFoundEntity.ELECTIVE)
+        if (!exists(id)) throw NotFoundException(ExceptionEntity.ELECTIVE)
         return Elective.Reference(id)
     }
 
@@ -243,7 +243,7 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
             .selectAll()
             .where { Electives.id eq elective.id }
             .singleOrNull()
-            ?: throw NotFoundException(NotFoundEntity.ELECTIVE)
+            ?: throw NotFoundException(ExceptionEntity.ELECTIVE)
 
         return row[Electives.startDate] to row[Electives.endDate]
     }
@@ -271,7 +271,7 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
         Subjects.selectAll().where { Subjects.id eq id }.empty().not()
 
     fun require(id: Int): Subject.Reference {
-        if (!exists(id)) throw NotFoundException(NotFoundEntity.SUBJECT)
+        if (!exists(id)) throw NotFoundException(ExceptionEntity.SUBJECT)
         return Subject.Reference(id)
     }
 

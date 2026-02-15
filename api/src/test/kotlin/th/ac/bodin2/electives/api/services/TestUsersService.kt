@@ -1,6 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.MockUtils.mockStudent
@@ -48,7 +48,7 @@ class TestUsersService : UsersService {
     override fun getUserType(id: Int) = when (id) {
         TEACHER_ID -> UserType.TEACHER
         STUDENT_ID -> UserType.STUDENT
-        else -> throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
+        else -> throw NotFoundException(ExceptionEntity.USER, "User does not exist: $id")
     }
 
     @CreatesTransaction

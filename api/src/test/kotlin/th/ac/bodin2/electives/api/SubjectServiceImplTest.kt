@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -61,6 +62,26 @@ class SubjectServiceImplTest : ApplicationTest() {
     }
 
     @Test
+    fun `create subject with duplicate id throws conflict`() = runTest {
+        assertFailsWith<ConflictException> {
+            @OptIn(CreatesTransaction::class)
+            subjectService.create(
+                id = TestConstants.Subjects.PHYSICS_ID,
+                name = "Duplicate Subject",
+                description = null,
+                code = null,
+                tag = SubjectTag.SCIENCE_AND_TECHNOLOGY,
+                location = null,
+                capacity = 20,
+                team = null,
+                teacherIds = emptyList(),
+                thumbnailUrl = null,
+                imageUrl = null,
+            )
+        }
+    }
+
+    @Test
     fun `delete subject`() = runTest {
         @OptIn(CreatesTransaction::class)
         subjectService.delete(TestConstants.Subjects.PHYSICS_ID)
@@ -108,6 +129,68 @@ class SubjectServiceImplTest : ApplicationTest() {
             subjectService.update(
                 UNUSED_ID,
                 SubjectService.SubjectUpdate(name = "Does not exist")
+            )
+        }
+    }
+
+    @Test
+    fun `create subject with non-existent team throws not found`() = runTest {
+        assertFailsWith<NotFoundException> {
+            @OptIn(CreatesTransaction::class)
+            subjectService.create(
+                id = 600,
+                name = "Invalid Team Subject",
+                description = null,
+                code = null,
+                tag = SubjectTag.SCIENCE_AND_TECHNOLOGY,
+                location = null,
+                capacity = 20,
+                team = UNUSED_ID,
+                teacherIds = emptyList(),
+                thumbnailUrl = null,
+                imageUrl = null,
+            )
+        }
+    }
+
+    @Test
+    fun `create subject with non-existent teacher throws not found`() = runTest {
+        assertFailsWith<NotFoundException> {
+            @OptIn(CreatesTransaction::class)
+            subjectService.create(
+                id = 601,
+                name = "Invalid Teacher Subject",
+                description = null,
+                code = null,
+                tag = SubjectTag.SCIENCE_AND_TECHNOLOGY,
+                location = null,
+                capacity = 20,
+                team = null,
+                teacherIds = listOf(UNUSED_ID),
+                thumbnailUrl = null,
+                imageUrl = null,
+            )
+        }
+    }
+
+    @Test
+    fun `update subject with non-existent team throws not found`() = runTest {
+        assertFailsWith<NotFoundException> {
+            @OptIn(CreatesTransaction::class)
+            subjectService.update(
+                TestConstants.Subjects.PHYSICS_ID,
+                SubjectService.SubjectUpdate(setTeam = true, team = UNUSED_ID)
+            )
+        }
+    }
+
+    @Test
+    fun `update subject with non-existent teacher throws not found`() = runTest {
+        assertFailsWith<NotFoundException> {
+            @OptIn(CreatesTransaction::class)
+            subjectService.update(
+                TestConstants.Subjects.PHYSICS_ID,
+                SubjectService.SubjectUpdate(teacherIds = listOf(UNUSED_ID))
             )
         }
     }

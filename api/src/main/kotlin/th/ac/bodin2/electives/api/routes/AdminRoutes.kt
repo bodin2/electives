@@ -14,7 +14,8 @@ import io.ktor.server.routing.routing
 import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ConflictException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ADMIN_AUTHENTICATION
@@ -177,6 +178,12 @@ class AdminUsersController(
 
                 else -> badRequest()
             }
+        } catch (_: IllegalArgumentException) {
+            badRequest("Password does not meet the requirements")
+        } catch (_: NotFoundException) {
+            badRequest("One or more specified teams not found")
+        } catch (_: ConflictException) {
+            conflict("User with the same ID already exists")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
@@ -223,11 +230,11 @@ class AdminUsersController(
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.USER,
-                NotFoundEntity.TEACHER,
-                NotFoundEntity.STUDENT -> badRequest("User not found")
+                ExceptionEntity.USER,
+                ExceptionEntity.TEACHER,
+                ExceptionEntity.STUDENT -> badRequest("User not found")
 
-                NotFoundEntity.TEAM -> badRequest("One or more teams not found")
+                ExceptionEntity.TEAM -> badRequest("One or more teams not found")
 
                 else -> throw e
             }
@@ -275,9 +282,9 @@ class AdminUsersSelectionsController(
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.STUDENT -> badRequest("Student not found")
-                NotFoundEntity.ELECTIVE -> badRequest("One or more electives not found")
-                NotFoundEntity.SUBJECT -> badRequest("One or more subjects not found")
+                ExceptionEntity.STUDENT -> badRequest("Student not found")
+                ExceptionEntity.ELECTIVE -> badRequest("One or more electives not found")
+                ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
 
                 else -> throw e
             }
@@ -323,6 +330,10 @@ class AdminElectivesController(
             ok()
         } catch (_: NotFoundException) {
             badRequest("Team not found")
+        } catch (_: ConflictException) {
+            conflict("Elective with the same ID already exists")
+        } catch (e: ExposedSQLException) {
+            badRequest(e.message ?: "SQL exception occurred")
         }
     }
 
@@ -358,8 +369,8 @@ class AdminElectivesController(
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.ELECTIVE -> badRequest("Elective not found")
-                NotFoundEntity.TEAM -> badRequest("Team not found")
+                ExceptionEntity.ELECTIVE -> badRequest("Elective not found")
+                ExceptionEntity.TEAM -> badRequest("Team not found")
 
                 else -> throw e
             }
@@ -391,8 +402,8 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.ELECTIVE -> badRequest("Elective not found")
-                NotFoundEntity.SUBJECT -> badRequest("One or more subjects not found")
+                ExceptionEntity.ELECTIVE -> badRequest("Elective not found")
+                ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
 
                 else -> throw e
             }
@@ -455,11 +466,13 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.TEAM -> badRequest("Team not found")
-                NotFoundEntity.TEACHER -> badRequest("One or more teachers not found")
+                ExceptionEntity.TEAM -> badRequest("Team not found")
+                ExceptionEntity.TEACHER -> badRequest("One or more teachers not found")
 
                 else -> throw e
             }
+        } catch (_: ConflictException) {
+            conflict("Subject with the same ID already exists")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
@@ -506,9 +519,9 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.SUBJECT -> badRequest("Subject not found")
-                NotFoundEntity.TEACHER -> badRequest("One or more teachers not found")
-                NotFoundEntity.TEAM -> badRequest("Team not found")
+                ExceptionEntity.SUBJECT -> badRequest("Subject not found")
+                ExceptionEntity.TEACHER -> badRequest("One or more teachers not found")
+                ExceptionEntity.TEAM -> badRequest("Team not found")
 
                 else -> throw e
             }
@@ -558,10 +571,11 @@ class AdminTeamsController(private val teamService: TeamService) {
             @OptIn(CreatesTransaction::class)
             teamService.create(team.id, team.name)
             ok()
+        } catch (_: ConflictException) {
+            conflict("Team with the same ID already exists")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
-
     }
 
     private suspend fun RoutingContext.handleDeleteTeam(id: Int) {
@@ -590,7 +604,7 @@ class AdminTeamsController(private val teamService: TeamService) {
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                NotFoundEntity.TEAM -> badRequest("Team not found")
+                ExceptionEntity.TEAM -> badRequest("Team not found")
 
                 else -> throw e
             }

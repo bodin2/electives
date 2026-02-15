@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -109,6 +110,14 @@ class ElectiveServiceImplTest : ApplicationTest() {
     }
 
     @Test
+    fun `create elective with duplicate id throws conflict`() = runTest {
+        assertFailsWith<ConflictException> {
+            @OptIn(CreatesTransaction::class)
+            electiveService.create(TestConstants.Electives.SCIENCE_ID, "Duplicate Elective")
+        }
+    }
+
+    @Test
     fun `create elective with team`() = runTest {
         val newId = 501
         @OptIn(CreatesTransaction::class)
@@ -210,6 +219,41 @@ class ElectiveServiceImplTest : ApplicationTest() {
             electiveService.setSubjects(UNUSED_ID, listOf(TestConstants.Subjects.PHYSICS_ID))
         }
     }
+
+    @Test
+    fun `create elective with non-existent team throws not found`() = runTest {
+        assertFailsWith<NotFoundException> {
+            @OptIn(CreatesTransaction::class)
+            electiveService.create(
+                id = 700,
+                name = "Invalid Team Elective",
+                team = UNUSED_ID
+            )
+        }
+    }
+
+    @Test
+    fun `update elective with non-existent team throws not found`() = runTest {
+        assertFailsWith<NotFoundException> {
+            @OptIn(CreatesTransaction::class)
+            electiveService.update(
+                TestConstants.Electives.SCIENCE_ID,
+                ElectiveService.ElectiveUpdate(setTeam = true, team = UNUSED_ID)
+            )
+        }
+    }
+
+    @Test
+    fun `set subjects with non-existent subject throws not found`() = runTest {
+        assertFailsWith<NotFoundException> {
+            @OptIn(CreatesTransaction::class)
+            electiveService.setSubjects(
+                TestConstants.Electives.SCIENCE_ID,
+                listOf(UNUSED_ID)
+            )
+        }
+    }
+
     fun <T> ElectiveService.QueryResult<T>.assertElectiveNotFound() {
         when (this) {
             is ElectiveService.QueryResult.ElectiveNotFound -> {

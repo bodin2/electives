@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
+import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -15,6 +16,14 @@ interface UsersService {
      * @throws IllegalStateException if the user is neither a Student nor a Teacher.
      */
     fun getUserType(id: Int): UserType
+
+    /**
+     * Creates a new student with the given information.
+     *
+     * @throws NotFoundException if any of the specified teams do not exist.
+     * @throws ConflictException if a teacher with the same ID already exists.
+     * @throws IllegalArgumentException if the password does not meet the requirements.
+     */
     fun createStudent(
         id: Int,
         firstName: String,
@@ -24,6 +33,12 @@ interface UsersService {
         avatarUrl: String? = null,
     ): Student
 
+    /**
+     * Creates a new teacher with the given information.
+     *
+     * @throws ConflictException if a teacher with the same ID already exists.
+     * @throws IllegalArgumentException if the password does not meet the requirements.
+     */
     fun createTeacher(
         id: Int,
         firstName: String,
