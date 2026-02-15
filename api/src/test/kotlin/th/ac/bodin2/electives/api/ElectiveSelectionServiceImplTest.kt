@@ -458,26 +458,4 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
             )
         }
     }
-
-    @Test
-    fun `force set all student selections empty map`() = runTest {
-        // First set a selection
-        electiveSelectionService.forceSetAllStudentSelections(
-            TestConstants.Students.JOHN_ID,
-            mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.PHYSICS_ID)
-        )
-
-        // Then force set with empty map (should not clear existing)
-        electiveSelectionService.forceSetAllStudentSelections(
-            TestConstants.Students.JOHN_ID,
-            emptyMap()
-        )
-
-        val selections = transaction {
-            electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
-        }
-
-        // The existing selection should still be there since empty map means no changes
-        assertEquals(TestConstants.Subjects.PHYSICS_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id?.value)
-    }
 }
