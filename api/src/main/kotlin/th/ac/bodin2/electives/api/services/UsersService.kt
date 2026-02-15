@@ -37,7 +37,6 @@ interface UsersService {
      * Deletes the teacher or student with the given ID.
      *
      * @throws NotFoundException if the user does not exist.
-     * @throws NothingToUpdateException if there's nothing to update.
      */
     @CreatesTransaction
     fun deleteUser(id: Int)
@@ -58,6 +57,7 @@ interface UsersService {
      * Updates the teacher's profile information.
      *
      * @throws NotFoundException if the user does not exist.
+     * @throws NothingToUpdateException if there's nothing to update.
      */
     @CreatesTransaction
     fun updateTeacher(
