@@ -34,7 +34,7 @@ class AdminAuthServiceImplTest : ApplicationTest() {
     }
 
     private fun runTestWithCustomConfig(
-        challengeTimeoutMillis: Long = 60000,
+        challengeTimeoutSeconds: Long = 60,
         sessionDurationSeconds: Long = 60,
         allowedIPs: List<CIDR>? = null,
         block: suspend ApplicationTestBuilder.() -> Unit
@@ -49,7 +49,7 @@ class AdminAuthServiceImplTest : ApplicationTest() {
                                 minimumSessionCreationTime = 0.milliseconds,
                                 publicKey = adminKeyPair.public,
                                 allowedIPs = allowedIPs,
-                                challengeTimeoutMillis = challengeTimeoutMillis
+                                challengeTimeoutSeconds = challengeTimeoutSeconds
                             )
                         )
                     }
@@ -255,9 +255,9 @@ class AdminAuthServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `challenge clears after timeout`(): Unit = runTestWithCustomConfig(challengeTimeoutMillis = 100) {
+    fun `challenge clears after timeout`(): Unit = runTestWithCustomConfig(challengeTimeoutSeconds = 1) {
         val challenge = adminAuthService.newChallenge()
-        delay(100)
+        delay(1000)
 
         val signature = sign(challenge)
         val result = adminAuthService.createSession(signature, "127.0.0.1")

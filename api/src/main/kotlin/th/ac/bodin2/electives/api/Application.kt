@@ -163,7 +163,7 @@ fun Application.provideDependencies() {
                             else ips.split(",").map { CIDR.parse(it.trim()) }
                         },
                         publicKey = publicKey,
-                        challengeTimeoutMillis = 60000L
+                        challengeTimeoutSeconds = 60
                     )
                 )
             }

@@ -2,14 +2,10 @@ package th.ac.bodin2.electives.api.services
 
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
-import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.CIDR
 import th.ac.bodin2.electives.utils.contains
 import th.ac.bodin2.electives.utils.withMinimumDelay
-import java.security.PublicKey
-import java.security.SecureRandom
-import java.security.Signature
-import java.security.SignatureException
+import java.security.*
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
@@ -17,7 +13,7 @@ import kotlin.time.Duration
 
 class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
     private class SessionData(
-        val hash: String,
+        val token: String,
         val expires: LocalDateTime,
     )
 
@@ -41,7 +37,7 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
         val minimumSessionCreationTime: Duration,
         val publicKey: PublicKey,
         val allowedIPs: List<CIDR>?,
-        val challengeTimeoutMillis: Long,
+        val challengeTimeoutSeconds: Long,
     )
 
     init {
@@ -72,7 +68,7 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
         val challengeBytes = ByteArray(CHALLENGE_SIZE).apply { secureRand.nextBytes(this) }
         val challenge = Challenge(
             bytes = challengeBytes,
-            expires = LocalDateTime.now().plusSeconds(config.challengeTimeoutMillis.div(1000)),
+            expires = LocalDateTime.now().plusSeconds(config.challengeTimeoutSeconds),
         )
 
         currentChallenge.set(challenge)
@@ -98,13 +94,13 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
                     .encodeToString(ByteArray(TOKEN_SIZE).apply { secureRand.nextBytes(this) })
 
                 val data = SessionData(
-                    hash = Argon2.hash(session.toCharArray()),
+                    token = session,
                     expires = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds),
                 )
 
                 sessionData.set(data)
 
-                logger.warn("New admin session created (IP: $ip)")
+                logger.info("New admin session created (IP: $ip)")
 
                 CreateSessionResult.Success(session)
             } else {
@@ -125,7 +121,7 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
             return false
         }
 
-        return Argon2.verify(session.hash, token.toCharArray())
+        return MessageDigest.isEqual(session.token.toByteArray(), token.toByteArray())
     }
 
     override fun clearSession() {
