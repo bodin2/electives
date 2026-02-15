@@ -7,7 +7,7 @@ import io.ktor.server.plugins.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
-import io.ktor.server.routing.Routing
+import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
@@ -679,7 +679,7 @@ class Admin {
     }
 }
 
-private fun Application.adminRoutes(block: Routing.() -> Unit) {
+private fun Application.adminRoutes(block: Route.() -> Unit) {
     routing {
         authenticate(ADMIN_AUTHENTICATION) {
             rateLimit(RATE_LIMIT_ADMIN) {
