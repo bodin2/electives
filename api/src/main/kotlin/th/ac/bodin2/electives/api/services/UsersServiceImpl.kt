@@ -197,6 +197,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
             ((Students innerJoin Users)
                 .select(Students.columns + userInfoFields)
                 .where { Students.id inList studentIds }
+                .orderBy(Students.id)
                 .map { row ->
                     Student(
                         Student.Reference.from(row),
@@ -215,6 +216,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         return transaction {
             ((Teachers innerJoin Users)
                 .select(Teachers.columns + userInfoFields)
+                .orderBy(Teachers.id)
                 .limit(PAGE_SIZE)
                 .offset(offset)
                 .map { Teacher.from(it) }) to (Teachers.selectAll().count())
