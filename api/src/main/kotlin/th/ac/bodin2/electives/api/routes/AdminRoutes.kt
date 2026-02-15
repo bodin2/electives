@@ -310,16 +310,20 @@ class AdminElectivesController(
 
         if (elective.id != id) return badRequest("ID in URL does not match body")
 
-        @OptIn(CreatesTransaction::class)
-        electiveService.create(
-            id = elective.id,
-            name = elective.name,
-            team = if (elective.hasTeamId()) elective.teamId else null,
-            startDate = if (elective.hasStartDate()) elective.startDate.inLocalDateTimeBySeconds else null,
-            endDate = if (elective.hasEndDate()) elective.endDate.inLocalDateTimeBySeconds else null
-        )
+        try {
+            @OptIn(CreatesTransaction::class)
+            electiveService.create(
+                id = elective.id,
+                name = elective.name,
+                team = if (elective.hasTeamId()) elective.teamId else null,
+                startDate = if (elective.hasStartDate()) elective.startDate.inLocalDateTimeBySeconds else null,
+                endDate = if (elective.hasEndDate()) elective.endDate.inLocalDateTimeBySeconds else null
+            )
 
-        ok()
+            ok()
+        } catch (_: NotFoundException) {
+            badRequest("Team not found")
+        }
     }
 
     private suspend fun RoutingContext.handleDeleteElective(id: Int) {
@@ -449,6 +453,13 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
             )
 
             ok()
+        } catch (e: NotFoundException) {
+            return when (e.entity) {
+                NotFoundEntity.TEAM -> badRequest("Team not found")
+                NotFoundEntity.TEACHER -> badRequest("One or more teachers not found")
+
+                else -> throw e
+            }
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }

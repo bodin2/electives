@@ -10,6 +10,11 @@ import th.ac.bodin2.electives.db.Teacher
 import java.time.LocalDateTime
 
 interface ElectiveService {
+    /**
+     * Creates a new elective with the given information.
+     *
+     * @throws NotFoundException if the specified team does not exist.
+     */
     @CreatesTransaction
     fun create(
         id: Int,

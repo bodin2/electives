@@ -7,6 +7,11 @@ import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.proto.api.SubjectTag
 
 interface SubjectService {
+    /**
+     * Creates a new subject with the given information.
+     *
+     * @throws NotFoundException if the specified team or any of the specified teachers do not exist.
+     */
     @CreatesTransaction
     fun create(
         id: Int,
