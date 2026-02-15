@@ -1,14 +1,17 @@
-package th.ac.bodin2.electives.api
+package th.ac.bodin2.electives.api.routes
 
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants.TestData
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.TestServiceConstants
+import th.ac.bodin2.electives.api.parse
+import th.ac.bodin2.electives.api.postProto
 import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants
 import th.ac.bodin2.electives.proto.api.AuthService
 import th.ac.bodin2.electives.proto.api.AuthServiceKt
 import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateRequest

@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api.services
+package th.ac.bodin2.electives.api.services.mock
 
 object TestServiceConstants {
     const val TEACHER_ID = 1

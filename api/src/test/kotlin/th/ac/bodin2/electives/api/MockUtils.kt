@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api.services
+package th.ac.bodin2.electives.api
 
 import io.mockk.every
 import io.mockk.mockk
@@ -7,11 +7,11 @@ import io.mockk.unmockkObject
 import org.jetbrains.exposed.v1.dao.DaoEntityID
 import org.jetbrains.exposed.v1.jdbc.EmptySizedIterable
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
-import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_TEAM_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_WITHOUT_SUBJECTS_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_TEAM_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.TEACHER_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_TEAM_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_WITHOUT_SUBJECTS_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_TEAM_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.Electives
 import th.ac.bodin2.electives.db.models.Subjects

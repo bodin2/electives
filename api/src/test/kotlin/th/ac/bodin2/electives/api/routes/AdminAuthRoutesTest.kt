@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api
+package th.ac.bodin2.electives.api.routes
 
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -6,6 +6,9 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import io.mockk.coEvery
 import io.mockk.every
+import th.ac.bodin2.electives.api.ApplicationTest
+import th.ac.bodin2.electives.api.parse
+import th.ac.bodin2.electives.api.postProto
 import th.ac.bodin2.electives.api.services.AdminAuthService
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
 import th.ac.bodin2.electives.proto.api.AdminService

@@ -1,11 +1,13 @@
-package th.ac.bodin2.electives.api.services
+package th.ac.bodin2.electives.api.services.mock
 
+import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_WITHOUT_SUBJECTS_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.STUDENT_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.TEACHER_ID
+import th.ac.bodin2.electives.api.services.ElectiveService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_WITHOUT_SUBJECTS_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Subject
@@ -31,6 +33,7 @@ class TestElectiveService : ElectiveService {
 
     @CreatesTransaction
     override fun setSubjects(electiveId: Int, subjectIds: List<Int>) = error("Not testable")
+
     companion object {
         val ELECTIVE_IDS = listOf(
             ELECTIVE_ID,

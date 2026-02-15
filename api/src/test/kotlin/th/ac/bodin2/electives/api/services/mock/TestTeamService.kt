@@ -1,8 +1,10 @@
-package th.ac.bodin2.electives.api.services
+package th.ac.bodin2.electives.api.services.mock
 
+import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_TEAM_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_TEAM_ID
+import th.ac.bodin2.electives.api.services.TeamService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_TEAM_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_TEAM_ID
 import th.ac.bodin2.electives.db.Team
 
 class TestTeamService : TeamService {

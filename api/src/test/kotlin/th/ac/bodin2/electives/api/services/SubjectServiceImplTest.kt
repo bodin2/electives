@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api
+package th.ac.bodin2.electives.api.services
 
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
@@ -6,9 +6,10 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
+import th.ac.bodin2.electives.api.ApplicationTest
+import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.SubjectService
-import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import kotlin.test.*
 

@@ -15,6 +15,7 @@ import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.TestDatabase.mockData
 import th.ac.bodin2.electives.api.services.*
+import th.ac.bodin2.electives.api.services.mock.*
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 

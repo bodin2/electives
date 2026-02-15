@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api
+package th.ac.bodin2.electives.api.services
 
 import io.ktor.client.plugins.websocket.*
 import io.ktor.server.plugins.di.*
@@ -10,17 +10,14 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.withTimeout
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants.Electives
 import th.ac.bodin2.electives.api.TestConstants.Students
 import th.ac.bodin2.electives.api.TestConstants.Subjects
 import th.ac.bodin2.electives.api.TestConstants.Teams
 import th.ac.bodin2.electives.api.TestConstants.TestData.CLIENT_NAME
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.ElectiveSelectionService
-import th.ac.bodin2.electives.api.services.NotificationsService
-import th.ac.bodin2.electives.api.services.NotificationsServiceImpl
-import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
-import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.utils.send
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.models.StudentTeams

@@ -1,7 +1,9 @@
-package th.ac.bodin2.electives.api.services
+package th.ac.bodin2.electives.api.services.mock
 
+import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_ID
+import th.ac.bodin2.electives.api.services.SubjectService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.proto.api.SubjectTag
 

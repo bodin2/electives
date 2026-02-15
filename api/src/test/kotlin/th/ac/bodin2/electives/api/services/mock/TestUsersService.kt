@@ -1,13 +1,14 @@
-package th.ac.bodin2.electives.api.services
+package th.ac.bodin2.electives.api.services.mock
 
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.MockUtils.mockStudent
+import th.ac.bodin2.electives.api.MockUtils.mockTeacher
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.MockUtils.mockStudent
-import th.ac.bodin2.electives.api.services.MockUtils.mockTeacher
-import th.ac.bodin2.electives.api.services.TestServiceConstants.PASSWORD
-import th.ac.bodin2.electives.api.services.TestServiceConstants.STUDENT_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.TEACHER_ID
+import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.PASSWORD
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.UserType

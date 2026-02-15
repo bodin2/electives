@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api
+package th.ac.bodin2.electives.api.routes
 
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -6,10 +6,13 @@ import io.ktor.client.statement.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import io.mockk.every
+import th.ac.bodin2.electives.api.ApplicationTest
+import th.ac.bodin2.electives.api.getWithAuth
+import th.ac.bodin2.electives.api.parse
 import th.ac.bodin2.electives.api.services.AdminAuthService
-import th.ac.bodin2.electives.api.services.TestElectiveService
-import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.api.services.mock.TestElectiveService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.Elective
 import th.ac.bodin2.electives.proto.api.ElectivesService
 import kotlin.test.Test
