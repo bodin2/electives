@@ -12,10 +12,7 @@ import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
-import th.ac.bodin2.electives.db.Elective
-import th.ac.bodin2.electives.db.Student
-import th.ac.bodin2.electives.db.Subject
-import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.ElectiveSubjects
 import th.ac.bodin2.electives.db.models.Electives
 import java.time.LocalDateTime
@@ -32,9 +29,13 @@ class ElectiveServiceImpl : ElectiveService {
         Elective.wrapRow(Electives.insert {
             it[this.id] = id
             it[this.name] = name
-            it[this.team] = team
             it[this.startDate] = startDate
             it[this.endDate] = endDate
+
+            if (team != null) {
+                Team.exists(team)
+                it[this.team] = team
+            }
         }.resultedValues!!.first())
     }
 
@@ -53,11 +54,15 @@ class ElectiveServiceImpl : ElectiveService {
     override fun update(id: Int, update: ElectiveService.ElectiveUpdate) {
         transaction {
             Elective.require(id)
+
             Electives.update({ Electives.id eq id }) {
                 update.name?.let { name -> it[this.name] = name }
-                if (update.setTeam) it[this.team] = update.team
                 if (update.setStartDate) it[this.startDate] = update.startDate
                 if (update.setEndDate) it[this.endDate] = update.endDate
+                if (update.setTeam) {
+                    if (update.team != null) Team.exists(update.team)
+                    it[this.team] = update.team
+                }
 
                 if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
             }

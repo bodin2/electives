@@ -50,7 +50,12 @@ interface SubjectService {
         val teacherIds: List<Int>? = null,
         val thumbnailUrl: String? = null,
         val imageUrl: String? = null,
-        val patchTeachers: Boolean = false,
+        val setDescription: Boolean = false,
+        val setCode: Boolean = false,
+        val setLocation: Boolean = false,
+        val setImageUrl: Boolean = false,
+        val setThumbnailUrl: Boolean = false,
+        val setTeam: Boolean = false,
     )
 
     fun getAll(): List<Subject>

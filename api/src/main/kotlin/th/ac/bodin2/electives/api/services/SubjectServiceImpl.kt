@@ -12,6 +12,8 @@ import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.Team
+import th.ac.bodin2.electives.db.exists
 import th.ac.bodin2.electives.db.models.Subjects
 import th.ac.bodin2.electives.db.models.TeacherSubjects
 import th.ac.bodin2.electives.proto.api.SubjectTag
@@ -34,14 +36,17 @@ class SubjectServiceImpl : SubjectService {
         val subject = Subject.wrapRow(Subjects.insert {
             it[this.id] = id
             it[this.name] = name
-            it[this.description] = description
-            it[this.code] = code
-            it[this.tag] = tag.number
-            it[this.location] = location
             it[this.capacity] = capacity
-            it[this.team] = team
-            it[this.thumbnailUrl] = thumbnailUrl
-            it[this.imageUrl] = imageUrl
+            it[this.tag] = tag.number
+            if (description != null) it[this.description] = description
+            if (code != null) it[this.code] = code
+            if (location != null) it[this.location] = location
+            if (thumbnailUrl != null) it[this.thumbnailUrl] = thumbnailUrl
+            if (imageUrl != null) it[this.imageUrl] = imageUrl
+            if (team != null) {
+                Team.exists(team)
+                it[this.team] = team
+            }
         }.resultedValues!!.first())
 
         if (teacherIds.isNotEmpty()) {
@@ -71,20 +76,25 @@ class SubjectServiceImpl : SubjectService {
         transaction {
             Subject.require(id)
             Subjects.update({ Subjects.id eq id }) {
+                if (update.setTeam) {
+                    if (update.team != null) Team.exists(update.team)
+                    it[team] = update.team
+                }
+
                 update.name?.let { name -> it[this.name] = name }
-                update.description?.let { description -> it[this.description] = description }
-                update.code?.let { code -> it[this.code] = code }
                 update.tag?.let { tag -> it[this.tag] = tag.number }
-                update.location?.let { location -> it[this.location] = location }
                 update.capacity?.let { capacity -> it[this.capacity] = capacity }
-                update.team?.let { team -> it[this.team] = team }
-                update.thumbnailUrl?.let { thumbnailUrl -> it[this.thumbnailUrl] = thumbnailUrl }
-                update.imageUrl?.let { imageUrl -> it[this.imageUrl] = imageUrl }
+
+                if (update.setDescription) it[description] = update.description
+                if (update.setCode) it[code] = update.code
+                if (update.setLocation) it[location] = update.location
+                if (update.setThumbnailUrl) it[thumbnailUrl] = update.thumbnailUrl
+                if (update.setImageUrl) it[imageUrl] = update.imageUrl
 
                 if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
             }
 
-            if (update.patchTeachers && update.teacherIds != null) {
+            if (update.teacherIds != null) {
                 TeacherSubjects.deleteWhere { TeacherSubjects.subject eq id }
 
                 TeacherSubjects.batchInsert(update.teacherIds) { teacherId ->

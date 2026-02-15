@@ -52,6 +52,8 @@ class ElectiveSelectionServiceImpl(
     @CreatesTransaction
     override fun forceSetAllStudentSelections(userId: Int, selections: Map<Int, Int>) {
         transaction {
+            Student.require(userId)
+
             StudentElectives.deleteWhere { StudentElectives.student eq userId }
             StudentElectives.batchInsert(selections.toList()) { (electiveId, subjectId) ->
                 Elective.require(electiveId)

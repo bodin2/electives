@@ -472,16 +472,21 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
 
         val update = SubjectService.SubjectUpdate(
             name = if (req.hasName()) req.name else null,
-            description = if (req.hasDescription()) req.description else null,
-            code = if (req.hasCode()) req.code else null,
             tag = if (req.hasTag()) req.tag else null,
-            location = if (req.hasLocation()) req.location else null,
             capacity = if (req.hasCapacity()) req.capacity else null,
-            team = if (req.hasTeamId()) req.teamId else null,
-            teacherIds = req.teachersList.map { it.id },
-            thumbnailUrl = if (req.hasThumbnailUrl()) req.thumbnailUrl else null,
-            imageUrl = if (req.hasImageUrl()) req.imageUrl else null,
-            patchTeachers = req.patchTeachers,
+            teacherIds = if (req.patchTeachers) req.teachersList else null,
+            description = req.description,
+            code = req.code,
+            location = req.location,
+            team = req.teamId,
+            thumbnailUrl = req.thumbnailUrl,
+            imageUrl = req.imageUrl,
+            setCode = req.patchCode,
+            setTeam = req.patchTeamId,
+            setLocation = req.patchLocation,
+            setImageUrl = req.patchImageUrl,
+            setDescription = req.patchDescription,
+            setThumbnailUrl = req.patchThumbnailUrl,
         )
 
         try {
