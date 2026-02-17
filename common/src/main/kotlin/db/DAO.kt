@@ -4,10 +4,7 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.Entity
 import org.jetbrains.exposed.v1.dao.EntityClass
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.*
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.db.models.*
@@ -27,7 +24,8 @@ class Student(val reference: Reference, val user: User, val teams: List<Team>) {
     class Reference internal constructor(val id: Int) {
         companion object {
             fun from(row: ResultRow): Reference {
-                val entityId = row.getOrNull(Students.id) ?: throw IllegalArgumentException("ResultRow does not contain student ID")
+                val entityId = row.getOrNull(Students.id)
+                    ?: throw IllegalArgumentException("ResultRow does not contain student ID")
                 return Reference(entityId.value)
             }
         }
@@ -96,12 +94,20 @@ class Student(val reference: Reference, val user: User, val teams: List<Team>) {
                 .map { Team.wrapRow(it) }
         }
 
-        fun new(id: Int, user: User): Student {
+        fun new(id: Int, user: User, teamIds: List<Int>): Student {
             Students.insert {
                 it[Students.id] = id
             }
 
-            return Student(Reference(id), user, emptyList())
+            val teams = teamIds.map { teamId -> Team.findById(teamId) ?: throw NotFoundException(ExceptionEntity.TEAM) }
+            if (teams.isNotEmpty()) {
+                StudentTeams.batchInsert(teams) { team ->
+                    this[StudentTeams.student] = id
+                    this[StudentTeams.team] = team.id
+                }
+            }
+
+            return Student(Reference(id), user, teams)
         }
     }
 }
@@ -111,7 +117,8 @@ class Teacher(val reference: Reference, val user: User) {
 
     companion object {
         fun from(user: ResultRow): Teacher {
-            val id = user.getOrNull(Teachers.id)?.value ?: throw IllegalArgumentException("ResultRow does not contain teacher ID")
+            val id = user.getOrNull(Teachers.id)?.value
+                ?: throw IllegalArgumentException("ResultRow does not contain teacher ID")
             return Teacher(Reference(id), User.wrapRow(user))
         }
 

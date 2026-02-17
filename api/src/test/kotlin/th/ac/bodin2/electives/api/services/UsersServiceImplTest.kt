@@ -50,10 +50,19 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create student`() = runTest {
         transaction {
-            val student = usersService.createStudent(1010, "New", "Student", "User", "testpass")
+            val student = usersService.createStudent(
+                1010,
+                "New",
+                "Student",
+                "User",
+                "testpass",
+                teams = listOf(TestConstants.Teams.TEAM_1_ID)
+            )
+
             assertNotNull(student)
             assertEquals(1010, student.id)
             assertEquals("New", student.user.firstName)
+            assertEquals(TestConstants.Teams.TEAM_1_ID, student.teams.first().id.value)
         }
     }
 

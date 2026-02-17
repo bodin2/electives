@@ -33,6 +33,8 @@ message AdminService {
   message AddUserRequest {
     User user = 1;
     string password = 2;
+    // Students-only
+    repeated uint32 team_ids = 3;
   }
 
   message SetElectiveSubjectsRequest {

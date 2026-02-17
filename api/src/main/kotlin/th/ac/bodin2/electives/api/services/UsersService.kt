@@ -31,6 +31,7 @@ interface UsersService {
         lastName: String? = null,
         password: String,
         avatarUrl: String? = null,
+        teams: List<Int>? = null,
     ): Student
 
     /**

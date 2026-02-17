@@ -85,7 +85,16 @@ class UsersServiceImpl(val config: Config) : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
-    ): Student = Student.new(id, createUser(id, firstName, middleName, lastName, password, avatarUrl))
+        teams: List<Int>?,
+    ): Student {
+        val stud = Student.new(
+            id,
+            createUser(id, firstName, middleName, lastName, password, avatarUrl),
+            teamIds = teams ?: emptyList()
+        )
+
+        return stud
+    }
 
     override fun createTeacher(
         id: Int,

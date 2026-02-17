@@ -163,7 +163,8 @@ class AdminUsersController(
                         middleName = if (user.hasMiddleName()) user.middleName else null,
                         lastName = user.lastName,
                         password = req.password,
-                        avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null
+                        avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,
+                        teams = req.teamIdsList.ifEmpty { null }
                     )
 
                     UserType.TEACHER -> usersService.createTeacher(
