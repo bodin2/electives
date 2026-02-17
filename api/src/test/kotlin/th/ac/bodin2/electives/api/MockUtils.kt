@@ -4,6 +4,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.DaoEntityID
 import org.jetbrains.exposed.v1.jdbc.EmptySizedIterable
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
@@ -38,7 +39,7 @@ object MockUtils {
         every { mock.subjects } returns
                 if (id == ELECTIVE_WITHOUT_SUBJECTS_ID) EmptySizedIterable()
                 else SizedCollection(mockSubject(SUBJECT_ID))
-        every { mock.team } returns mockTeam(ELECTIVE_TEAM_ID)
+        every { mock.teamId } returns EntityID(ELECTIVE_TEAM_ID, Teams)
 
         return mock
     }

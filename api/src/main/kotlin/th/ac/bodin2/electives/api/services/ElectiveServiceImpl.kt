@@ -1,7 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.dao.load
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
@@ -91,7 +90,7 @@ class ElectiveServiceImpl : ElectiveService {
 
     override fun getAll() = Elective.all().toList()
 
-    override fun getById(electiveId: Int) = Elective.findById(electiveId)?.load(Elective::team)
+    override fun getById(electiveId: Int) = Elective.findById(electiveId)
 
     override fun getSubjects(electiveId: Int): QueryResult<out List<Subject>> {
         try {

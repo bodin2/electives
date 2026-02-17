@@ -88,7 +88,7 @@ fun Elective.toProto(): th.ac.bodin2.electives.proto.api.Elective {
         id = elective.id.value
         name = elective.name
 
-        elective.team?.let { teamId = it.id.value }
+        elective.teamId?.let { teamId = it.value }
         elective.startDate?.toUnixTimestamp()?.let { startDate = it }
         elective.endDate?.toUnixTimestamp()?.let { endDate = it }
     }

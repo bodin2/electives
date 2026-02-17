@@ -132,7 +132,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
         val fetched = transaction { electiveService.getById(newId) }
         assertNotNull(fetched)
-        assertEquals(TestConstants.Teams.TEAM_1_ID, transaction { fetched.team?.id?.value })
+        assertEquals(TestConstants.Teams.TEAM_1_ID, transaction { fetched.teamId?.value })
     }
 
     @Test
