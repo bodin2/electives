@@ -100,6 +100,13 @@ class AdminAuthController(private val adminAuthService: AdminAuthService) {
                     }
                 }
             }
+
+            adminRoutes {
+                post<Admin.LogOut> {
+                    adminAuthService.clearSession()
+                    ok()
+                }
+            }
         }
     }
 }
@@ -627,6 +634,9 @@ class Admin {
 
     @Resource("auth")
     class Auth(val parent: Admin)
+
+    @Resource("logout")
+    class LogOut(val parent: Admin)
 
     @Resource("notifications")
     class Notifications(val parent: Admin)
