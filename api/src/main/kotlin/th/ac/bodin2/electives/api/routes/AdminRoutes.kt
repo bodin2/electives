@@ -160,19 +160,19 @@ class AdminUsersController(
                     UserType.STUDENT -> usersService.createStudent(
                         id = user.id,
                         firstName = user.firstName,
-                        middleName = user.middleName,
+                        middleName = if (user.hasMiddleName()) user.middleName else null,
                         lastName = user.lastName,
                         password = req.password,
-                        avatarUrl = user.avatarUrl
+                        avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null
                     )
 
                     UserType.TEACHER -> usersService.createTeacher(
                         id = user.id,
                         firstName = user.firstName,
-                        middleName = user.middleName,
+                        middleName = if (user.hasMiddleName()) user.middleName else null,
                         lastName = user.lastName,
                         password = req.password,
-                        avatarUrl = user.avatarUrl
+                        avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null
                     )
 
                     else -> null
