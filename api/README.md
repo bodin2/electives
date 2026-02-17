@@ -55,3 +55,42 @@ The server can be configured using the following environment variables:
 | `ADMIN_ENABLED`                                     | Set to non-empty value to enable dangerous admin endpoints for maintenance                     | (None)<br>**Disabled by default for safety.**                                                                                       |
 | `ADMIN_ALLOWED_IPS`                                 | Comma-separated list of CIDR ranges allowed to access admin endpoints                          | `127.0.0.0/8, ::1/128`<br>Setting to an empty value will use the default. To allow any IP, set to `*` **(dangerous!)**.             |
 | `ADMIN_PUBLIC_KEY`                                  | A base64-encoded X.509 SubjectPublicKeyInfo RSA public key without PEM headers/footers         | (None)<br>**Required if `ADMIN_ENABLED` is set.**                                                                                   |
+
+### Admin Key Generation
+
+To generate an RSA key pair for admin authentication, you can use the following OpenSSL commands:
+
+```bash
+# Generate a 2048-bit RSA private key and save it to private_key.pem
+openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+# Extract the public key from the private key and save it to public_key.pem
+openssl rsa -pubout -in private_key.pem -out public_key.pem
+```
+
+#### Windows (PowerShell)
+
+To extract the base64-encoded public key string on Windows using PowerShell, run:
+
+```powershell
+# Read the public key file, remove PEM headers/footers, and concatenate the lines
+(Get-Content -Raw -Path public_key.pem) -replace '-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s' -join ''
+```
+
+#### Unix-like Systems (Linux, macOS)
+
+To extract the base64-encoded public key string on Unix-like systems, run:
+
+```bash
+# Read the public key file, remove PEM headers/footers, and concatenate the lines
+awk 'NF {sub(/-----BEGIN PUBLIC KEY-----/, ""); sub(/-----END PUBLIC KEY-----/, ""); printf "%s", $0}' public_key.pem
+```
+
+---
+
+You can copy the resulting string and set it as the value of the `ADMIN_PUBLIC_KEY` environment variable.
+
+> [!IMPORTANT]  
+> **Keep the generated private key (`private_key.pem`) secure**, as it will be used to authenticate and receive admin session tokens.
+> 
+> If the private key is compromised, a new key pair should be generated immediately, and the `ADMIN_PUBLIC_KEY`
+> environment variable should be updated with the new public key.
