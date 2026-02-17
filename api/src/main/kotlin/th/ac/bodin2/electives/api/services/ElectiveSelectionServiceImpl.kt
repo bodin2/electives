@@ -54,11 +54,15 @@ class ElectiveSelectionServiceImpl(
         transaction {
             Student.require(userId)
 
-            StudentElectives.deleteWhere { StudentElectives.student eq userId }
-            StudentElectives.batchInsert(selections.toList()) { (electiveId, subjectId) ->
+            val selections = selections.map { (electiveId, subjectId) ->
                 Elective.require(electiveId)
                 Subject.require(subjectId)
 
+                electiveId to subjectId
+            }
+
+            StudentElectives.deleteWhere { StudentElectives.student eq userId }
+            StudentElectives.batchInsert(selections) { (electiveId, subjectId) ->
                 this[StudentElectives.student] = userId
                 this[StudentElectives.elective] = electiveId
                 this[StudentElectives.subject] = subjectId

@@ -121,10 +121,13 @@ class UsersServiceImpl(val config: Config) : UsersService {
             }
 
             if (update.teams != null) {
-                StudentTeams.deleteWhere { StudentTeams.student eq id }
-                StudentTeams.batchInsert(update.teams) { teamId ->
-                    if (!Team.exists(teamId)) throw NotFoundException(ExceptionEntity.TEAM)
+                val teamIds = update.teams.distinct()
+                teamIds.forEach {
+                    if (!Team.exists(it)) throw NotFoundException(ExceptionEntity.TEAM)
+                }
 
+                StudentTeams.deleteWhere { StudentTeams.student eq id }
+                StudentTeams.batchInsert(teamIds) { teamId ->
                     this[StudentTeams.student] = id
                     this[StudentTeams.team] = teamId
                 }

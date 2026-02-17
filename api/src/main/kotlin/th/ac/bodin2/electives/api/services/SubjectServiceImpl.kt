@@ -103,11 +103,11 @@ class SubjectServiceImpl : SubjectService {
             }
 
             if (update.teacherIds != null) {
+                val teacherIds = update.teacherIds.distinct()
+                teacherIds.forEach { Teacher.require(it) }
+
                 TeacherSubjects.deleteWhere { TeacherSubjects.subject eq id }
-
-                TeacherSubjects.batchInsert(update.teacherIds) { teacherId ->
-                    Teacher.require(teacherId)
-
+                TeacherSubjects.batchInsert(teacherIds) { teacherId ->
                     this[TeacherSubjects.teacher] = teacherId
                     this[TeacherSubjects.subject] = id
                 }

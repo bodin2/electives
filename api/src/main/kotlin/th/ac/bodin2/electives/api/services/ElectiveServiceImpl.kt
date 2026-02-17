@@ -77,11 +77,11 @@ class ElectiveServiceImpl : ElectiveService {
         transaction {
             Elective.require(electiveId)
 
+            val subjectIds = subjectIds.distinct()
+            subjectIds.forEach { Subject.require(it) }
+
             ElectiveSubjects.deleteWhere { ElectiveSubjects.elective eq electiveId }
-
             ElectiveSubjects.batchInsert(subjectIds) { subjectId ->
-                Subject.require(subjectId)
-
                 this[ElectiveSubjects.elective] = electiveId
                 this[ElectiveSubjects.subject] = subjectId
             }
