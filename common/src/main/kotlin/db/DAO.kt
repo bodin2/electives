@@ -102,7 +102,9 @@ class Student(val reference: Reference, val user: User, val teams: List<Team>) {
 
             if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.STUDENT)
 
-            val teams = teamIds.map { teamId -> Team.findById(teamId) ?: throw NotFoundException(ExceptionEntity.TEAM) }
+            val teams = teamIds.distinct()
+                .map { teamId -> Team.findById(teamId) ?: throw NotFoundException(ExceptionEntity.TEAM) }
+
             if (teams.isNotEmpty()) {
                 StudentTeams.batchInsert(teams) { team ->
                     this[StudentTeams.student] = id

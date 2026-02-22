@@ -53,9 +53,10 @@ class SubjectServiceImpl : SubjectService {
         if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.SUBJECT)
 
         if (teacherIds.isNotEmpty()) {
-            TeacherSubjects.batchInsert(teacherIds) { teacherId ->
-                Teacher.require(teacherId)
+            val teacherIds = teacherIds.distinct()
+            teacherIds.forEach { Teacher.require(it) }
 
+            TeacherSubjects.batchInsert(teacherIds) { teacherId ->
                 this[TeacherSubjects.teacher] = teacherId
                 this[TeacherSubjects.subject] = id
             }
