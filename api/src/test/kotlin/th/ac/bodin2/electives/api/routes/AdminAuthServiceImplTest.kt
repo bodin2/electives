@@ -2,7 +2,9 @@ package th.ac.bodin2.electives.api.routes
 
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.advanceTimeBy
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.adminKeyPair
 import th.ac.bodin2.electives.api.services.AdminAuthService
@@ -209,7 +211,9 @@ class AdminAuthServiceImplTest : ApplicationTest() {
         val result = adminAuthService.createSession(signature, "127.0.0.1")
         assertIs<CreateSessionResult.Success>(result)
 
-        delay(1000)
+        assertTrue(adminAuthService.hasSession(result.token, "127.0.0.1"))
+
+        delay(1250)
 
         assertFalse(adminAuthService.hasSession(result.token, "127.0.0.1"))
     }
@@ -258,12 +262,22 @@ class AdminAuthServiceImplTest : ApplicationTest() {
 
     @Test
     fun `challenge clears after timeout`(): Unit = runTestWithCustomConfig(challengeTimeoutSeconds = 1) {
-        val challenge = adminAuthService.newChallenge()
-        delay(1000)
+        @OptIn(ExperimentalCoroutinesApi::class)
+        kotlinx.coroutines.test.runTest {
+            val challenge = adminAuthService.newChallenge()
+            val signature = sign(challenge)
 
-        val signature = sign(challenge)
-        val result = adminAuthService.createSession(signature, "127.0.0.1")
-        assertIs<CreateSessionResult.NoChallenge>(result)
+            advanceTimeBy(999)
+
+            val result1 = adminAuthService.createSession(signature, "127.0.0.1")
+            assertIs<CreateSessionResult.Success>(result1)
+
+            advanceTimeBy(1)
+
+            val result2 = adminAuthService.createSession(signature, "127.0.0.1")
+
+            assertIs<CreateSessionResult.NoChallenge>(result2)
+        }
     }
 
     @Test
