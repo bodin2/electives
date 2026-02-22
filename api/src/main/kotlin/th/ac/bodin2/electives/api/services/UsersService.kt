@@ -21,7 +21,7 @@ interface UsersService {
      * Creates a new student with the given information.
      *
      * @throws NotFoundException if any of the specified teams do not exist.
-     * @throws ConflictException if a student with the same ID already exists.
+     * @throws ConflictException if a user/student with the same ID already exists.
      * @throws IllegalArgumentException if the password does not meet the requirements.
      */
     fun createStudent(
@@ -37,7 +37,7 @@ interface UsersService {
     /**
      * Creates a new teacher with the given information.
      *
-     * @throws ConflictException if a teacher with the same ID already exists.
+     * @throws ConflictException if a user/teacher with the same ID already exists.
      * @throws IllegalArgumentException if the password does not meet the requirements.
      */
     fun createTeacher(

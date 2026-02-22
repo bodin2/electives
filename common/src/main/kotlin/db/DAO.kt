@@ -5,6 +5,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.Entity
 import org.jetbrains.exposed.v1.dao.EntityClass
 import org.jetbrains.exposed.v1.jdbc.*
+import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.db.models.*
@@ -95,9 +96,11 @@ class Student(val reference: Reference, val user: User, val teams: List<Team>) {
         }
 
         fun new(id: Int, user: User, teamIds: List<Int>): Student {
-            Students.insert {
+            val stmt = Students.insertIgnore {
                 it[Students.id] = id
             }
+
+            if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.STUDENT)
 
             val teams = teamIds.map { teamId -> Team.findById(teamId) ?: throw NotFoundException(ExceptionEntity.TEAM) }
             if (teams.isNotEmpty()) {
@@ -151,9 +154,11 @@ class Teacher(val reference: Reference, val user: User) {
         }
 
         fun new(id: Int, user: User): Teacher {
-            Teachers.insert {
+            val stmt = Teachers.insertIgnore {
                 it[Teachers.id] = id
             }
+
+            if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.TEACHER)
 
             return Teacher(Reference(id), user)
         }
