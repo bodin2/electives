@@ -248,6 +248,8 @@ class AdminUsersController(
             }
         } catch (_: NothingToUpdateException) {
             badRequest("Nothing to update")
+        } catch (_: IllegalArgumentException) {
+            badRequest("New password does not meet the requirements")
         }
     }
 
