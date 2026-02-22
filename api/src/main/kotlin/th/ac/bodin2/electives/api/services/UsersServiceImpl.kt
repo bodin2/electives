@@ -208,6 +208,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
             ((Students innerJoin Users)
                 .select(Students.columns + userInfoFields)
+                .orderBy(Students.id)
                 .where { Students.id inList studentIds }
                 .map { row ->
                     Student(
