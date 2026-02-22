@@ -162,14 +162,17 @@ fun Application.provideDependencies() {
                         allowedIPs = getEnv("ADMIN_ALLOWED_IPS").let { ipString ->
                             val ips = ipString.let {
                                 if (it.isNullOrBlank()) {
-                                    this@provideDependencies.log.warn("ADMIN_ALLOWED_IPS is not set, defaulting to only allow localhost access.")
+                                    logger.warn("ADMIN_ALLOWED_IPS is not set, defaulting to only allow localhost access.")
                                     return@let "127.0.0.0/8,::1/128"
                                 }
 
                                 return@let it
                             }
-                            if (ips == "*") null
-                            else ips.split(",").map { CIDR.parse(it.trim()) }
+
+                            if (ips == "*") {
+                                logger.warn("ADMIN_ALLOWED_IPS is set to '*', allowing access from any IP address. Not recommended!")
+                                null 
+                            } else ips.split(",").map { CIDR.parse(it.trim()) }
                         },
                         publicKey = publicKey,
                         challengeTimeoutSeconds = 60
