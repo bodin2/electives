@@ -240,7 +240,7 @@ class AdminUsersController(
             return when (e.entity) {
                 ExceptionEntity.USER,
                 ExceptionEntity.TEACHER,
-                ExceptionEntity.STUDENT -> badRequest("User not found")
+                ExceptionEntity.STUDENT -> notFound("User not found")
 
                 ExceptionEntity.TEAM -> badRequest("One or more teams not found")
 
@@ -257,7 +257,7 @@ class AdminUsersController(
             usersService.deleteUser(id)
             ok()
         } catch (_: NotFoundException) {
-            return badRequest("User not found")
+            return notFound("User not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
@@ -290,7 +290,7 @@ class AdminUsersSelectionsController(
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                ExceptionEntity.STUDENT -> badRequest("Student not found")
+                ExceptionEntity.STUDENT -> notFound("Student not found")
                 ExceptionEntity.ELECTIVE -> badRequest("One or more electives not found")
                 ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
 
@@ -353,7 +353,7 @@ class AdminElectivesController(
             electiveService.delete(id)
             ok()
         } catch (_: NotFoundException) {
-            badRequest("Elective not found")
+            notFound("Elective not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
@@ -379,7 +379,7 @@ class AdminElectivesController(
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                ExceptionEntity.ELECTIVE -> badRequest("Elective not found")
+                ExceptionEntity.ELECTIVE -> notFound("Elective not found")
                 ExceptionEntity.TEAM -> badRequest("Team not found")
 
                 else -> throw e
@@ -412,7 +412,7 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                ExceptionEntity.ELECTIVE -> badRequest("Elective not found")
+                ExceptionEntity.ELECTIVE -> notFound("Elective not found")
                 ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
 
                 else -> throw e
@@ -494,7 +494,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
             subjectService.delete(id)
             ok()
         } catch (_: NotFoundException) {
-            badRequest("Subject not found")
+            notFound("Subject not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
@@ -529,7 +529,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                ExceptionEntity.SUBJECT -> badRequest("Subject not found")
+                ExceptionEntity.SUBJECT -> notFound("Subject not found")
                 ExceptionEntity.TEACHER -> badRequest("One or more teachers not found")
                 ExceptionEntity.TEAM -> badRequest("Team not found")
 
@@ -594,7 +594,7 @@ class AdminTeamsController(private val teamService: TeamService) {
             teamService.delete(id)
             ok()
         } catch (_: NotFoundException) {
-            badRequest("Team not found")
+            notFound("Team not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
@@ -614,7 +614,7 @@ class AdminTeamsController(private val teamService: TeamService) {
             ok()
         } catch (e: NotFoundException) {
             return when (e.entity) {
-                ExceptionEntity.TEAM -> badRequest("Team not found")
+                ExceptionEntity.TEAM -> notFound("Team not found")
 
                 else -> throw e
             }
