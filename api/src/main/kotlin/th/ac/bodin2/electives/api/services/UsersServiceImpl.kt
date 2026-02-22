@@ -192,6 +192,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         return transaction {
             val studentIds = (Students innerJoin Users)
                 .select(Students.id)
+                .orderBy(Students.id)
                 .limit(PAGE_SIZE)
                 .offset(offset)
                 .map { it[Students.id].value }
@@ -208,7 +209,6 @@ class UsersServiceImpl(val config: Config) : UsersService {
             ((Students innerJoin Users)
                 .select(Students.columns + userInfoFields)
                 .where { Students.id inList studentIds }
-                .orderBy(Students.id)
                 .map { row ->
                     Student(
                         Student.Reference.from(row),
