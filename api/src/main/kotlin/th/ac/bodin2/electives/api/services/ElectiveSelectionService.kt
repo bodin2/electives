@@ -12,6 +12,7 @@ interface ElectiveSelectionService {
      * @param selections A map of elective IDs to selected subject IDs.
      *
      * @throws th.ac.bodin2.electives.NotFoundException if the student, elective, or subject does not exist.
+     * @throws IllegalArgumentException if the subject is not part of the elective.
      */
     @CreatesTransaction
     fun forceSetAllStudentSelections(

@@ -459,4 +459,26 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
             )
         }
     }
+
+    @Test
+    fun `force set all student selections with subject not in elective`() = runTest {
+        transaction {
+            Subjects.insert {
+                it[id] = TestConstants.Subjects.OTHER_ID
+                it[name] = "Other Subject"
+                it[code] = "OTH999"
+                it[tag] = SubjectTag.MATH.number
+                it[location] = "Room B"
+                it[capacity] = 10
+                it[team] = null
+            }
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            electiveSelectionService.forceSetAllStudentSelections(
+                TestConstants.Students.JOHN_ID,
+                mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.OTHER_ID)
+            )
+        }
+    }
 }

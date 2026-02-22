@@ -296,6 +296,8 @@ class AdminUsersSelectionsController(
 
                 else -> throw e
             }
+        } catch (_: IllegalArgumentException) {
+            badRequest("One or more subjects are not part of their respective electives")
         }
     }
 }

@@ -55,8 +55,9 @@ class ElectiveSelectionServiceImpl(
             Student.require(userId)
 
             val selections = selections.map { (electiveId, subjectId) ->
-                Elective.require(electiveId)
-                Subject.require(subjectId)
+                if (!Subject.isPartOfElective(Subject.require(subjectId), Elective.require(electiveId))) {
+                    throw IllegalArgumentException("Subject $subjectId is not part of elective $electiveId")
+                }
 
                 electiveId to subjectId
             }
