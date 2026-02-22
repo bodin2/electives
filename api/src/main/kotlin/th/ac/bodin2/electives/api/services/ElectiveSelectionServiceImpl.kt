@@ -2,10 +2,12 @@ package th.ac.bodin2.electives.api.services
 
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.batchInsert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
@@ -47,13 +49,40 @@ class ElectiveSelectionServiceImpl(
         """.trimIndent()
     }
 
+    @CreatesTransaction
+    override fun forceSetAllStudentSelections(userId: Int, selections: Map<Int, Int>) {
+        transaction {
+            Student.require(userId)
+
+            val selections = selections.map { (electiveId, subjectId) ->
+                if (!Subject.isPartOfElective(Subject.require(subjectId), Elective.require(electiveId))) {
+                    throw IllegalArgumentException("Subject $subjectId is not part of elective $electiveId")
+                }
+
+                electiveId to subjectId
+            }
+
+            StudentElectives.deleteWhere { StudentElectives.student eq userId }
+            StudentElectives.batchInsert(selections) { (electiveId, subjectId) ->
+                this[StudentElectives.student] = userId
+                this[StudentElectives.elective] = electiveId
+                this[StudentElectives.subject] = subjectId
+            }
+        }
+    }
+
     // We're currently using SQLite, which locks during writes, so technically all of this code to prevent TOCTOU doesn't really matter.
     // But in case if we ever switch databases, this will be useful.
 
     // We want to prevent overbooking: Thread A reads (29/30) -> Thread B reads (29/30) -> A inserts (30/30) -> B inserts (31/30)
     // SERIALIZABLE will ensure that if two transactions try to do this at the same time, one of them will be fail.
     @CreatesTransaction
-    override fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult {
+    override fun setStudentSelection(
+        executorId: Int,
+        userId: Int,
+        electiveId: Int,
+        subjectId: Int
+    ): ModifySelectionResult {
         var onSuccess: (() -> Unit)? = null
 
         val result = transaction(transactionIsolation = TRANSACTION_SERIALIZABLE) {
@@ -164,17 +193,17 @@ class ElectiveSelectionServiceImpl(
 
     private fun NotFoundException.tryHandling(): ModifySelectionResult {
         return when (entity) {
-            NotFoundEntity.ELECTIVE,
-            NotFoundEntity.SUBJECT,
-            NotFoundEntity.STUDENT -> {
+            ExceptionEntity.ELECTIVE,
+            ExceptionEntity.SUBJECT,
+            ExceptionEntity.STUDENT -> {
                 ModifySelectionResult.NotFound(entity)
             }
 
             // Should never throw, we already check teacher existence in setStudentSelection
-            NotFoundEntity.TEACHER -> throw IllegalStateException("Unreachable TEACHER NotFoundException")
+            ExceptionEntity.TEACHER -> throw IllegalStateException("Unreachable TEACHER NotFoundException")
 
             // Should never throw, we already try to get the selection above in deleteStudentSelection
-            NotFoundEntity.ELECTIVE_SELECTION -> throw IllegalStateException("Unreachable ELECTIVE_SELECTION NotFoundException")
+            ExceptionEntity.ELECTIVE_SELECTION -> throw IllegalStateException("Unreachable ELECTIVE_SELECTION NotFoundException")
 
             else -> throw this
         }

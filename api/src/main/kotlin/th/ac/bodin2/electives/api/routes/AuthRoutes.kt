@@ -1,6 +1,5 @@
 package th.ac.bodin2.electives.api.routes
 
-import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.ratelimit.*
@@ -44,7 +43,7 @@ fun Application.registerAuthRoutes() {
             post("/logout") {
                 authenticated { userId ->
                     transaction { usersService.clearSession(userId) }
-                    call.response.status(HttpStatusCode.OK)
+                    ok()
                 }
             }
         }

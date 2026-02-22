@@ -22,4 +22,9 @@ interface NotificationsService {
      * Handles a new WebSocket connection for notifications.
      */
     suspend fun WebSocketServerSession.handleConnection()
+
+    /**
+     * Handles a new WebSocket connection for notifications for admins.
+     */
+    suspend fun WebSocketServerSession.handleAdminConnection()
 }

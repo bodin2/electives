@@ -5,6 +5,119 @@ package th.ac.bodin2.electives.proto.api;
 option java_multiple_files = true;
 option java_package = "th.ac.bodin2.electives.proto.api";
 
+message AdminService {
+  message ChallengeResponse {
+    string challenge = 1;
+  }
+
+  message ListUsersResponse {
+    repeated User users = 1;
+    uint32 total = 2;
+  }
+
+  message ListTeamsResponse {
+    repeated Team teams = 1;
+  }
+
+  message ListElectivesResponse {
+    repeated Elective electives = 1;
+    // Elective -> Counts
+    map<uint32, Counts> selected_counts = 2;
+
+    message Counts {
+      uint32 selected = 1;
+      uint32 total = 2;
+    }
+  }
+
+  message AddUserRequest {
+    User user = 1;
+    string password = 2;
+    // Students-only
+    repeated uint32 team_ids = 3;
+  }
+
+  message SetElectiveSubjectsRequest {
+    repeated uint32 subject_ids = 1;
+  }
+
+  message SetStudentSelectionsRequest {
+    // Elective ID -> Subject ID
+    map<uint32, uint32> selections = 1;
+  }
+
+  message UserPatch {
+    optional string first_name = 1;
+    optional string middle_name = 2;
+    optional string last_name = 3;
+    repeated uint32 teams = 4;
+    optional string avatar_url = 5;
+    optional string new_password = 6;
+
+    // Whether the `teams` field should be considered during patching.
+    bool patch_teams = 7;
+    // Whether the `middle_name` field should be considered during patching.
+    bool patch_middle_name = 8;
+    // Whether the `avatar_url` field should be considered during patching.
+    bool patch_avatar_url = 9;
+  }
+
+  message TeamPatch {
+    optional string name = 1;
+  }
+
+  message ElectivePatch {
+    optional string name = 1;
+    /**
+     * Unix timestamp representing the start date of the selection period.
+     * If not set, the selection period should be treated as started.
+     */
+    optional uint64 start_date = 2;
+    /**
+     * Unix timestamp representing the end date of the selection period.
+     * If not set, the selection period should be treated as indefinite.
+     */
+    optional uint64 end_date = 3;
+    optional uint32 team_id = 4;
+
+    // Whether the `start_date` field should be considered during patching.
+    bool patch_start_date = 5;
+    // Whether the `end_date` field should be considered during patching.
+    bool patch_end_date = 6;
+    // Whether the `team_id` field should be considered during patching.
+    bool patch_team_id = 7;
+  }
+
+  message SubjectPatch {
+    optional string name = 1;
+    optional string description = 2;
+    optional string code = 3;
+    optional SubjectTag tag = 4;
+    optional string location = 5;
+    optional uint32 capacity = 6;
+    optional uint32 team_id = 7;
+    repeated uint32 teachers = 8;
+    optional string thumbnail_url = 9;
+    optional string image_url = 10;
+
+    // Whether the `description` field should be considered during patching.
+    bool patch_description = 11;
+    // Whether the `code` field should be considered during patching.
+    bool patch_code = 12;
+    // Whether the `location` field should be considered during patching.
+    bool patch_location = 13;
+    // Whether the `team_id` field should be considered during patching.
+    bool patch_team_id = 14;
+    // Whether the `teachers` field should be considered during patching.
+    bool patch_teachers = 15;
+    // Whether the `thumbnail_url` field should be considered during patching.
+    bool patch_thumbnail_url = 16;
+    // Whether the `image_url` field should be considered during patching.
+    bool patch_image_url = 17;
+
+  }
+}
+
 message AuthService {
   message AuthenticateRequest {
     uint32 id = 1;
@@ -26,10 +139,6 @@ message ElectivesService {
     repeated Subject subjects = 1;
   }
 
-  message ListSubjectsCountsResponse {
-    map<uint32, uint32> subject_enrolled_counts = 1;
-  }
-
   message ListSubjectMembersResponse {
     repeated User teachers = 1;
     repeated User students = 2;
@@ -37,7 +146,7 @@ message ElectivesService {
 }
 
 message UsersService {
-  message GetStudentSelectionsResponse {
+  message StudentSelections {
     // Elective ID -> Subject
     map<uint32, Subject> subjects = 1;
   }
@@ -137,7 +246,7 @@ message User {
   uint32 id = 1;
   string first_name = 2;
   optional string middle_name = 3;
-  string last_name = 4; 
+  string last_name = 4;
   UserType type = 5;
   // Only passed for Students
   repeated Team teams = 7;

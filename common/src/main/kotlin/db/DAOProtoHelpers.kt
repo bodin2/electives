@@ -5,8 +5,6 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 fun Student.toProto(): th.ac.bodin2.electives.proto.api.User {
-    val student = this
-
     return user {
         id = user.id.value
         firstName = user.firstName
@@ -17,13 +15,11 @@ fun Student.toProto(): th.ac.bodin2.electives.proto.api.User {
 
         user.avatarUrl?.let { avatarUrl = it }
 
-        teams.addAll(student.teams.map { it.toProto() })
+        teams.addAll(this@toProto.teams.map { it.toProto() })
     }
 }
 
 fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
-    val teacher = this
-
     return user {
         id = user.id.value
         firstName = user.firstName
@@ -92,7 +88,7 @@ fun Elective.toProto(): th.ac.bodin2.electives.proto.api.Elective {
         id = elective.id.value
         name = elective.name
 
-        elective.team?.let { teamId = it.id.value }
+        elective.teamId?.let { teamId = it.value }
         elective.startDate?.toUnixTimestamp()?.let { startDate = it }
         elective.endDate?.toUnixTimestamp()?.let { endDate = it }
     }
