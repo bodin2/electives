@@ -65,7 +65,7 @@ fun Application.module() {
 
         if (TransactionManager.primaryDatabase == null) {
             val path = requireEnvNonBlank("DB_PATH")
-            Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC").apply {
+            Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC") {
                 val conn = connector().connection as JDBC4Connection
                 conn.createStatement().use {
                     it.execute("PRAGMA foreign_keys=ON;")

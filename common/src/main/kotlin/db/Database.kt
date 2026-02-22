@@ -6,8 +6,10 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.db.models.*
 
 object Database {
-    fun init(url: String, driver: String): Database {
-        val db = Database.connect(url, driver)
+    fun init(url: String, driver: String) = init(url, driver) {}
+
+    fun init(url: String, driver: String, setup: org.jetbrains.exposed.v1.jdbc.Database.() -> Unit): Database {
+        val db = Database.connect(url, driver).apply(setup)
 
         // Create tables if they do not exist
         transaction { SchemaUtils.create(*tables.toTypedArray()) }
