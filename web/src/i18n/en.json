@@ -71,5 +71,8 @@
   "REMOVE_STUDENT_FROM_SUBJECT": "Remove student from subject",
   "YOU": "You",
   "SETTING_THAI": "ภาษาไทย",
-  "SETTING_THAI_DESCRIPTION": "Display the app in Thai language"
+  "SETTING_THAI_DESCRIPTION": "Display the app in Thai language",
+  "ENROLLMENT_FAILED_TITLE": "Enrollment failed",
+  "ENROLLMENT_FAILED_DESCRIPTION": "An error occurred while trying to enroll. Please try again.\n\n{{ reason }}",
+  "CLOSE": "Close"
 }

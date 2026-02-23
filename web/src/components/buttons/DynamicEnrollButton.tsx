@@ -9,6 +9,7 @@ import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { formatCountdown } from '../../utils/date'
 import { Button } from '../Button'
+import SubjectEnrollmentFailedDialog from '../dialogs/SubjectEnrollmentFailedDialog'
 import UnenrollDialog from '../dialogs/UnenrollDialog'
 import type { Elective, Subject } from '../../api'
 
@@ -22,6 +23,7 @@ export default function DynamicEnrollButton(props: {
     const router = useRouter()
     const { string } = useI18n()
     const enrollment = useEnrollmentCounts()
+    const [error, setError] = createSignal<string | null>(null)
 
     const [dialogOpen, setDialogOpen] = createSignal(false)
     const [countdown, setCountdown] = createSignal<number | null>(null)
@@ -78,10 +80,14 @@ export default function DynamicEnrollButton(props: {
                 onClick={async () => {
                     switch (enrollState()) {
                         case EnrollState.NotEnrolled:
-                            await api.client.selections.set('@me', props.elective.id, props.subject.id)
-                            await router.invalidate({
-                                sync: true,
-                            })
+                            try {
+                                await api.client.selections.set('@me', props.elective.id, props.subject.id)
+                                await router.invalidate({
+                                    sync: true,
+                                })
+                            } catch (e) {
+                                setError(String(e))
+                            }
                             break
 
                         case EnrollState.Enrolled:
@@ -120,6 +126,7 @@ export default function DynamicEnrollButton(props: {
                     electiveId={props.elective.id}
                     selectedSubject={props.selectedSubject}
                 />
+                <SubjectEnrollmentFailedDialog reason={error()} onClose={() => setError(null)} />
             </Portal>
         </>
     )

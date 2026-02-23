@@ -71,5 +71,8 @@
   "REMOVE_STUDENT_FROM_SUBJECT": "ลบนักเรียนออกจากวิชา",
   "YOU": "คุณ",
   "SETTING_THAI": "Thai language",
-  "SETTING_THAI_DESCRIPTION": "แสดงแอปในภาษาไทย"
+  "SETTING_THAI_DESCRIPTION": "แสดงแอปในภาษาไทย",
+  "ENROLLMENT_FAILED_TITLE": "ไม่สามารถลงทะเบียนเรียนได้",
+  "ENROLLMENT_FAILED_DESCRIPTION": "เกิดข้อผิดพลาดขณะพยายามลงทะเบียนเรียน กรุณาลองอีกครั้ง\n\n{{ reason }}",
+  "CLOSE": "ปิด"
 }
