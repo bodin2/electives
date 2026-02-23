@@ -25,6 +25,7 @@ import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.envelope
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
 import th.ac.bodin2.electives.utils.setInterval
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 
@@ -66,7 +67,7 @@ class NotificationsServiceImpl(
     private val connections = ConcurrentHashMap<Int, ClientConnection>()
 
     private val subjectSelectionSubscriptions =
-        ConcurrentHashMap<Int, MutableMap<Int, MutableList<SubjectSelectionUpdateListener>>>()
+        ConcurrentHashMap<Int, ConcurrentHashMap<Int, CopyOnWriteArrayList<SubjectSelectionUpdateListener>>>()
 
     internal fun isBulkUpdatesEnabled() = config.bulkUpdatesEnabled
 
@@ -163,8 +164,8 @@ class NotificationsServiceImpl(
         } catch (e: Exception) {
             when (e) {
                 // Client authentication failures
+                is CancellationException,
                 is IllegalArgumentException,
-                is TimeoutCancellationException,
                 is NotFoundException -> {
                 }
 
@@ -272,9 +273,9 @@ class NotificationsServiceImpl(
         }
 
         for ((electiveId, subjectIds) in subscriptions) {
-            val electiveSubscriptions = subjectSelectionSubscriptions.getOrPut(electiveId) { mutableMapOf() }
+            val electiveSubscriptions = subjectSelectionSubscriptions.getOrPut(electiveId) { ConcurrentHashMap() }
             for (subjectId in subjectIds) {
-                val listeners = electiveSubscriptions.getOrPut(subjectId) { mutableListOf() }
+                val listeners = electiveSubscriptions.getOrPut(subjectId) { CopyOnWriteArrayList() }
                 listeners.add(listener)
             }
         }
