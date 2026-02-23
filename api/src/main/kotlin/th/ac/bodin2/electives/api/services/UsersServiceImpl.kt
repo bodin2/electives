@@ -28,6 +28,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
     companion object {
         private const val PAGE_SIZE = 50
         private const val TOKEN_SIZE = 32
+        private val secureRand = SecureRandom()
         private val logger = LoggerFactory.getLogger(UsersServiceImpl::class.java)
 
         private val userInfoFields = listOf(
@@ -257,9 +258,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
 
                 val session = Base64.getUrlEncoder()
                     .withoutPadding()
-                    .encodeToString(ByteArray(TOKEN_SIZE).apply {
-                        SecureRandom().nextBytes(this)
-                    })
+                    .encodeToString(ByteArray(TOKEN_SIZE).apply { secureRand.nextBytes(this) })
 
                 Users.update({ Users.id eq id }) {
                     it[Users.sessionExpiry] = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds)

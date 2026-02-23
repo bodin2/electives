@@ -58,12 +58,11 @@ class Student(val reference: Reference, val user: User, val teams: List<Team>) {
         }
 
         fun getAllElectiveSelections(student: Reference): List<Pair<Int, Subject>> {
-            return StudentElectives
+            return (StudentElectives innerJoin Subjects)
                 .selectAll().where { StudentElectives.student eq student.id }
                 .map {
                     val electiveId = it[StudentElectives.elective]
-                    val subjectId = it[StudentElectives.subject]
-                    electiveId.value to Subject.findById(subjectId)!!
+                    electiveId.value to Subject.wrapRow(it)
                 }
         }
 
@@ -228,13 +227,16 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
      *
      * @return Map<SubjectId, EnrolledCount>
      */
-    fun getSubjectsEnrolledCounts(elective: Elective.Reference): Map<Int, Int> =
-        getSubjectIds(elective).associateBy({ it.value }, { subjectId ->
-            StudentElectives
-                .selectAll().where { StudentElectives.subject eq subjectId }
-                .count()
-                .toInt()
-        })
+    fun getSubjectsEnrolledCounts(elective: Elective.Reference): Map<Int, Int> {
+        val subjectIds = getSubjectIds(elective)
+        if (subjectIds.isEmpty()) return emptyMap()
+
+        return StudentElectives
+            .select(StudentElectives.subject, Count(StudentElectives.student))
+            .where { (StudentElectives.elective eq elective.id) and (StudentElectives.subject inList subjectIds) }
+            .groupBy(StudentElectives.subject)
+            .associate { it[StudentElectives.subject].value to it[Count(StudentElectives.student)].toInt() }
+    }
 
     fun getEnrollmentDateRange(elective: Elective.Reference): Pair<LocalDateTime?, LocalDateTime?> {
         val row = Electives
@@ -288,9 +290,10 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
      * Gets teachers for the specified subject.
      */
     fun getTeachers(subject: Subject.Reference): List<Teacher> {
-        return (TeacherSubjects innerJoin Teachers)
-            .selectAll().where { (TeacherSubjects.subject eq subject.id) }
-            .map { Teacher.findById(it[Teachers.id].value)!! }
+        return (TeacherSubjects innerJoin Teachers innerJoin Users)
+            .selectAll()
+            .where { TeacherSubjects.subject eq subject.id }
+            .map { Teacher.from(it) }
     }
 
     /**
@@ -301,12 +304,29 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
     fun getStudents(subject: Subject.Reference, elective: Elective.Reference): List<Student> {
         if (!isPartOfElective(subject, elective)) throw Subject.NotPartOfElectiveException(subject.id, elective.id)
 
-        return (StudentElectives innerJoin Students)
-            .selectAll().where {
-                (StudentElectives.subject eq subject.id) and
-                        (StudentElectives.elective eq elective.id)
+        val studentIds = StudentElectives
+            .select(StudentElectives.student)
+            .where { (StudentElectives.subject eq subject.id) and (StudentElectives.elective eq elective.id) }
+            .map { it[StudentElectives.student].value }
+
+        if (studentIds.isEmpty()) return emptyList()
+
+        val teamsMap = (StudentTeams innerJoin Teams)
+            .selectAll()
+            .where { StudentTeams.student inList studentIds }
+            .groupBy({ it[StudentTeams.student].value }, { Team.wrapRow(it) })
+
+        return (Students innerJoin Users)
+            .selectAll()
+            .where { Students.id inList studentIds }
+            .map { row ->
+                val studentId = row[Students.id].value
+                Student(
+                    Student.Reference(studentId),
+                    User.wrapRow(row),
+                    teamsMap[studentId] ?: emptyList()
+                )
             }
-            .map { Student.findById(it[Students.id].value)!! }
     }
 
     /**
