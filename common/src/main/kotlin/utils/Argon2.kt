@@ -32,8 +32,8 @@ object Argon2 {
         return argon2.hash(ITERATIONS, MEMORY, CORES, password)
     }
 
-    fun verify(hash: ByteArray, password: CharArray): Boolean {
-        return argon2.verify(hash.decodeToString(), password)
+    fun verify(hash: String, password: CharArray): Boolean {
+        return argon2.verify(hash, password)
     }
 
     fun findIterations(avgTimeMillis: Long): Int {

@@ -252,7 +252,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
                 val passwordHash = user[Users.passwordHash]
 
                 require(
-                    Argon2.verify(passwordHash.toByteArray(), password.toCharArray())
+                    Argon2.verify(passwordHash, password.toCharArray())
                 ) { "Invalid password for user: $id" }
 
                 val session = Base64.getUrlEncoder()
@@ -290,7 +290,7 @@ class UsersServiceImpl(val config: Config) : UsersService {
         if (sessionExpiry.isBefore(LocalDateTime.now()))
             throw IllegalArgumentException("Session expired for user: $userId")
 
-        if (!Argon2.verify(sessionHash.toByteArray(), session.toCharArray()))
+        if (!Argon2.verify(sessionHash, session.toCharArray()))
             throw IllegalArgumentException("Invalid session token for user: $userId")
 
         logger.debug("Validated session token, user: $userId")

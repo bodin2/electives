@@ -24,7 +24,7 @@ class Argon2Test {
         val password = "testpassword123".toCharArray()
         val hash = Argon2.hash(password)
 
-        val result = Argon2.verify(hash.toByteArray(), password)
+        val result = Argon2.verify(hash, password)
         assertTrue(result)
     }
 
@@ -34,7 +34,7 @@ class Argon2Test {
         val wrongPassword = "wrongpassword".toCharArray()
         val hash = Argon2.hash(password)
 
-        val result = Argon2.verify(hash.toByteArray(), wrongPassword)
+        val result = Argon2.verify(hash, wrongPassword)
         assertFalse(result)
     }
 
@@ -53,8 +53,8 @@ class Argon2Test {
         val hash1 = Argon2.hash(password)
         val hash2 = Argon2.hash(password)
 
-        assertTrue(Argon2.verify(hash1.toByteArray(), password))
-        assertTrue(Argon2.verify(hash2.toByteArray(), password))
+        assertTrue(Argon2.verify(hash1, password))
+        assertTrue(Argon2.verify(hash2, password))
     }
 
     @Test
@@ -69,7 +69,7 @@ class Argon2Test {
         val hash = Argon2.hash(password)
         assertNotNull(hash)
         assertTrue(hash.isNotBlank())
-        assertTrue(Argon2.verify(hash.toByteArray(), password))
+        assertTrue(Argon2.verify(hash, password))
     }
 
     @Test
@@ -77,14 +77,14 @@ class Argon2Test {
         val password = "a".repeat(10000).toCharArray()
         val hash = Argon2.hash(password)
         assertNotNull(hash)
-        assertTrue(Argon2.verify(hash.toByteArray(), password))
+        assertTrue(Argon2.verify(hash, password))
     }
 
     @Test
     fun testHashPasswordWithSpecialCharacters() {
         val password = "  密碼123🔐 @émoji!   ".toCharArray()
         val hash = Argon2.hash(password)
-        assertTrue(Argon2.verify(hash.toByteArray(), password))
+        assertTrue(Argon2.verify(hash, password))
     }
 
     @Test
@@ -92,14 +92,14 @@ class Argon2Test {
         val password = "   testpassword   "
         val trimmedPassword = password.trim().toCharArray()
         val hash = Argon2.hash(password.toCharArray())
-        assertTrue(Argon2.verify(hash.toByteArray(), password.toCharArray()))
-        assertFalse(Argon2.verify(hash.toByteArray(), trimmedPassword))
+        assertTrue(Argon2.verify(hash, password.toCharArray()))
+        assertFalse(Argon2.verify(hash, trimmedPassword))
     }
 
     @Test
     fun testVerifyWithEmptyHash() {
         val password = "testpassword".toCharArray()
-        val result = Argon2.verify(ByteArray(0), password)
+        val result = Argon2.verify("", password)
         assertFalse(result)
     }
 }
