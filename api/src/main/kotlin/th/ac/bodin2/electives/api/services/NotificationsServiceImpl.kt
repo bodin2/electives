@@ -125,11 +125,6 @@ class NotificationsServiceImpl(
     private suspend fun WebSocketServerSession.handleSession(userId: Int) {
         logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
-        connections[userId]?.let {
-            logger.warn("Existing connection found for user: $userId, closing previous connection")
-            it.close()
-        }
-
         val connection = ClientConnection(
             this@NotificationsServiceImpl,
             userId = userId,
@@ -139,13 +134,17 @@ class NotificationsServiceImpl(
             parentScope = updateScope,
         )
 
-        connections[userId] = connection
+        connection.start()
+        connections.put(userId, connection)?.let {
+            logger.warn("Existing connection found for user: $userId, closing previous connection")
+            it.close()
+        }
 
         try {
             for (frame in incoming) connection.handleFrame(frame)
         } finally {
             connection.close()
-            connections.remove(userId)
+            connections.remove(userId, connection)
             logger.debug("Client disconnected, user: $userId")
         }
     }
@@ -197,7 +196,8 @@ class NotificationsServiceImpl(
             when (e) {
                 // Client authentication failures
                 is IllegalArgumentException,
-                is TimeoutCancellationException -> {}
+                is TimeoutCancellationException -> {
+                }
 
                 else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteHost}", e)
             }
@@ -312,14 +312,16 @@ private class ClientConnection(
 
         private fun ClientConnection.handleUndeliveredElement() {
             @OptIn(DelicateCoroutinesApi::class)
-            if (!outgoing.isClosedForSend) {
-                val dropped = droppedCount.incrementAndGet()
-                logger.warn("Dropped envelope for user: $userId, dropped so far: $dropped")
+            // This could return false, and later during dropped comparison return true
+            // But that's fine, we only filter for log noise, closing a closed channel is a no-op
+            if (outgoing.isClosedForSend) return
 
-                if (dropped >= DROPPED_LIMIT) {
-                    logger.error("Dropped envelope limit reached for user: $userId, closing connection")
-                    scope.cancel()
-                }
+            val dropped = droppedCount.incrementAndGet()
+            logger.warn("Dropped envelope for user: $userId, dropped so far: $dropped")
+
+            if (dropped >= DROPPED_LIMIT) {
+                logger.error("Dropped envelope limit reached for user: $userId, closing connection")
+                close()
             }
         }
     }
@@ -334,25 +336,13 @@ private class ClientConnection(
         onUndeliveredElement = { handleUndeliveredElement() }
     )
 
-    init {
-        val job = scope.coroutineContext[Job]!!
-
-        job.invokeOnCompletion {
-            scope.launch(NonCancellable) {
-                runCatching {
-                    session.close()
-                }.onFailure {
-                    logger.error("Error closing WebSocket session for user: $userId", it)
-                }
-            }
-
-            for (cleanup in cleanups) runCatching { cleanup() }.onFailure {
-                logger.error("Error during ClientConnection close:", it)
-            }
-        }
-
+    fun start() {
         scope.launch {
-            for (msg in outgoing) session.send(msg)
+            try {
+                for (msg in outgoing) session.send(msg)
+            } finally {
+                cleanup()
+            }
         }
 
         scope.launch {
@@ -366,16 +356,33 @@ private class ClientConnection(
                 // ? If this becomes a bottleneck, move to per‑elective StateFlow.
                 for ((id, update) in current)
                 // Prevent sending duplicate updates. Protobuf message comparison is by‑value.
-                    if (last[id] != update) send(update)
+                    if (last[id] != update) trySend(update)
 
                 last = current
             }
         }
     }
 
+    // This can be called multiple times in the right conditions, but that's fine, closing a closed session/channel is a no-op
+    private suspend fun cleanup() {
+        try {
+            session.close()
+        } catch (e: Exception) {
+            logger.error("Error during ClientConnection WebSocket close: $userId", e)
+        }
+
+        for (cleanup in cleanups) try {
+            cleanup()
+        } catch (e: Exception) {
+            logger.error("Error during ClientConnection close:", e)
+        }
+
+        scope.cancel()
+    }
+
     suspend fun send(msg: Envelope) = outgoing.send(msg)
 
     fun trySend(msg: Envelope) = outgoing.trySend(msg)
 
-    fun close() = scope.cancel()
+    fun close() = outgoing.close()
 }
