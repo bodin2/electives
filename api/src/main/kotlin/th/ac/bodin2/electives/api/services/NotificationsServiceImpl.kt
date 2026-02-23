@@ -7,6 +7,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
@@ -37,7 +38,7 @@ private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: 
 class NotificationsServiceImpl(
     val config: Config,
     val usersService: UsersService,
-    val adminAuthService: AdminAuthService? = null
+    val adminAuthService: AdminAuthService? = null,
 ) : NotificationsService {
     class Config(
         val maxSubjectSubscriptionsPerClient: Int,
@@ -45,7 +46,7 @@ class NotificationsServiceImpl(
         /**
          * Set to `false` to disable bulk updates (usually for testing purposes).
          */
-        var bulkUpdatesEnabled: Boolean
+        var bulkUpdatesEnabled: Boolean,
     )
 
     companion object {
@@ -54,12 +55,15 @@ class NotificationsServiceImpl(
     }
 
     /**
-     * A flow that holds latest bulk updates to be sent to connected clients.
+     * A StateFlow of the map of per-elective StateFlows.
      * **Bulk updates must always be sent on connection, then in an interval after.**
      *
-     * Map<ElectiveId, Envelope>
+     * Wrapping in a StateFlow allows [ClientConnection] to react to new electives
+     * being added after a client has already connected.
+     *
+     * Map<ElectiveId, StateFlow<Envelope?>>
      */
-    internal val bulkUpdates = MutableStateFlow<Map<Int, Envelope>>(emptyMap())
+    internal val bulkUpdateFlows = MutableStateFlow<Map<Int, MutableStateFlow<Envelope?>>>(emptyMap())
 
     private val bulkUpdateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val updateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -70,6 +74,14 @@ class NotificationsServiceImpl(
         ConcurrentHashMap<Int, ConcurrentHashMap<Int, CopyOnWriteArrayList<SubjectSelectionUpdateListener>>>()
 
     internal fun isBulkUpdatesEnabled() = config.bulkUpdatesEnabled
+
+    internal fun bulkUpdateFlowForElective(electiveId: Int): StateFlow<Envelope?> =
+        bulkUpdateFlows.value[electiveId] ?: MutableStateFlow<Envelope?>(null).also { newFlow ->
+            bulkUpdateFlows.update { current ->
+                if (electiveId in current) current
+                else current + (electiveId to newFlow)
+            }
+        }
 
     override fun notifySubjectSelectionUpdate(
         electiveId: Int,
@@ -105,7 +117,7 @@ class NotificationsServiceImpl(
                 Elective.allActiveReferences().map { elective ->
                     val enrolledCounts = Elective.getSubjectsEnrolledCounts(elective)
 
-                    envelope {
+                    elective.id to envelope {
                         bulkSubjectEnrollmentUpdate = bulkSubjectEnrollmentUpdate {
                             electiveId = elective.id
                             subjectEnrolledCounts.putAll(enrolledCounts)
@@ -114,8 +126,10 @@ class NotificationsServiceImpl(
                 }
             }
 
-            bulkUpdates.update { current ->
-                current + updates.associateBy { it.bulkSubjectEnrollmentUpdate.electiveId }
+            for ((electiveId, update) in updates) {
+                val flow = bulkUpdateFlowForElective(electiveId) as MutableStateFlow
+                // Update the flow only if the updated value changes
+                if (flow.value != update) flow.value = update
             }
 
             logger.debug("Finished sending bulk updates in ${System.currentTimeMillis() - startMs}ms")
@@ -126,7 +140,7 @@ class NotificationsServiceImpl(
         logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
         val connection = ClientConnection(
-            this@NotificationsServiceImpl,
+            notificationsService = this@NotificationsServiceImpl,
             userId = userId,
             session = this,
             subscriptions = ConcurrentHashMap(),
@@ -199,7 +213,7 @@ class NotificationsServiceImpl(
                 is TimeoutCancellationException -> {
                 }
 
-                else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteHost}", e)
+                else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteAddress}", e)
             }
 
             return unauthorized()
@@ -234,13 +248,13 @@ class NotificationsServiceImpl(
                     acknowledge(envelope)
                     logger.debug("Client subscriptions updated, user: $userId")
 
-                    // Cleanup previous enrollment updates
-                    for (cleanup in cleanups) runCatching { cleanup() }.onFailure {
-                        logger.error(
-                            "Error during elective enrollment subscription update:",
-                            it
-                        )
+                    // Cleanup previous enrollment update listeners
+                    for (cleanup in cleanups) try {
+                        cleanup()
+                    } catch (e: Exception) {
+                        logger.error("Error during elective enrollment subscription update:", e)
                     }
+
                     cleanups.clear()
 
                     // Listen for enrollment updates the client requested
@@ -248,16 +262,14 @@ class NotificationsServiceImpl(
                 }
 
                 // Server payloads
-                PayloadCase.SUBJECT_ENROLLMENT_UPDATE, PayloadCase.BULK_SUBJECT_ENROLLMENT_UPDATE, PayloadCase.ACKNOWLEDGED ->
-                    return badFrame()
+                PayloadCase.SUBJECT_ENROLLMENT_UPDATE,
+                PayloadCase.BULK_SUBJECT_ENROLLMENT_UPDATE,
+                PayloadCase.ACKNOWLEDGED -> return badFrame()
 
                 // Invalid payload
                 PayloadCase.PAYLOAD_NOT_SET,
                 PayloadCase.IDENTIFY -> return badFrame()
             }
-
-            // Make sure it returns something
-            return@with
         }
     }
 
@@ -301,7 +313,7 @@ private class ClientConnection(
     private val notificationsService: NotificationsServiceImpl,
     val userId: Int,
     val session: WebSocketServerSession,
-    // Map<ElectiveId, List<SubjectId>>
+    // Map<ElectiveId, Set<SubjectId>>
     val subscriptions: ConcurrentHashMap<Int, ConcurrentHashMap.KeySetView<Int, Boolean>>,
     val cleanups: ConcurrentHashMap.KeySetView<() -> Unit, Boolean>,
     parentScope: CoroutineScope,
@@ -333,7 +345,7 @@ private class ClientConnection(
     private val outgoing = Channel<Envelope>(
         16,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        onUndeliveredElement = { handleUndeliveredElement() }
+        onUndeliveredElement = { handleUndeliveredElement() },
     )
 
     fun start() {
@@ -345,20 +357,29 @@ private class ClientConnection(
             }
         }
 
+        // Collect the outer StateFlow so we react to both existing elective flows
+        // and any new ones added after this client connected
         scope.launch {
-            var last: Map<Int, Envelope> = emptyMap()
+            val active = mutableMapOf<Int, Job>()
+            notificationsService.bulkUpdateFlows.collect { flows ->
+                // Cancel collectors for electives that have been removed
+                val removed = active.keys - flows.keys
+                removed.forEach { active.remove(it)?.cancel() }
 
-            notificationsService.bulkUpdates.collect { current ->
-                if (!notificationsService.isBulkUpdatesEnabled())
-                    return@collect
+                // Launch a collector for any newly added elective flow
+                for ((electiveId, flow) in flows) {
+                    if (electiveId in active) continue
 
-                // ? This is generally fine for small numbers of electives.
-                // ? If this becomes a bottleneck, move to per‑elective StateFlow.
-                for ((id, update) in current)
-                // Prevent sending duplicate updates. Protobuf message comparison is by‑value.
-                    if (last[id] != update) trySend(update)
-
-                last = current
+                    active[electiveId] = scope.launch {
+                        var last: Envelope? = null
+                        flow.collect { update ->
+                            if (!notificationsService.isBulkUpdatesEnabled()) return@collect
+                            if (update == null || update === last) return@collect
+                            last = update
+                            trySend(update)
+                        }
+                    }
+                }
             }
         }
     }
