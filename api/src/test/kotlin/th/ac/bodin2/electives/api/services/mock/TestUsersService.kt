@@ -1,13 +1,14 @@
-package th.ac.bodin2.electives.api.services
+package th.ac.bodin2.electives.api.services.mock
 
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.MockUtils.mockStudent
+import th.ac.bodin2.electives.api.MockUtils.mockTeacher
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.MockUtils.mockStudent
-import th.ac.bodin2.electives.api.services.MockUtils.mockTeacher
-import th.ac.bodin2.electives.api.services.TestServiceConstants.PASSWORD
-import th.ac.bodin2.electives.api.services.TestServiceConstants.STUDENT_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.TEACHER_ID
+import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.PASSWORD
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.UserType
@@ -22,6 +23,7 @@ class TestUsersService : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
+        teams: List<Int>?,
     ) = error("Not testable")
 
     override fun createTeacher(
@@ -33,10 +35,22 @@ class TestUsersService : UsersService {
         avatarUrl: String?,
     ) = error("Not testable")
 
+    @CreatesTransaction
+    override fun deleteUser(id: Int) = error("Not testable")
+
+    @CreatesTransaction
+    override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = error("Not testable")
+
+    @CreatesTransaction
+    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = error("Not testable")
+
+    @CreatesTransaction
+    override fun setPassword(id: Int, newPassword: String) = error("Not testable")
+
     override fun getUserType(id: Int) = when (id) {
         TEACHER_ID -> UserType.TEACHER
         STUDENT_ID -> UserType.STUDENT
-        else -> throw NotFoundException(NotFoundEntity.USER, "User does not exist: $id")
+        else -> throw NotFoundException(ExceptionEntity.USER, "User does not exist: $id")
     }
 
     @CreatesTransaction
@@ -77,4 +91,21 @@ class TestUsersService : UsersService {
         }
     }
 
+    @CreatesTransaction
+    override fun getStudents(page: Int): Pair<List<Student>, Long> {
+        return if (page == 1) {
+            listOf(mockStudent(STUDENT_ID)) to 1
+        } else {
+            emptyList<Student>() to 0
+        }
+    }
+
+    @CreatesTransaction
+    override fun getTeachers(page: Int): Pair<List<Teacher>, Long> {
+        return if (page == 1) {
+            listOf(mockTeacher(TEACHER_ID)) to 1
+        } else {
+            emptyList<Teacher>() to 0
+        }
+    }
 }

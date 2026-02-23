@@ -28,9 +28,16 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 
+// Fake ID for admin sessions
+private const val ADMIN_PSEUDO_ID = -1
+
 private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
-class NotificationsServiceImpl(val config: Config, val usersService: UsersService) : NotificationsService {
+class NotificationsServiceImpl(
+    val config: Config,
+    val usersService: UsersService,
+    val adminAuthService: AdminAuthService? = null
+) : NotificationsService {
     class Config(
         val maxSubjectSubscriptionsPerClient: Int,
         val bulkUpdateInterval: Duration,
@@ -59,7 +66,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
     private val connections = ConcurrentHashMap<Int, ClientConnection>()
 
     private val subjectSelectionSubscriptions =
-        mutableMapOf<Int, MutableMap<Int, MutableList<SubjectSelectionUpdateListener>>>()
+        ConcurrentHashMap<Int, MutableMap<Int, MutableList<SubjectSelectionUpdateListener>>>()
 
     internal fun isBulkUpdatesEnabled() = config.bulkUpdatesEnabled
 
@@ -114,31 +121,7 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
         }
     }
 
-    override suspend fun WebSocketServerSession.handleConnection() {
-        val userId = try {
-            withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
-                (incoming.receive() as? Frame.Binary)?.let {
-                    val token =
-                        it.parseOrNull<Envelope>()?.identify?.token
-                            ?: return@withTimeout null
-
-                    usersService.toPrincipal(token, call)
-                }
-            } ?: throw IllegalArgumentException()
-        } catch (e: Exception) {
-            when (e) {
-                // Client authentication failures
-                is IllegalArgumentException,
-                is TimeoutCancellationException,
-                is NotFoundException -> {
-                }
-
-                else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteHost}", e)
-            }
-
-            return unauthorized()
-        }
-
+    private suspend fun WebSocketServerSession.handleSession(userId: Int) {
         logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
         connections[userId]?.let {
@@ -162,7 +145,66 @@ class NotificationsServiceImpl(val config: Config, val usersService: UsersServic
         } finally {
             connection.close()
             connections.remove(userId)
+            logger.debug("Client disconnected, user: $userId")
         }
+    }
+
+    override suspend fun WebSocketServerSession.handleConnection() {
+        val userId = try {
+            withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
+                (incoming.receive() as? Frame.Binary)?.let {
+                    val token =
+                        it.parseOrNull<Envelope>()?.identify?.token
+                            ?: return@withTimeout null
+
+                    usersService.toPrincipal(token, call)?.userId
+                }
+            } ?: throw IllegalArgumentException()
+        } catch (e: Exception) {
+            when (e) {
+                // Client authentication failures
+                is IllegalArgumentException,
+                is TimeoutCancellationException,
+                is NotFoundException -> {
+                }
+
+                else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteHost}", e)
+            }
+
+            return unauthorized()
+        }
+
+        handleSession(userId)
+    }
+
+    override suspend fun WebSocketServerSession.handleAdminConnection() {
+        adminAuthService ?: throw IllegalStateException("Cannot get AdminAuthService")
+
+        try {
+            withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
+                val authenticated = (incoming.receive() as? Frame.Binary)?.let {
+                    val token =
+                        it.parseOrNull<Envelope>()?.identify?.token
+                            ?: return@withTimeout null
+
+                    adminAuthService.hasSession(token, call.request.origin.remoteAddress)
+                }
+
+                if (authenticated != true) throw IllegalArgumentException()
+            }
+        } catch (e: Exception) {
+            when (e) {
+                // Client authentication failures
+                is IllegalArgumentException,
+                is TimeoutCancellationException -> {}
+
+                else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteHost}", e)
+            }
+
+            return unauthorized()
+        }
+
+        handleSession(ADMIN_PSEUDO_ID)
     }
 
     private suspend fun ClientConnection.handleFrame(frame: Frame) {

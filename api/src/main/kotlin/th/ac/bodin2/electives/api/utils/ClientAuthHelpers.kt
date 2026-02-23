@@ -4,9 +4,9 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.routing.*
-import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.USER_AUTHENTICATION
+import th.ac.bodin2.electives.api.UserPrincipal
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.UserType
 
@@ -49,20 +49,6 @@ suspend fun RoutingContext.authenticated(
     block(userId)
 }
 
-/**
- * [RoutingContext.authenticated], but for WebSocket sessions.
- */
-suspend fun WebSocketServerSession.authenticated(
-    types: List<UserType> = ALL_USER_TYPES,
-    block: suspend WebSocketServerSession.(userId: Int) -> Unit
-) {
-    val userId = call.authenticatedUserId() ?: return unauthorized()
-    val usersService: UsersService by call.application.dependencies
-    if (usersService.missingType(userId, types)) return unauthorized()
-
-    block(userId)
-}
-
 @Suppress("NOTHING_TO_INLINE")
 inline fun UsersService.missingType(userId: Int, types: List<UserType>): Boolean {
     return transaction { getUserType(userId) } !in types
@@ -77,5 +63,5 @@ fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
 }
 
 fun ApplicationCall.authenticatedUserId(): Int? {
-    return principal<Int>()
+    return principal<UserPrincipal>()?.userId
 }

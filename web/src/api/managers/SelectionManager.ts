@@ -5,10 +5,10 @@
 import { nonNull } from '../../utils'
 import { Subject } from '../structures'
 import {
-    type GetStudentSelectionsResponse,
-    GetStudentSelectionsResponseCodec,
     type SetStudentElectiveSelectionRequest,
     SetStudentElectiveSelectionRequestCodec,
+    type StudentSelections,
+    StudentSelectionsCodec,
 } from '../types'
 import type { Cache } from '../cache'
 import type { Client } from '../client'
@@ -55,8 +55,8 @@ export class SelectionManager implements CacheableManager {
             if (cached) return cached
         }
 
-        const data = await this.client.rest.get<GetStudentSelectionsResponse>(`/users/${userId}/selections`, {
-            decoder: GetStudentSelectionsResponseCodec,
+        const data = await this.client.rest.get<StudentSelections>(`/users/${userId}/selections`, {
+            decoder: StudentSelectionsCodec,
         })
 
         const selections = new Map<number, Subject>()

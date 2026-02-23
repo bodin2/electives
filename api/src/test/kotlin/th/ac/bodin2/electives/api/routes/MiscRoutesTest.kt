@@ -1,7 +1,8 @@
-package th.ac.bodin2.electives.api
+package th.ac.bodin2.electives.api.routes
 
 import io.ktor.client.request.*
 import io.ktor.http.*
+import th.ac.bodin2.electives.api.ApplicationTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

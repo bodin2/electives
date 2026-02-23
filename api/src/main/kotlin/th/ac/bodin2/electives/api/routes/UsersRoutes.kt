@@ -1,6 +1,5 @@
 package th.ac.bodin2.electives.api.routes
 
-import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.di.*
@@ -9,7 +8,7 @@ import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.routing
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_USERS
 import th.ac.bodin2.electives.api.RATE_LIMIT_USERS_SELECTIONS
@@ -22,7 +21,7 @@ import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
-import th.ac.bodin2.electives.proto.api.UsersServiceKt.getStudentSelectionsResponse
+import th.ac.bodin2.electives.proto.api.UsersServiceKt.studentSelections
 
 fun Application.registerUsersRoutes() {
     val usersService: UsersService by dependencies
@@ -41,13 +40,15 @@ class UsersController(
                 rateLimit(RATE_LIMIT_USERS) {
                     get<Users.Id> {
                         resolveUserIdEnforced(it.id) { userId, _ ->
-                            handleGetUser(userId)
+                            context(usersService) { handleGetUser(userId) }
                         }
                     }
 
                     get<Users.Id.Selections> {
                         resolveUserIdEnforced(it.parent.id) { userId, _ ->
-                            handleGetStudentSelections(userId)
+                            context(electiveSelectionService) {
+                                handleGetStudentSelections(userId)
+                            }
                         }
                     }
                 }
@@ -69,45 +70,6 @@ class UsersController(
         }
     }
 
-    private suspend fun RoutingContext.handleGetUser(userId: Int) {
-        val userProto = transaction {
-            try {
-                when (val type = usersService.getUserType(userId)) {
-                    UserType.STUDENT -> usersService.getStudentById(userId)?.toProto() ?: return@transaction null
-                    UserType.TEACHER -> usersService.getTeacherById(userId)?.toProto() ?: return@transaction null
-
-                    else -> throw IllegalStateException("Unknown user type: $type (id: $userId)")
-                }
-            } catch (_: NotFoundException) {
-                return@transaction null
-            }
-        } ?: return userNotFoundError()
-
-        call.respond(userProto)
-    }
-
-    private suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
-        try {
-            val response = transaction {
-                val selections = electiveSelectionService.getStudentSelections(userId)
-
-                getStudentSelectionsResponse {
-                    subjects.putAll(selections.mapValues {
-                        it.value.toProto(withDescription = false, withTeachers = true)
-                    })
-                }
-            }
-
-            // @TODO: Return more specific error if user is not a student?
-            // But that requires an extra query and exposes unnecessary information...
-
-            call.respond(response)
-        } catch (_: NotFoundException) {
-            return badRequest("Viewing selections for non-student users")
-        }
-
-    }
-
     private suspend fun RoutingContext.handlePutStudentElectiveSelection(
         electiveId: Int,
         userId: Int,
@@ -118,16 +80,16 @@ class UsersController(
         @OptIn(CreatesTransaction::class)
         when (val result =
             electiveSelectionService.setStudentSelection(authenticatedUserId, userId, electiveId, req.subjectId)) {
-            ModifySelectionResult.Success -> call.response.status(HttpStatusCode.OK)
+            ModifySelectionResult.Success -> ok()
 
             is ModifySelectionResult.NotFound -> {
                 /**
                  * See [th.ac.bodin2.electives.api.services.ElectiveSelectionServiceImpl.tryHandling]
                  */
                 return when (result.entity) {
-                    NotFoundEntity.ELECTIVE -> notFound("Elective not found")
-                    NotFoundEntity.SUBJECT -> badRequest("Subject does not exist")
-                    NotFoundEntity.STUDENT -> modifyingNonStudentUserSelectionError()
+                    ExceptionEntity.ELECTIVE -> notFound("Elective not found")
+                    ExceptionEntity.SUBJECT -> badRequest("Subject does not exist")
+                    ExceptionEntity.STUDENT -> modifyingNonStudentUserSelectionError()
 
                     else -> throw IllegalStateException("Unreachable case: ${result.entity}")
                 }
@@ -170,7 +132,7 @@ class UsersController(
     ) {
         @OptIn(CreatesTransaction::class)
         when (val result = electiveSelectionService.deleteStudentSelection(authenticatedUserId, userId, electiveId)) {
-            ModifySelectionResult.Success -> call.response.status(HttpStatusCode.OK)
+            ModifySelectionResult.Success -> ok()
 
             is ModifySelectionResult.CannotModify -> {
                 return when (result.status) {
@@ -181,8 +143,8 @@ class UsersController(
 
             is ModifySelectionResult.NotFound -> {
                 return when (result.entity) {
-                    NotFoundEntity.ELECTIVE -> notFound("Elective not found")
-                    NotFoundEntity.STUDENT -> modifyingNonStudentUserSelectionError()
+                    ExceptionEntity.ELECTIVE -> notFound("Elective not found")
+                    ExceptionEntity.STUDENT -> modifyingNonStudentUserSelectionError()
 
                     else -> throw IllegalStateException("Unreachable case: ${result.entity}")
                 }
@@ -204,6 +166,46 @@ class UsersController(
             }
         }
     }
+}
+
+context(electiveSelectionService: ElectiveSelectionService)
+suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
+    try {
+        val response = transaction {
+            val selections = electiveSelectionService.getStudentSelections(userId)
+
+            studentSelections {
+                subjects.putAll(selections.mapValues {
+                    it.value.toProto(withDescription = false, withTeachers = true)
+                })
+            }
+        }
+
+        // @TODO: Return more specific error if user is not a student?
+        // But that requires an extra query and exposes unnecessary information...
+
+        call.respond(response)
+    } catch (_: NotFoundException) {
+        return badRequest("Viewing selections for non-student users")
+    }
+}
+
+context(usersService: UsersService)
+suspend fun RoutingContext.handleGetUser(userId: Int) {
+    val userProto = transaction {
+        try {
+            when (val type = usersService.getUserType(userId)) {
+                UserType.STUDENT -> usersService.getStudentById(userId)?.toProto() ?: return@transaction null
+                UserType.TEACHER -> usersService.getTeacherById(userId)?.toProto() ?: return@transaction null
+
+                else -> throw IllegalStateException("Unknown user type: $type (id: $userId)")
+            }
+        } catch (_: NotFoundException) {
+            return@transaction null
+        }
+    } ?: return userNotFoundError()
+
+    call.respond(userProto)
 }
 
 

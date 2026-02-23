@@ -30,7 +30,8 @@ fun Application.configureHTTP() {
                 "/auth" -> 2.KiB
                 "/notifications" -> Long.MAX_VALUE
                 else -> {
-                    if (path.startsWith("/users")) 1.KiB
+                    if (path.startsWith("/admin")) return@bodyLimit 1024.KiB
+                    if (path.startsWith("/users")) return@bodyLimit 1.KiB
                     else 0
                 }
             }
@@ -80,6 +81,17 @@ private fun Application.configureRateLimits() {
     install(RateLimit) {
         val authenticated: suspend (ApplicationCall) -> Any = { it.authenticatedUserId() ?: Unit }
 
+        register(RATE_LIMIT_ADMIN) {
+            rateLimiter(limit = 10, refillPeriod = 10.seconds)
+            requestKey { it.request.origin.remoteAddress }
+        }
+
+        register(RATE_LIMIT_ADMIN_AUTH) {
+            // Includes creating a challenge
+            rateLimiter(limit = 10, refillPeriod = 1.minutes)
+            requestKey { it.request.origin.remoteAddress }
+        }
+
         register(RATE_LIMIT_AUTH) {
             rateLimiter(limit = 10, refillPeriod = 1.minutes)
             requestKey { it.request.origin.remoteAddress }
@@ -125,6 +137,8 @@ private fun Application.configureRateLimits() {
     }
 }
 
+val RATE_LIMIT_ADMIN = RateLimitName("admin")
+val RATE_LIMIT_ADMIN_AUTH = RateLimitName("admin.auth")
 val RATE_LIMIT_AUTH = RateLimitName("auth")
 val RATE_LIMIT_ELECTIVES = RateLimitName("electives")
 val RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS = RateLimitName("electives.subject.members")

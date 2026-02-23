@@ -1,19 +1,20 @@
-package th.ac.bodin2.electives.api
+package th.ac.bodin2.electives.api.routes
 
 import io.ktor.client.statement.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
+import th.ac.bodin2.electives.api.*
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
-import th.ac.bodin2.electives.api.services.TestServiceConstants.ELECTIVE_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.PASSWORD
-import th.ac.bodin2.electives.api.services.TestServiceConstants.STUDENT_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.SUBJECT_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.TEACHER_ID
-import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.services.testElectiveSelectionServiceResponse
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.PASSWORD
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.api.services.mock.testElectiveSelectionServiceResponse
 import th.ac.bodin2.electives.proto.api.User
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersServiceKt.setStudentElectiveSelectionRequest
@@ -98,7 +99,7 @@ class UsersRoutesTest : ApplicationTest() {
     fun `get student selections`() = runRouteTest {
         val selections = client.getWithAuth("/users/@me/selections", studentToken())
             .assertOK()
-            .parse<th.ac.bodin2.electives.proto.api.UsersService.GetStudentSelectionsResponse>()
+            .parse<th.ac.bodin2.electives.proto.api.UsersService.StudentSelections>()
 
         assertEquals(SUBJECT_ID, selections.subjectsMap[ELECTIVE_ID]?.id)
         assertEquals(TEACHER_ID, selections.subjectsMap[ELECTIVE_ID]?.teachersList?.first()?.id)
@@ -139,19 +140,19 @@ class UsersRoutesTest : ApplicationTest() {
 
     @Test
     fun `modify selection on not found elective`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.NotFound(NotFoundEntity.ELECTIVE))
+        modifySelectionWithResult(ModifySelectionResult.NotFound(ExceptionEntity.ELECTIVE))
             .assertNotFound("Elective not found")
     }
 
     @Test
     fun `modify selection on not found subject`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.NotFound(NotFoundEntity.SUBJECT))
+        modifySelectionWithResult(ModifySelectionResult.NotFound(ExceptionEntity.SUBJECT))
             .assertBadRequest("Subject does not exist")
     }
 
     @Test
     fun `modify selection on non-student user`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.NotFound(NotFoundEntity.STUDENT))
+        modifySelectionWithResult(ModifySelectionResult.NotFound(ExceptionEntity.STUDENT))
             .assertBadRequest("Modifying selections for non-student users")
     }
 

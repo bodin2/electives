@@ -15,6 +15,7 @@ import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.TestDatabase.mockData
 import th.ac.bodin2.electives.api.services.*
+import th.ac.bodin2.electives.api.services.mock.*
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
@@ -22,7 +23,6 @@ typealias TransactionBlock = JdbcTransaction.() -> Any?
 
 abstract class ApplicationTest {
     private fun mockTransactions() {
-        MockUtils.mockElectiveRequire()
         mockkStatic("org.jetbrains.exposed.v1.jdbc.transactions.TransactionsKt")
         every {
             transaction<Any?>(any(), any(), any(), any())
@@ -32,7 +32,6 @@ abstract class ApplicationTest {
     }
 
     private fun unmockTransactions() {
-        MockUtils.unmockElectiveRequire()
         unmockkStatic("org.jetbrains.exposed.v1.jdbc.transactions.TransactionsKt")
     }
 
@@ -42,6 +41,8 @@ abstract class ApplicationTest {
                 rateLimiter(Int.MAX_VALUE, 0.seconds)
             }
 
+            register(RATE_LIMIT_ADMIN, mock)
+            register(RATE_LIMIT_ADMIN_AUTH, mock)
             register(RATE_LIMIT_AUTH, mock)
             register(RATE_LIMIT_ELECTIVES, mock)
             register(RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS, mock)
@@ -54,6 +55,7 @@ abstract class ApplicationTest {
     open fun runRouteTest(block: suspend ApplicationTestBuilder.() -> Unit) {
         setupTestEnvironment()
         mockTransactions()
+        MockUtils.mockDAOHelpers()
 
         testApplication {
             application {
@@ -62,6 +64,9 @@ abstract class ApplicationTest {
                     provide<NotificationsService> { mockk(relaxed = true) }
                     provide<ElectiveService> { TestElectiveService() }
                     provide<ElectiveSelectionService> { TestElectiveSelectionService() }
+                    provide<SubjectService> { TestSubjectService() }
+                    provide<TeamService> { TestTeamService() }
+                    provide<AdminAuthService> { mockk(relaxed = true) }
                 }
 
                 mockRateLimits()
@@ -72,6 +77,7 @@ abstract class ApplicationTest {
         }
 
         unmockTransactions()
+        MockUtils.unmockDAOHelpers()
     }
 
     open fun runTest(setup: TestApplicationBuilder.() -> Unit, block: suspend ApplicationTestBuilder.() -> Unit) {

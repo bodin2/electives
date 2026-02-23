@@ -28,9 +28,11 @@ class ElectivesController(private val electiveService: ElectiveService) {
     fun Application.register() {
         routing {
             rateLimit(RATE_LIMIT_ELECTIVES) {
-                get<Electives> { handleGetElectives() }
-                get<Electives.Id> { handleGetElective(it.id) }
-                get<Electives.Id.Subjects> { handleGetElectiveSubjects(it.parent.id) }
+                context(electiveService) {
+                    get<Electives> { handleGetElectives() }
+                    get<Electives.Id> { handleGetElective(it.id) }
+                    get<Electives.Id.Subjects> { handleGetElectiveSubjects(it.parent.id) }
+                }
                 get<Electives.Id.Subjects.SubjectId> { handleGetElectiveSubject(it.parent.parent.id, it.subjectId) }
             }
 
@@ -46,37 +48,6 @@ class ElectivesController(private val electiveService: ElectiveService) {
                 }
             }
         }
-    }
-
-    private suspend fun RoutingContext.handleGetElectives() {
-        call.respond(listResponse {
-            transaction {
-                electives += electiveService.getAll().map { it.toProto() }
-            }
-        })
-    }
-
-    private suspend fun RoutingContext.handleGetElective(electiveId: Int) {
-        val response = transaction { electiveService.getById(electiveId)?.toProto() }
-            ?: return electiveNotFoundError()
-
-        call.respond(response)
-    }
-
-    private suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
-        val response = transaction {
-            return@transaction when (val result = electiveService.getSubjects(electiveId)) {
-                is QueryResult.ElectiveNotFound -> null
-                is QueryResult.Success ->
-                    listSubjectsResponse {
-                        subjects += result.value.map { it.toProto(withDescription = false, withTeachers = true, electiveId = electiveId) }
-                    }
-
-                else -> throw IllegalStateException("Unreachable case: $result")
-            }
-        } ?: return electiveNotFoundError()
-
-        call.respond(response)
     }
 
     private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, subjectId: Int) {
@@ -137,6 +108,40 @@ class ElectivesController(private val electiveService: ElectiveService) {
             }
         }
     }
+}
+
+context(electiveService: ElectiveService)
+suspend fun RoutingContext.handleGetElectives() {
+    call.respond(listResponse {
+        transaction {
+            electives += electiveService.getAll().map { it.toProto() }
+        }
+    })
+}
+
+context(electiveService: ElectiveService)
+suspend fun RoutingContext.handleGetElective(electiveId: Int) {
+    val response = transaction { electiveService.getById(electiveId)?.toProto() }
+        ?: return electiveNotFoundError()
+
+    call.respond(response)
+}
+
+context(electiveService: ElectiveService)
+suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
+    val response = transaction {
+        return@transaction when (val result = electiveService.getSubjects(electiveId)) {
+            is QueryResult.ElectiveNotFound -> null
+            is QueryResult.Success ->
+                listSubjectsResponse {
+                    subjects += result.value.map { it.toProto(withDescription = false, withTeachers = true, electiveId = electiveId) }
+                }
+
+            else -> throw IllegalStateException("Unreachable case: $result")
+        }
+    } ?: return electiveNotFoundError()
+
+    call.respond(response)
 }
 
 private val electiveNotFound: ErrorResponse

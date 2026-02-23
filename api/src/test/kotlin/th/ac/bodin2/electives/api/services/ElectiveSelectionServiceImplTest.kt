@@ -1,4 +1,4 @@
-package th.ac.bodin2.electives.api
+package th.ac.bodin2.electives.api.services
 
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
@@ -6,19 +6,18 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import th.ac.bodin2.electives.NotFoundEntity
+import th.ac.bodin2.electives.ExceptionEntity
+import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.api.ApplicationTest
+import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
-import th.ac.bodin2.electives.api.services.ElectiveSelectionService
-import th.ac.bodin2.electives.api.services.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.db.models.ElectiveSubjects
 import th.ac.bodin2.electives.db.models.Electives
 import th.ac.bodin2.electives.db.models.Subjects
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import java.time.LocalDateTime
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @OptIn(CreatesTransaction::class)
 class ElectiveSelectionServiceImplTest : ApplicationTest() {
@@ -143,7 +142,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         )
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.NotFound>(result)
-        assertEquals(NotFoundEntity.ELECTIVE, result.entity)
+        assertEquals(ExceptionEntity.ELECTIVE, result.entity)
     }
 
     @Test
@@ -156,7 +155,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         )
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.NotFound>(result)
-        assertEquals(NotFoundEntity.SUBJECT, result.entity)
+        assertEquals(ExceptionEntity.SUBJECT, result.entity)
     }
 
     @Test
@@ -247,7 +246,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         )
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.NotFound>(result)
-        assertEquals(NotFoundEntity.ELECTIVE, result.entity)
+        assertEquals(ExceptionEntity.ELECTIVE, result.entity)
     }
 
     @Test
@@ -396,5 +395,90 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         )
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(result)
+    }
+
+    @Test
+    fun `force set all student selections`() = runTest {
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.PHYSICS_ID)
+        )
+
+        val selections = transaction {
+            electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
+        }
+
+        assertEquals(TestConstants.Subjects.PHYSICS_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id?.value)
+    }
+
+    @Test
+    fun `force set all student selections replaces existing`() = runTest {
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.PHYSICS_ID)
+        )
+
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            mapOf()
+        )
+
+        val selections = transaction {
+            electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
+        }
+
+        assertTrue(selections.isEmpty())
+    }
+
+    @Test
+    fun `force set all student selections with invalid student`() = runTest {
+        assertFailsWith<NotFoundException> {
+            electiveSelectionService.forceSetAllStudentSelections(
+                UNUSED_ID,
+                mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.PHYSICS_ID)
+            )
+        }
+    }
+
+    @Test
+    fun `force set all student selections with invalid elective`() = runTest {
+        assertFailsWith<NotFoundException> {
+            electiveSelectionService.forceSetAllStudentSelections(
+                TestConstants.Students.JOHN_ID,
+                mapOf(UNUSED_ID to TestConstants.Subjects.PHYSICS_ID)
+            )
+        }
+    }
+
+    @Test
+    fun `force set all student selections with invalid subject`() = runTest {
+        assertFailsWith<NotFoundException> {
+            electiveSelectionService.forceSetAllStudentSelections(
+                TestConstants.Students.JOHN_ID,
+                mapOf(TestConstants.Electives.SCIENCE_ID to UNUSED_ID)
+            )
+        }
+    }
+
+    @Test
+    fun `force set all student selections with subject not in elective`() = runTest {
+        transaction {
+            Subjects.insert {
+                it[id] = TestConstants.Subjects.OTHER_ID
+                it[name] = "Other Subject"
+                it[code] = "OTH999"
+                it[tag] = SubjectTag.MATH.number
+                it[location] = "Room B"
+                it[capacity] = 10
+                it[team] = null
+            }
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            electiveSelectionService.forceSetAllStudentSelections(
+                TestConstants.Students.JOHN_ID,
+                mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.OTHER_ID)
+            )
+        }
     }
 }
