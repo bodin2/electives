@@ -107,18 +107,20 @@ const APIProvider: ParentComponent<{ client: Client }> = props => {
                 log.warn('Gateway rate limited, retrying after:', retryAfter, 'ms')
             }
 
+            let loggingOut = false
             const onUnauthorized = (error: ClientEventMap['unauthorized']) => {
-                if (authState() === AuthenticationState.LoggedOut) {
+                if (authState() === AuthenticationState.LoggedOut || loggingOut) {
                     log.warn('Received unauthorized event while logged out, likely a bad session.')
-                    api.logout()
                     return
                 }
 
+                loggingOut = true
                 client.rest.get('/users/@me').catch(e => {
                     if (e instanceof UnauthorizedError) {
                         log.warn('Unauthorized, logging out:', error.message)
                         return client.logout()
                     }
+                    loggingOut = false
                 })
             }
 
