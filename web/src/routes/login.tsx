@@ -38,6 +38,10 @@ function Login() {
     const [inputExtraProps, setInputExtraProps] = createSignal<Partial<TextFieldProps>>({})
 
     createEffect(() => {
+        // Track search params, so if the app marvelously explodes and produces a /login?to=/login?to=/some-page,
+        // The user won't get stuck on the /login page
+        const s = search()
+
         if (api.authState() === AuthenticationState.LoggedIn) {
             log.info('Logged in, redirecting to home')
 
@@ -48,7 +52,6 @@ function Login() {
             })
 
             setTimeout(() => {
-                const s = search()
                 const url = s.to ? `${s.to}${s.search ? `?${decodeURIComponent(s.search)}` : ''}` : '/'
                 navigate({ to: url, replace: true })
             }, 350)

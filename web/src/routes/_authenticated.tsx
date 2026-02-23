@@ -16,32 +16,37 @@ export const Route = createFileRoute('/_authenticated')({
     },
     component: AuthenticatedLayout,
     errorComponent: props => {
-        if (props.error instanceof UnauthorizedError) return null
+        if (props.error instanceof UnauthorizedError) return <UnauthorizedRedirect />
         throw props.error
     },
 })
 
-function AuthenticatedLayout() {
+function useLogoutRedirect() {
     const api = useAPI()
     const navigate = useNavigate()
     const location = useLocation()
-    const pageData = usePageData()
 
     createEffect(
         on(api.authState, authState => {
             if (authState === AuthenticationState.LoggedOut) {
-                const loc = location()
                 navigate({
                     to: '/login',
                     replace: true,
                     search: {
-                        to: loc.pathname,
-                        search: loc.searchStr || undefined,
+                        to: location().pathname,
+                        search: location().searchStr || undefined,
                     },
                 })
             }
         }),
     )
+}
+
+function AuthenticatedLayout() {
+    const api = useAPI()
+    const pageData = usePageData()
+
+    useLogoutRedirect()
 
     return (
         <Switch>
@@ -73,6 +78,11 @@ function AuthenticatedLayout() {
             </Match>
         </Switch>
     )
+}
+
+function UnauthorizedRedirect() {
+    useLogoutRedirect()
+    return null
 }
 
 function NetworkErrorPage() {
