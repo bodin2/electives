@@ -25,6 +25,7 @@ import java.util.*
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 internal val logger: Logger = LoggerFactory.getLogger("ElectivesAPI")
@@ -157,12 +158,15 @@ fun Application.provideDependencies() {
             provide<AdminAuthService> {
                 AdminAuthServiceImpl(
                     AdminAuthServiceImpl.Config(
-                        sessionDurationSeconds = 1.hours.inWholeSeconds,
-                        minimumSessionCreationTime = 3.seconds,
+                        sessionDurationSeconds =
+                            (getEnv("ADMIN_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.hours).inWholeSeconds,
+                        minimumSessionCreationTime =
+                            (getEnv("ADMIN_SESSION_CREATION_MINIMUM_TIME")?.toIntOrNull()?.milliseconds
+                                ?: 3.seconds),
                         allowedIPs = getEnv("ADMIN_ALLOWED_IPS").let { ipString ->
                             val ips = ipString.let {
                                 if (it.isNullOrBlank()) {
-                                    logger.warn("ADMIN_ALLOWED_IPS is not set, defaulting to only allow localhost access.")
+                                    logger.warn("ADMIN_ALLOWED_IPS is not set, only allowing admin access from local machine.")
                                     return@let "127.0.0.0/8,::1/128"
                                 }
 
@@ -171,11 +175,12 @@ fun Application.provideDependencies() {
 
                             if (ips == "*") {
                                 logger.warn("ADMIN_ALLOWED_IPS is set to '*', allowing access from any IP address. Not recommended!")
-                                null 
+                                null
                             } else ips.split(",").map { CIDR.parse(it.trim()) }
                         },
                         publicKey = publicKey,
-                        challengeTimeoutSeconds = 60
+                        challengeTimeoutSeconds =
+                            (getEnv("ADMIN_CHALLENGE_TIMEOUT")?.toIntOrNull()?.seconds ?: 1.minutes).inWholeSeconds
                     )
                 )
             }
