@@ -1,13 +1,16 @@
+import ArrowLeftIcon from '@iconify-icons/mdi/arrow-left'
 import {
     createFileRoute,
     type ErrorRouteComponent,
     Outlet,
+    useCanGoBack,
     useLocation,
     useNavigate,
     useRouter,
 } from '@tanstack/solid-router'
 import { createEffect, Match, on, Switch } from 'solid-js'
 import { UnauthorizedError } from '../api'
+import { Button } from '../components/Button'
 import SchoolLogo from '../components/images/SchoolLogo'
 import ErrorPage from '../components/pages/ErrorPage'
 import LoadingPage from '../components/pages/LoadingPage'
@@ -37,6 +40,8 @@ export const Route = createFileRoute('/_authenticated')({
 function AuthenticatedLayout() {
     const api = useAPI()
     const pageData = usePageData()
+    const canGoBack = useCanGoBack()
+    const { string } = useI18n()
 
     useLogoutRedirect()
 
@@ -45,6 +50,19 @@ function AuthenticatedLayout() {
             <Match when={api.authState() === AuthenticationState.LoggedIn}>
                 <TopAppBar
                     variant="small"
+                    leading={
+                        canGoBack()
+                            ? () => (
+                                  <Button
+                                      aria-label={string.BACK()}
+                                      variant="text"
+                                      icon={ArrowLeftIcon}
+                                      iconType="only"
+                                      onClick={() => history.back()}
+                                  />
+                              )
+                            : undefined
+                    }
                     headline={() => (
                         <HStack
                             alignHorizontal="center"
