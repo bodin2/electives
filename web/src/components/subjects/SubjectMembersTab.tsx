@@ -13,7 +13,7 @@ import styles from './SubjectMembersTab.module.css'
 import type { User } from '../../api'
 
 interface SubjectMembersTabProps {
-    members: { teachers: User[]; students: User[] } | undefined
+    members: { teachers: User[]; students: User[]; maxStudents: number } | undefined
     gridClass?: string
     headerClass?: string
     listClass?: string
@@ -43,6 +43,7 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
                             listClass={props.listClass}
                             noMembersClass={props.noMembersClass}
                             onRemove={props.onStudentRemove}
+                            maxCapacity={data().maxStudents}
                         />
                     </div>
                 )}
@@ -58,6 +59,7 @@ interface SubjectMembersSectionProps {
     listClass?: string
     noMembersClass?: string
     onRemove?: (user: User) => unknown
+    maxCapacity?: number
 }
 
 function SubjectMembersSection(props: SubjectMembersSectionProps) {
@@ -67,7 +69,8 @@ function SubjectMembersSection(props: SubjectMembersSectionProps) {
     return (
         <section>
             <h1 class={`m3-label-large text-primary ${props.headerClass ?? ''}`}>
-                {props.title} ({props.users.length})
+                {props.title} ({props.users.length}
+                {props.maxCapacity ? `/${props.maxCapacity}` : ''})
             </h1>
             <ul class={props.listClass}>
                 <Show when={props.users.length === 0}>

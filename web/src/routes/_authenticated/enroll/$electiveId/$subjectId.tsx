@@ -108,7 +108,7 @@ function RouteComponent() {
             students = [...students].sort((a, b) => a.fullName.localeCompare(b.fullName))
             teachers = [...teachers].sort((a, b) => a.fullName.localeCompare(b.fullName))
 
-            return { students, teachers }
+            return { students, teachers, maxStudents: data().subject.capacity }
         },
         {
             shouldFetch: membersTabOpened,
