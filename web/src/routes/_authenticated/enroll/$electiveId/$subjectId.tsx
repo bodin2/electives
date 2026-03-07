@@ -17,9 +17,11 @@ import { useEnrollmentCounts } from '../../../../providers/EnrollmentCountsProvi
 import { useI18n } from '../../../../providers/I18nProvider'
 import { useScrollData } from '../../../../providers/ScrollDataProvider'
 import { nonNull } from '../../../../utils'
+import { AUTHENTICATED_ROUTE_DEFAULTS } from '../../../_authenticated'
 import styles from './$subjectId.module.css'
 
 export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjectId')({
+    ...AUTHENTICATED_ROUTE_DEFAULTS,
     params: {
         parse: raw => ({
             electiveId: Number(raw.electiveId),

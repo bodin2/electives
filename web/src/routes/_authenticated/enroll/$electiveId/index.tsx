@@ -11,9 +11,11 @@ import SubjectCategorySection from '../../../../components/subjects/SubjectCateg
 import { useEnrollmentCounts } from '../../../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { debounce, groupItems, nonNull } from '../../../../utils'
+import { AUTHENTICATED_ROUTE_DEFAULTS } from '../../../_authenticated'
 import styles from './index.module.css'
 
 export const Route = createFileRoute('/_authenticated/enroll/$electiveId/')({
+    ...AUTHENTICATED_ROUTE_DEFAULTS,
     params: {
         parse: raw => ({
             electiveId: Number(raw.electiveId),

@@ -11,9 +11,11 @@ import { HStack, VStack } from '../../components/Stack'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { electiveSorter, groupItems, nonNull } from '../../utils'
+import { AUTHENTICATED_ROUTE_DEFAULTS } from '../_authenticated'
 import styles from './index.module.css'
 
 export const Route = createFileRoute('/_authenticated/')({
+    ...AUTHENTICATED_ROUTE_DEFAULTS,
     loader: async ({ context }) => {
         const user = nonNull(context.client.user)
 

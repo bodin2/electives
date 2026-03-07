@@ -1,4 +1,11 @@
-import { createFileRoute, Outlet, useLocation, useNavigate, useRouter } from '@tanstack/solid-router'
+import {
+    createFileRoute,
+    type ErrorRouteComponent,
+    Outlet,
+    useLocation,
+    useNavigate,
+    useRouter,
+} from '@tanstack/solid-router'
 import { createEffect, Match, on, Switch } from 'solid-js'
 import { UnauthorizedError } from '../api'
 import SchoolLogo from '../components/images/SchoolLogo'
@@ -10,37 +17,22 @@ import { AuthenticationState, useAPI } from '../providers/APIProvider'
 import { useI18n } from '../providers/I18nProvider'
 import { usePageData } from '../providers/PageProvider'
 
-export const Route = createFileRoute('/_authenticated')({
-    beforeLoad: async ({ context }) => {
-        await context.authState
-    },
-    component: AuthenticatedLayout,
+export const AUTHENTICATED_ROUTE_DEFAULTS = {
     errorComponent: props => {
         if (props.error instanceof UnauthorizedError) return <UnauthorizedRedirect />
         throw props.error
     },
-})
-
-function useLogoutRedirect() {
-    const api = useAPI()
-    const navigate = useNavigate()
-    const location = useLocation()
-
-    createEffect(
-        on(api.authState, authState => {
-            if (authState === AuthenticationState.LoggedOut) {
-                navigate({
-                    to: '/login',
-                    replace: true,
-                    search: {
-                        to: location().pathname,
-                        search: location().searchStr || undefined,
-                    },
-                })
-            }
-        }),
-    )
+} satisfies {
+    errorComponent: ErrorRouteComponent
 }
+
+export const Route = createFileRoute('/_authenticated')({
+    ...AUTHENTICATED_ROUTE_DEFAULTS,
+    beforeLoad: async ({ context }) => {
+        await context.authState
+    },
+    component: AuthenticatedLayout,
+})
 
 function AuthenticatedLayout() {
     const api = useAPI()
@@ -80,11 +72,6 @@ function AuthenticatedLayout() {
     )
 }
 
-function UnauthorizedRedirect() {
-    useLogoutRedirect()
-    return null
-}
-
 function NetworkErrorPage() {
     const api = useAPI()
     const router = useRouter()
@@ -100,5 +87,31 @@ function NetworkErrorPage() {
                 })
             }}
         />
+    )
+}
+
+function UnauthorizedRedirect() {
+    useLogoutRedirect()
+    return null
+}
+
+function useLogoutRedirect() {
+    const api = useAPI()
+    const navigate = useNavigate()
+    const location = useLocation()
+
+    createEffect(
+        on(api.authState, authState => {
+            if (authState === AuthenticationState.LoggedOut) {
+                navigate({
+                    to: '/login',
+                    replace: true,
+                    search: {
+                        to: location().pathname,
+                        search: location().searchStr || undefined,
+                    },
+                })
+            }
+        }),
     )
 }
