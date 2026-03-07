@@ -1,3 +1,4 @@
+import { useRouter } from '@tanstack/solid-router'
 import { onMount, Show } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'
@@ -8,6 +9,7 @@ import Version from '../Version'
 
 export default function ErrorPage(props: { error: string | Error; reset: () => void | Promise<void> }) {
     const { string } = useI18n()
+    const router = useRouter()
 
     onMount(() => {
         console.error('ErrorPage caught an error:', props.error)
@@ -44,7 +46,7 @@ export default function ErrorPage(props: { error: string | Error; reset: () => v
                     <Button onClick={() => window.location.reload()} variant="tonal">
                         {string.RELOAD()}
                     </Button>
-                    <Button onClick={props.reset} variant="filled">
+                    <Button onClick={() => router.invalidate({ sync: true, filter: () => true })} variant="filled">
                         {string.RETRY()}
                     </Button>
                 </HStack>
