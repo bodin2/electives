@@ -46,7 +46,13 @@ export default function ErrorPage(props: { error: string | Error; reset: () => v
                     <Button onClick={() => window.location.reload()} variant="tonal">
                         {string.RELOAD()}
                     </Button>
-                    <Button onClick={() => router.invalidate({ sync: true, filter: () => true })} variant="filled">
+                    <Button
+                        onClick={() => {
+                            router.invalidate({ sync: true, filter: () => true })
+                            props.reset()
+                        }}
+                        variant="filled"
+                    >
                         {string.RETRY()}
                     </Button>
                 </HStack>
