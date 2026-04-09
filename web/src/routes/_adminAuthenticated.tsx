@@ -7,30 +7,33 @@ import LoadingPage from '../components/pages/LoadingPage'
 import { useLogoutRedirect } from '../hooks/useAuthRedirect'
 import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
 import { useI18n } from '../providers/I18nProvider'
-import { catchErrors } from '../utils/error-component'
 
-export const AUTHENTICATED_ROUTE_DEFAULTS = {
-    errorComponent: catchErrors([UnauthorizedError, UnauthorizedRedirect]),
+export const ADMIN_AUTHENTICATED_ROUTE_DEFAULTS = {
+    errorComponent: props => {
+        if (props.error instanceof UnauthorizedError) return <UnauthorizedRedirect />
+        throw props.error
+    },
 } satisfies {
     errorComponent: ErrorRouteComponent
 }
 
-export const Route = createFileRoute('/_authenticated')({
-    ...AUTHENTICATED_ROUTE_DEFAULTS,
+export const Route = createFileRoute('/_adminAuthenticated')({
+    ...ADMIN_AUTHENTICATED_ROUTE_DEFAULTS,
     beforeLoad: async ({ context }) => {
         await context.authState
     },
-    component: AuthenticatedLayout,
+    component: AdminAuthenticatedLayout,
 })
 
-function AuthenticatedLayout() {
+function AdminAuthenticatedLayout() {
     const api = useAPI()
+    const { string } = useI18n()
 
-    useUserLogoutRedirect()
+    useAdminLogoutRedirect()
 
     return (
         <Switch>
-            <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.User}>
+            <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.Admin}>
                 <PageTopAppBar />
                 <Outlet />
             </Match>
@@ -38,27 +41,18 @@ function AuthenticatedLayout() {
                 <LoadingPage />
             </Match>
             <Match when={api.authState() === AuthenticationState.NetworkError}>
-                <NetworkErrorPage />
+                <ErrorPage
+                    error={navigator.onLine ? string.ERROR_API_UNREACHABLE() : string.ERROR_OFFLINE()}
+                    reset={() => api.resumeSession()}
+                />
             </Match>
         </Switch>
     )
 }
 
-function NetworkErrorPage() {
-    const api = useAPI()
-    const { string } = useI18n()
-
-    return (
-        <ErrorPage
-            error={navigator.onLine ? string.ERROR_API_UNREACHABLE() : string.ERROR_OFFLINE()}
-            reset={() => api.resumeSession()}
-        />
-    )
-}
-
 function UnauthorizedRedirect() {
-    useUserLogoutRedirect()
+    useAdminLogoutRedirect()
     return null
 }
 
-const useUserLogoutRedirect = () => useLogoutRedirect('/login', TokenType.User)
+const useAdminLogoutRedirect = () => useLogoutRedirect('/manage/login', TokenType.Admin)

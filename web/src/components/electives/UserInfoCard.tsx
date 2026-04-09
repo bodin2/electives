@@ -1,4 +1,3 @@
-import LogOutIcon from '@iconify-icons/mdi/logout'
 import { Card } from 'm3-solid'
 import { For } from 'solid-js'
 import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
@@ -6,7 +5,7 @@ import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { nonNull } from '../../utils'
 import Badge from '../Badge'
-import { Button } from '../Button'
+import LogOutButton from '../buttons/LogOutButton'
 import { HStack, VStack } from '../Stack'
 import styles from './UserInfoCard.module.css'
 
@@ -37,9 +36,7 @@ export default function UserInfoCard(props: UserInfoCardProps) {
                     </VStack>
                     <img src={user().avatarUrl || AvatarPlaceholder} class={styles.avatar} alt={string.AVATAR()} />
                 </HStack>
-                <Button icon={LogOutIcon} variant="tonal-error" onClick={() => api.logout()}>
-                    {string.LOGOUT()}
-                </Button>
+                <LogOutButton />
             </VStack>
         </Card>
     )

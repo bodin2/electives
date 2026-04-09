@@ -56,7 +56,7 @@ function Home() {
     return (
         <Page
             name={string.ELECTIVES()}
-            leading={
+            trailing={
                 <Button
                     variant="text"
                     aria-label={string.SETTINGS()}

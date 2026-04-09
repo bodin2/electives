@@ -74,5 +74,10 @@
   "SETTING_THAI_DESCRIPTION": "Display the app in Thai language",
   "ENROLLMENT_FAILED_TITLE": "Enrollment failed",
   "ENROLLMENT_FAILED_DESCRIPTION": "An error occurred while trying to enroll. Please try again.\n\n{{ reason }}",
-  "CLOSE": "Close"
+  "CLOSE": "Close",
+  "ADMIN_LOGIN": "Admin Login",
+  "ADMIN_LOGIN_HINT": "Import your key to continue.",
+  "IMPORT_PRIVATE_KEY": "Log in with key",
+  "ERROR_INVALID_PRIVATE_KEY": "Invalid private key.",
+  "ADMIN_DASHBOARD": "Dashboard"
 }

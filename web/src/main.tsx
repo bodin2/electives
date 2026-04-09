@@ -1,7 +1,7 @@
 import { render } from 'solid-js/web'
 import 'solid-devtools'
 
-import { createRouter, RouterProvider } from '@tanstack/solid-router'
+import { createRouter, type Register, type RoutePaths, RouterProvider, type ToPathOption } from '@tanstack/solid-router'
 import { routeTree } from './routeTree.gen'
 
 import 'm3-solid/styles.css'
@@ -31,6 +31,9 @@ const router = createRouter({
     scrollRestoration: true,
     context: { client, authState } satisfies RouterContext,
 })
+
+type Router = Register['router']
+export type RoutePath = ToPathOption<Router, string, RoutePaths<Router['routeTree']>> & {}
 
 declare module '@tanstack/solid-router' {
     interface Register {

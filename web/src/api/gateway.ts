@@ -1,13 +1,12 @@
 import mitt, { type Emitter, type Handler } from 'mitt'
-import { NotificationEnvelopeCodec } from './types'
-import { encodeToBytes } from './utils'
-import type {
-    BulkSubjectEnrollmentUpdate,
+import {
+    type BulkSubjectEnrollmentUpdate,
     NotificationEnvelope,
-    SubjectEnrollmentUpdate,
-    SubjectEnrollmentUpdateSubscription,
-    SubjectEnrollmentUpdateSubscriptionRequest,
+    type SubjectEnrollmentUpdate,
+    type SubjectEnrollmentUpdateSubscription,
+    type SubjectEnrollmentUpdateSubscriptionRequest,
 } from './types'
+import { encodeToBytes } from './utils'
 
 export type GatewayEventMap = {
     /** Fired when the gateway connects */
@@ -31,14 +30,15 @@ export type GatewayEventMap = {
 export type GatewayEventNames = keyof GatewayEventMap
 export type GatewayEventHandler<K extends GatewayEventNames> = Handler<GatewayEventMap[K]>
 
+export interface GatewayAuthenticator {
+    identify(gateway: Gateway): void | Promise<void>
+    refresh(): GatewayAuthenticator
+}
+
 export interface GatewayOptions {
-    /**
-     * WebSocket URL for the gateway
-     */
+    /** WebSocket URL for the gateway */
     url: string
-    /**
-     * Whether to automatically reconnect on disconnection
-     */
+    /** Whether to automatically reconnect on disconnection */
     autoReconnect?: boolean
     /**
      * Maximum number of reconnect attempts
@@ -49,7 +49,7 @@ export interface GatewayOptions {
     /**
      * Reconnect delay in ms
      *
-     * @default 1000 // 1 second
+     * @default 1000
      */
     reconnectDelay?: number
     /**
@@ -74,15 +74,15 @@ export class Gateway {
     private messageId = 0
     private reconnectAttempts = 0
     private reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+    private currentAuthenticator: GatewayAuthenticator | null = null
     private readonly emitter: Emitter<GatewayEventMap> = mitt<GatewayEventMap>()
 
-    readonly url: string
+    url: string
     readonly autoReconnect: boolean
     readonly maxReconnectAttempts: number
     readonly reconnectDelay: number
     readonly retryOnRateLimit: boolean
 
-    token: string | null = null
     status: GatewayStatus = GatewayStatus.DISCONNECTED
 
     constructor(options: GatewayOptions) {
@@ -93,21 +93,33 @@ export class Gateway {
         this.retryOnRateLimit = options.retryOnRateLimit ?? true
     }
 
+    setURL(url: string): void {
+        if (this.url === url) return
+
+        const activeAuthenticator = this.currentAuthenticator
+        this.url = url
+
+        if (!activeAuthenticator) return
+
+        this.disconnect()
+        this.connect(activeAuthenticator)
+    }
+
     /**
      * Connect to the gateway
      */
-    connect(token: string): void {
+    connect(authenticator: GatewayAuthenticator): void {
         if (this.ws) {
             this.disconnect()
         }
 
-        this.token = token
+        this.currentAuthenticator = authenticator
         this.status = GatewayStatus.CONNECTING
 
         try {
             this.ws = new WebSocket(this.url)
             this.ws.binaryType = 'arraybuffer'
-            this.setupEventHandlers()
+            this.setupEventHandlers(authenticator)
         } catch (error) {
             this.status = GatewayStatus.DISCONNECTED
             this.emitter.emit('error', error instanceof Error ? error : new Error(String(error)))
@@ -127,22 +139,19 @@ export class Gateway {
             if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
                 this.ws.close(1000, 'Client disconnect')
             }
-
             this.ws = null
         }
 
         this.status = GatewayStatus.DISCONNECTED
         this.reconnectAttempts = 0
+        this.currentAuthenticator = null
     }
 
     /**
      * Subscribe to subject enrollment updates
      */
     subscribe(subscriptions: Record<number, SubjectEnrollmentUpdateSubscription>): void {
-        const request: SubjectEnrollmentUpdateSubscriptionRequest = {
-            subscriptions,
-        }
-
+        const request: SubjectEnrollmentUpdateSubscriptionRequest = { subscriptions }
         this.send({
             messageId: this.nextMessageId(),
             subjectEnrollmentUpdateSubscriptionRequest: request,
@@ -153,22 +162,34 @@ export class Gateway {
      * Subscribe to updates for specific subjects in an elective
      */
     subscribeToElective(electiveId: number, subjectIds: number[]): void {
-        this.subscribe({
-            [electiveId]: { subjectIds },
-        })
+        this.subscribe({ [electiveId]: { subjectIds } })
     }
 
     /**
-     * Add an event listener
+     * Send a raw envelope over the WebSocket.
+     * Authenticators use this to send identify envelopes on connect.
      */
+    send(envelope: NotificationEnvelope): void {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            throw new Error('WebSocket is not connected')
+        }
+        const bytes = NotificationEnvelope.encode(envelope).finish()
+        this.ws.send(bytes)
+    }
+
+    nextMessageId(): number {
+        return ++this.messageId
+    }
+
+    isConnected(): boolean {
+        return this.status === GatewayStatus.READY
+    }
+
     on<K extends GatewayEventNames>(event: K, handler: GatewayEventHandler<K>): this {
         this.emitter.on(event, handler)
         return this
     }
 
-    /**
-     * Add a one-time event listener
-     */
     once<K extends GatewayEventNames>(event: K, handler: GatewayEventHandler<K>): this {
         const wrapper = ((arg: GatewayEventMap[K]) => {
             this.off(event, wrapper as GatewayEventHandler<K>)
@@ -177,17 +198,11 @@ export class Gateway {
         return this.on(event, wrapper)
     }
 
-    /**
-     * Remove an event listener
-     */
     off<K extends GatewayEventNames>(event: K, handler: GatewayEventHandler<K>): this {
         this.emitter.off(event, handler)
         return this
     }
 
-    /**
-     * Remove all listeners for an event (or all events if no event specified)
-     */
     removeAllListeners(event?: GatewayEventNames): this {
         if (event) {
             this.emitter.all.delete(event)
@@ -197,37 +212,46 @@ export class Gateway {
         return this
     }
 
-    /**
-     * Check if connected to the gateway
-     */
-    isConnected(): boolean {
-        return this.status === GatewayStatus.READY
-    }
-
-    private setupEventHandlers(): void {
+    private setupEventHandlers(authenticator: GatewayAuthenticator): void {
         if (!this.ws) return
 
         this.ws.onopen = () => {
             this.status = GatewayStatus.IDENTIFYING
             this.reconnectAttempts = 0
-            this.identify()
+
+            Promise.resolve(authenticator.identify(this))
+                .then(() => {
+                    this.status = GatewayStatus.READY
+                    this.emitter.emit('connect')
+                })
+                .catch(error => {
+                    this.emitter.emit('error', error instanceof Error ? error : new Error(String(error)))
+                    this.disconnect()
+                })
         }
 
         this.ws.onclose = event => {
             const reason = event.reason || 'Connection closed'
             this.status = GatewayStatus.DISCONNECTED
 
-            // TODO: Handle rate limiting (HTTP 429) if server sends such a code
+            if (event.code === 4029 || event.code === 4008) {
+                const retryAfter = this.parseRetryAfterFromReason(reason)
+                this.emitter.emit('rateLimited', retryAfter)
+
+                if (this.retryOnRateLimit) {
+                    this.scheduleReconnect(retryAfter)
+                    this.emitter.emit('disconnect', { code: event.code, reason })
+                    return
+                }
+            }
 
             switch (event.code) {
                 case 1000:
                 case 1001:
                     break
-
                 case 1002:
                     this.emitter.emit('error', new Error(`Client violated server protocol: [${event.code}] ${reason}`))
                     break
-
                 default:
                     this.emitter.emit('error', new Error(`WebSocket closed unexpectedly: [${event.code}] ${reason}`))
                     break
@@ -254,35 +278,17 @@ export class Gateway {
         }
     }
 
-    private identify(): void {
-        if (!this.token) {
-            this.emitter.emit('error', new Error('No token provided'))
-            this.disconnect()
-            return
-        }
-
-        this.send({
-            messageId: this.nextMessageId(),
-            identify: { token: this.token },
-        })
-
-        this.status = GatewayStatus.READY
-        this.emitter.emit('connect')
-    }
-
     private async handleMessage(data: string | ArrayBuffer | Blob): Promise<void> {
         let bytes: Uint8Array
         if (data instanceof Blob) {
-            const buffer = await data.arrayBuffer()
-            bytes = new Uint8Array(buffer)
+            bytes = new Uint8Array(await data.arrayBuffer())
         } else if (data instanceof ArrayBuffer) {
             bytes = new Uint8Array(data)
         } else {
             bytes = encodeToBytes(data)
         }
 
-        const message = NotificationEnvelopeCodec.decode(bytes)
-
+        const message = NotificationEnvelope.decode(bytes)
         this.emitter.emit('raw', message)
 
         if (message.subjectEnrollmentUpdate) {
@@ -294,17 +300,10 @@ export class Gateway {
         }
     }
 
-    private send(envelope: NotificationEnvelope): void {
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-            throw new Error('WebSocket is not connected')
-        }
-
-        const bytes = NotificationEnvelopeCodec.encode(envelope).finish()
-        this.ws.send(bytes)
-    }
-
-    private nextMessageId(): number {
-        return ++this.messageId
+    private parseRetryAfterFromReason(reason: string): number {
+        const match = reason.match(/retry-after:\s*(\d+)/i)
+        if (match) return Number.parseInt(match[1], 10) * 1000
+        return 5000
     }
 
     private scheduleReconnect(customDelay?: number): void {
@@ -313,9 +312,7 @@ export class Gateway {
             return
         }
 
-        if (this.reconnectTimeout) {
-            clearTimeout(this.reconnectTimeout)
-        }
+        if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout)
 
         this.reconnectAttempts++
         this.status = GatewayStatus.RECONNECTING
@@ -323,9 +320,13 @@ export class Gateway {
         const delay = customDelay ?? this.reconnectDelay * 2 ** (this.reconnectAttempts - 1)
 
         this.reconnectTimeout = setTimeout(() => {
-            if (this.token) {
-                this.connect(this.token)
-            }
+            const auth = this.currentAuthenticator?.refresh() ?? this.currentAuthenticator
+            if (auth) this.connect(auth)
         }, delay)
     }
 }
+
+export const GatewayEndpoints = {
+    AdminNotifications: '/notifications',
+    Notifications: '/notifications',
+} as const

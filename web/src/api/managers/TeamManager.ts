@@ -1,0 +1,128 @@
+import { Team } from '../structures'
+import { AdminListTeamsResponse, AdminTeamPatch, RawTeam } from '../types'
+import type { Cache } from '../cache'
+import type { RESTClient } from '../rest'
+import type { CacheableManager, FetchOptions } from '.'
+
+export class TeamManager implements CacheableManager {
+    readonly cache: Cache<number, Team>
+    readonly admin: TeamAdminActions
+
+    private cachedAll = false
+
+    constructor(
+        private readonly rest: RESTClient,
+        cache: Cache<number, Team>,
+    ) {
+        this.cache = cache
+        this.admin = new TeamAdminActions(rest, this)
+    }
+
+    clearCache(): void {
+        this.cache.clear()
+        this.cachedAll = false
+    }
+
+    /**
+     * Fetch all teams
+     *
+     * @param options Fetch options
+     */
+    async fetchAll(options: FetchOptions = {}): Promise<Team[]> {
+        const { force = false, cache = true } = options
+
+        if (!force && this.cachedAll) {
+            const cached = this.cache.toArray()
+            if (cached.length > 0) return cached
+        }
+
+        const data = await this.rest.get<AdminListTeamsResponse>('/admin/teams', {
+            decoder: AdminListTeamsResponse,
+        })
+        const teams = data.teams.map(t => new Team(t))
+
+        if (cache) {
+            for (const team of teams) {
+                this.cache.set(team.id, team)
+            }
+            this.cachedAll = true
+        }
+
+        return teams
+    }
+
+    /**
+     * Fetch a single team by ID
+     *
+     * @param id The team's ID
+     * @param options Fetch options
+     */
+    async fetch(id: number, options: FetchOptions = {}): Promise<Team> {
+        const { force = false, cache = true } = options
+
+        if (!force) {
+            const cached = this.cache.get(id)
+            if (cached) return cached
+        }
+
+        const data = await this.rest.get<RawTeam>(`/admin/teams/${id}`, {
+            decoder: RawTeam,
+        })
+        const team = new Team(data)
+
+        if (cache) this.cache.set(team.id, team)
+
+        return team
+    }
+
+    /**
+     * Get a team from cache without fetching
+     * @param id The team's ID
+     */
+    resolve(id: number): Team | undefined {
+        return this.cache.get(id)
+    }
+}
+
+export class TeamAdminActions {
+    constructor(
+        private readonly rest: RESTClient,
+        private readonly manager: TeamManager,
+    ) {}
+
+    /**
+     * Create or replace a team
+     *
+     * @param id The team's ID
+     * @param team The team data
+     */
+    async put(id: number, team: RawTeam): Promise<void> {
+        await this.rest.put(`/admin/teams/${id}`, team, {
+            encoder: RawTeam,
+        })
+        this.manager.cache.delete(id)
+    }
+
+    /**
+     * Patch a team
+     *
+     * @param id The team's ID
+     * @param patch The fields to update
+     */
+    async patch(id: number, patch: AdminTeamPatch): Promise<void> {
+        await this.rest.patch(`/admin/teams/${id}`, patch, {
+            encoder: AdminTeamPatch,
+        })
+        this.manager.cache.delete(id)
+    }
+
+    /**
+     * Delete a team
+     *
+     * @param id The team's ID
+     */
+    async delete(id: number): Promise<void> {
+        await this.rest.delete(`/admin/teams/${id}`)
+        this.manager.cache.delete(id)
+    }
+}

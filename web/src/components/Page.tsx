@@ -5,7 +5,7 @@ import { VStack } from './Stack'
 
 interface PageProps extends JSX.HTMLAttributes<HTMLElement> {
     name?: JSXElement
-    leading?: JSXElement
+    trailing?: JSXElement
     style?: JSX.CSSProperties
     resources?: Resource<unknown>[]
     showLoading?: boolean
@@ -13,14 +13,14 @@ interface PageProps extends JSX.HTMLAttributes<HTMLElement> {
 
 export default function Page(props: PageProps) {
     const pageData = usePageData()
-    const [local, others] = splitProps(props, ['name', 'resources', 'showLoading', 'children', 'leading'])
+    const [local, others] = splitProps(props, ['name', 'resources', 'showLoading', 'children', 'trailing'])
 
     createEffect(() => {
         // so ErrorPage works without PageProvider
         if (!pageData) return
 
         pageData.setTitle(local.name ? () => local.name : '')
-        pageData.setTrailing(local.leading ? () => local.leading : undefined)
+        pageData.setTrailing(local.trailing ? () => local.trailing : undefined)
     })
 
     const allReady = () => {

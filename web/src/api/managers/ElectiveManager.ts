@@ -1,53 +1,56 @@
-import { Elective, Subject, User } from '../structures'
+import { Elective, Subject } from '../structures'
 import {
-    type ListElectivesResponse,
-    ListElectivesResponseCodec,
-    type ListSubjectMembersResponse,
-    ListSubjectMembersResponseCodec,
-    type ListSubjectsResponse,
-    ListSubjectsResponseCodec,
-    type RawElective,
-    RawElectiveCodec,
-    type RawSubject,
-    RawSubjectCodec,
+    AdminElectivePatch,
+    AdminListElectivesResponse,
+    AdminSetElectiveSubjectsRequest,
+    ListElectivesResponse,
+    ListSubjectsResponse,
+    RawElective,
 } from '../types'
 import type { Cache } from '../cache'
 import type { RESTClient } from '../rest'
-import type { CacheableManager } from '.'
-import type { FetchOptions } from './UserManager'
+import type { CacheableManager, FetchOptions } from '.'
+import type { SubjectManager } from './SubjectManager'
 
-export interface SubjectMembersResult {
-    teachers: User[]
-    students: User[]
+export interface AdminElectiveCounts {
+    selected: number
+    total: number
+}
+
+export interface AdminElectiveListEntry {
+    elective: Elective
+    counts?: AdminElectiveCounts
 }
 
 export class ElectiveManager implements CacheableManager {
-    /** Cache of fetched electives */
     readonly cache: Cache<number, Elective>
-    /** Whether all electives have been cached via {@link fetchAll} */
+    readonly admin: ElectiveAdminActions
+    // Whether all electives have been cached via fetchAll
     cachedAll = false
 
     constructor(
         private readonly rest: RESTClient,
         cache: Cache<number, Elective>,
-        private readonly subjectManager: SubjectManager,
+        private readonly subjects: SubjectManager,
     ) {
         this.cache = cache
+        this.admin = new ElectiveAdminActions(rest, this, subjects)
     }
 
     clearCache(): void {
         this.cache.clear()
         this.cachedAll = false
+        this.admin.clearCache()
     }
 
     /**
      * Fetch all electives
+     *
      * @param options Fetch options
      */
     async fetchAll(options: FetchOptions = {}): Promise<Elective[]> {
         const { force = false, cache = true } = options
 
-        // If not forcing, check if we have any cached electives
         if (!force && this.cachedAll) {
             const cached = this.cache.toArray()
             if (cached.length > 0) {
@@ -56,7 +59,7 @@ export class ElectiveManager implements CacheableManager {
         }
 
         const data = await this.rest.get<ListElectivesResponse>('/electives', {
-            decoder: ListElectivesResponseCodec,
+            decoder: ListElectivesResponse,
         })
         const electives = data.electives.map(e => new Elective(e))
 
@@ -73,6 +76,7 @@ export class ElectiveManager implements CacheableManager {
 
     /**
      * Fetch a single elective by ID
+     *
      * @param id The elective's ID
      * @param options Fetch options
      */
@@ -85,7 +89,7 @@ export class ElectiveManager implements CacheableManager {
         }
 
         const data = await this.rest.get<RawElective>(`/electives/${id}`, {
-            decoder: RawElectiveCodec,
+            decoder: RawElective,
         })
         const elective = new Elective(data)
 
@@ -95,11 +99,12 @@ export class ElectiveManager implements CacheableManager {
     }
 
     async fetchSubjects(electiveId: number, options: FetchOptions = {}): Promise<Subject[]> {
-        return this.subjectManager.fetchAll({ electiveId, ...options })
+        return this.subjects.fetchAll({ electiveId, ...options })
     }
 
     /**
      * Get an elective from cache without fetching
+     *
      * @param id The elective's ID
      */
     resolve(id: number): Elective | undefined {
@@ -118,17 +123,16 @@ export class ElectiveManager implements CacheableManager {
 
     /**
      * Get all enrolled counts for an elective from cache without fetching
+     *
      * @param electiveId The elective's ID
      */
     resolveAllEnrolledCounts(electiveId: number): Record<number, number> {
-        const subjects = this.subjectManager.resolveAll(electiveId)
+        const subjects = this.subjects.resolveAll(electiveId)
         if (!subjects) return {}
 
         const counts: Record<number, number> = {}
         for (const subject of subjects) {
-            const count = this.subjectManager.enrolledCountCache.get(
-                this.subjectManager.getCacheKey(electiveId, subject.id),
-            )
+            const count = this.subjects.resolveEnrolledCount(electiveId, subject.id)
             if (count !== undefined) {
                 counts[subject.id] = count
             }
@@ -137,202 +141,146 @@ export class ElectiveManager implements CacheableManager {
     }
 }
 
-export interface SubjectFetchAllOptions extends FetchOptions {
-    electiveId: number
-}
-
-export interface SubjectFetchOptions extends FetchOptions {
-    electiveId: number
-    subjectId: number
-    /** Whether to ensure the subject has a description (fetches if cached subject lacks it) */
-    withDescription?: boolean
-}
-
-export interface SubjectMembersFetchOptions extends FetchOptions {
-    electiveId: number
-    subjectId: number
-    /** Whether to include students (requires authentication) */
-    withStudents?: boolean
-}
-
-export interface EnrolledCountFetchOptions extends FetchOptions {
-    electiveId: number
-    subjectId: number
-}
-
-export class SubjectManager implements CacheableManager {
-    /** Cache of fetched subjects (key: "electiveId:subjectId") */
-    readonly cache: Cache<string, Subject>
-    /** Cache of enrolled counts (key: "electiveId:subjectId") */
-    readonly enrolledCountCache: Cache<string, number>
-    private readonly electiveSubjectIds = new Map<number, Set<number>>()
+export class ElectiveAdminActions {
+    private cachedAll = false
+    private cachedEntries: AdminElectiveListEntry[] = []
 
     constructor(
         private readonly rest: RESTClient,
-        cache: Cache<string, Subject>,
-        enrolledCountCache: Cache<string, number>,
-    ) {
-        this.cache = cache
-        this.enrolledCountCache = enrolledCountCache
-    }
+        private readonly manager: ElectiveManager,
+        private readonly subjects: SubjectManager,
+    ) {}
 
-    clearCache() {
-        this.cache.clear()
-        this.enrolledCountCache.clear()
-        this.electiveSubjectIds.clear()
-    }
-
-    getCacheKey(electiveId: number, subjectId: number): string {
-        return `${electiveId}:${subjectId}`
+    clearCache(): void {
+        this.cachedAll = false
+        this.cachedEntries = []
     }
 
     /**
-     * Fetch all subjects for an elective
-     * @param options Fetch options including electiveId
+     * Fetch all electives with enrollment counts
+     *
+     * @param options Fetch options
      */
-    async fetchAll(options: SubjectFetchAllOptions): Promise<Subject[]> {
-        const { electiveId, force = false, cache = true } = options
+    async fetchAll(options: FetchOptions = {}): Promise<AdminElectiveListEntry[]> {
+        const { force = false, cache = true } = options
+
+        if (!force && this.cachedAll && this.cachedEntries.length > 0) {
+            return this.cachedEntries
+        }
+
+        const data = await this.rest.get<AdminListElectivesResponse>('/admin/electives', {
+            decoder: AdminListElectivesResponse,
+        })
+
+        const entries: AdminElectiveListEntry[] = data.electives.map(e => {
+            const elective = new Elective(e)
+            const counts = data.selectedCounts[e.id]
+            return {
+                elective,
+                counts: counts ? { selected: counts.selected, total: counts.total } : undefined,
+            }
+        })
+
+        if (cache) {
+            for (const entry of entries) {
+                this.manager.cache.set(entry.elective.id, entry.elective)
+            }
+            this.cachedAll = true
+            this.cachedEntries = entries
+        }
+
+        return entries
+    }
+
+    /**
+     * Fetch a single elective by ID
+     *
+     * @param id The elective's ID
+     * @param options Fetch options
+     */
+    async fetch(id: number, options: FetchOptions = {}): Promise<Elective> {
+        const { force = false, cache = true } = options
 
         if (!force) {
-            const cached = this.resolveAll(electiveId)
+            const cached = this.manager.cache.get(id)
             if (cached) return cached
         }
 
-        const data = await this.rest.get<ListSubjectsResponse>(`/electives/${electiveId}/subjects`, {
-            decoder: ListSubjectsResponseCodec,
+        const data = await this.rest.get<RawElective>(`/admin/electives/${id}`, {
+            decoder: RawElective,
+        })
+        const elective = new Elective(data)
+
+        if (cache) this.manager.cache.set(elective.id, elective)
+
+        return elective
+    }
+
+    /**
+     * Create or replace an elective
+     *
+     * @param id The elective's ID
+     * @param elective The elective data
+     */
+    async put(id: number, elective: RawElective): Promise<void> {
+        await this.rest.put(`/admin/electives/${id}`, elective, {
+            encoder: RawElective,
+        })
+        this.manager.cache.delete(id)
+    }
+
+    /**
+     * Patch an elective
+     *
+     * @param id The elective's ID
+     * @param patch The fields to update
+     */
+    async patch(id: number, patch: AdminElectivePatch): Promise<void> {
+        await this.rest.patch(`/admin/electives/${id}`, patch, {
+            encoder: AdminElectivePatch,
+        })
+        this.manager.cache.delete(id)
+    }
+
+    /**
+     * Delete an elective
+     *
+     * @param id The elective's ID
+     */
+    async delete(id: number): Promise<void> {
+        await this.rest.delete(`/admin/electives/${id}`)
+        this.manager.cache.delete(id)
+    }
+
+    /**
+     * Fetch subjects for an elective via admin route
+     *
+     * @param electiveId The elective's ID
+     */
+    async fetchSubjects(electiveId: number): Promise<Subject[]> {
+        const data = await this.rest.get<ListSubjectsResponse>(`/admin/electives/${electiveId}/subjects`, {
+            decoder: ListSubjectsResponse,
         })
         const subjects = data.subjects.map(s => new Subject(s))
 
-        if (cache) {
-            const subjectIds = new Set<number>()
-            for (let i = 0; i < subjects.length; i++) {
-                const subject = subjects[i]
-                const rawSubject = data.subjects[i]
-                const cacheKey = this.getCacheKey(electiveId, subject.id)
-                this.cache.set(cacheKey, subject)
-                subjectIds.add(subject.id)
-                if (rawSubject.enrolledCount !== undefined) {
-                    this.enrolledCountCache.set(cacheKey, rawSubject.enrolledCount)
-                }
-            }
-            this.electiveSubjectIds.set(electiveId, subjectIds)
+        // Also cache in shared subject cache
+        for (const subject of subjects) {
+            this.subjects.cache.set(subject.id, subject)
         }
 
         return subjects
     }
 
     /**
-     * Fetch a single subject
-     * @param options Fetch options including electiveId and subjectId
+     * Set subjects for an elective
+     *
+     * @param electiveId The elective's ID
+     * @param subjectIds The subject IDs to assign
      */
-    async fetch(options: SubjectFetchOptions): Promise<Subject> {
-        const { electiveId, subjectId, force = false, cache = true, withDescription = false } = options
-        const cacheKey = this.getCacheKey(electiveId, subjectId)
-
-        if (!force) {
-            const cached = this.cache.get(cacheKey)
-            if (cached) {
-                if (!withDescription || cached.description !== undefined) {
-                    return cached
-                }
-            }
-        }
-
-        const data = await this.rest.get<RawSubject>(`/electives/${electiveId}/subjects/${subjectId}`, {
-            decoder: RawSubjectCodec,
+    async setSubjects(electiveId: number, subjectIds: number[]): Promise<void> {
+        const body: AdminSetElectiveSubjectsRequest = { subjectIds }
+        await this.rest.put(`/admin/electives/${electiveId}/subjects`, body, {
+            encoder: AdminSetElectiveSubjectsRequest,
         })
-
-        const subject = new Subject(data)
-
-        if (cache) {
-            this.cache.set(cacheKey, subject)
-            if (data.enrolledCount !== undefined) {
-                this.enrolledCountCache.set(cacheKey, data.enrolledCount)
-            }
-        }
-
-        return subject
-    }
-
-    /**
-     * Fetch enrolled count for a subject
-     * @param options Fetch options
-     */
-    async fetchEnrolledCount(options: EnrolledCountFetchOptions): Promise<number> {
-        const { electiveId, subjectId, force = false, cache = true } = options
-        const cacheKey = this.getCacheKey(electiveId, subjectId)
-
-        if (!force) {
-            const cached = this.enrolledCountCache.get(cacheKey)
-            if (cached !== undefined) return cached
-        }
-
-        const count = await this.rest.get<number>(`/electives/${electiveId}/subjects/${subjectId}/enrolled-count`)
-
-        if (cache) this.enrolledCountCache.set(cacheKey, count)
-
-        return count
-    }
-
-    /**
-     * Fetch members (teachers and optionally students) of a subject
-     * @param options Fetch options
-     */
-    async fetchMembers(options: SubjectMembersFetchOptions): Promise<SubjectMembersResult> {
-        const { electiveId, subjectId, withStudents = false } = options
-
-        const data = await this.rest.get<ListSubjectMembersResponse>(
-            `/electives/${electiveId}/subjects/${subjectId}/members`,
-            {
-                query: { with_students: withStudents },
-                decoder: ListSubjectMembersResponseCodec,
-            },
-        )
-
-        return {
-            teachers: data.teachers.map(t => new User(t)),
-            students: data.students.map(s => new User(s)),
-        }
-    }
-
-    /**
-     * Get a subject from cache without fetching
-     * @param electiveId The elective's ID
-     * @param subjectId The subject's ID
-     */
-    resolve(electiveId: number, subjectId: number): Subject | undefined {
-        return this.cache.get(this.getCacheKey(electiveId, subjectId))
-    }
-
-    /**
-     * Get all subjects for an elective from cache without fetching
-     * @param electiveId The elective's ID
-     */
-    resolveAll(electiveId: number): Subject[] | undefined {
-        const subjectIds = this.electiveSubjectIds.get(electiveId)
-        if (!subjectIds) return undefined
-
-        const subjects: Subject[] = []
-        for (const subjectId of subjectIds) {
-            const subject = this.cache.get(this.getCacheKey(electiveId, subjectId))
-            if (subject) subjects.push(subject)
-        }
-        return subjects.length > 0 ? subjects : undefined
-    }
-
-    /**
-     * Get enrolled count from cache without fetching
-     * @param electiveId The elective's ID
-     * @param subjectId The subject's ID
-     */
-    resolveEnrolledCount(electiveId: number, subjectId: number): number | undefined {
-        return this.enrolledCountCache.get(this.getCacheKey(electiveId, subjectId))
-    }
-
-    /**
-     * Update enrolled count for a subject (used by real-time updates)
-     */
-    _updateEnrolledCount(electiveId: number, subjectId: number, count: number): void {
-        this.enrolledCountCache.set(this.getCacheKey(electiveId, subjectId), count)
     }
 }

@@ -10,7 +10,7 @@ import ScrollDataProvider from '../providers/ScrollDataProvider'
 import type { Client } from '../api'
 
 export interface RouterContext {
-    client: Client
+    client: Client<unknown>
     authState: Promise<AuthenticationState>
 }
 

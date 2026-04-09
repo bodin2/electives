@@ -1,30 +1,31 @@
-/**
- * User Manager - handles user fetching and caching
- * Similar to Discord.js UserManager
- */
-
 import { User } from '../structures'
-import { type RawUser, RawUserCodec } from '../types'
+import { AdminAddUserRequest, AdminListUsersResponse, AdminUserPatch, RawUser, UnauthorizedError } from '../types'
 import type { Cache } from '../cache'
 import type { RESTClient } from '../rest'
 import type { CacheableManager } from '.'
 
 export interface FetchOptions {
-    /** Skip cache and fetch from API */
+    /**
+     * Whether to skip cache and fetch from API
+     */
     force?: boolean
-    /** Cache the result (default: true) */
+    /**
+     * Whether to cache the result
+     * @default true
+     */
     cache?: boolean
 }
 
 export class UserManager implements CacheableManager {
-    /** Cache of fetched users */
     readonly cache: Cache<number, User>
+    readonly admin: UserAdminActions
 
     constructor(
         private readonly rest: RESTClient,
         cache: Cache<number, User>,
     ) {
         this.cache = cache
+        this.admin = new UserAdminActions(rest, this)
     }
 
     clearCache(): void {
@@ -33,6 +34,7 @@ export class UserManager implements CacheableManager {
 
     /**
      * Fetch a user by ID
+     *
      * @param id The user's ID, or "@me" for the authenticated user
      * @param options Fetch options
      */
@@ -47,7 +49,7 @@ export class UserManager implements CacheableManager {
 
         // Fetch from API using protobuf
         const data = await this.rest.get<RawUser>(`/users/${id}`, {
-            decoder: RawUserCodec,
+            decoder: RawUser,
         })
         const user = new User(data)
 
@@ -61,6 +63,7 @@ export class UserManager implements CacheableManager {
 
     /**
      * Fetch the currently authenticated user
+     *
      * @param options Fetch options
      */
     async fetchMe(options: FetchOptions = {}): Promise<User> {
@@ -69,6 +72,7 @@ export class UserManager implements CacheableManager {
 
     /**
      * Get a user from cache without fetching
+     *
      * @param id The user's ID
      */
     resolve(id: number): User | undefined {
@@ -83,5 +87,124 @@ export class UserManager implements CacheableManager {
             return userResolvable
         }
         return userResolvable.id
+    }
+}
+
+export class UserAdminActions {
+    constructor(
+        private readonly rest: RESTClient,
+        private readonly manager: UserManager,
+    ) {}
+
+    /**
+     * Check if the current token has admin privileges by making a HEAD request to an admin-only endpoint.
+     */
+    async loggedIn() {
+        try {
+            await this.rest.request('/admin', {
+                method: 'HEAD',
+            })
+        } catch (e) {
+            if (e instanceof UnauthorizedError) return false
+            throw e
+        }
+
+        return true
+    }
+
+    /**
+     * Fetch students (paginated)
+     * @param page The page number (1-based)
+     */
+    async fetchStudents(page = 1): Promise<{ users: User[]; total: number }> {
+        const data = await this.rest.get<AdminListUsersResponse>('/admin/users/students', {
+            query: { page },
+            decoder: AdminListUsersResponse,
+        })
+        const users = data.users.map(u => new User(u))
+        for (const user of users) {
+            this.manager.cache.set(user.id, user)
+        }
+        return { users, total: data.total }
+    }
+
+    /**
+     * Fetch teachers (paginated)
+     *
+     * @param page The page number (1-based)
+     */
+    async fetchTeachers(page = 1): Promise<{ users: User[]; total: number }> {
+        const data = await this.rest.get<AdminListUsersResponse>('/admin/users/teachers', {
+            query: { page },
+            decoder: AdminListUsersResponse,
+        })
+        const users = data.users.map(u => new User(u))
+        for (const user of users) {
+            this.manager.cache.set(user.id, user)
+        }
+        return { users, total: data.total }
+    }
+
+    /**
+     * Fetch a single user by ID via admin route
+     *
+     * @param id The user's ID
+     * @param options Fetch options
+     */
+    async fetch(id: number, options: FetchOptions = {}): Promise<User> {
+        const { force = false, cache = true } = options
+
+        if (!force) {
+            const cached = this.manager.cache.get(id)
+            if (cached) return cached
+        }
+
+        const data = await this.rest.get<RawUser>(`/admin/users/${id}`, {
+            decoder: RawUser,
+        })
+        const user = new User(data)
+
+        if (cache) this.manager.cache.set(user.id, user)
+
+        return user
+    }
+
+    /**
+     * Create or replace a user
+     *
+     * @param id The user's ID
+     * @param request The user data and password
+     */
+    async put(id: number, request: AdminAddUserRequest): Promise<User> {
+        const data = await this.rest.put<RawUser>(`/admin/users/${id}`, request, {
+            encoder: AdminAddUserRequest,
+            decoder: RawUser,
+        })
+        const user = new User(data)
+        this.manager.cache.set(user.id, user)
+        return user
+    }
+
+    /**
+     * Patch a user
+     *
+     * @param id The user's ID
+     * @param patch The fields to update
+     */
+    async patch(id: number, patch: AdminUserPatch): Promise<void> {
+        await this.rest.patch(`/admin/users/${id}`, patch, {
+            encoder: AdminUserPatch,
+        })
+        this.manager.cache.delete(id)
+    }
+
+    /**
+     * Delete a user
+     *
+     * @param id The user's ID
+     */
+    async delete(id: number): Promise<void> {
+        await this.rest.delete(`/admin/users/${id}`)
+        this.manager.cache.delete(id)
     }
 }

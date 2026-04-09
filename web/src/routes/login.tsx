@@ -1,15 +1,17 @@
 import Logger from '@bodin2/electives-common/Logger'
-import { createFileRoute, useNavigate, useRouter, useSearch } from '@tanstack/solid-router'
+import { createFileRoute, useSearch } from '@tanstack/solid-router'
 import { Dialog, TextField, type TextFieldProps } from 'm3-solid'
-import { createEffect, createSignal, untrack } from 'solid-js'
+import { createSignal } from 'solid-js'
 import { UnauthorizedError } from '../api'
 import { Button } from '../components/Button'
 import SchoolLogo from '../components/images/SchoolLogo'
 import Page from '../components/Page'
 import { VStack } from '../components/Stack'
 import Version from '../components/Version'
-import { AuthenticationState, useAPI } from '../providers/APIProvider'
+import { useLoginRedirect } from '../hooks/useAuthRedirect'
+import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
 import { useI18n } from '../providers/I18nProvider'
+import type { RoutePath } from '../main'
 
 const log = new Logger('routes/login')
 
@@ -29,33 +31,17 @@ export const Route = createFileRoute('/login')({
 function Login() {
     const { string } = useI18n()
     const api = useAPI()
-    const navigate = useNavigate()
-    const router = useRouter()
     const search = useSearch({ from: '/login' }) as () => LoginSearch
 
     const [loading, setLoading] = createSignal(false)
 
     const [inputExtraProps, setInputExtraProps] = createSignal<Partial<TextFieldProps>>({})
 
-    createEffect(() => {
-        // Track search params, so if the app marvelously explodes and produces a /login?to=/login?to=/some-page,
-        // The user won't get stuck on the /login page
-        const s = search()
-
-        if (api.authState() === AuthenticationState.LoggedIn) {
-            log.info('Logged in, redirecting to home')
-
-            // Clear router cache to prevent showing previous user's data
-            untrack(() => {
-                router.clearCache({ filter: () => true })
-                router.invalidate({ sync: true, filter: () => true })
-            })
-
-            setTimeout(() => {
-                const url = s.to ? `${s.to}${s.search ? `?${decodeURIComponent(s.search)}` : ''}` : '/'
-                navigate({ to: url, replace: true })
-            }, 350)
-        }
+    useLoginRedirect(() => (search().to || '/') as RoutePath, {
+        tokenType: TokenType.User,
+        altPath: '/manage',
+        search: () => search().search,
+        delay: 350,
     })
 
     let form!: HTMLFormElement
@@ -80,7 +66,7 @@ function Login() {
                         {string.LOGIN()}
                     </Button>
                 }
-                open={api.authState() !== AuthenticationState.LoggedIn}
+                open={api.authState() === AuthenticationState.LoggedOut}
             >
                 <VStack
                     gap={24}

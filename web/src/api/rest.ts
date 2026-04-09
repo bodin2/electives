@@ -1,9 +1,3 @@
-/**
- * REST API client for the Electives API
- * Handles HTTP requests with authentication and error handling
- * Uses Protobuf for serialization
- */
-
 import Logger from '@bodin2/electives-common/Logger'
 import {
     APIError,
@@ -17,28 +11,36 @@ import {
     UnauthorizedError,
 } from './types'
 import { sleep } from './utils'
-import type { MessageFns } from '@bodin2/electives-common/proto/api'
+import type { MessageFns } from './types'
 
 export interface RESTOptions {
-    /** Base URL for the API */
+    /**
+     * Base URL for the API
+     *
+     * @default http://localhost:8080/api
+     */
     baseURL: string
     /**
-     * Request timeout in milliseconds.
+     * Request timeout in milliseconds
+     *
      * @default 30000
      */
     timeout?: number
     /**
      * Whether to automatically retry on rate limit
+     *
      * @default true
      */
     retryOnRateLimit?: boolean
-    /** Handler for request errors */
+    /**
+     * Handler for request errors
+     */
     onError?: (error: APIError) => void
 }
 
 export interface RequestOptions<TReq = unknown, TRes = unknown> {
     /** HTTP method */
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD'
     /** Request body data */
     body?: TReq
     /** Protobuf encoder for request body */
@@ -81,10 +83,10 @@ export class RESTClient {
     readonly retryOnRateLimit: boolean
 
     token: string | null = null
+    onError: (error: APIError) => void
 
     /** Per-route rate limit buckets */
     private readonly rateLimitBuckets = new Map<string, RateLimitState>()
-    private readonly onError: (error: APIError) => void
 
     constructor(options: RESTOptions) {
         this.baseURL = options.baseURL.replace(/\/$/, '')
@@ -272,9 +274,7 @@ export class RESTClient {
         if (!retryAfter) return 5
 
         const parsed = Number.parseInt(retryAfter, 10)
-        // TODO: Currently Kotlin truncates fractional seconds, so we add 1 second to be safe. We need this to be fixed in Ktor.
-        // https://youtrack.jetbrains.com/issue/KTOR-9285/Server-RateLimit-Retry-After-milliseconds-is-truncated
-        return Number.isNaN(parsed) ? 60 : parsed + 1
+        return Number.isNaN(parsed) ? 60 : parsed
     }
 
     private markRateLimited(routeKey: string, retryAfter: number): void {

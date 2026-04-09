@@ -25,7 +25,7 @@ type EnrollmentContextValue = {
 
 const EnrollmentContext = createContext<EnrollmentContextValue>()
 
-export function EnrollmentCountsProvider(props: ParentProps<{ client: Client }>) {
+export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unknown> }>) {
     const [store, setStore] = createStore<EnrollmentStore>({ counts: {}, versions: {} })
 
     // @ts-expect-error: Exposing to DEV

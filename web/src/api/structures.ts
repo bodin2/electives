@@ -1,17 +1,7 @@
-/**
- * Entity classes representing API objects
- * Similar to Discord.js structures (User, Guild, Channel, etc.)
- */
+import { type RawElective, type RawSubject, type RawTeam, type RawUser, type SubjectTag, UserType } from './types'
 
-import type { RawElective, RawSubject, RawTeam, RawUser, SubjectTag, UserType } from './types'
-
-/**
- * Represents a team/class group
- */
 export class Team {
-    /** The team's unique ID */
     readonly id: number
-    /** The team's name */
     readonly name: string
 
     constructor(data: RawTeam) {
@@ -27,19 +17,11 @@ export class Team {
     }
 }
 
-/**
- * Represents a user (student or teacher)
- */
 export class User {
-    /** The user's unique ID */
     readonly id: number
-    /** The user's first name */
     readonly firstName: string
-    /** The user's middle name (optional) */
     readonly middleName?: string
-    /** The user's last name */
     readonly lastName: string
-    /** The user's type (STUDENT or TEACHER) */
     readonly type: UserType
     /** The user's avatar as bytes (optional) */
     readonly avatarUrl?: string
@@ -70,14 +52,14 @@ export class User {
      * Check if the user is a student
      */
     isStudent(): boolean {
-        return this.type === 0 // UserType.STUDENT
+        return this.type === UserType.STUDENT
     }
 
     /**
      * Check if the user is a teacher
      */
     isTeacher(): boolean {
-        return this.type === 1 // UserType.TEACHER
+        return this.type === UserType.TEACHER
     }
 
     /**
@@ -100,19 +82,11 @@ export class User {
     }
 }
 
-/**
- * Represents an elective course
- */
 export class Elective {
-    /** The elective's unique ID */
     readonly id: number
-    /** The elective's name */
     readonly name: string
-    /** Start date of the selection period (optional) */
     readonly startDate?: Date
-    /** End date of the selection period (optional) */
     readonly endDate?: Date
-    /** The team ID this elective belongs to */
     readonly teamId: number | null
     /** Subjects within this elective. `null` if not fetched. */
     subjects: Subject[] | null = null
@@ -143,7 +117,9 @@ export class Elective {
     }
 
     /**
-     * Get time until selection opens (returns 0 if already open or `null` if no start date)
+     * Get time until selection opens
+     *
+     * @returns `0` if already open or `null` if no start date
      */
     getTimeUntilOpen(): number | null {
         if (!this.startDate) return null
@@ -152,7 +128,9 @@ export class Elective {
     }
 
     /**
-     * Get time until selection closes (returns 0 if already closed or `null` if no end date)
+     * Get time until selection closes
+     *
+     * @returns `0` if already closed or `null` if no end date
      */
     getTimeUntilClose(): number | null {
         if (!this.endDate) return null
@@ -171,31 +149,18 @@ export class Elective {
     }
 }
 
-/**
- * Represents a subject within an elective
- */
 export class Subject {
-    /** The subject's unique ID */
     readonly id: number
-    /** The subject's name */
     readonly name: string
-    /** The subject's description (optional) */
     readonly description?: string
-    /** The subject's code */
     readonly code: string
-    /** The subject's tag/category */
     readonly tag: SubjectTag
-    /** The subject's location */
     readonly location: string
-    /** Maximum capacity for this subject */
     readonly capacity: number
-    /** The team ID this subject is restricted to (optional) */
     readonly teamId?: number
     /** Teachers assigned to this subject */
     readonly teachers: User[]
-    /** URL to the subject's thumbnail image (optional) */
     readonly thumbnailUrl?: string
-    /** URL to the subject's image (optional) */
     readonly imageUrl?: string
 
     constructor(data: RawSubject) {

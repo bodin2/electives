@@ -1,24 +1,16 @@
-import mitt, { type Emitter, type Handler } from 'mitt'
+import mitt from 'mitt'
 import { Cache } from './cache'
-import { Gateway, GatewayStatus } from './gateway'
-import { ElectiveManager, SelectionManager, SubjectManager, UserManager } from './managers'
-import { RESTClient } from './rest'
-import {
-    AuthenticateRequestCodec,
-    type AuthenticateResponse,
-    AuthenticateResponseCodec,
-    type ClientOptions,
-    type LoginOptions,
-    NetworkError,
-    UnauthorizedError,
-} from './types'
+import { type Gateway, type GatewayEventMap, GatewayStatus } from './gateway'
+import { ElectiveManager } from './managers/ElectiveManager'
+import { SelectionManager } from './managers/SelectionManager'
+import { SubjectManager } from './managers/SubjectManager'
+import { TeamManager } from './managers/TeamManager'
+import { UserManager } from './managers/UserManager'
+import { NetworkError, UnauthorizedError } from './types'
+import type { Emitter, Handler } from 'mitt'
+import type { Authenticator } from './auth'
+import type { RESTClient } from './rest'
 import type { User } from './structures'
-
-export type SubjectEnrollmentUpdateEvent = {
-    electiveId: number
-    subjectId: number
-    enrolledCount: number
-}
 
 export type ClientEventMap = {
     /** Fired when the client is ready (logged in) */
@@ -26,15 +18,15 @@ export type ClientEventMap = {
     /** Fired when the client logs out */
     logout: undefined
     /** Fired when the gateway connects */
-    gatewayConnect: undefined
+    gatewayConnect: GatewayEventMap['connect']
     /** Fired when the gateway disconnects */
-    gatewayDisconnect: string
+    gatewayDisconnect: GatewayEventMap['disconnect']
     /** Fired when the gateway is rate limited */
-    gatewayRateLimited: number
+    gatewayRateLimited: GatewayEventMap['rateLimited']
     /** Fired when a subscribed subject enrollment count updates */
-    subjectEnrollmentUpdate: SubjectEnrollmentUpdateEvent
+    subjectEnrollmentUpdate: GatewayEventMap['subjectEnrollmentUpdate']
     /** Fired when a bulk subject enrollment count update occurs */
-    bulkSubjectEnrollmentUpdate: { electiveId: number; subjectEnrolledCounts: Record<string, number> }
+    bulkSubjectEnrollmentUpdate: GatewayEventMap['bulkSubjectEnrollmentUpdate']
     /** Fired on any error */
     error: Error
     /** Fired when an unauthorized error occurs (HTTP 401) */
@@ -46,30 +38,47 @@ export type ClientEventMap = {
 export type ClientEventNames = keyof ClientEventMap
 export type ClientEventHandler<K extends ClientEventNames> = Handler<ClientEventMap[K]>
 
+export interface ClientOptions<TCredentials> {
+    rest: RESTClient
+    gateway: Gateway
+    authenticator: Authenticator<TCredentials>
+    /**
+     * Whether to automatically connect to the gateway on login
+     * @default true
+     */
+    autoConnect?: boolean
+    /**
+     * Cache TTL in milliseconds
+     * @default 300000 // 5 minutes
+     */
+    cacheTTL?: number
+}
+
 /**
  * The main client for interacting with the Electives API
  *
  * @example
  * ```ts
- * const client = new Client({
- *   baseURL: "https://api.example.com",
- *   wsURL: "wss://api.example.com/notifications",
- * });
+ * const rest = new RESTClient({ baseURL: 'https://api.example.com' })
+ * const gateway = new Gateway({ url: 'wss://api.example.com/notifications' })
+ * const authenticator = new UserAuthenticator(rest)
  *
- * await client.login({ id: 12345, password: "secret" });
+ * const client = new Client({ rest, gateway, authenticator })
+ *
+ * await client.login({ id: 12345, password: 'secret' })
  *
  * // Fetch electives
- * const electives = await client.electives.fetchAll();
+ * const electives = await client.electives.fetchAll()
  *
  * // Subscribe to real-time updates
- * client.gateway.subscribeToElective(1, [1, 2, 3]);
+ * client.gateway.subscribeToElective(1, [1, 2, 3])
  *
- * client.on("subjectEnrollmentUpdate", ({ electiveId, subjectId, enrolledCount }) => {
- *   console.log(`Subject ${subjectId} now has ${enrolledCount} enrollments`);
- * });
+ * client.on('subjectEnrollmentUpdate', ({ electiveId, subjectId, enrolledCount }) => {
+ *   console.log(`Subject ${subjectId} now has ${enrolledCount} enrollments`)
+ * })
  * ```
  */
-export class Client {
+export class Client<TCredentials> {
     /** The REST client for HTTP requests */
     readonly rest: RESTClient
 
@@ -88,28 +97,25 @@ export class Client {
     /** Manager for student selections */
     readonly selections: SelectionManager
 
+    /** Manager for teams */
+    readonly teams: TeamManager
+
     /** Whether to auto-connect to the gateway on login */
     readonly autoConnect: boolean
 
     /** The currently authenticated user */
     user: User | null = null
 
+    private authenticator: Authenticator<unknown>
     private readonly emitter: Emitter<ClientEventMap> = mitt<ClientEventMap>()
 
-    constructor(options: ClientOptions) {
-        const { baseURL, notificationsURL: wsURL, timeout, cacheTTL = 5 * 60 * 1000, autoConnect = true } = options
+    constructor(options: ClientOptions<TCredentials>) {
+        const { rest, gateway, authenticator, autoConnect = true, cacheTTL = 5 * 60 * 1000 } = options
 
+        this.rest = rest
+        this.gateway = gateway
+        this.authenticator = authenticator as Authenticator<unknown>
         this.autoConnect = autoConnect
-
-        this.rest = new RESTClient({
-            baseURL,
-            timeout,
-            onError: err => this.handleError(err),
-        })
-
-        const gatewayURL = wsURL ?? `${baseURL.replace(/^http/, 'ws')}/notifications`
-        this.gateway = new Gateway(Object.assign({ url: gatewayURL }, options.gateway))
-        this.setupGatewayListeners()
 
         const cacheOpts = { ttl: cacheTTL }
         const infiniteCacheOpts = { ttl: Number.POSITIVE_INFINITY }
@@ -117,52 +123,41 @@ export class Client {
         this.users = new UserManager(this.rest, new Cache(cacheOpts))
         this.subjects = new SubjectManager(this.rest, new Cache(infiniteCacheOpts), new Cache(cacheOpts))
         this.electives = new ElectiveManager(this.rest, new Cache(infiniteCacheOpts), this.subjects)
-        this.selections = new SelectionManager(this, new Cache(cacheOpts))
+        this.selections = new SelectionManager(this.rest, new Cache(cacheOpts), () => {
+            if (!this.user) throw new Error('Not logged in')
+            return this.user.id
+        })
+        this.teams = new TeamManager(this.rest, new Cache(cacheOpts))
+
+        this.rest.onError = err => this.handleError(err)
+        this.setupGatewayListeners()
     }
 
     /**
-     * Authenticate to the API
-     * @param options Login credentials
-     * @returns The authentication token
+     * Authenticate, fetch the current user, and optionally connect the gateway.
      */
-    async authenticate(options: LoginOptions): Promise<string> {
-        const { id, password, clientName = 'API Client' } = options
+    async login(credentials: TCredentials): Promise<void> {
+        const token = await this.authenticator.login(credentials)
+        this.rest.token = token
 
-        const response = await this.rest.post<AuthenticateResponse>(
-            '/auth',
-            { id, password, clientName },
-            {
-                encoder: AuthenticateRequestCodec,
-                decoder: AuthenticateResponseCodec,
-            },
-        )
-
-        return response.token
-    }
-
-    async login(token?: string | undefined): Promise<void> {
-        const tokenToUse = token ?? this.rest.token
-        if (!tokenToUse) {
-            throw new Error('Cannot login without authentication token')
-        }
-
-        this.rest.token = tokenToUse
-        this.user = await this.users.fetch('@me')
+        const synthetic = this.authenticator.syntheticUser()
+        this.user = synthetic ?? (await this.users.fetch('@me'))
 
         if (this.autoConnect) {
-            this.gateway.connect(tokenToUse)
+            this.gateway.connect(this.authenticator)
         }
 
         this.emitter.emit('ready', this.user)
     }
 
     /**
-     * Logout from the API
+     * Logout, disconnect the gateway, and clear all caches.
      */
     async logout(): Promise<void> {
         try {
-            await this.rest.post('/logout')
+            await this.authenticator.logout()
         } finally {
+            this.authenticator.setToken(null)
             this.rest.token = null
             this.user = null
             this.gateway.disconnect()
@@ -179,28 +174,38 @@ export class Client {
     }
 
     /**
-     * Get the authentication token
+     * Check if there is an existing valid session
      */
-    get token(): string | null {
-        return this.rest.token
+    hasSession(): Promise<boolean> {
+        return this.authenticator.hasSession()
     }
 
     /**
-     * Set the authentication token manually (for restoring sessions)
+     * Restore a session from a previously obtained token without re-authenticating.
+     * Fetches the current user and optionally connects the gateway.
      */
-    setToken(token: string): void {
+    async resume(token: string): Promise<void> {
+        this.authenticator.setToken(token)
         this.rest.token = token
+
+        const synthetic = this.authenticator.syntheticUser()
+        this.user = synthetic ?? (await this.users.fetch('@me'))
+
+        if (this.autoConnect) {
+            this.gateway.connect(this.authenticator)
+        }
+
+        this.emitter.emit('ready', this.user)
     }
 
     /**
      * Connect to the gateway manually
      */
     connectGateway(): void {
-        const token = this.rest.token
-        if (!token) {
+        if (!this.rest.token) {
             throw new Error('Cannot connect to gateway without authentication')
         }
-        this.gateway.connect(token)
+        this.gateway.connect(this.authenticator)
     }
 
     /**
@@ -218,6 +223,23 @@ export class Client {
     }
 
     /**
+     * Replace the active authenticator (e.g. user <-> admin).
+     * Disconnects the gateway so future connections use the new authenticator.
+     */
+    setAuthenticator<TNewCredentials>(authenticator: Authenticator<TNewCredentials>): Client<TNewCredentials> {
+        this.gateway.disconnect()
+        this.authenticator = authenticator as Authenticator<unknown>
+        return this as unknown as Client<TNewCredentials>
+    }
+
+    /**
+     * Update the gateway URL (e.g. `/notifications` <-> `/admin/notifications`).
+     */
+    setGatewayURL(url: string): void {
+        this.gateway.setURL(url)
+    }
+
+    /**
      * Clear all caches
      */
     clearCaches(): void {
@@ -225,19 +247,14 @@ export class Client {
         this.subjects.clearCache()
         this.electives.clearCache()
         this.selections.clearCache()
+        this.teams.clearCache()
     }
 
-    /**
-     * Add an event listener
-     */
     on<K extends ClientEventNames>(event: K, handler: ClientEventHandler<K>): this {
         this.emitter.on(event, handler)
         return this
     }
 
-    /**
-     * Add a one-time event listener
-     */
     once<K extends ClientEventNames>(event: K, handler: ClientEventHandler<K>): this {
         const wrapper = ((arg: ClientEventMap[K]) => {
             this.off(event, wrapper as ClientEventHandler<K>)
@@ -246,17 +263,11 @@ export class Client {
         return this.on(event, wrapper)
     }
 
-    /**
-     * Remove an event listener
-     */
     off<K extends ClientEventNames>(event: K, handler: ClientEventHandler<K>): this {
         this.emitter.off(event, handler)
         return this
     }
 
-    /**
-     * Remove all listeners for an event (or all events if no event specified)
-     */
     removeAllListeners(event?: ClientEventNames): this {
         if (event) {
             this.emitter.all.delete(event)
@@ -274,7 +285,6 @@ export class Client {
         this.clearCaches()
         this.removeAllListeners()
         this.rest.token = null
-        this.gateway.token = null
         this.user = null
     }
 

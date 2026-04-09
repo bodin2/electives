@@ -74,5 +74,10 @@
   "SETTING_THAI_DESCRIPTION": "แสดงแอปในภาษาไทย",
   "ENROLLMENT_FAILED_TITLE": "ไม่สามารถลงทะเบียนเรียนได้",
   "ENROLLMENT_FAILED_DESCRIPTION": "เกิดข้อผิดพลาดขณะพยายามลงทะเบียนเรียน กรุณาลองอีกครั้ง\n\n{{ reason }}",
-  "CLOSE": "ปิด"
+  "CLOSE": "ปิด",
+  "ADMIN_LOGIN": "เข้าสู่ระบบผู้ดูแล",
+  "ADMIN_LOGIN_HINT": "ใช้ไฟล์คีย์เพื่อเข้าสู่ระบบ",
+  "IMPORT_PRIVATE_KEY": "เข้าสู่ระบบด้วยไฟล์คีย์",
+  "ERROR_INVALID_PRIVATE_KEY": "ไฟล์คีย์ไม่ถูกต้อง",
+  "ADMIN_DASHBOARD": "แดชบอร์ด"
 }

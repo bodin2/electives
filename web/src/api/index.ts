@@ -1,10 +1,15 @@
+export {
+    type AdminAuthenticateOptions,
+    AdminAuthenticator,
+    type Authenticator,
+    UserAuthenticator,
+} from './auth'
 export { Cache, type CacheEntry, type CacheOptions } from './cache'
 export {
     Client,
     type ClientEventHandler,
     type ClientEventMap,
     type ClientEventNames,
-    type SubjectEnrollmentUpdateEvent,
 } from './client'
 export {
     Gateway,
@@ -15,16 +20,34 @@ export {
     GatewayStatus,
 } from './gateway'
 export {
+    type AdminElectiveCounts,
+    type AdminElectiveListEntry,
+    ElectiveAdminActions,
     ElectiveManager,
     type FetchOptions,
+    SelectionAdminActions,
     SelectionManager,
+    SubjectAdminActions,
     SubjectManager,
     type SubjectMembersResult,
+    TeamAdminActions,
+    TeamManager,
+    UserAdminActions,
     UserManager,
 } from './managers'
 export { RESTClient, type RESTOptions, type RequestOptions } from './rest'
 export { Elective, Subject, Team, User } from './structures'
 export {
+    type AdminAddUserRequest,
+    type AdminElectivePatch,
+    type AdminListElectivesResponse,
+    type AdminListTeamsResponse,
+    type AdminListUsersResponse,
+    type AdminSetElectiveSubjectsRequest,
+    type AdminSetStudentSelectionsRequest,
+    type AdminSubjectPatch,
+    type AdminTeamPatch,
+    type AdminUserPatch,
     APIError,
     type AuthenticateRequest,
     type AuthenticateResponse,

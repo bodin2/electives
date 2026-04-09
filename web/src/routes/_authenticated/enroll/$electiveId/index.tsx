@@ -90,21 +90,21 @@ function RouteComponent() {
         return filtered
     })
 
-    // Try to show at max 3 items per category
-    // But if one category has less than 3, show that amount instead
-    const maxItemsShownUnexpanded = createMemo(() => {
-        let least = 3
-        const subjectsData = filteredSubjects()
-        if (!subjectsData) return least
+    // Try to show at max 2 - 3 items per category
+    // But if one category has less than 3, show that amount instead if more than 2 items
+    // const maxItemsShownUnexpanded = createMemo(() => {
+    //     let least = 3
+    //     const subjectsData = filteredSubjects()
+    //     if (!subjectsData) return least
 
-        for (const subjectList of Object.values(subjectsData)) {
-            if (subjectList.length < least) {
-                least = subjectList.length
-            }
-        }
+    //     for (const subjectList of Object.values(subjectsData)) {
+    //         if (subjectList.length < least) {
+    //             least = subjectList.length
+    //         }
+    //     }
 
-        return Math.min(least, 3)
-    })
+    //     return Math.min(Math.max(least, 2), 3)
+    // })
 
     return (
         <Page name={elective()?.name}>
@@ -127,7 +127,7 @@ function RouteComponent() {
                             {([category, categorySubjects]) => (
                                 <SubjectCategorySection
                                     defaultExpanded={query().length > 0}
-                                    maxUnexpandedShown={maxItemsShownUnexpanded()}
+                                    maxUnexpandedShown={3}
                                     electiveId={electiveId()}
                                     category={category as keyof typeof SubjectTag}
                                     subjects={categorySubjects}
