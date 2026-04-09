@@ -16,6 +16,8 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.TestDatabase.mockData
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.services.mock.*
+import th.ac.bodin2.electives.utils.Argon2
+import th.ac.bodin2.electives.utils.MiB
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
@@ -60,6 +62,7 @@ abstract class ApplicationTest {
         testApplication {
             application {
                 dependencies {
+                    provide<Argon2> { Argon2(16.MiB.toInt(), 5) }
                     provide<UsersService> { TestUsersService() }
                     provide<NotificationsService> { mockk(relaxed = true) }
                     provide<ElectiveService> { TestElectiveService() }
@@ -87,6 +90,8 @@ abstract class ApplicationTest {
             setup()
 
             application {
+                dependencies.provide<Argon2> { Argon2(16.MiB.toInt(), 5) }
+
                 provideDependencies()
                 mockRateLimits()
                 module()

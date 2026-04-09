@@ -5,10 +5,11 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
 import th.ac.bodin2.electives.db.Elective
@@ -77,7 +78,7 @@ class ElectiveSelectionServiceImpl(
     // We want to prevent overbooking: Thread A reads (29/30) -> Thread B reads (29/30) -> A inserts (30/30) -> B inserts (31/30)
     // SERIALIZABLE will ensure that if two transactions try to do this at the same time, one of them will be fail.
     @CreatesTransaction
-    override fun setStudentSelection(
+    override suspend fun setStudentSelection(
         executorId: Int,
         userId: Int,
         electiveId: Int,
@@ -85,7 +86,7 @@ class ElectiveSelectionServiceImpl(
     ): ModifySelectionResult {
         var onSuccess: (() -> Unit)? = null
 
-        val result = transaction(transactionIsolation = TRANSACTION_SERIALIZABLE) {
+        val result = suspendTransaction(transactionIsolation = TRANSACTION_SERIALIZABLE) {
             maxAttempts = 3
 
             try {
@@ -98,10 +99,10 @@ class ElectiveSelectionServiceImpl(
                     if (usersService.getUserType(executorId) == UserType.TEACHER) {
                         val teacher = Teacher.require(executorId)
                         if (!Teacher.teachesSubject(teacher, subjectId)) {
-                            return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
+                            return@suspendTransaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                         }
                     } else {
-                        return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
+                        return@suspendTransaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                     }
                 }
 
@@ -109,7 +110,7 @@ class ElectiveSelectionServiceImpl(
                 when (val result = canEnrollInSubject(student, elective, subject, executorIsSomeoneElse)) {
                     CanEnrollStatus.CAN_ENROLL -> {}
 
-                    else -> return@transaction ModifySelectionResult.CannotEnroll(result)
+                    else -> return@suspendTransaction ModifySelectionResult.CannotEnroll(result)
                 }
 
                 (connection.connection as Connection).prepareStatement(INSERT_SELECTION_QUERY).use { ps ->
@@ -127,7 +128,7 @@ class ElectiveSelectionServiceImpl(
                         logger.debug("Student elective selection failed due to full subject, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
 
                         // Not inserted, subject is full
-                        return@transaction ModifySelectionResult.CannotEnroll(
+                        return@suspendTransaction ModifySelectionResult.CannotEnroll(
                             CanEnrollStatus.SUBJECT_FULL
                         )
                     }
@@ -143,9 +144,9 @@ class ElectiveSelectionServiceImpl(
                     )
                 }
 
-                return@transaction ModifySelectionResult.Success
-            } catch (e: NotFoundException) {
-                return@transaction e.tryHandling()
+                return@suspendTransaction ModifySelectionResult.Success
+            } catch (e: EntityNotFoundException) {
+                return@suspendTransaction e.tryHandling()
             }
         }
 
@@ -155,23 +156,23 @@ class ElectiveSelectionServiceImpl(
     }
 
     @CreatesTransaction
-    override fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult =
-        transaction {
+    override suspend fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult =
+        suspendTransaction {
             try {
                 val student = Student.require(userId)
                 val elective = Elective.require(electiveId)
 
                 val selection = Student.getElectiveSelectionId(student, elective)
-                    ?: return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.NOT_ENROLLED)
+                    ?: return@suspendTransaction ModifySelectionResult.CannotModify(ModifySelectionStatus.NOT_ENROLLED)
 
                 if (student.id != executorId) {
                     if (usersService.getUserType(executorId) == UserType.TEACHER) {
                         val teacher = Teacher.require(executorId)
                         if (!Teacher.teachesSubject(teacher, selection.value)) {
-                            return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
+                            return@suspendTransaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                         }
                     } else {
-                        return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
+                        return@suspendTransaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                     }
                 }
 
@@ -186,12 +187,12 @@ class ElectiveSelectionServiceImpl(
                 )
 
                 ModifySelectionResult.Success
-            } catch (e: NotFoundException) {
-                return@transaction e.tryHandling()
+            } catch (e: EntityNotFoundException) {
+                return@suspendTransaction e.tryHandling()
             }
         }
 
-    private fun NotFoundException.tryHandling(): ModifySelectionResult {
+    private fun EntityNotFoundException.tryHandling(): ModifySelectionResult {
         return when (entity) {
             ExceptionEntity.ELECTIVE,
             ExceptionEntity.SUBJECT,
@@ -200,10 +201,10 @@ class ElectiveSelectionServiceImpl(
             }
 
             // Should never throw, we already check teacher existence in setStudentSelection
-            ExceptionEntity.TEACHER -> throw IllegalStateException("Unreachable TEACHER NotFoundException")
+            ExceptionEntity.TEACHER -> throw IllegalStateException("Unreachable TEACHER EntityNotFoundException")
 
             // Should never throw, we already try to get the selection above in deleteStudentSelection
-            ExceptionEntity.ELECTIVE_SELECTION -> throw IllegalStateException("Unreachable ELECTIVE_SELECTION NotFoundException")
+            ExceptionEntity.ELECTIVE_SELECTION -> throw IllegalStateException("Unreachable ELECTIVE_SELECTION EntityNotFoundException")
 
             else -> throw this
         }

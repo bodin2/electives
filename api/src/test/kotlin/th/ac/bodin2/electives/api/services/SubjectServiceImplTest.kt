@@ -4,7 +4,7 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
@@ -93,7 +93,7 @@ class SubjectServiceImplTest : ApplicationTest() {
 
     @Test
     fun `delete subject not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             subjectService.delete(UNUSED_ID)
         }
@@ -125,7 +125,7 @@ class SubjectServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update subject not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             subjectService.update(
                 UNUSED_ID,
@@ -136,7 +136,7 @@ class SubjectServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create subject with non-existent team throws not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             subjectService.create(
                 id = 600,
@@ -156,7 +156,7 @@ class SubjectServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create subject with non-existent teacher throws not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             subjectService.create(
                 id = 601,
@@ -176,7 +176,7 @@ class SubjectServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update subject with non-existent team throws not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             subjectService.update(
                 TestConstants.Subjects.PHYSICS_ID,
@@ -187,7 +187,7 @@ class SubjectServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update subject with non-existent teacher throws not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             subjectService.update(
                 TestConstants.Subjects.PHYSICS_ID,

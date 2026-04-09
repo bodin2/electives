@@ -3,9 +3,10 @@ package th.ac.bodin2.electives.api.services
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import kotlinx.coroutines.delay
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.TestConstants.Students
@@ -14,6 +15,7 @@ import th.ac.bodin2.electives.api.TestConstants.TestData
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.UserType
+import th.ac.bodin2.electives.utils.Argon2
 import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
@@ -28,22 +30,22 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `get student user type`() = runTest {
-        val userType = transaction { usersService.getUserType(Students.JOHN_ID) }
+        val userType = suspendTransaction { usersService.getUserType(Students.JOHN_ID) }
         assertEquals(UserType.STUDENT, userType)
 
     }
 
     @Test
     fun `get teacher user type`() = runTest {
-        val userType = transaction { usersService.getUserType(Teachers.BOB_ID) }
+        val userType = suspendTransaction { usersService.getUserType(Teachers.BOB_ID) }
         assertEquals(UserType.TEACHER, userType)
 
     }
 
     @Test
     fun `get non existent user type`() = runTest {
-        assertFailsWith<NotFoundException> {
-            transaction { usersService.getUserType(UNUSED_ID) }
+        assertFailsWith<EntityNotFoundException> {
+            suspendTransaction { usersService.getUserType(UNUSED_ID) }
         }
     }
 
@@ -138,7 +140,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create non existent user session`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             usersService.createSession(UNUSED_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
         }
     }
@@ -278,7 +280,8 @@ class UsersServiceImplTest : ApplicationTest() {
             UsersServiceImpl.Config(
                 sessionDurationSeconds = 1,
                 minimumSessionCreationTime = 0.seconds
-            )
+            ),
+            application.dependencies.resolve<Argon2>()
         )
 
         val token = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
@@ -297,7 +300,8 @@ class UsersServiceImplTest : ApplicationTest() {
             UsersServiceImpl.Config(
                 sessionDurationSeconds = 5,
                 minimumSessionCreationTime = 1.seconds
-            )
+            ),
+            application.dependencies.resolve<Argon2>()
         )
 
         val time = measureTime {
@@ -317,7 +321,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `delete non existent user`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             usersService.deleteUser(UNUSED_ID)
         }
     }
@@ -344,7 +348,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update student nonexistent team`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             usersService.updateStudent(
                 Students.JOHN_ID,
                 UsersService.StudentUpdate(
@@ -362,7 +366,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update non existent student`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             usersService.updateStudent(
                 UNUSED_ID,
                 UsersService.StudentUpdate(
@@ -398,7 +402,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update non existent teacher`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             usersService.updateTeacher(
                 UNUSED_ID,
                 UsersService.TeacherUpdate(
@@ -436,7 +440,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `set password non existent user`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             usersService.setPassword(UNUSED_ID, "newpassword123")
         }
     }

@@ -8,7 +8,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
@@ -33,7 +33,7 @@ class ElectiveServiceImpl : ElectiveService {
             it[this.endDate] = endDate
 
             if (team != null) {
-                if (!Team.exists(team)) throw NotFoundException(ExceptionEntity.TEAM)
+                if (!Team.exists(team)) throw EntityNotFoundException(ExceptionEntity.TEAM)
                 it[this.team] = team
             }
         }
@@ -48,7 +48,7 @@ class ElectiveServiceImpl : ElectiveService {
         transaction {
             val rows = Electives.deleteWhere { Electives.id eq id }
             if (rows == 0) {
-                throw NotFoundException(ExceptionEntity.ELECTIVE)
+                throw EntityNotFoundException(ExceptionEntity.ELECTIVE)
             }
         }
     }
@@ -63,7 +63,7 @@ class ElectiveServiceImpl : ElectiveService {
                 if (update.setStartDate) it[this.startDate] = update.startDate
                 if (update.setEndDate) it[this.endDate] = update.endDate
                 if (update.setTeam) {
-                    if (update.team != null && !Team.exists(update.team)) throw NotFoundException(ExceptionEntity.TEAM)
+                    if (update.team != null && !Team.exists(update.team)) throw EntityNotFoundException(ExceptionEntity.TEAM)
                     it[this.team] = update.team
                 }
 
@@ -96,7 +96,7 @@ class ElectiveServiceImpl : ElectiveService {
         try {
             val elective = Elective.require(electiveId)
             return QueryResult.Success(Elective.getSubjects(elective))
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.ELECTIVE -> QueryResult.ElectiveNotFound
                 else -> throw e
@@ -114,7 +114,7 @@ class ElectiveServiceImpl : ElectiveService {
             }
 
             return QueryResult.Success(Subject.findById(subject.id)!!)
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.SUBJECT -> QueryResult.SubjectNotFound
                 ExceptionEntity.ELECTIVE -> QueryResult.ElectiveNotFound
@@ -140,7 +140,7 @@ class ElectiveServiceImpl : ElectiveService {
             val students = if (withStudents) Subject.getStudents(subject, elective) else emptyList()
 
             return QueryResult.Success(teachers to students)
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.SUBJECT -> QueryResult.SubjectNotFound
                 ExceptionEntity.ELECTIVE -> QueryResult.ElectiveNotFound

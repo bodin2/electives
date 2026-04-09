@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.routes
 
+import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -13,10 +14,11 @@ import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ADMIN_AUTHENTICATION
 import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN
@@ -40,8 +42,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-fun Application.registerAdminRoutes() {
-    val adminAuthService: AdminAuthService by dependencies
+val adminController = controller {
     val notificationsService: NotificationsService by dependencies
     val usersService: UsersService by dependencies
     val electiveSelectionService: ElectiveSelectionService by dependencies
@@ -49,15 +50,25 @@ fun Application.registerAdminRoutes() {
     val subjectService: SubjectService by dependencies
     val teamService: TeamService by dependencies
 
-    AdminAuthController(adminAuthService).apply { register() }
-    AdminUsersController(usersService).apply { register() }
-    AdminUsersSelectionsController(electiveSelectionService).apply { register() }
-    AdminElectivesController(electiveService).apply { register() }
-    AdminElectivesSubjectsController(electiveService).apply { register() }
-    AdminSubjectsController(subjectService).apply { register() }
-    AdminTeamsController(teamService).apply { register() }
+    listOf(
+        adminAuthController,
+        AdminUsersController(usersService),
+        AdminUsersSelectionsController(electiveSelectionService),
+        AdminElectivesController(electiveService),
+        AdminElectivesSubjectsController(electiveService),
+        AdminSubjectsController(subjectService),
+        AdminTeamsController(teamService),
+    ).forEach { ctl -> ctl.apply { this@controller.register() } }
 
     routing {
+        head<Admin> {
+            if (call.isAdmin()) {
+                return@head ok()
+            }
+
+            call.response.status(HttpStatusCode.NotFound)
+        }
+
         resource<Admin.Notifications> {
             webSocket {
                 notificationsService.apply { handleAdminConnection() }
@@ -66,46 +77,46 @@ fun Application.registerAdminRoutes() {
     }
 }
 
-class AdminAuthController(private val adminAuthService: AdminAuthService) {
-    fun Application.register() {
-        routing {
-            rateLimit(RATE_LIMIT_ADMIN_AUTH) {
-                get<Admin.Challenge> {
-                    call.respond(challengeResponse {
-                        challenge = adminAuthService.newChallenge()
-                    })
-                }
+val adminAuthController = controller {
+    val adminAuthService: AdminAuthService by dependencies
 
-                post<Admin.Auth> {
-                    val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post notFound()
-
-                    try {
-                        when (val result =
-                            adminAuthService.createSession(req.password, call.request.origin.remoteAddress)) {
-                            is CreateSessionResult.Success -> {
-                                call.respond(authenticateResponse {
-                                    token = result.token
-                                })
-                            }
-
-                            is CreateSessionResult.NoChallenge,
-                            is CreateSessionResult.IPNotAllowed -> notFound()
-
-                            is CreateSessionResult.InvalidSignature -> unauthorized()
-                        }
-
-                    } catch (e: Exception) {
-                        application.log.error("Attempt create admin session failed: ${e.message}")
-                        unauthorized()
-                    }
-                }
+    routing {
+        rateLimit(RATE_LIMIT_ADMIN_AUTH) {
+            get<Admin.Challenge> {
+                call.respond(challengeResponse {
+                    challenge = adminAuthService.newChallenge()
+                })
             }
 
-            adminRoutes {
-                post<Admin.LogOut> {
-                    adminAuthService.clearSession()
-                    ok()
+            post<Admin.Auth> {
+                val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post notFound()
+
+                try {
+                    when (val result =
+                        adminAuthService.createSession(req.password, call.request.origin.remoteAddress)) {
+                        is CreateSessionResult.Success -> {
+                            call.respond(authenticateResponse {
+                                token = result.token
+                            })
+                        }
+
+                        is CreateSessionResult.NoChallenge,
+                        is CreateSessionResult.IPNotAllowed -> notFound()
+
+                        is CreateSessionResult.InvalidSignature -> unauthorized()
+                    }
+
+                } catch (e: Exception) {
+                    application.log.error("Attempt create admin session failed: ${e.message}")
+                    unauthorized()
                 }
+            }
+        }
+
+        adminRoutes {
+            post<Admin.LogOut> {
+                adminAuthService.clearSession()
+                ok()
             }
         }
     }
@@ -113,8 +124,8 @@ class AdminAuthController(private val adminAuthService: AdminAuthService) {
 
 class AdminUsersController(
     private val usersService: UsersService,
-) {
-    fun Application.register() {
+) : Controller {
+    override fun Application.register() {
         adminRoutes {
             get<Admin.Users.Students> { params ->
                 call.respond(listUsersResponse {
@@ -188,7 +199,7 @@ class AdminUsersController(
             }
         } catch (_: IllegalArgumentException) {
             badRequest("Password does not meet the requirements")
-        } catch (_: NotFoundException) {
+        } catch (_: EntityNotFoundException) {
             badRequest("One or more specified teams not found")
         } catch (_: ConflictException) {
             conflict("User with the same ID already exists")
@@ -202,7 +213,7 @@ class AdminUsersController(
             ?: return badRequest()
 
         try {
-            transaction {
+            suspendTransaction {
                 val type = usersService.getUserType(id)
 
                 val update = UsersService.UserUpdate(
@@ -236,7 +247,7 @@ class AdminUsersController(
             }
 
             ok()
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.USER,
                 ExceptionEntity.TEACHER,
@@ -258,7 +269,7 @@ class AdminUsersController(
             @OptIn(CreatesTransaction::class)
             usersService.deleteUser(id)
             ok()
-        } catch (_: NotFoundException) {
+        } catch (_: EntityNotFoundException) {
             return notFound("User not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
@@ -268,8 +279,8 @@ class AdminUsersController(
 
 class AdminUsersSelectionsController(
     private val electiveSelectionService: ElectiveSelectionService,
-) {
-    fun Application.register() {
+) : Controller {
+    override fun Application.register() {
         adminRoutes {
             get<Admin.Users.Id.Selections> { params ->
                 context(electiveSelectionService) {
@@ -290,7 +301,7 @@ class AdminUsersSelectionsController(
             electiveSelectionService.forceSetAllStudentSelections(id, req.selectionsMap)
 
             ok()
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.STUDENT -> notFound("Student not found")
                 ExceptionEntity.ELECTIVE -> badRequest("One or more electives not found")
@@ -306,8 +317,8 @@ class AdminUsersSelectionsController(
 
 class AdminElectivesController(
     private val electiveService: ElectiveService,
-) {
-    fun Application.register() {
+) : Controller {
+    override fun Application.register() {
         adminRoutes {
             context(electiveService) {
                 get<Admin.Electives> { handleGetElectives() }
@@ -335,12 +346,12 @@ class AdminElectivesController(
                 id = elective.id,
                 name = elective.name,
                 team = if (elective.hasTeamId()) elective.teamId else null,
-                startDate = if (elective.hasStartDate()) elective.startDate.inLocalDateTimeBySeconds else null,
-                endDate = if (elective.hasEndDate()) elective.endDate.inLocalDateTimeBySeconds else null
+                startDate = if (elective.hasStartDate()) elective.startDate.secondsToUTCDateTime else null,
+                endDate = if (elective.hasEndDate()) elective.endDate.secondsToUTCDateTime else null
             )
 
             ok()
-        } catch (_: NotFoundException) {
+        } catch (_: EntityNotFoundException) {
             badRequest("Team not found")
         } catch (_: ConflictException) {
             conflict("Elective with the same ID already exists")
@@ -354,7 +365,7 @@ class AdminElectivesController(
             @OptIn(CreatesTransaction::class)
             electiveService.delete(id)
             ok()
-        } catch (_: NotFoundException) {
+        } catch (_: EntityNotFoundException) {
             notFound("Elective not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
@@ -368,8 +379,8 @@ class AdminElectivesController(
         val update = ElectiveService.ElectiveUpdate(
             name = if (req.hasName()) req.name else null,
             team = if (req.hasTeamId()) req.teamId else null,
-            startDate = if (req.hasStartDate()) req.startDate.inLocalDateTimeBySeconds else null,
-            endDate = if (req.hasEndDate()) req.endDate.inLocalDateTimeBySeconds else null,
+            startDate = if (req.hasStartDate()) req.startDate.secondsToUTCDateTime else null,
+            endDate = if (req.hasEndDate()) req.endDate.secondsToUTCDateTime else null,
             setTeam = req.patchTeamId,
             setStartDate = req.patchStartDate,
             setEndDate = req.patchEndDate,
@@ -379,7 +390,7 @@ class AdminElectivesController(
             @OptIn(CreatesTransaction::class)
             electiveService.update(id, update)
             ok()
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.ELECTIVE -> notFound("Elective not found")
                 ExceptionEntity.TEAM -> badRequest("Team not found")
@@ -392,8 +403,8 @@ class AdminElectivesController(
     }
 }
 
-class AdminElectivesSubjectsController(private val electiveService: ElectiveService) {
-    fun Application.register() {
+class AdminElectivesSubjectsController(private val electiveService: ElectiveService) : Controller {
+    override fun Application.register() {
         adminRoutes {
             context(electiveService) {
                 get<Admin.Electives.Id.Subjects> { params -> handleGetElectiveSubjects(params.parent.id) }
@@ -412,7 +423,7 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
             electiveService.setSubjects(electiveId, req.subjectIdsList)
 
             ok()
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.ELECTIVE -> notFound("Elective not found")
                 ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
@@ -423,8 +434,8 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
     }
 }
 
-class AdminSubjectsController(private val subjectService: SubjectService) {
-    fun Application.register() {
+class AdminSubjectsController(private val subjectService: SubjectService) : Controller {
+    override fun Application.register() {
         adminRoutes {
             get<Admin.Subjects> { handleGetSubjects() }
 
@@ -476,7 +487,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
             )
 
             ok()
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.TEAM -> badRequest("Team not found")
                 ExceptionEntity.TEACHER -> badRequest("One or more teachers not found")
@@ -495,7 +506,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
             @OptIn(CreatesTransaction::class)
             subjectService.delete(id)
             ok()
-        } catch (_: NotFoundException) {
+        } catch (_: EntityNotFoundException) {
             notFound("Subject not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
@@ -529,7 +540,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
             @OptIn(CreatesTransaction::class)
             subjectService.update(id, update)
             ok()
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.SUBJECT -> notFound("Subject not found")
                 ExceptionEntity.TEACHER -> badRequest("One or more teachers not found")
@@ -543,8 +554,8 @@ class AdminSubjectsController(private val subjectService: SubjectService) {
     }
 }
 
-class AdminTeamsController(private val teamService: TeamService) {
-    fun Application.register() {
+class AdminTeamsController(private val teamService: TeamService) : Controller {
+    override fun Application.register() {
         adminRoutes {
             get<Admin.Teams> { handleGetTeams() }
 
@@ -595,7 +606,7 @@ class AdminTeamsController(private val teamService: TeamService) {
             @OptIn(CreatesTransaction::class)
             teamService.delete(id)
             ok()
-        } catch (_: NotFoundException) {
+        } catch (_: EntityNotFoundException) {
             notFound("Team not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
@@ -614,7 +625,7 @@ class AdminTeamsController(private val teamService: TeamService) {
             @OptIn(CreatesTransaction::class)
             teamService.update(id, update)
             ok()
-        } catch (e: NotFoundException) {
+        } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.TEAM -> notFound("Team not found")
 
@@ -626,14 +637,14 @@ class AdminTeamsController(private val teamService: TeamService) {
     }
 }
 
-private val Long.inLocalDateTimeBySeconds: LocalDateTime
+private val Long.secondsToUTCDateTime: LocalDateTime
     get() = Instant.ofEpochSecond(this)
         .atZone(ZoneId.of("UTC"))
         .toLocalDateTime()
 
 @Suppress("UNUSED")
 @Resource("/admin")
-class Admin {
+private class Admin {
     @Resource("challenge")
     class Challenge(val parent: Admin)
 

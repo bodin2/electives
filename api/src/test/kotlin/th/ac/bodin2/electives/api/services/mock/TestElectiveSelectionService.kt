@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.api.services.mock
 
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService
@@ -20,7 +20,7 @@ class TestElectiveSelectionService : ElectiveSelectionService {
     override fun forceSetAllStudentSelections(userId: Int, selections: Map<Int, Int>) = error("Not testable")
 
     @CreatesTransaction
-    override fun setStudentSelection(
+    override suspend fun setStudentSelection(
         executorId: Int,
         userId: Int,
         electiveId: Int,
@@ -28,7 +28,7 @@ class TestElectiveSelectionService : ElectiveSelectionService {
     ) = testElectiveSelectionServiceResponse
 
     @CreatesTransaction
-    override fun deleteStudentSelection(
+    override suspend fun deleteStudentSelection(
         executorId: Int,
         userId: Int,
         electiveId: Int,
@@ -36,7 +36,7 @@ class TestElectiveSelectionService : ElectiveSelectionService {
 
     @CreatesTransaction
     override fun getStudentSelections(userId: Int): Map<Int, Subject> {
-        if (userId != STUDENT_ID) throw NotFoundException(ExceptionEntity.STUDENT)
+        if (userId != STUDENT_ID) throw EntityNotFoundException(ExceptionEntity.STUDENT)
         return mapOf(ELECTIVE_ID to MockUtils.mockSubject(SUBJECT_ID))
     }
 }

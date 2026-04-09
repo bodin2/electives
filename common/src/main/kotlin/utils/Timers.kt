@@ -7,7 +7,8 @@ import kotlin.time.TimeSource
 /**
  * Runs the given [action] every [delay].
  *
- * This interval will stop running once the [CoroutineScope] is cancelled or completed.
+ * This interval will stop running once the [CoroutineScope] is canceled or completed.
+ *
  * ```
  * runBlocking {
  *   val job = coroutineScope.setInterval(1.seconds) {
@@ -20,6 +21,7 @@ import kotlin.time.TimeSource
  * ```
  *
  * To create an interval that runs until explicitly stopped, use [GlobalScope] or another long-lived scope:
+ *
  * ```
  * lateinit var job: Job
  *

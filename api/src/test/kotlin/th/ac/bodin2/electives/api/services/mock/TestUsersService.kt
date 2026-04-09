@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.api.services.mock
 
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.NotFoundException
 import th.ac.bodin2.electives.api.MockUtils.mockStudent
 import th.ac.bodin2.electives.api.MockUtils.mockTeacher
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -47,10 +47,10 @@ class TestUsersService : UsersService {
     @CreatesTransaction
     override fun setPassword(id: Int, newPassword: String) = error("Not testable")
 
-    override fun getUserType(id: Int) = when (id) {
+    override suspend fun getUserType(id: Int) = when (id) {
         TEACHER_ID -> UserType.TEACHER
         STUDENT_ID -> UserType.STUDENT
-        else -> throw NotFoundException(ExceptionEntity.USER, "User does not exist: $id")
+        else -> throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
     }
 
     @CreatesTransaction
@@ -59,6 +59,11 @@ class TestUsersService : UsersService {
             throw IllegalArgumentException("Invalid password for user ID: $id")
         }
 
+        return insecurelyCreateSessionWithoutValidation(id)
+    }
+
+    @CreatesTransaction
+    override fun insecurelyCreateSessionWithoutValidation(id: Int): String {
         hasSessions.add(id)
         return id.toString()
     }

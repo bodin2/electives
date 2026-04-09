@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.api.services
 
 import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Student
@@ -12,15 +12,15 @@ interface UsersService {
     /**
      * Gets the [UserType] of the given user ID.
      *
-     * @throws NotFoundException if the user does not exist.
+     * @throws EntityNotFoundException if the user does not exist.
      * @throws IllegalStateException if the user is neither a Student nor a Teacher.
      */
-    fun getUserType(id: Int): UserType
+    suspend fun getUserType(id: Int): UserType
 
     /**
      * Creates a new student with the given information.
      *
-     * @throws NotFoundException if any of the specified teams do not exist.
+     * @throws EntityNotFoundException if any of the specified teams do not exist.
      * @throws ConflictException if a user/student with the same ID already exists.
      * @throws IllegalArgumentException if the password does not meet the requirements.
      */
@@ -52,7 +52,7 @@ interface UsersService {
     /**
      * Deletes the teacher or student with the given ID.
      *
-     * @throws NotFoundException if the user does not exist.
+     * @throws EntityNotFoundException if the user does not exist.
      */
     @CreatesTransaction
     fun deleteUser(id: Int)
@@ -60,7 +60,7 @@ interface UsersService {
     /**
      * Updates the student's profile information.
      *
-     * @throws NotFoundException if the user or team does not exist.
+     * @throws EntityNotFoundException if the user or team does not exist.
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @CreatesTransaction
@@ -72,7 +72,7 @@ interface UsersService {
     /**
      * Updates the teacher's profile information.
      *
-     * @throws NotFoundException if the user does not exist.
+     * @throws EntityNotFoundException if the user does not exist.
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @CreatesTransaction
@@ -111,7 +111,7 @@ interface UsersService {
      *
      * The password must be at least 4 characters. Leading and trailing spaces are trimmed.
      *
-     * @throws NotFoundException if the user does not exist.
+     * @throws EntityNotFoundException if the user does not exist.
      * @throws IllegalArgumentException if the new password does not meet the requirements.
      */
     @CreatesTransaction
@@ -143,16 +143,23 @@ interface UsersService {
     /**
      * Validates password and creates a new session for the given user ID.
      *
-     * @throws NotFoundException if the user does not exist.
+     * @throws EntityNotFoundException if the user does not exist.
      * @throws IllegalArgumentException if the token or session is invalid.
      */
     @CreatesTransaction
     suspend fun createSession(id: Int, password: String, aud: String): String
 
     /**
+     * Creates a new session for the given user ID without validating the password.
+     * Assumes the user exists.
+     */
+    @CreatesTransaction
+    fun insecurelyCreateSessionWithoutValidation(id: Int): String
+
+    /**
      * Gets the user ID associated with the given session token.
      *
-     * @throws NotFoundException if the user does not exist.
+     * @throws EntityNotFoundException if the user does not exist.
      * @throws IllegalArgumentException if the token or session is invalid.
      */
     fun getSessionUserId(token: String): Int

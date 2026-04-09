@@ -462,8 +462,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
             withTimeout(10.seconds) {
                 while (received.size < electives.size) {
                     val frame = incoming.receive() as Frame.Binary
-                    val envelope =
-                        Envelope.parseFrom(frame.readBytes())
+                    val envelope = Envelope.parseFrom(frame.readBytes())
 
                     assertTrue(
                         envelope.hasBulkSubjectEnrollmentUpdate(),
@@ -498,6 +497,8 @@ class NotificationsServiceImplTest : ApplicationTest() {
             close()
         }
     }
+
+    // TODO: More bulk update tests
 
     @Test
     fun `websocket disconnects if a new instance connects`() = runTest {

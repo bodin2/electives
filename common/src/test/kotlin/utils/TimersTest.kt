@@ -1,41 +1,44 @@
 package th.ac.bodin2.electives.utils
 
 import kotlinx.coroutines.*
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-class TimersTest {
+class SetIntervalTest {
     @Test
-    fun testSetIntervalExecutesMultipleTimes() = runBlocking {
+    fun `executes multiple times`() = runBlocking {
         var counter = 0
         val job = setInterval(50.milliseconds) {
             counter++
         }
 
-        delay(250)
+        delay(250.milliseconds)
         job.cancel()
 
         assertTrue(counter >= 4)
     }
 
     @Test
-    fun testSetIntervalStopsWhenCancelled() = runBlocking {
+    fun `stops when canceled`() = runBlocking {
         var counter = 0
         val job = setInterval(50.milliseconds) {
             counter++
         }
 
-        delay(150)
+        delay(150.milliseconds)
         job.cancel()
         val counterAfterCancel = counter
 
-        delay(150)
+        delay(150.milliseconds)
         assertEquals(counterAfterCancel, counter)
     }
 
     @Test
-    fun testSetIntervalWithZeroDuration() = runBlocking {
+    fun `zero duration executes every tick`() = runBlocking {
         var counter = 0
         val job = setInterval(0.milliseconds) {
             counter++
@@ -44,58 +47,56 @@ class TimersTest {
             }
         }
 
-        delay(50)
+        delay(50.milliseconds)
         job.cancel()
 
         assertTrue(counter >= 10)
     }
 
     @Test
-    fun testSetIntervalWithLongDuration() = runBlocking {
+    fun `long duration doesn't execute initially`() = runBlocking {
         var counter = 0
         val job = setInterval(1.seconds) {
             counter++
         }
 
-        delay(500)
+        delay(500.milliseconds)
         job.cancel()
 
         assertTrue(counter <= 1)
     }
 
     @Test
-    fun testSetIntervalWithSuspendingAction() = runBlocking {
+    fun `suspending action should block`() = runBlocking {
         var counter = 0
         val job = setInterval(50.milliseconds) {
-            delay(10)
+            delay(500.milliseconds)
             counter++
         }
 
-        delay(250)
+        delay(250.milliseconds)
         job.cancel()
 
-        assertTrue(counter >= 3)
+        assertTrue(counter < 1)
     }
 
     @Test
-    fun testSetIntervalDoesNotBlockScope() = runBlocking {
+    fun `setting does not block scope`() = runBlocking {
         var intervalExecuted = false
-        var afterIntervalExecuted: Boolean
 
         val job = setInterval(100.milliseconds) {
             intervalExecuted = true
         }
 
-        afterIntervalExecuted = true
-        delay(150)
+        assertFalse(intervalExecuted)
+        delay(150.milliseconds)
         job.cancel()
 
         assertTrue(intervalExecuted)
-        assertTrue(afterIntervalExecuted)
     }
 
     @Test
-    fun testMultipleSetIntervals() = runBlocking {
+    fun `can run concurrently`() = runBlocking {
         var counter1 = 0
         var counter2 = 0
 
@@ -107,7 +108,7 @@ class TimersTest {
             counter2++
         }
 
-        delay(300)
+        delay(300.milliseconds)
         job1.cancel()
         job2.cancel()
 
@@ -115,7 +116,7 @@ class TimersTest {
     }
 
     @Test
-    fun testSetIntervalStopsWithScopeCancel() = runBlocking {
+    fun `stops when scope is cancelled`() = runBlocking {
         var counter = 0
         val scope = CoroutineScope(Job())
 
@@ -123,16 +124,16 @@ class TimersTest {
             counter++
         }
 
-        delay(150)
+        delay(150.milliseconds)
         scope.cancel()
         val counterAfterCancel = counter
 
-        delay(150)
+        delay(150.milliseconds)
         assertEquals(counterAfterCancel, counter)
     }
 
     @Test
-    fun testSetIntervalExceptionHandling() = runBlocking {
+    fun `works with exceptions handler`() = runBlocking {
         var counter = 0
         val exceptionHandler = CoroutineExceptionHandler { _, _ -> }
         val scope = CoroutineScope(Job() + exceptionHandler)
@@ -144,7 +145,7 @@ class TimersTest {
             }
         }
 
-        delay(250)
+        delay(250.milliseconds)
         job.cancel()
 
         assertTrue(counter >= 3)

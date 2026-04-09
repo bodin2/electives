@@ -7,7 +7,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Team
@@ -33,7 +33,7 @@ class TeamServiceImpl : TeamService {
         transaction {
             val rows = Teams.deleteWhere { Teams.id eq id }
             if (rows == 0) {
-                throw NotFoundException(ExceptionEntity.TEAM)
+                throw EntityNotFoundException(ExceptionEntity.TEAM)
             }
         }
     }
@@ -41,7 +41,7 @@ class TeamServiceImpl : TeamService {
     @CreatesTransaction
     override fun update(id: Int, update: TeamService.TeamUpdate) {
         transaction {
-            Team.findById(id) ?: throw NotFoundException(ExceptionEntity.TEAM)
+            Team.findById(id) ?: throw EntityNotFoundException(ExceptionEntity.TEAM)
             Teams.update({ Teams.id eq id }) {
                 update.name?.let { name -> it[this.name] = name }
 

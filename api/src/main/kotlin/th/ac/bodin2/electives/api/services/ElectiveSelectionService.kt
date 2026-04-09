@@ -11,7 +11,7 @@ interface ElectiveSelectionService {
      * @param userId The ID of the student.
      * @param selections A map of elective IDs to selected subject IDs.
      *
-     * @throws th.ac.bodin2.electives.NotFoundException if the student, elective, or subject does not exist.
+     * @throws th.ac.bodin2.electives.EntityNotFoundException if the student, elective, or subject does not exist.
      * @throws IllegalArgumentException if the subject is not part of the elective.
      */
     @CreatesTransaction
@@ -25,20 +25,20 @@ interface ElectiveSelectionService {
      *
      * @param executorId The ID of the user performing the operation.
      *
-     * @throws th.ac.bodin2.electives.NotFoundException if the student, elective, or subject does not exist.
+     * @throws th.ac.bodin2.electives.EntityNotFoundException if the student, elective, or subject does not exist.
      */
     @CreatesTransaction
-    fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult
+    suspend fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult
 
     /**
      * Deletes the subject selection for a student in a given elective.
      *
      * @param executorId The ID of the user performing the operation.
      *
-     * @throws th.ac.bodin2.electives.NotFoundException if the student or elective does not exist.
+     * @throws th.ac.bodin2.electives.EntityNotFoundException if the student or elective does not exist.
      */
     @CreatesTransaction
-    fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult
+    suspend fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult
 
     /**
      * Gets all subject selections for a student.
@@ -46,7 +46,7 @@ interface ElectiveSelectionService {
      * @param userId The ID of the student.
      * @return A map of elective IDs to selected subject IDs.
      *
-     * @throws th.ac.bodin2.electives.NotFoundException if the student does not exist.
+     * @throws th.ac.bodin2.electives.EntityNotFoundException if the student does not exist.
      */
     fun getStudentSelections(userId: Int): Map<Int, Subject>
 

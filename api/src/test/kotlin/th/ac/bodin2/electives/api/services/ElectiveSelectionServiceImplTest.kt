@@ -7,7 +7,7 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
@@ -432,7 +432,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
 
     @Test
     fun `force set all student selections with invalid student`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             electiveSelectionService.forceSetAllStudentSelections(
                 UNUSED_ID,
                 mapOf(TestConstants.Electives.SCIENCE_ID to TestConstants.Subjects.PHYSICS_ID)
@@ -442,7 +442,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
 
     @Test
     fun `force set all student selections with invalid elective`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             electiveSelectionService.forceSetAllStudentSelections(
                 TestConstants.Students.JOHN_ID,
                 mapOf(UNUSED_ID to TestConstants.Subjects.PHYSICS_ID)
@@ -452,7 +452,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
 
     @Test
     fun `force set all student selections with invalid subject`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             electiveSelectionService.forceSetAllStudentSelections(
                 TestConstants.Students.JOHN_ID,
                 mapOf(TestConstants.Electives.SCIENCE_ID to UNUSED_ID)

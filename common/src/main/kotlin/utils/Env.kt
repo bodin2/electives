@@ -10,30 +10,16 @@ fun loadDotEnv() {
     dotenv.entries().forEach { System.setProperty(it.key, it.value) }
 }
 
-fun getEnv(key: String): String? {
-    val key = "$ENV_PREFIX$key"
-    if (key.isBlank()) throw IllegalArgumentException("Cannot get environment variable with blank key")
-
-    return if (ENV_GET_FROM_SYSTEM) System.getenv(key) ?: System.getProperty(key)
-    else System.getProperty(key)
+fun env(key: String): String? {
+    require(!key.isBlank()) { "Cannot get environment variable with blank key" }
+    return System.getenv(key) ?: System.getProperty(key)
 }
 
-fun requireEnv(key: String): String {
-    return getEnv(key) ?: throw IllegalStateException("Required environment variable '$key' is not set")
-}
+fun requireEnv(key: String): String =
+    checkNotNull(env(key)) { "Required environment variable '$key' is not set" }
 
 fun requireEnvNonBlank(key: String): String {
     val value = requireEnv(key)
-    if (value.isBlank()) throw IllegalStateException("Required environment variable '$key' is blank")
+    check(!value.isBlank()) { "Required environment variable '$key' is blank" }
     return value
 }
-
-/**
- * Prefix to add to all environment variable lookups.
- */
-var ENV_PREFIX = ""
-
-/**
- * Whether to get environment variables from the system environment variables.
- */
-var ENV_GET_FROM_SYSTEM = true

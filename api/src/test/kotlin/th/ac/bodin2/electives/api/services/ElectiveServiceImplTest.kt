@@ -4,7 +4,7 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
@@ -150,7 +150,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `delete elective not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             electiveService.delete(UNUSED_ID)
         }
@@ -182,7 +182,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update elective not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             electiveService.update(
                 UNUSED_ID,
@@ -215,7 +215,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `set elective subjects not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             electiveService.setSubjects(UNUSED_ID, listOf(TestConstants.Subjects.PHYSICS_ID))
         }
@@ -223,7 +223,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create elective with non-existent team throws not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             electiveService.create(
                 id = 700,
@@ -235,7 +235,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update elective with non-existent team throws not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             electiveService.update(
                 TestConstants.Electives.SCIENCE_ID,
@@ -246,7 +246,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `set subjects with non-existent subject throws not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             electiveService.setSubjects(
                 TestConstants.Electives.SCIENCE_ID,

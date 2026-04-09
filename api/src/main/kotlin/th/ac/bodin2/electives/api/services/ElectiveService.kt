@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.api.services
 
 import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Elective
@@ -14,7 +14,7 @@ interface ElectiveService {
     /**
      * Creates a new elective with the given information.
      *
-     * @throws NotFoundException if the specified team does not exist.
+     * @throws EntityNotFoundException if the specified team does not exist.
      * @throws ConflictException if an elective with the same ID already exists.
      */
     @CreatesTransaction
@@ -29,7 +29,7 @@ interface ElectiveService {
     /**
      * Deletes an elective by its ID.
      *
-     * @throws NotFoundException if the elective does not exist.
+     * @throws EntityNotFoundException if the elective does not exist.
      */
     @CreatesTransaction
     fun delete(id: Int)
@@ -37,7 +37,7 @@ interface ElectiveService {
     /**
      * Updates an elective's information.
      *
-     * @throws NotFoundException if the elective does not exist.
+     * @throws EntityNotFoundException if the elective does not exist.
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @CreatesTransaction

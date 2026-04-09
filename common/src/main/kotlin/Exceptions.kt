@@ -1,6 +1,6 @@
 package th.ac.bodin2.electives
 
-class NotFoundException(val entity: ExceptionEntity, override val message: String = "${entity.name} not found") :
+class EntityNotFoundException(val entity: ExceptionEntity, override val message: String = "${entity.name} not found") :
     Exception(message)
 
 enum class ExceptionEntity {

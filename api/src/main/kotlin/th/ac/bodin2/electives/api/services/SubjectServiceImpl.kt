@@ -8,7 +8,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.CreatesTransaction
 import th.ac.bodin2.electives.db.Subject
@@ -45,7 +45,7 @@ class SubjectServiceImpl : SubjectService {
             if (thumbnailUrl != null) it[this.thumbnailUrl] = thumbnailUrl
             if (imageUrl != null) it[this.imageUrl] = imageUrl
             if (team != null) {
-                if (!Team.exists(team)) throw NotFoundException(ExceptionEntity.TEAM)
+                if (!Team.exists(team)) throw EntityNotFoundException(ExceptionEntity.TEAM)
                 it[this.team] = team
             }
         }
@@ -70,7 +70,7 @@ class SubjectServiceImpl : SubjectService {
         transaction {
             val rows = Subjects.deleteWhere { Subjects.id eq id }
             if (rows == 0) {
-                throw NotFoundException(ExceptionEntity.SUBJECT)
+                throw EntityNotFoundException(ExceptionEntity.SUBJECT)
             }
         }
     }
@@ -83,7 +83,7 @@ class SubjectServiceImpl : SubjectService {
             try {
                 Subjects.update({ Subjects.id eq id }) {
                     if (update.setTeam) {
-                        if (update.team != null && !Team.exists(update.team)) throw NotFoundException(ExceptionEntity.TEAM)
+                        if (update.team != null && !Team.exists(update.team)) throw EntityNotFoundException(ExceptionEntity.TEAM)
                         it[team] = update.team
                     }
 

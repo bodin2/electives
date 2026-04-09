@@ -1,6 +1,6 @@
 package th.ac.bodin2.electives.api
 
-import th.ac.bodin2.electives.utils.getEnv
+import th.ac.bodin2.electives.utils.env
 
-val isTest by lazy { getEnv("APP_ENV") == "test" }
-val isDev by lazy { getEnv("APP_ENV") == "development" }
+val isTest by lazy { env("APP_ENV") == "test" }
+val isDev by lazy { env("APP_ENV") == "development" }

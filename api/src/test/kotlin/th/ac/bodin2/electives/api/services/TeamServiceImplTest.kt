@@ -4,7 +4,7 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.NotFoundException
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
@@ -76,7 +76,7 @@ class TeamServiceImplTest : ApplicationTest() {
 
     @Test
     fun `delete team not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             teamService.delete(UNUSED_ID)
         }
@@ -108,7 +108,7 @@ class TeamServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update team not found`() = runTest {
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<EntityNotFoundException> {
             @OptIn(CreatesTransaction::class)
             teamService.update(
                 UNUSED_ID,

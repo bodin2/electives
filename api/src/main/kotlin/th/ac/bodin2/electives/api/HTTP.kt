@@ -11,12 +11,12 @@ import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.resources.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.utils.authenticatedUserId
+import th.ac.bodin2.electives.api.utils.userId
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.KiB
-import th.ac.bodin2.electives.utils.getEnv
+import th.ac.bodin2.electives.utils.env
 import th.ac.bodin2.electives.utils.requireEnvNonBlank
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -39,6 +39,7 @@ fun Application.configureHTTP() {
     }
 
     install(CORS) {
+        allowMethod(HttpMethod.Head)
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Put)
         allowMethod(HttpMethod.Delete)
@@ -63,7 +64,7 @@ fun Application.configureHTTP() {
 
     install(ConditionalHeaders)
 
-    if (!getEnv("IS_BEHIND_PROXY").isNullOrBlank()) {
+    if (!env("IS_BEHIND_PROXY").isNullOrBlank()) {
         logger.info("IS_BEHIND_PROXY is set, respecting forwarded headers.")
 
         install(ForwardedHeaders)
@@ -79,7 +80,7 @@ private fun Application.configureRateLimits() {
     val usersService: UsersService by dependencies
 
     install(RateLimit) {
-        val authenticated: suspend (ApplicationCall) -> Any = { it.authenticatedUserId() ?: Unit }
+        val authenticated: suspend (ApplicationCall) -> Any = { it.userId() ?: Unit }
 
         register(RATE_LIMIT_ADMIN) {
             rateLimiter(limit = 10, refillPeriod = 10.seconds)
@@ -99,7 +100,7 @@ private fun Application.configureRateLimits() {
 
         register(RATE_LIMIT_ELECTIVES) {
             rateLimiter(limit = 60, refillPeriod = 1.minutes)
-            requestKey { it.authenticatedUserId() ?: it.request.origin.remoteAddress }
+            requestKey { it.userId() ?: it.request.origin.remoteAddress }
         }
 
         register(RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS) {
@@ -125,7 +126,7 @@ private fun Application.configureRateLimits() {
             requestKey(authenticated)
             requestWeight { _, key ->
                 if (key is Int)
-                    return@requestWeight when (transaction { usersService.getUserType(key) }) {
+                    return@requestWeight when (suspendTransaction { usersService.getUserType(key) }) {
                         // Teachers are not affected by elective selection limits
                         UserType.TEACHER -> 0
                         else -> 1

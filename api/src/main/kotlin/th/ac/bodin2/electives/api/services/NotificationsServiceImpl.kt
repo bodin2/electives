@@ -1,6 +1,7 @@
 package th.ac.bodin2.electives.api.services
 
 import io.ktor.server.plugins.*
+import io.ktor.server.plugins.di.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
@@ -12,6 +13,8 @@ import kotlinx.coroutines.flow.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.isTest
+import th.ac.bodin2.electives.api.resolveOrNull
+import th.ac.bodin2.electives.api.services.NotificationsServiceImpl.Config
 import th.ac.bodin2.electives.api.toPrincipal
 import th.ac.bodin2.electives.api.utils.badFrame
 import th.ac.bodin2.electives.api.utils.parseOrNull
@@ -24,11 +27,28 @@ import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.acknowledged
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.bulkSubjectEnrollmentUpdate
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.envelope
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
+import th.ac.bodin2.electives.utils.env
 import th.ac.bodin2.electives.utils.setInterval
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+
+fun DependencyRegistry.provideNotificationsService() = provide<NotificationsService> {
+    NotificationsServiceImpl(
+        Config(
+            maxSubjectSubscriptionsPerClient =
+                env("NOTIFICATIONS_UPDATE_MAX_SUBSCRIPTIONS_PER_CLIENT")?.toIntOrNull() ?: 5,
+            bulkUpdateInterval =
+                env("NOTIFICATIONS_BULK_UPDATE_INTERVAL")?.toIntOrNull()?.milliseconds ?: 5.seconds,
+            bulkUpdatesEnabled = true
+        ),
+        resolve<UsersService>(),
+        resolveOrNull<AdminAuthService>()
+    )
+}
 
 // Fake ID for admin sessions
 private const val ADMIN_PSEUDO_ID = -1

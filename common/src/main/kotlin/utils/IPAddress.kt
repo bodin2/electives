@@ -25,6 +25,7 @@ sealed class IP(val bits: Int) {
                 }
 
                 is Inet6Address -> V6(BigInteger(1, address.address))
+
                 else -> throw IllegalArgumentException("Unknown InetAddress type: ${address::class.java}")
             }
         }
@@ -51,6 +52,7 @@ data class CIDR(val net: IP, val prefix: Int) {
                         else (0xffff_ffffL shl (32 - prefix)) and 0xffff_ffffL
                     IP.V4(ip.value and mask)
                 }
+
                 is IP.V6 -> {
                     val hostBits = 128 - prefix
                     val mask =
@@ -93,9 +95,7 @@ data class CIDR(val net: IP, val prefix: Int) {
 
     operator fun contains(ip: String) = contains(IP.parse(ip))
 
-    operator fun contains(ip: IP): Boolean {
-        return matches(ip)
-    }
+    operator fun contains(ip: IP) = matches(ip)
 }
 
 operator fun List<CIDR>.contains(ip: IP): Boolean = any { ip in it }

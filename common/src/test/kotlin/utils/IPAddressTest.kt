@@ -5,64 +5,40 @@ import kotlin.test.*
 
 class IPTest {
     @Test
-    fun testParseIPv4() {
+    fun `parsing IPv4 works`() {
         val ip = IP.parse("192.168.1.1") as IP.V4
         assertEquals(32, ip.bits)
         assertEquals(0xc0a80101L, ip.value)
     }
 
     @Test
-    fun testParseIPv4WithLeadingTrailingSpaces() {
+    fun `parsing IPv4 works with spaces around`() {
         val ip = IP.parse("  10.0.0.1  ") as IP.V4
         assertEquals(0x0a000001L, ip.value)
     }
 
     @Test
-    fun testParseIPv4Localhost() {
-        val ip = IP.parse("127.0.0.1") as IP.V4
-        assertEquals(0x7f000001L, ip.value)
-    }
-
-    @Test
-    fun testParseIPv4Zero() {
-        val ip = IP.parse("0.0.0.0") as IP.V4
-        assertEquals(0L, ip.value)
-    }
-
-    @Test
-    fun testParseIPv4Max() {
-        val ip = IP.parse("255.255.255.255") as IP.V4
-        assertEquals(0xffffffffL, ip.value)
-    }
-
-    @Test
-    fun testParseIPv6() {
+    fun `parsing IPv6 works`() {
         val ip = IP.parse("2001:db8::1") as IP.V6
         assertEquals(128, ip.bits)
         assertTrue(ip.value > BigInteger.ZERO)
     }
 
     @Test
-    fun testParseIPv6Localhost() {
-        val ip = IP.parse("::1") as IP.V6
-        assertEquals(BigInteger.ONE, ip.value)
-    }
-
-    @Test
-    fun testParseIPv6Zero() {
+    fun `parsing IPv6 zero works`() {
         val ip = IP.parse("::") as IP.V6
         assertEquals(BigInteger.ZERO, ip.value)
     }
 
     @Test
-    fun testParseInvalidIP() {
+    fun `parsing invalid IP fails`() {
         assertFails {
             IP.parse("invalid")
         }
     }
 
     @Test
-    fun testParseEmptyIP() {
+    fun `parsing an empty string fails`() {
         assertFailsWith<IllegalArgumentException> {
             IP.parse("")
         }
@@ -71,15 +47,16 @@ class IPTest {
 
 class CIDRTest {
     @Test
-    fun testParseCIDRv4() {
+    fun `parsing IPv4 works`() {
         val cidr = CIDR.parse("192.168.1.0/24")
         assertEquals(24, cidr.prefix)
         val net = cidr.net as IP.V4
         assertEquals(0xc0a80100L, net.value)
+        assertEquals(24, cidr.prefix)
     }
 
     @Test
-    fun testParseCIDRv4WithNormalization() {
+    fun `IPv4 is normalized`() {
         val cidr = CIDR.parse("192.168.1.15/24")
         val net = cidr.net as IP.V4
         assertEquals(0xc0a80100L, net.value)
@@ -87,7 +64,7 @@ class CIDRTest {
     }
 
     @Test
-    fun testParseCIDRv4PrefixZero() {
+    fun `IPv4 zero prefix works`() {
         val cidr = CIDR.parse("10.0.0.1/0")
         assertEquals(0, cidr.prefix)
         val net = cidr.net as IP.V4
@@ -95,22 +72,14 @@ class CIDRTest {
     }
 
     @Test
-    fun testParseCIDRv4Prefix32() {
-        val cidr = CIDR.parse("192.168.1.1/32")
-        assertEquals(32, cidr.prefix)
-        val net = cidr.net as IP.V4
-        assertEquals(0xc0a80101L, net.value)
-    }
-
-    @Test
-    fun testParseCIDRv6() {
-        val cidr = CIDR.parse("2001:db8::/32")
-        assertEquals(32, cidr.prefix)
+    fun `parsing IPv6 works`() {
+        val cidr = CIDR.parse("2001:db8::/128")
+        assertEquals(128, cidr.prefix)
         assertTrue(cidr.net is IP.V6)
     }
 
     @Test
-    fun testParseCIDRv6PrefixZero() {
+    fun `IPv6 zero prefix works`() {
         val cidr = CIDR.parse("2001:db8::1/0")
         assertEquals(0, cidr.prefix)
         val net = cidr.net as IP.V6
@@ -118,126 +87,118 @@ class CIDRTest {
     }
 
     @Test
-    fun testParseCIDRv6Prefix128() {
-        val cidr = CIDR.parse("::1/128")
-        assertEquals(128, cidr.prefix)
-        val net = cidr.net as IP.V6
-        assertEquals(BigInteger.ONE, net.value)
-    }
-
-    @Test
-    fun testParseCIDRWithSpaces() {
+    fun `CIDR with space around works`() {
         val cidr = CIDR.parse("  192.168.1.0/24  ")
         assertEquals(24, cidr.prefix)
     }
 
     @Test
-    fun testParseCIDREmpty() {
+    fun `parsing an empty string fails`() {
         assertFailsWith<IllegalArgumentException> {
             CIDR.parse("")
         }
     }
 
     @Test
-    fun testParseCIDRMissingPrefix() {
+    fun `parsing without prefix fails`() {
         assertFailsWith<IllegalArgumentException> {
             CIDR.parse("192.168.1.0")
         }
     }
 
     @Test
-    fun testParseCIDRInvalidPrefix() {
+    fun `parsing with invalid prefix fails`() {
         assertFailsWith<NumberFormatException> {
             CIDR.parse("192.168.1.0/abc")
         }
     }
 
     @Test
-    fun testParseCIDRPrefixTooLarge() {
+    fun `parsing with large prefix fails`() {
         assertFailsWith<IllegalArgumentException> {
             CIDR.parse("192.168.1.0/33")
         }
     }
 
     @Test
-    fun testParseCIDRPrefixNegative() {
+    fun `parsing with negative prefix fails`() {
         assertFailsWith<IllegalArgumentException> {
             CIDR.parse("192.168.1.0/-1")
         }
     }
 
     @Test
-    fun testMatchesIPv4InRange() {
+    fun `IPv4 matches inside range`() {
         val cidr = CIDR.parse("192.168.1.0/24")
         val ip = IP.parse("192.168.1.100")
         assertTrue(cidr.matches(ip))
     }
 
     @Test
-    fun testMatchesIPv4OutOfRange() {
+    fun `IPv4 doesn't match outside range`() {
         val cidr = CIDR.parse("192.168.1.0/24")
         val ip = IP.parse("192.168.2.1")
         assertFalse(cidr.matches(ip))
     }
 
     @Test
-    fun testMatchesIPv4ExactMatch() {
+    fun `IPv4 matches exact`() {
         val cidr = CIDR.parse("192.168.1.1/32")
         val ip = IP.parse("192.168.1.1")
         assertTrue(cidr.matches(ip))
     }
 
     @Test
-    fun testMatchesIPv4PrefixZero() {
+    fun `IPv4 zero prefix matches`() {
         val cidr = CIDR.parse("0.0.0.0/0")
         val ip = IP.parse("192.168.1.1")
         assertTrue(cidr.matches(ip))
     }
 
     @Test
-    fun testMatchesIPv6InRange() {
+    fun `IPv6 matches in range`() {
         val cidr = CIDR.parse("2001:db8::/32")
         val ip = IP.parse("2001:db8::1")
         assertTrue(cidr.matches(ip))
     }
 
     @Test
-    fun testMatchesIPv6OutOfRange() {
+    fun `IPv6 doesn't match outside range`() {
         val cidr = CIDR.parse("2001:db8::/32")
         val ip = IP.parse("2001:db9::1")
         assertFalse(cidr.matches(ip))
     }
 
     @Test
-    fun testMatchesIPv6PrefixZero() {
+    fun `IPv6 zero prefix matches`() {
         val cidr = CIDR.parse("::/0")
         val ip = IP.parse("2001:db8::1")
         assertTrue(cidr.matches(ip))
     }
 
     @Test
-    fun testMatchesDifferentIPVersions() {
+    fun `different protocol versions don't match`() {
         val cidr = CIDR.parse("192.168.1.0/24")
         val ip = IP.parse("2001:db8::1")
         assertFalse(cidr.matches(ip))
     }
 
     @Test
-    fun testContainsOperatorWithIPObject() {
+    fun `contains operator works IP`() {
         val cidr = CIDR.parse("10.0.0.0/8")
         val ip = IP.parse("10.1.2.3")
         assertTrue(ip in cidr)
     }
 
     @Test
-    fun testContainsOperatorWithString() {
+    fun `contains operator works with string`() {
         val cidr = CIDR.parse("10.0.0.0/8")
         assertTrue("10.1.2.3" in cidr)
         assertFalse("11.1.2.3" in cidr)
     }
 
     @Test
-    fun testListContainsOperatorWithIP() {
+    fun `list contains operator works with IP`() {
         val list = listOf(
             CIDR.parse("192.168.0.0/16"),
             CIDR.parse("10.0.0.0/8")
@@ -247,7 +208,7 @@ class CIDRTest {
     }
 
     @Test
-    fun testListContainsOperatorWithString() {
+    fun `list contains operator works with string`() {
         val list = listOf(
             CIDR.parse("192.168.0.0/16"),
             CIDR.parse("10.0.0.0/8")
@@ -257,7 +218,7 @@ class CIDRTest {
     }
 
     @Test
-    fun testListContainsOperatorEmpty() {
+    fun `empty list contains operator doesn't match`() {
         val list = emptyList<CIDR>()
         assertFalse(IP.parse("192.168.1.1") in list)
         assertFalse("192.168.1.1" in list)

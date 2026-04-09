@@ -15,10 +15,9 @@ import th.ac.bodin2.electives.api.utils.getParser
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.db.models.*
 import th.ac.bodin2.electives.proto.api.SubjectTag
-import th.ac.bodin2.electives.utils.Argon2
 import java.security.KeyPair
 import java.security.KeyPairGenerator
-import java.util.Base64
+import java.util.*
 
 val adminKeyPair: KeyPair = KeyPairGenerator.getInstance("RSA").apply {
     initialize(2048)
@@ -28,7 +27,6 @@ fun setupTestEnvironment() {
     System.setProperty("ADMIN_ENABLED", "1")
     System.setProperty("ADMIN_PUBLIC_KEY", Base64.getEncoder().encodeToString(adminKeyPair.public.encoded))
     System.setProperty("APP_ENV", "test")
-    Argon2.init(memory = 16384, iterations = 10)
 }
 
 object TestDatabase {
