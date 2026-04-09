@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["GRADLE_USER_HOME"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
