@@ -3,7 +3,7 @@ import { resolve } from 'path'
 import { build } from './build'
 
 const watcher = watch(
-    resolve(import.meta.dir, '..'),
+    resolve(import.meta.dir, '..', 'src'),
     {
         recursive: true,
     },

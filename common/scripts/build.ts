@@ -24,6 +24,7 @@ export function build(filename: string): Promise<void> {
     Bun.spawn(
         ['bunx', 'protoc', '--proto_path=./src', `--plugin=${protoPath}`, '--ts_proto_out=./build/ts', filename],
         {
+            cwd: join(import.meta.dir, '..'),
             stdio: ['ignore', 'inherit', 'inherit'],
             onExit: (_, code) => {
                 if (code) rj(`Process exited with code ${code}`)
