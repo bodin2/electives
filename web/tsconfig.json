@@ -15,7 +15,9 @@
 
     // Type Checking & Safety
     "skipLibCheck": true,
-    "strict": true
+    "strict": true,
+
+    "types": ["node", "vite/client", "bun"]
   },
   "exclude": ["node_modules", "dist", "src/api/**", "**/m3-solid/**"],
   "include": ["src"]
