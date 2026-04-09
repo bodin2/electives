@@ -2,6 +2,8 @@
 
 Fast and student-friendly electives management system for [Bodindecha (Sing Singhaseni) 2 School](https://bodin2.ac.th).
 
+<img src="./SCREENSHOT.png" alt="Screenshot of the application" height="320" />
+
 ## Why?
 
 This project aims to improve the existing Electives system at [Bodindecha (Sing Singhaseni) 2 School](http://bodin2.ac.th).
