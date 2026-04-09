@@ -15,7 +15,7 @@ import java.security.MessageDigest
 import kotlin.time.Duration.Companion.milliseconds
 
 fun DependencyRegistry.provideArgon2() {
-    val memory = env("ARGON2_MEMORY")?.toIntOrNull()?.KiB?.toInt() ?: Argon2.DEFAULT_MEMORY
+    val memory = env("ARGON2_MEMORY")?.toIntOrNull()?.KiB ?: Argon2.DEFAULT_MEMORY
     val iterations = Argon2.findIterations(
         env("ARGON2_AVG_TIME")?.toIntOrNull()?.milliseconds ?: 500.milliseconds,
         memory,

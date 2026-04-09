@@ -4,7 +4,7 @@ import kotlin.test.*
 import kotlin.time.Duration.Companion.milliseconds
 
 class Argon2Test {
-    private val argon2 = Argon2(memory = 16384, iterations = 10)
+    private val argon2 = Argon2(memory = 16.MiB, iterations = 5)
 
     private val password = "testpassword123".toCharArray()
 

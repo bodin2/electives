@@ -62,7 +62,7 @@ abstract class ApplicationTest {
         testApplication {
             application {
                 dependencies {
-                    provide<Argon2> { Argon2(16.MiB.toInt(), 5) }
+                    provide<Argon2> { Argon2(16.MiB, 5) }
                     provide<UsersService> { TestUsersService() }
                     provide<NotificationsService> { mockk(relaxed = true) }
                     provide<ElectiveService> { TestElectiveService() }
@@ -90,7 +90,7 @@ abstract class ApplicationTest {
             setup()
 
             application {
-                dependencies.provide<Argon2> { Argon2(16.MiB.toInt(), 5) }
+                dependencies.provide<Argon2> { Argon2(16.MiB, 5) }
 
                 provideDependencies()
                 mockRateLimits()
