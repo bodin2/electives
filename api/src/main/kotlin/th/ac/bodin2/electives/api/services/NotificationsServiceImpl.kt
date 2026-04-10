@@ -70,7 +70,7 @@ class NotificationsServiceImpl(
     )
 
     companion object {
-        private const val AUTHENTICATION_TIMEOUT_MILLISECONDS = 10_000L
+        private val AUTHENTICATION_TIMEOUT = 10.seconds
         private val logger = LoggerFactory.getLogger(NotificationsServiceImpl::class.java)
     }
 
@@ -134,12 +134,12 @@ class NotificationsServiceImpl(
             logger.debug("Sending bulk enrollment updates...")
 
             val updates = transaction {
-                Elective.allActiveReferences().map { elective ->
-                    val enrolledCounts = Elective.getSubjectsEnrolledCounts(elective)
+                Elective.getAllActiveIds().map { electiveId ->
+                    val enrolledCounts = Elective.getSubjectsEnrolledCounts(electiveId)
 
-                    elective.id to envelope {
+                    electiveId to envelope {
                         bulkSubjectEnrollmentUpdate = bulkSubjectEnrollmentUpdate {
-                            electiveId = elective.id
+                            this.electiveId = electiveId
                             subjectEnrolledCounts.putAll(enrolledCounts)
                         }
                     }
@@ -185,7 +185,7 @@ class NotificationsServiceImpl(
 
     override suspend fun WebSocketServerSession.handleConnection() {
         val userId = try {
-            withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
+            withTimeout(AUTHENTICATION_TIMEOUT) {
                 (incoming.receive() as? Frame.Binary)?.let {
                     val token =
                         it.parseOrNull<Envelope>()?.identify?.token
@@ -215,7 +215,7 @@ class NotificationsServiceImpl(
         adminAuthService ?: throw IllegalStateException("Cannot get AdminAuthService")
 
         try {
-            withTimeout(AUTHENTICATION_TIMEOUT_MILLISECONDS) {
+            withTimeout(AUTHENTICATION_TIMEOUT) {
                 val authenticated = (incoming.receive() as? Frame.Binary)?.let {
                     val token =
                         it.parseOrNull<Envelope>()?.identify?.token

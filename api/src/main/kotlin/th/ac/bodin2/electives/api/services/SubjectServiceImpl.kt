@@ -7,8 +7,8 @@ import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Subject
@@ -54,7 +54,7 @@ class SubjectServiceImpl : SubjectService {
 
         if (teacherIds.isNotEmpty()) {
             val teacherIds = teacherIds.distinct()
-            teacherIds.forEach { Teacher.require(it) }
+            teacherIds.forEach { Teacher.assertExists(it) }
 
             TeacherSubjects.batchInsert(teacherIds) { teacherId ->
                 this[TeacherSubjects.teacher] = teacherId
@@ -78,7 +78,7 @@ class SubjectServiceImpl : SubjectService {
     @Transactional
     override fun update(id: Int, update: SubjectService.SubjectUpdate) {
         transaction {
-            Subject.require(id)
+            Subject.assertExists(id)
 
             try {
                 Subjects.update({ Subjects.id eq id }) {
@@ -105,7 +105,7 @@ class SubjectServiceImpl : SubjectService {
 
             if (update.teacherIds != null) {
                 val teacherIds = update.teacherIds.distinct()
-                teacherIds.forEach { Teacher.require(it) }
+                teacherIds.forEach { Teacher.assertExists(it) }
 
                 TeacherSubjects.deleteWhere { TeacherSubjects.subject eq id }
                 TeacherSubjects.batchInsert(teacherIds) { teacherId ->

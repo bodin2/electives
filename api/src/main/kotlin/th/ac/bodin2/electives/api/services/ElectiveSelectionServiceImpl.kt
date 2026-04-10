@@ -15,7 +15,6 @@ import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Student.Companion.hasTeam
-import th.ac.bodin2.electives.db.Student.Reference
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.models.StudentElectives
@@ -51,21 +50,24 @@ class ElectiveSelectionServiceImpl(
     }
 
     @Transactional
-    override fun forceSetAllStudentSelections(userId: Int, selections: Map<Int, Int>) {
+    override fun forceSetAllStudentSelections(studentId: Int, selections: Map<Int, Int>) {
         transaction {
-            Student.require(userId)
+            Student.assertExists(studentId)
 
             val selections = selections.map { (electiveId, subjectId) ->
-                if (!Subject.isPartOfElective(Subject.require(subjectId), Elective.require(electiveId))) {
+                Subject.assertExists(subjectId)
+                Elective.assertExists(electiveId)
+
+                if (!Subject.isPartOfElective(subjectId, electiveId)) {
                     throw IllegalArgumentException("Subject $subjectId is not part of elective $electiveId")
                 }
 
                 electiveId to subjectId
             }
 
-            StudentElectives.deleteWhere { StudentElectives.student eq userId }
+            StudentElectives.deleteWhere { StudentElectives.student eq studentId }
             StudentElectives.batchInsert(selections) { (electiveId, subjectId) ->
-                this[StudentElectives.student] = userId
+                this[StudentElectives.student] = studentId
                 this[StudentElectives.elective] = electiveId
                 this[StudentElectives.subject] = subjectId
             }
@@ -80,7 +82,7 @@ class ElectiveSelectionServiceImpl(
     @Transactional
     override suspend fun setStudentSelection(
         executorId: Int,
-        userId: Int,
+        studentId: Int,
         electiveId: Int,
         subjectId: Int
     ): ModifySelectionResult {
@@ -90,15 +92,15 @@ class ElectiveSelectionServiceImpl(
             maxAttempts = 3
 
             try {
-                val student = Student.require(userId)
-                val elective = Elective.require(electiveId)
-                val subject = Subject.require(subjectId)
+                Student.assertExists(studentId)
+                Elective.assertExists(electiveId)
+                Subject.assertExists(subjectId)
 
-                val executorIsSomeoneElse = student.id != executorId
+                val executorIsSomeoneElse = studentId != executorId
                 if (executorIsSomeoneElse) {
                     if (usersService.getUserType(executorId) == UserType.TEACHER) {
-                        val teacher = Teacher.require(executorId)
-                        if (!Teacher.teachesSubject(teacher, subjectId)) {
+                        Teacher.assertExists(executorId)
+                        if (!Teacher.teachesSubject(executorId, subjectId)) {
                             return@suspendTransaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                         }
                     } else {
@@ -107,14 +109,14 @@ class ElectiveSelectionServiceImpl(
                 }
 
                 // By the time we reach here, bypassDateCheck will only be true if the executor is a teacher
-                when (val result = canEnrollInSubject(student, elective, subject, executorIsSomeoneElse)) {
+                when (val result = canEnrollInSubject(studentId, electiveId, subjectId, executorIsSomeoneElse)) {
                     CanEnrollStatus.CAN_ENROLL -> {}
 
                     else -> return@suspendTransaction ModifySelectionResult.CannotEnroll(result)
                 }
 
                 (connection.connection as Connection).prepareStatement(INSERT_SELECTION_QUERY).use { ps ->
-                    ps.setInt(1, userId)
+                    ps.setInt(1, studentId)
                     ps.setInt(2, electiveId)
                     ps.setInt(3, subjectId)
 
@@ -125,7 +127,7 @@ class ElectiveSelectionServiceImpl(
 
                     val inserted = ps.executeUpdate()
                     if (inserted == 0) {
-                        logger.debug("Student elective selection failed due to full subject, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
+                        logger.debug("Student elective selection failed due to full subject, user: $studentId, elective: $electiveId, subject: $subjectId, executor: $executorId")
 
                         // Not inserted, subject is full
                         return@suspendTransaction ModifySelectionResult.CannotEnroll(
@@ -135,12 +137,12 @@ class ElectiveSelectionServiceImpl(
                 }
 
                 onSuccess = {
-                    logger.debug("Student elective selected, user: $userId, elective: $electiveId, subject: $subjectId, executor: $executorId")
+                    logger.debug("Student elective selected, user: $studentId, elective: $electiveId, subject: $subjectId, executor: $executorId")
 
                     notificationsService.notifySubjectSelectionUpdate(
                         electiveId,
                         subjectId,
-                        transaction { Subject.getEnrolledCount(subject, elective) }
+                        transaction { Subject.getEnrolledCount(subjectId, electiveId) }
                     )
                 }
 
@@ -156,19 +158,20 @@ class ElectiveSelectionServiceImpl(
     }
 
     @Transactional
-    override suspend fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult =
+    override suspend fun deleteStudentSelection(executorId: Int, studentId: Int, electiveId: Int): ModifySelectionResult =
         suspendTransaction {
             try {
-                val student = Student.require(userId)
-                val elective = Elective.require(electiveId)
+                Student.assertExists(studentId)
+                Elective.assertExists(electiveId)
 
-                val selection = Student.getElectiveSelectionId(student, elective)
+                val selection = Student.getElectiveSelectionId(studentId, electiveId)
                     ?: return@suspendTransaction ModifySelectionResult.CannotModify(ModifySelectionStatus.NOT_ENROLLED)
 
-                if (student.id != executorId) {
+                if (studentId != executorId) {
                     if (usersService.getUserType(executorId) == UserType.TEACHER) {
-                        val teacher = Teacher.require(executorId)
-                        if (!Teacher.teachesSubject(teacher, selection.value)) {
+                        Teacher.assertExists(executorId)
+
+                        if (!Teacher.teachesSubject(executorId, selection.value)) {
                             return@suspendTransaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                         }
                     } else {
@@ -176,14 +179,14 @@ class ElectiveSelectionServiceImpl(
                     }
                 }
 
-                Student.removeElectiveSelection(student, elective)
+                Student.removeElectiveSelection(studentId, electiveId)
 
-                logger.debug("Student elective removed, user: $userId, elective: $electiveId, executor: $executorId")
+                logger.debug("Student elective removed, user: $studentId, elective: $electiveId, executor: $executorId")
 
                 notificationsService.notifySubjectSelectionUpdate(
                     electiveId,
                     selection.value,
-                    Subject.getEnrolledCount(selection, elective)
+                    Subject.getEnrolledCount(selection.value, electiveId)
                 )
 
                 ModifySelectionResult.Success
@@ -201,18 +204,17 @@ class ElectiveSelectionServiceImpl(
             }
 
             // Should never throw, we already check teacher existence in setStudentSelection
-            ExceptionEntity.TEACHER -> throw IllegalStateException("Unreachable TEACHER EntityNotFoundException")
-
+            ExceptionEntity.TEACHER,
             // Should never throw, we already try to get the selection above in deleteStudentSelection
-            ExceptionEntity.ELECTIVE_SELECTION -> throw IllegalStateException("Unreachable ELECTIVE_SELECTION EntityNotFoundException")
+            ExceptionEntity.ELECTIVE_SELECTION -> throw IllegalStateException("Unreachable ${entity.name} EntityNotFoundException")
 
             else -> throw this
         }
     }
 
-    override fun getStudentSelections(userId: Int): Map<Int, Subject> {
-        val student = Student.require(userId)
-        return buildMap { Student.getAllElectiveSelections(student).forEach { put(it.first, it.second) } }
+    override fun getStudentSelections(studentId: Int): Map<Int, Subject> {
+        Student.assertExists(studentId)
+        return buildMap { Student.getAllElectiveSelections(studentId).forEach { put(it.first, it.second) } }
     }
 
     /**
@@ -223,45 +225,43 @@ class ElectiveSelectionServiceImpl(
      * 3. Checking if the student is already enrolled in another subject of the same elective.
      * 4. Checking if the student is part of the elective's team (if any).
      * 5. Checking if the student is part of the subject's team (if any).
-     * ~~6. Checking if the subject is full.~~
+     *
+     * **Subject capacity is not checked here and should be handled by the caller within a transaction with proper isolation level to prevent TOCTOU issues.**
      */
     private fun canEnrollInSubject(
-        student: Reference,
-        elective: Elective.Reference,
-        subject: Subject.Reference,
+        studentId: Int,
+        electiveId: Int,
+        subjectId: Int,
         bypassDateCheck: Boolean,
     ): CanEnrollStatus {
         // Check elective date range
-        val (startDate, endDate) = Elective.getEnrollmentDateRange(elective)
+        val (startDate, endDate) = Elective.getEnrollmentDateRange(electiveId)
         val now = LocalDateTime.now()
         if (!bypassDateCheck) {
             if (startDate != null && now.isBefore(startDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
             if (endDate != null && now.isAfter(endDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
         }
 
-        if (!Subject.isPartOfElective(subject, elective)) return CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE
+        if (!Subject.isPartOfElective(subjectId, electiveId)) return CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE
 
         // Check if the student is already enrolled in another subject of the same elective
         // UNSAFE FROM TOCTOU by its own!!! This is handled by the unique index on (student, elective) in the StudentElectives table and the SERIALIZABLE transaction isolation level!
         val alreadyEnrolled = StudentElectives
             .selectAll()
-            .where { (StudentElectives.student eq student.id) and (StudentElectives.elective eq elective.id) }
+            .where { (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) }
             .empty().not()
 
         if (alreadyEnrolled) return CanEnrollStatus.ALREADY_ENROLLED
 
         // Check if the student is part of the elective's team (if any)
-        val electiveTeamId = Elective.getTeamId(elective)
-        if (electiveTeamId != null && !hasTeam(student, electiveTeamId))
+        val electiveTeamId = Elective.getTeamId(electiveId)
+        if (electiveTeamId != null && !hasTeam(studentId, electiveTeamId))
             return CanEnrollStatus.NOT_IN_ELECTIVE_TEAM
 
         // Check if the student is part of the subject's team (if any)
-        val subjectTeamId = Subject.getTeamId(subject)
-        if (subjectTeamId != null && !hasTeam(student, subjectTeamId))
+        val subjectTeamId = Subject.getTeamId(subjectId)
+        if (subjectTeamId != null && !hasTeam(studentId, subjectTeamId))
             return CanEnrollStatus.NOT_IN_SUBJECT_TEAM
-
-//        if (Subject.isFull(subject, elective))
-//            return CanEnrollStatus.SUBJECT_FULL
 
         return CanEnrollStatus.CAN_ENROLL
     }

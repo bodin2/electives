@@ -6,6 +6,7 @@ import io.ktor.server.plugins.di.*
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.dao.load
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
@@ -15,7 +16,10 @@ import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersServiceImpl.Config
-import th.ac.bodin2.electives.db.*
+import th.ac.bodin2.electives.db.Student
+import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.Team
+import th.ac.bodin2.electives.db.User
 import th.ac.bodin2.electives.db.models.*
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
@@ -106,13 +110,10 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         avatarUrl: String?,
         teams: List<Int>?,
     ): Student {
-        val stud = Student.new(
-            id,
-            createUser(id, firstName, middleName, lastName, password, avatarUrl),
-            teamIds = teams ?: emptyList()
-        )
-
-        return stud
+        return Student.new(id) {
+            user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
+            if (teams != null) this.teams = Team.find { Teams.id inList teams }
+        }.also { it.refresh(flush = true) }
     }
 
     override fun createTeacher(
@@ -122,7 +123,11 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
-    ): Teacher = Teacher.new(id, createUser(id, firstName, middleName, lastName, password, avatarUrl))
+    ): Teacher {
+        return Teacher.new(id) {
+            user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
+        }.also { it.refresh(flush = true) }
+    }
 
     @Transactional
     override fun deleteUser(id: Int) {
@@ -140,24 +145,21 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     @Transactional
     override fun updateStudent(id: Int, update: UsersService.StudentUpdate) {
         transaction {
-            Student.require(id)
+            Student.assertExists(id)
 
             try {
-                updateUser(id, update.update)
+                updateUser(id, update.user)
             } catch (e: NothingToUpdateException) {
                 update.teams ?: throw e
             }
 
-            if (update.teams != null) {
-                val teamIds = update.teams.distinct()
-                teamIds.forEach {
-                    if (!Team.exists(it)) throw EntityNotFoundException(ExceptionEntity.TEAM)
-                }
-
+            update.teams?.let { teams ->
                 StudentTeams.deleteWhere { StudentTeams.student eq id }
-                StudentTeams.batchInsert(teamIds) { teamId ->
+                StudentTeams.batchInsert(teams) {
+                    Team.assertExists(it)
+
                     this[StudentTeams.student] = id
-                    this[StudentTeams.team] = teamId
+                    this[StudentTeams.team] = it
                 }
             }
         }
@@ -166,9 +168,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     @Transactional
     override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) {
         transaction {
-            Teacher.require(id)
-
-            updateUser(id, update.update)
+            Teacher.assertExists(id)
+            updateUser(id, update.user)
         }
     }
 
@@ -220,22 +221,11 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
             if (studentIds.isEmpty()) return@transaction (emptyList<Student>() to count)
 
-            val teamsMap = (StudentTeams innerJoin Teams)
-                .selectAll()
-                .where { StudentTeams.student inList studentIds }
-                .groupBy({ it[StudentTeams.student].value }, { Team.wrapRow(it) })
-
             ((Students innerJoin Users)
                 .select(Students.columns + userInfoFields)
                 .orderBy(Students.id)
                 .where { Students.id inList studentIds }
-                .map { row ->
-                    Student(
-                        Student.Reference.from(row),
-                        User.wrapRow(row),
-                        teamsMap[row[Students.id].value] ?: emptyList()
-                    )
-                }) to (count)
+                .map { Student.wrapRow(it).load(Student::teams) }) to (count)
         }
     }
 
@@ -250,7 +240,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
                 .orderBy(Teachers.id)
                 .limit(PAGE_SIZE)
                 .offset(offset)
-                .map { Teacher.from(it) }) to (Teachers.selectAll().count())
+                .map { Teacher.wrapRow(it) }) to (Teachers.selectAll().count())
         }
     }
 

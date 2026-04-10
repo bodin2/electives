@@ -4,72 +4,54 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.Entity
 import org.jetbrains.exposed.v1.dao.EntityClass
-import org.jetbrains.exposed.v1.jdbc.*
-import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.ExceptionEntity
+import org.jetbrains.exposed.v1.dao.load
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.db.models.*
 import java.time.LocalDateTime
 
 class User(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : EntityClass<Int, User>(Users)
 
-    val firstName by Users.firstName
-    val middleName by Users.middleName
-    val lastName by Users.lastName
+    var firstName by Users.firstName
+    var middleName by Users.middleName
+    var lastName by Users.lastName
 
-    val avatarUrl by Users.avatarUrl
+    var avatarUrl by Users.avatarUrl
 }
 
-class Student(val reference: Reference, val user: User, val teams: List<Team>) {
-    class Reference internal constructor(val id: Int) {
-        companion object {
-            fun from(row: ResultRow): Reference {
-                val entityId = row.getOrNull(Students.id)
-                    ?: throw IllegalArgumentException("ResultRow does not contain student ID")
-                return Reference(entityId.value)
-            }
-        }
-    }
+class Student(id: EntityID<Int>) : Entity<Int>(id) {
+    var user by User referencedOn Students.user
+    var teams by Team via StudentTeams
 
-    val id = reference.id
-
-    companion object {
-        fun exists(id: Int): Boolean = Students.selectAll().where { Students.id eq id }.empty().not()
-
-        fun require(id: Int): Reference {
-            if (!exists(id)) throw EntityNotFoundException(ExceptionEntity.STUDENT)
-            return Reference(id)
+    companion object : EntityClass<Int, Student>(Students) {
+        fun assertExists(studentId: Int) {
+            if (!exists(studentId)) throw EntityNotFoundException(ExceptionEntity.STUDENT)
         }
 
-        fun findById(id: Int): Student? {
-            if (!exists(id)) return null
-
-            val user = User.findById(id) ?: return null
-            val ref = Reference(id)
-            return Student(ref, user, getTeams(ref))
-        }
-
-        fun hasTeam(student: Reference, teamId: EntityID<Int>) = hasTeam(student, teamId.value)
-        fun hasTeam(student: Reference, teamId: Int): Boolean {
+        fun hasTeam(studentId: Int, teamId: EntityID<Int>) = hasTeam(studentId, teamId.value)
+        fun hasTeam(studentId: Int, teamId: Int): Boolean {
             return StudentTeams
-                .selectAll().where { (StudentTeams.student eq student.id) and (StudentTeams.team eq teamId) }
+                .selectAll().where { (StudentTeams.student eq studentId) and (StudentTeams.team eq teamId) }
                 .empty().not()
         }
 
-        fun getAllElectiveSelections(student: Reference): List<Pair<Int, Subject>> {
+        fun getAllElectiveSelections(studentId: Int): List<Pair<Int, Subject>> {
             return (StudentElectives innerJoin Subjects)
-                .selectAll().where { StudentElectives.student eq student.id }
+                .selectAll().where { StudentElectives.student eq studentId }
                 .map {
                     val electiveId = it[StudentElectives.elective]
                     electiveId.value to Subject.wrapRow(it)
                 }
         }
 
-        fun getElectiveSelectionId(student: Reference, elective: Elective.Reference): EntityID<Int>? {
+        fun getElectiveSelectionId(studentId: Int, electiveId: Int): EntityID<Int>? {
             return StudentElectives
                 .selectAll()
-                .where { (StudentElectives.student eq student.id) and (StudentElectives.elective eq elective.id) }
+                .where { (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId) }
                 .singleOrNull()
                 ?.get(StudentElectives.subject)
         }
@@ -77,148 +59,88 @@ class Student(val reference: Reference, val user: User, val teams: List<Team>) {
         /**
          * Removes a selection from the specified elective.
          */
-        fun removeElectiveSelection(student: Reference, elective: Elective.Reference) {
-            val studentId = student.id
-            val electiveId = elective.id
-
+        fun removeElectiveSelection(studentId: Int, electiveId: Int) {
             val count = StudentElectives.deleteWhere {
                 (StudentElectives.student eq studentId) and (StudentElectives.elective eq electiveId)
             }
 
             if (count == 0) throw EntityNotFoundException(ExceptionEntity.ELECTIVE_SELECTION)
         }
-
-        fun getTeams(student: Reference): List<Team> {
-            return (StudentTeams innerJoin Teams)
-                .selectAll().where { StudentTeams.student eq student.id }
-                .map { Team.wrapRow(it) }
-        }
-
-        fun new(id: Int, user: User, teamIds: List<Int>): Student {
-            val stmt = Students.insertIgnore {
-                it[Students.id] = id
-            }
-
-            if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.STUDENT)
-
-            val teams = teamIds.distinct()
-                .map { teamId -> Team.findById(teamId) ?: throw EntityNotFoundException(ExceptionEntity.TEAM) }
-
-            if (teams.isNotEmpty()) {
-                StudentTeams.batchInsert(teams) { team ->
-                    this[StudentTeams.student] = id
-                    this[StudentTeams.team] = team.id
-                }
-            }
-
-            return Student(Reference(id), user, teams)
-        }
     }
 }
 
-class Teacher(val reference: Reference, val user: User) {
-    class Reference internal constructor(val id: Int)
+class Teacher(id: EntityID<Int>) : Entity<Int>(id) {
+    var user by User referencedOn Teachers.user
+    val subjects by Subject via TeacherSubjects
 
-    companion object {
-        fun from(user: ResultRow): Teacher {
-            val id = user.getOrNull(Teachers.id)?.value
-                ?: throw IllegalArgumentException("ResultRow does not contain teacher ID")
-            return Teacher(Reference(id), User.wrapRow(user))
+    companion object : EntityClass<Int, Teacher>(Teachers) {
+        fun assertExists(teacherId: Int) {
+            if (!exists(teacherId)) throw EntityNotFoundException(ExceptionEntity.TEACHER)
         }
 
-        fun findById(id: Int): Teacher? {
-            if (!exists(id)) return null
-
-            val user = User.findById(id) ?: return null
-            return Teacher(Reference(id), user)
-        }
-
-        fun exists(id: Int): Boolean =
-            Teachers.selectAll().where { Teachers.id eq id }.empty().not()
-
-        fun require(id: Int): Reference {
-            if (!exists(id)) throw EntityNotFoundException(ExceptionEntity.TEACHER)
-            return Reference(id)
-        }
-
-        fun getSubjects(teacher: Reference): List<Subject> {
+        fun getSubjects(teacherId: Int): List<Subject> {
             return (TeacherSubjects innerJoin Subjects)
-                .selectAll().where { TeacherSubjects.teacher eq teacher.id }
+                .selectAll().where { TeacherSubjects.teacher eq teacherId }
                 .map { Subject.wrapRow(it) }
         }
 
-        fun teachesSubject(teacher: Reference, subjectId: Int): Boolean {
+        fun teachesSubject(teacherId: Int, subjectId: Int): Boolean {
             return TeacherSubjects
                 .selectAll()
-                .where { (TeacherSubjects.teacher eq teacher.id) and (TeacherSubjects.subject eq subjectId) }
+                .where { (TeacherSubjects.teacher eq teacherId) and (TeacherSubjects.subject eq subjectId) }
                 .empty().not()
         }
-
-        fun new(id: Int, user: User): Teacher {
-            val stmt = Teachers.insertIgnore {
-                it[Teachers.id] = id
-            }
-
-            if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.TEACHER)
-
-            return Teacher(Reference(id), user)
-        }
     }
-
-    val id = reference.id
-
-    val subjects
-        get() = getSubjects(reference)
 }
 
 class Team(id: EntityID<Int>) : Entity<Int>(id) {
-    companion object : EntityClass<Int, Team>(Teams)
+    companion object : EntityClass<Int, Team>(Teams) {
+        fun assertExists(teamId: Int) {
+            if (!exists(teamId)) throw EntityNotFoundException(ExceptionEntity.TEAM)
+        }
+    }
 
     val name by Teams.name
 }
 
 open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
-    fun exists(id: Int): Boolean =
-        Electives.selectAll().where { Electives.id eq id }.empty().not()
-
-    fun require(id: Int): Elective.Reference {
+    fun assertExists(id: Int) {
         if (!exists(id)) throw EntityNotFoundException(ExceptionEntity.ELECTIVE)
-        return Elective.Reference(id)
     }
 
-    fun allActiveReferences(at: LocalDateTime = LocalDateTime.now()): List<Elective.Reference> {
+    fun getAllActiveIds(at: LocalDateTime = LocalDateTime.now()): List<Int> {
         return Electives
-            .selectAll()
+            .select(Electives.id)
             .where {
-                ((Electives.startDate lessEq at) and (Electives.endDate greaterEq at)) or
-                        (Electives.startDate.isNull() and Electives.endDate.isNull())
+                ((Electives.startDate lessEq at) or (Electives.startDate.isNull())) and
+                        ((Electives.endDate greaterEq at) or (Electives.endDate.isNull()))
             }
-            .map { Elective.Reference(it[Electives.id].value) }
+            .map { it[Electives.id].value }
     }
 
     /**
      * Gets the team ID for the specified elective.
      */
-    fun getTeamId(elective: Elective.Reference): EntityID<Int>? {
+    fun getTeamId(electiveId: Int): EntityID<Int>? {
         return Electives
             .select(Electives.team)
-            .where { Electives.id eq elective.id }
+            .where { Electives.id eq electiveId }
             .singleOrNull()
             ?.get(Electives.team)
     }
 
-    fun getSubjectIds(elective: Elective.Reference): List<EntityID<Int>> {
+    fun getSubjectIds(electiveId: Int): List<EntityID<Int>> {
         return ElectiveSubjects
-            .selectAll().where { ElectiveSubjects.elective eq elective.id }
+            .selectAll().where { ElectiveSubjects.elective eq electiveId }
             .map { it[ElectiveSubjects.subject] }
     }
 
     /**
      * Gets the subjects for the specified elective.
      */
-    fun getSubjects(elective: Elective.Reference): List<Subject> {
+    fun getSubjects(electiveId: Int): List<Subject> {
         return (ElectiveSubjects innerJoin Subjects)
-            .selectAll().where { ElectiveSubjects.elective eq elective.id }
+            .selectAll().where { ElectiveSubjects.elective eq electiveId }
             .map { Subject.wrapRow(it) }
     }
 
@@ -227,21 +149,21 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
      *
      * @return Map<SubjectId, EnrolledCount>
      */
-    fun getSubjectsEnrolledCounts(elective: Elective.Reference): Map<Int, Int> {
-        val subjectIds = getSubjectIds(elective)
+    fun getSubjectsEnrolledCounts(electiveId: Int): Map<Int, Int> {
+        val subjectIds = getSubjectIds(electiveId)
         if (subjectIds.isEmpty()) return emptyMap()
 
         return StudentElectives
             .select(StudentElectives.subject, Count(StudentElectives.student))
-            .where { (StudentElectives.elective eq elective.id) and (StudentElectives.subject inList subjectIds) }
+            .where { (StudentElectives.elective eq electiveId) and (StudentElectives.subject inList subjectIds) }
             .groupBy(StudentElectives.subject)
             .associate { it[StudentElectives.subject].value to it[Count(StudentElectives.student)].toInt() }
     }
 
-    fun getEnrollmentDateRange(elective: Elective.Reference): Pair<LocalDateTime?, LocalDateTime?> {
+    fun getEnrollmentDateRange(electiveId: Int): Pair<LocalDateTime?, LocalDateTime?> {
         val row = Electives
             .selectAll()
-            .where { Electives.id eq elective.id }
+            .where { Electives.id eq electiveId }
             .singleOrNull()
             ?: throw EntityNotFoundException(ExceptionEntity.ELECTIVE)
 
@@ -251,11 +173,6 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
 
 class Elective(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : ElectiveCompanion()
-
-    /**
-     * A lightweight reference to an Elective entity that exists.
-     */
-    class Reference internal constructor(val id: Int)
 
     val name by Electives.name
     val teamId by Electives.team
@@ -267,21 +184,17 @@ class Elective(id: EntityID<Int>) : Entity<Int>(id) {
 }
 
 open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
-    fun exists(id: Int): Boolean =
-        Subjects.selectAll().where { Subjects.id eq id }.empty().not()
-
-    fun require(id: Int): Subject.Reference {
+    fun assertExists(id: Int) {
         if (!exists(id)) throw EntityNotFoundException(ExceptionEntity.SUBJECT)
-        return Subject.Reference(id)
     }
 
     /**
      * Gets the team ID for the specified subject.
      */
-    fun getTeamId(subject: Subject.Reference): EntityID<Int>? {
+    fun getTeamId(subjectId: Int): EntityID<Int>? {
         return Subjects
             .select(Subjects.team)
-            .where { Subjects.id eq subject.id }
+            .where { Subjects.id eq subjectId }
             .singleOrNull()
             ?.get(Subjects.team)
     }
@@ -289,11 +202,11 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
     /**
      * Gets teachers for the specified subject.
      */
-    fun getTeachers(subject: Subject.Reference): List<Teacher> {
+    fun getTeachers(subjectId: Int): List<Teacher> {
         return (TeacherSubjects innerJoin Teachers innerJoin Users)
             .selectAll()
-            .where { TeacherSubjects.subject eq subject.id }
-            .map { Teacher.from(it) }
+            .where { TeacherSubjects.subject eq subjectId }
+            .map { Teacher.wrapRow(it) }
     }
 
     /**
@@ -301,32 +214,20 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
      *
      * @throws Subject.NotPartOfElectiveException if the subject is not part of the specified elective.
      */
-    fun getStudents(subject: Subject.Reference, elective: Elective.Reference): List<Student> {
-        if (!isPartOfElective(subject, elective)) throw Subject.NotPartOfElectiveException(subject.id, elective.id)
+    fun getStudents(subjectId: Int, electiveId: Int): List<Student> {
+        if (!isPartOfElective(subjectId, electiveId)) throw Subject.NotPartOfElectiveException(subjectId, electiveId)
 
         val studentIds = StudentElectives
             .select(StudentElectives.student)
-            .where { (StudentElectives.subject eq subject.id) and (StudentElectives.elective eq elective.id) }
+            .where { (StudentElectives.subject eq subjectId) and (StudentElectives.elective eq electiveId) }
             .map { it[StudentElectives.student].value }
 
         if (studentIds.isEmpty()) return emptyList()
 
-        val teamsMap = (StudentTeams innerJoin Teams)
-            .selectAll()
-            .where { StudentTeams.student inList studentIds }
-            .groupBy({ it[StudentTeams.student].value }, { Team.wrapRow(it) })
-
         return (Students innerJoin Users)
             .selectAll()
             .where { Students.id inList studentIds }
-            .map { row ->
-                val studentId = row[Students.id].value
-                Student(
-                    Student.Reference(studentId),
-                    User.wrapRow(row),
-                    teamsMap[studentId] ?: emptyList()
-                )
-            }
+            .map { Student.wrapRow(it).load(Student::teams) }
     }
 
     /**
@@ -334,10 +235,10 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
      *
      * @throws Subject.NotPartOfElectiveException if the subject is not part of the specified elective.
      */
-    fun isPartOfElective(subject: Subject.Reference, elective: Elective.Reference): Boolean {
+    fun isPartOfElective(subjectId: Int, electiveId: Int): Boolean {
         return (ElectiveSubjects innerJoin Subjects)
             .selectAll()
-            .where { (ElectiveSubjects.elective eq elective.id) and (ElectiveSubjects.subject eq subject.id) }
+            .where { (ElectiveSubjects.elective eq electiveId) and (ElectiveSubjects.subject eq subjectId) }
             .empty().not()
     }
 
@@ -345,41 +246,33 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
      * Gets the enrolled count for the specified subject of the specified elective.
      * @throws Subject.NotPartOfElectiveException if the subject is not part of the specified elective.
      */
-    fun getEnrolledCount(subject: Subject.Reference, elective: Elective.Reference): Int {
-        if (!isPartOfElective(subject, elective)) throw Subject.NotPartOfElectiveException(subject.id, elective.id)
+    fun getEnrolledCount(subjectId: Int, electiveId: Int): Int {
+        if (!isPartOfElective(subjectId, electiveId)) throw Subject.NotPartOfElectiveException(subjectId, electiveId)
         return StudentElectives
             .selectAll()
-            .where { (StudentElectives.subject eq subject.id) and (StudentElectives.elective eq elective.id) }
+            .where { (StudentElectives.subject eq subjectId) and (StudentElectives.elective eq electiveId) }
             .count()
             .toInt()
     }
-
-    fun getEnrolledCount(subjectId: EntityID<Int>, elective: Elective.Reference) =
-        getEnrolledCount(Subject.Reference(subjectId.value), elective)
 }
 
 class Subject(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : SubjectCompanion()
-
-    /**
-     * A lightweight reference to a Subject entity that exists.
-     */
-    class Reference internal constructor(val id: Int)
 
     class NotPartOfElectiveException(subjectId: Int, electiveId: Int) :
         Exception("Subject $subjectId is not part of elective $electiveId")
 
     val name by Subjects.name
 
-    fun getEnrolledCount(elective: Elective.Reference) = getEnrolledCount(this@Subject.id, elective)
+    fun getEnrolledCount(electiveId: Int) = getEnrolledCount(this@Subject.id.value, electiveId)
 
-    val teachers
-        get() = getTeachers(Reference(id.value))
+    val teachers by Teacher via TeacherSubjects
 
-    val description
-        get() = Subjects.select(Subjects.description)
+    val description by lazy {
+        Subjects.select(Subjects.description)
             .where { Subjects.id eq id }
             .single()[Subjects.description]
+    }
 
     val code by Subjects.code
     val tag by Subjects.tag

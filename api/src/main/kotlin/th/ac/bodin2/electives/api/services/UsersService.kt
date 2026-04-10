@@ -98,12 +98,12 @@ interface UsersService {
     )
 
     data class StudentUpdate(
-        val update: UserUpdate,
+        val user: UserUpdate,
         val teams: List<Int>? = null,
     )
 
     data class TeacherUpdate(
-        val update: UserUpdate,
+        val user: UserUpdate,
     )
 
     /**

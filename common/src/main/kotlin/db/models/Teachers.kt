@@ -1,9 +1,8 @@
 package th.ac.bodin2.electives.db.models
 
 import org.jetbrains.exposed.v1.core.ReferenceOption
-import org.jetbrains.exposed.v1.core.dao.id.IdTable
+import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 
-object Teachers : IdTable<Int>("teachers") {
-    override val id = reference("id", Users, onDelete = ReferenceOption.CASCADE)
-    override val primaryKey = PrimaryKey(id)
+object Teachers : IntIdTable("teachers") {
+    val user = reference("user_id", Users, onDelete = ReferenceOption.CASCADE)
 }

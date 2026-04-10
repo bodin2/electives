@@ -7,8 +7,8 @@ import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
@@ -56,7 +56,7 @@ class ElectiveServiceImpl : ElectiveService {
     @Transactional
     override fun update(id: Int, update: ElectiveService.ElectiveUpdate) {
         transaction {
-            Elective.require(id)
+            Elective.assertExists(id)
 
             Electives.update({ Electives.id eq id }) {
                 update.name?.let { name -> it[this.name] = name }
@@ -75,10 +75,10 @@ class ElectiveServiceImpl : ElectiveService {
     @Transactional
     override fun setSubjects(electiveId: Int, subjectIds: List<Int>) {
         transaction {
-            Elective.require(electiveId)
+            Elective.assertExists(electiveId)
 
             val subjectIds = subjectIds.distinct()
-            subjectIds.forEach { Subject.require(it) }
+            subjectIds.forEach { Subject.assertExists(it) }
 
             ElectiveSubjects.deleteWhere { ElectiveSubjects.elective eq electiveId }
             ElectiveSubjects.batchInsert(subjectIds) { subjectId ->
@@ -93,27 +93,20 @@ class ElectiveServiceImpl : ElectiveService {
     override fun getById(electiveId: Int) = Elective.findById(electiveId)
 
     override fun getSubjects(electiveId: Int): QueryResult<out List<Subject>> {
-        try {
-            val elective = Elective.require(electiveId)
-            return QueryResult.Success(Elective.getSubjects(elective))
-        } catch (e: EntityNotFoundException) {
-            return when (e.entity) {
-                ExceptionEntity.ELECTIVE -> QueryResult.ElectiveNotFound
-                else -> throw e
-            }
-        }
+        if (!Elective.exists(electiveId)) return QueryResult.ElectiveNotFound
+        return QueryResult.Success(Elective.getSubjects(electiveId))
     }
 
     override fun getSubject(electiveId: Int, subjectId: Int): QueryResult<out Subject> {
         try {
-            val elective = Elective.require(electiveId)
-            val subject = Subject.require(subjectId)
+            Elective.assertExists(electiveId)
+            Subject.assertExists(subjectId)
 
-            if (!Subject.isPartOfElective(subject, elective)) {
-                return QueryResult.SubjectNotPartOfElective(subject.id, elective.id)
+            if (!Subject.isPartOfElective(subjectId, electiveId)) {
+                return QueryResult.SubjectNotPartOfElective(subjectId, electiveId)
             }
 
-            return QueryResult.Success(Subject.findById(subject.id)!!)
+            return QueryResult.Success(Subject.findById(subjectId)!!)
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.SUBJECT -> QueryResult.SubjectNotFound
@@ -129,15 +122,15 @@ class ElectiveServiceImpl : ElectiveService {
         withStudents: Boolean,
     ): QueryResult<out Pair<List<Teacher>, List<Student>>> {
         try {
-            val elective = Elective.require(electiveId)
-            val subject = Subject.require(subjectId)
+            Elective.assertExists(electiveId)
+            Subject.assertExists(subjectId)
 
-            if (!Subject.isPartOfElective(subject, elective)) {
-                return QueryResult.SubjectNotPartOfElective(subject.id, elective.id)
+            if (!Subject.isPartOfElective(subjectId, electiveId)) {
+                return QueryResult.SubjectNotPartOfElective(subjectId, electiveId)
             }
 
-            val teachers = Subject.getTeachers(subject)
-            val students = if (withStudents) Subject.getStudents(subject, elective) else emptyList()
+            val teachers = Subject.getTeachers(subjectId)
+            val students = if (withStudents) Subject.getStudents(subjectId, electiveId) else emptyList()
 
             return QueryResult.Success(teachers to students)
         } catch (e: EntityNotFoundException) {

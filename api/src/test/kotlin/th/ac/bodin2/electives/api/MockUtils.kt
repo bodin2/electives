@@ -25,7 +25,7 @@ object MockUtils {
      */
     fun mockDAOHelpers() {
         mockkObject(Elective.Companion)
-        every { Elective.require(any()) } answers { mockk(relaxed = true) }
+        every { Elective.assertExists(any()) } answers { mockk(relaxed = true) }
     }
 
     fun unmockDAOHelpers() {
@@ -55,7 +55,7 @@ object MockUtils {
         val mock = mockk<Subject>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Subjects)
         every { mock.teamId } returns DaoEntityID(SUBJECT_TEAM_ID, Teams)
-        every { mock.teachers } returns listOf(mockTeacher(TEACHER_ID, true))
+        every { mock.teachers } returns SizedCollection(listOf(mockTeacher(TEACHER_ID, true)))
 
         return mock
     }
@@ -71,8 +71,8 @@ object MockUtils {
         val user = mockUser(id)
         val mock = mockk<Teacher>(relaxed = true)
         every { mock.user } returns user
-        every { mock.id } returns id
-        if (!noSubjects) every { mock.subjects } returns listOf(mockSubject(SUBJECT_ID))
+        every { mock.id } returns mockId(id)
+        if (!noSubjects) every { mock.subjects } returns SizedCollection(listOf(mockSubject(SUBJECT_ID)))
 
         return mock
     }
@@ -81,9 +81,15 @@ object MockUtils {
         val user = mockUser(id)
         val mock = mockk<Student>(relaxed = true)
         every { mock.user } returns user
-        every { mock.id } returns id
-        every { mock.teams } returns listOf(mockTeam(ELECTIVE_TEAM_ID), mockTeam(SUBJECT_TEAM_ID))
+        every { mock.id } returns mockId(id)
+        every { mock.teams } returns SizedCollection(listOf(mockTeam(ELECTIVE_TEAM_ID), mockTeam(SUBJECT_TEAM_ID)))
 
         return mock
+    }
+
+    fun mockId(id: Int): EntityID<Int> {
+        val entId = mockk<EntityID<Int>>()
+        every { entId.value } returns id
+        return entId
     }
 }

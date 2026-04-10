@@ -68,7 +68,11 @@ fun Subject.toProto(
         }
 
         this@toProto.teamId?.let { teamId = it.value }
-        electiveId?.let { enrolledCount = getEnrolledCount(Elective.require(it)) }
+
+        electiveId?.let {
+            Elective.assertExists(it)
+            enrolledCount = getEnrolledCount(it)
+        }
     }
 }
 

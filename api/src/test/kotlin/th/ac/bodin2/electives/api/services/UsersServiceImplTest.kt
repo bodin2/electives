@@ -62,7 +62,7 @@ class UsersServiceImplTest : ApplicationTest() {
             )
 
             assertNotNull(student)
-            assertEquals(1010, student.id)
+            assertEquals(1010, student.id.value)
             assertEquals("New", student.user.firstName)
             assertEquals(TestConstants.Teams.TEAM_1_ID, student.teams.first().id.value)
         }
@@ -81,7 +81,7 @@ class UsersServiceImplTest : ApplicationTest() {
             )
 
             assertNotNull(teacher)
-            assertEquals(2010, teacher.id)
+            assertEquals(2010, teacher.id.value)
             assertEquals("New", teacher.user.firstName)
         }
     }
@@ -176,7 +176,7 @@ class UsersServiceImplTest : ApplicationTest() {
         }
 
         assertNotNull(student)
-        assertEquals(Students.JOHN_ID, student.id)
+        assertEquals(Students.JOHN_ID, student.id.value)
     }
 
     @Test
@@ -195,7 +195,7 @@ class UsersServiceImplTest : ApplicationTest() {
         }
 
         assertNotNull(teacher)
-        assertEquals(Teachers.BOB_ID, teacher.id)
+        assertEquals(Teachers.BOB_ID, teacher.id.value)
     }
 
     @Test
@@ -331,7 +331,7 @@ class UsersServiceImplTest : ApplicationTest() {
         usersService.updateStudent(
             Students.JOHN_ID,
             UsersService.StudentUpdate(
-                update = UsersService.UserUpdate(
+                user = UsersService.UserUpdate(
                     firstName = "Updated",
                     middleName = null,
                     lastName = null,
@@ -341,9 +341,11 @@ class UsersServiceImplTest : ApplicationTest() {
             )
         )
 
-        val student = transaction { usersService.getStudentById(Students.JOHN_ID) }
-        assertNotNull(student)
-        assertEquals("Updated", student.user.firstName)
+        transaction {
+            val student = usersService.getStudentById(Students.JOHN_ID)
+            assertNotNull(student)
+            assertEquals("Updated", student.user.firstName)
+        }
     }
 
     @Test
@@ -352,7 +354,7 @@ class UsersServiceImplTest : ApplicationTest() {
             usersService.updateStudent(
                 Students.JOHN_ID,
                 UsersService.StudentUpdate(
-                    update = UsersService.UserUpdate(
+                    user = UsersService.UserUpdate(
                         firstName = null,
                         middleName = null,
                         lastName = null,
@@ -370,7 +372,7 @@ class UsersServiceImplTest : ApplicationTest() {
             usersService.updateStudent(
                 UNUSED_ID,
                 UsersService.StudentUpdate(
-                    update = UsersService.UserUpdate(
+                    user = UsersService.UserUpdate(
                         firstName = "Nope",
                         middleName = null,
                         lastName = null,
@@ -386,7 +388,7 @@ class UsersServiceImplTest : ApplicationTest() {
         usersService.updateTeacher(
             Teachers.BOB_ID,
             UsersService.TeacherUpdate(
-                update = UsersService.UserUpdate(
+                user = UsersService.UserUpdate(
                     firstName = "Robert",
                     middleName = null,
                     lastName = null,
@@ -395,9 +397,11 @@ class UsersServiceImplTest : ApplicationTest() {
             )
         )
 
-        val teacher = transaction { usersService.getTeacherById(Teachers.BOB_ID) }
-        assertNotNull(teacher)
-        assertEquals("Robert", teacher.user.firstName)
+        transaction {
+            val teacher = usersService.getTeacherById(Teachers.BOB_ID)
+            assertNotNull(teacher)
+            assertEquals("Robert", teacher.user.firstName)
+        }
     }
 
     @Test
@@ -406,7 +410,7 @@ class UsersServiceImplTest : ApplicationTest() {
             usersService.updateTeacher(
                 UNUSED_ID,
                 UsersService.TeacherUpdate(
-                    update = UsersService.UserUpdate(
+                    user = UsersService.UserUpdate(
                         firstName = "Nope",
                         middleName = null,
                         lastName = null,
@@ -452,7 +456,7 @@ class UsersServiceImplTest : ApplicationTest() {
         assertTrue(students.isNotEmpty())
         // In tests, we should have students < PAGE_SIZE
         assertEquals(total, students.size.toLong())
-        assertTrue(students.any { it.id == Students.JOHN_ID })
+        assertTrue(students.any { it.id.value == Students.JOHN_ID })
     }
 
     @Test
@@ -462,7 +466,7 @@ class UsersServiceImplTest : ApplicationTest() {
         assertTrue(teachers.isNotEmpty())
         // In tests, we should have students < PAGE_SIZE
         assertEquals(total, teachers.size.toLong())
-        assertTrue(teachers.any { it.id == Teachers.BOB_ID })
+        assertTrue(teachers.any { it.id.value == Teachers.BOB_ID })
     }
 
     @Test

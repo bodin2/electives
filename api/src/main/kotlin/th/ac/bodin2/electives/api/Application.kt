@@ -9,7 +9,6 @@ import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.sqlite.jdbc4.JDBC4Connection
 import th.ac.bodin2.electives.api.routes.*
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.utils.userId
@@ -89,8 +88,7 @@ fun setupDatabase() {
     if (TransactionManager.primaryDatabase == null) {
         val path = requireEnvNonBlank("DB_PATH")
         Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC") {
-            val conn = connector().connection as JDBC4Connection
-            conn.createStatement().use {
+            createStatement().use {
                 it.execute("PRAGMA foreign_keys=ON;")
                 it.execute("PRAGMA journal_mode=WAL;")
                 it.execute("PRAGMA synchronous=NORMAL;")

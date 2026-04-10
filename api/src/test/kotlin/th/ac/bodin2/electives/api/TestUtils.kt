@@ -37,7 +37,12 @@ object TestDatabase {
         if (!::db.isInitialized) {
             db = org.jetbrains.exposed.v1.jdbc.Database.connect(
                 "jdbc:sqlite:file:./build/tmp/test/db",
-                "org.sqlite.JDBC"
+                "org.sqlite.JDBC",
+                setupConnection = {
+                    it.createStatement().use { stmt ->
+                        stmt.execute("PRAGMA foreign_keys=ON;")
+                    }
+                }
             )
         }
 

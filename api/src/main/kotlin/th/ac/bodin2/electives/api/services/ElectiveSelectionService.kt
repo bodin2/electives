@@ -8,7 +8,7 @@ interface ElectiveSelectionService {
     /**
      * Sets all subject selections for a student. No permission or seat checks are performed.
      *
-     * @param userId The ID of the student.
+     * @param studentId The ID of the student.
      * @param selections A map of elective IDs to selected subject IDs.
      *
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student, elective, or subject does not exist.
@@ -16,7 +16,7 @@ interface ElectiveSelectionService {
      */
     @Transactional
     fun forceSetAllStudentSelections(
-        userId: Int,
+        studentId: Int,
         selections: Map<Int, Int>,
     )
 
@@ -28,7 +28,7 @@ interface ElectiveSelectionService {
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student, elective, or subject does not exist.
      */
     @Transactional
-    suspend fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult
+    suspend fun setStudentSelection(executorId: Int, studentId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult
 
     /**
      * Deletes the subject selection for a student in a given elective.
@@ -38,17 +38,17 @@ interface ElectiveSelectionService {
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student or elective does not exist.
      */
     @Transactional
-    suspend fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult
+    suspend fun deleteStudentSelection(executorId: Int, studentId: Int, electiveId: Int): ModifySelectionResult
 
     /**
      * Gets all subject selections for a student.
      *
-     * @param userId The ID of the student.
+     * @param studentId The ID of the student.
      * @return A map of elective IDs to selected subject IDs.
      *
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student does not exist.
      */
-    fun getStudentSelections(userId: Int): Map<Int, Subject>
+    fun getStudentSelections(studentId: Int): Map<Int, Subject>
 
     enum class CanEnrollStatus {
         CAN_ENROLL,
