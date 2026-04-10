@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.api.services
 
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Subject
 
 interface ElectiveSelectionService {
@@ -14,7 +14,7 @@ interface ElectiveSelectionService {
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student, elective, or subject does not exist.
      * @throws IllegalArgumentException if the subject is not part of the elective.
      */
-    @CreatesTransaction
+    @Transactional
     fun forceSetAllStudentSelections(
         userId: Int,
         selections: Map<Int, Int>,
@@ -27,7 +27,7 @@ interface ElectiveSelectionService {
      *
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student, elective, or subject does not exist.
      */
-    @CreatesTransaction
+    @Transactional
     suspend fun setStudentSelection(executorId: Int, userId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult
 
     /**
@@ -37,7 +37,7 @@ interface ElectiveSelectionService {
      *
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student or elective does not exist.
      */
-    @CreatesTransaction
+    @Transactional
     suspend fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult
 
     /**

@@ -6,7 +6,7 @@ import io.ktor.server.routing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_AUTH
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.proto.api.AuthService
@@ -34,7 +34,7 @@ suspend fun RoutingContext.handleAuth() {
 
     try {
         call.respond(authenticateResponse {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             token = usersService.createSession(req.id, req.password, req.clientName)
         })
     } catch (e: Throwable) {

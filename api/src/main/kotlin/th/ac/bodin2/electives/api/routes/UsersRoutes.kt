@@ -12,7 +12,7 @@ import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.RATE_LIMIT_USERS
 import th.ac.bodin2.electives.api.RATE_LIMIT_USERS_SELECTIONS
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.ModifySelectionResult
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.ModifySelectionStatus
@@ -112,7 +112,7 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
 ) {
     val req = call.parseOrNull<SetStudentElectiveSelectionRequest>() ?: return badRequest()
 
-    @OptIn(CreatesTransaction::class)
+    @OptIn(Transactional::class)
     when (val result =
         electiveSelectionService.setStudentSelection(authenticatedUserId, userId, electiveId, req.subjectId)) {
         ModifySelectionResult.Success -> ok()
@@ -166,7 +166,7 @@ private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
     userId: Int,
     authenticatedUserId: Int
 ) {
-    @OptIn(CreatesTransaction::class)
+    @OptIn(Transactional::class)
     when (val result = electiveSelectionService.deleteStudentSelection(authenticatedUserId, userId, electiveId)) {
         ModifySelectionResult.Success -> ok()
 

@@ -9,12 +9,12 @@ import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Team
 import th.ac.bodin2.electives.db.models.Teams
 
 class TeamServiceImpl : TeamService {
-    @CreatesTransaction
+    @Transactional
     override fun create(
         id: Int,
         name: String,
@@ -28,7 +28,7 @@ class TeamServiceImpl : TeamService {
         Team.wrapRow(stmt.resultedValues!!.first())
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun delete(id: Int) {
         transaction {
             val rows = Teams.deleteWhere { Teams.id eq id }
@@ -38,7 +38,7 @@ class TeamServiceImpl : TeamService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun update(id: Int, update: TeamService.TeamUpdate) {
         transaction {
             Team.findById(id) ?: throw EntityNotFoundException(ExceptionEntity.TEAM)

@@ -12,7 +12,7 @@ import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.TestConstants.Students
 import th.ac.bodin2.electives.api.TestConstants.Teachers
 import th.ac.bodin2.electives.api.TestConstants.TestData
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
@@ -20,7 +20,7 @@ import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
 
-@OptIn(CreatesTransaction::class)
+@OptIn(Transactional::class)
 class UsersServiceImplTest : ApplicationTest() {
     private val ApplicationTestBuilder.usersService: UsersService
         get() {

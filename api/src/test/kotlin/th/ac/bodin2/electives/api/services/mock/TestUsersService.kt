@@ -4,7 +4,7 @@ import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.MockUtils.mockStudent
 import th.ac.bodin2.electives.api.MockUtils.mockTeacher
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.PASSWORD
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
@@ -35,16 +35,16 @@ class TestUsersService : UsersService {
         avatarUrl: String?,
     ) = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun deleteUser(id: Int) = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun setPassword(id: Int, newPassword: String) = error("Not testable")
 
     override suspend fun getUserType(id: Int) = when (id) {
@@ -53,7 +53,7 @@ class TestUsersService : UsersService {
         else -> throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
     }
 
-    @CreatesTransaction
+    @Transactional
     override suspend fun createSession(id: Int, password: String, aud: String): String {
         if (password != PASSWORD) {
             throw IllegalArgumentException("Invalid password for user ID: $id")
@@ -62,7 +62,7 @@ class TestUsersService : UsersService {
         return insecurelyCreateSessionWithoutValidation(id)
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun insecurelyCreateSessionWithoutValidation(id: Int): String {
         hasSessions.add(id)
         return id.toString()
@@ -96,7 +96,7 @@ class TestUsersService : UsersService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun getStudents(page: Int): Pair<List<Student>, Long> {
         return if (page == 1) {
             listOf(mockStudent(STUDENT_ID)) to 1
@@ -105,7 +105,7 @@ class TestUsersService : UsersService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun getTeachers(page: Int): Pair<List<Teacher>, Long> {
         return if (page == 1) {
             listOf(mockTeacher(TEACHER_ID)) to 1

@@ -4,7 +4,7 @@ import io.ktor.client.request.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import th.ac.bodin2.electives.api.ApplicationTest
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.getWithAuth
 import th.ac.bodin2.electives.api.parse
 import th.ac.bodin2.electives.api.services.UsersService
@@ -32,7 +32,7 @@ class ElectivesRoutesTest : ApplicationTest() {
 
     private suspend fun ApplicationTestBuilder.studentToken(): String {
         startApplication()
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         return usersService.createSession(
             STUDENT_ID,
             PASSWORD,

@@ -7,7 +7,7 @@ import io.ktor.server.plugins.di.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants.TestData
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.parse
 import th.ac.bodin2.electives.api.postProto
 import th.ac.bodin2.electives.api.services.UsersService
@@ -73,7 +73,7 @@ class AuthRoutesTest : ApplicationTest() {
 
         val usersService: UsersService by application.dependencies
 
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         val token = usersService.createSession(
             TestServiceConstants.STUDENT_ID,
             TestServiceConstants.PASSWORD,

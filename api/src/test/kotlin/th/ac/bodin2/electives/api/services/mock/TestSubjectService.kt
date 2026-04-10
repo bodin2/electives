@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.api.services.mock
 
 import th.ac.bodin2.electives.api.MockUtils
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.SubjectService
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.db.Subject
@@ -12,7 +12,7 @@ class TestSubjectService : SubjectService {
         val SUBJECT_IDS = listOf(SUBJECT_ID)
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun create(
         id: Int,
         name: String,
@@ -27,10 +27,10 @@ class TestSubjectService : SubjectService {
         imageUrl: String?,
     ): Subject = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun delete(id: Int) = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun update(id: Int, update: SubjectService.SubjectUpdate) = error("Not testable")
 
     override fun getAll() = SUBJECT_IDS.map { id -> MockUtils.mockSubject(id) }

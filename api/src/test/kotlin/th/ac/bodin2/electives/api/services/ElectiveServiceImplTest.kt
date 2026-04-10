@@ -8,7 +8,7 @@ import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import kotlin.test.*
 
@@ -100,7 +100,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `create elective`() = runTest {
         val newId = 500
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         val created = electiveService.create(newId, "New Elective")
 
         assertEquals(newId, created.id.value)
@@ -113,7 +113,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `create elective with duplicate id throws conflict`() = runTest {
         assertFailsWith<ConflictException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.create(TestConstants.Electives.SCIENCE_ID, "Duplicate Elective")
         }
     }
@@ -121,7 +121,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `create elective with team`() = runTest {
         val newId = 501
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         val created = electiveService.create(
             id = newId,
             name = "Team Elective",
@@ -138,10 +138,10 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `delete elective`() = runTest {
         val tempId = 600
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         electiveService.create(tempId, "Temporary Elective")
 
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         electiveService.delete(tempId)
 
         val fetched = transaction { electiveService.getById(tempId) }
@@ -151,14 +151,14 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `delete elective not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.delete(UNUSED_ID)
         }
     }
 
     @Test
     fun `update elective name`() = runTest {
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         electiveService.update(
             TestConstants.Electives.SCIENCE_ID,
             ElectiveService.ElectiveUpdate(name = "Updated Science")
@@ -172,7 +172,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `update elective with nothing`() = runTest {
         assertFailsWith<NothingToUpdateException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.update(
                 TestConstants.Electives.SCIENCE_ID,
                 ElectiveService.ElectiveUpdate()
@@ -183,7 +183,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `update elective not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.update(
                 UNUSED_ID,
                 ElectiveService.ElectiveUpdate(name = "Does not exist")
@@ -193,7 +193,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `set elective subjects`() = runTest {
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         electiveService.setSubjects(
             TestConstants.Electives.SCIENCE_ID,
             listOf(TestConstants.Subjects.PHYSICS_ID)
@@ -206,7 +206,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `set elective subjects empty`() = runTest {
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         electiveService.setSubjects(TestConstants.Electives.SCIENCE_ID, emptyList())
 
         val subjects = transaction { electiveService.getSubjects(TestConstants.Electives.SCIENCE_ID) }.getOrThrow()
@@ -216,7 +216,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `set elective subjects not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.setSubjects(UNUSED_ID, listOf(TestConstants.Subjects.PHYSICS_ID))
         }
     }
@@ -224,7 +224,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `create elective with non-existent team throws not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.create(
                 id = 700,
                 name = "Invalid Team Elective",
@@ -236,7 +236,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `update elective with non-existent team throws not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.update(
                 TestConstants.Electives.SCIENCE_ID,
                 ElectiveService.ElectiveUpdate(setTeam = true, team = UNUSED_ID)
@@ -247,7 +247,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     @Test
     fun `set subjects with non-existent subject throws not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.setSubjects(
                 TestConstants.Electives.SCIENCE_ID,
                 listOf(UNUSED_ID)

@@ -8,7 +8,7 @@ import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import kotlin.test.*
 
@@ -42,7 +42,7 @@ class TeamServiceImplTest : ApplicationTest() {
     fun `create team`() = runTest {
         val newId = 500
 
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         val created = teamService.create(newId, "New Team")
 
         assertEquals(newId, created.id.value)
@@ -55,7 +55,7 @@ class TeamServiceImplTest : ApplicationTest() {
     @Test
     fun `create team with duplicate id throws conflict`() = runTest {
         assertFailsWith<ConflictException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             teamService.create(TestConstants.Teams.TEAM_1_ID, "Duplicate Team")
         }
     }
@@ -64,10 +64,10 @@ class TeamServiceImplTest : ApplicationTest() {
     fun `delete team`() = runTest {
         // Create a team that's not referenced by any subjects/electives
         val tempId = 600
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         teamService.create(tempId, "Temporary Team")
 
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         teamService.delete(tempId)
 
         val fetched = transaction { teamService.getById(tempId) }
@@ -77,14 +77,14 @@ class TeamServiceImplTest : ApplicationTest() {
     @Test
     fun `delete team not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             teamService.delete(UNUSED_ID)
         }
     }
 
     @Test
     fun `update team name`() = runTest {
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         teamService.update(
             TestConstants.Teams.TEAM_1_ID,
             TeamService.TeamUpdate(name = "Updated Team")
@@ -98,7 +98,7 @@ class TeamServiceImplTest : ApplicationTest() {
     @Test
     fun `update team nothing to update`() = runTest {
         assertFailsWith<NothingToUpdateException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             teamService.update(
                 TestConstants.Teams.TEAM_1_ID,
                 TeamService.TeamUpdate()
@@ -109,7 +109,7 @@ class TeamServiceImplTest : ApplicationTest() {
     @Test
     fun `update team not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             teamService.update(
                 UNUSED_ID,
                 TeamService.TeamUpdate(name = "Does not exist")

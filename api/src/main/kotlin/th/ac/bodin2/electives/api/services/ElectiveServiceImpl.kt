@@ -10,7 +10,7 @@ import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
 import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.ElectiveSubjects
@@ -18,7 +18,7 @@ import th.ac.bodin2.electives.db.models.Electives
 import java.time.LocalDateTime
 
 class ElectiveServiceImpl : ElectiveService {
-    @CreatesTransaction
+    @Transactional
     override fun create(
         id: Int,
         name: String,
@@ -43,7 +43,7 @@ class ElectiveServiceImpl : ElectiveService {
     }
 
 
-    @CreatesTransaction
+    @Transactional
     override fun delete(id: Int) {
         transaction {
             val rows = Electives.deleteWhere { Electives.id eq id }
@@ -53,7 +53,7 @@ class ElectiveServiceImpl : ElectiveService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun update(id: Int, update: ElectiveService.ElectiveUpdate) {
         transaction {
             Elective.require(id)
@@ -72,7 +72,7 @@ class ElectiveServiceImpl : ElectiveService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun setSubjects(electiveId: Int, subjectIds: List<Int>) {
         transaction {
             Elective.require(electiveId)

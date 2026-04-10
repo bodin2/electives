@@ -23,7 +23,7 @@ import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ADMIN_AUTHENTICATION
 import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN
 import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN_AUTH
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
 import th.ac.bodin2.electives.api.utils.*
@@ -130,7 +130,7 @@ class AdminUsersController(
             get<Admin.Users.Students> { params ->
                 call.respond(listUsersResponse {
                     val (students, count) =
-                        @OptIn(CreatesTransaction::class)
+                        @OptIn(Transactional::class)
                         usersService.getStudents(params.page)
 
                     users += students.map { it.toProto() }
@@ -141,7 +141,7 @@ class AdminUsersController(
             get<Admin.Users.Teachers> { params ->
                 call.respond(listUsersResponse {
                     val (teachers, count) =
-                        @OptIn(CreatesTransaction::class)
+                        @OptIn(Transactional::class)
                         usersService.getTeachers(params.page)
 
                     users += teachers.map { it.toProto() }
@@ -225,7 +225,7 @@ class AdminUsersController(
                     setAvatarUrl = req.patchAvatarUrl,
                 )
 
-                @OptIn(CreatesTransaction::class)
+                @OptIn(Transactional::class)
                 when (type) {
                     UserType.STUDENT -> usersService.updateStudent(
                         id,
@@ -241,7 +241,7 @@ class AdminUsersController(
                 }
 
                 if (req.hasNewPassword()) {
-                    @OptIn(CreatesTransaction::class)
+                    @OptIn(Transactional::class)
                     usersService.setPassword(id, req.newPassword)
                 }
             }
@@ -266,7 +266,7 @@ class AdminUsersController(
 
     private suspend fun RoutingContext.handleDeleteUser(id: Int) {
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             usersService.deleteUser(id)
             ok()
         } catch (_: EntityNotFoundException) {
@@ -297,7 +297,7 @@ class AdminUsersSelectionsController(
             ?: return badRequest()
 
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveSelectionService.forceSetAllStudentSelections(id, req.selectionsMap)
 
             ok()
@@ -341,7 +341,7 @@ class AdminElectivesController(
         if (elective.id != id) return badRequest("ID in URL does not match body")
 
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.create(
                 id = elective.id,
                 name = elective.name,
@@ -362,7 +362,7 @@ class AdminElectivesController(
 
     private suspend fun RoutingContext.handleDeleteElective(id: Int) {
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.delete(id)
             ok()
         } catch (_: EntityNotFoundException) {
@@ -387,7 +387,7 @@ class AdminElectivesController(
         )
 
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.update(id, update)
             ok()
         } catch (e: EntityNotFoundException) {
@@ -419,7 +419,7 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
             ?: return badRequest()
 
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             electiveService.setSubjects(electiveId, req.subjectIdsList)
 
             ok()
@@ -471,7 +471,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
         if (subject.id != id) return badRequest("ID in URL does not match body")
 
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.create(
                 id = subject.id,
                 name = subject.name,
@@ -503,7 +503,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
 
     private suspend fun RoutingContext.handleDeleteSubject(id: Int) {
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.delete(id)
             ok()
         } catch (_: EntityNotFoundException) {
@@ -537,7 +537,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
         )
 
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.update(id, update)
             ok()
         } catch (e: EntityNotFoundException) {
@@ -591,7 +591,7 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
         if (team.id != id) return badRequest("ID in URL does not match body")
 
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             teamService.create(team.id, team.name)
             ok()
         } catch (_: ConflictException) {
@@ -603,7 +603,7 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
 
     private suspend fun RoutingContext.handleDeleteTeam(id: Int) {
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             teamService.delete(id)
             ok()
         } catch (_: EntityNotFoundException) {
@@ -622,7 +622,7 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
         )
 
         try {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             teamService.update(id, update)
             ok()
         } catch (e: EntityNotFoundException) {

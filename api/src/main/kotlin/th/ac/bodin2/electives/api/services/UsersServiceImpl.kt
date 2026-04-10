@@ -13,7 +13,7 @@ import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersServiceImpl.Config
 import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.*
@@ -124,7 +124,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         avatarUrl: String?,
     ): Teacher = Teacher.new(id, createUser(id, firstName, middleName, lastName, password, avatarUrl))
 
-    @CreatesTransaction
+    @Transactional
     override fun deleteUser(id: Int) {
         val rows = transaction { Users.deleteWhere { Users.id eq id } }
         if (rows == 0) {
@@ -137,7 +137,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun updateStudent(id: Int, update: UsersService.StudentUpdate) {
         transaction {
             Student.require(id)
@@ -163,7 +163,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) {
         transaction {
             Teacher.require(id)
@@ -185,7 +185,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun setPassword(id: Int, newPassword: String) {
         val password = newPassword.assertPasswordRequirements()
 
@@ -202,7 +202,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
     override fun getStudentById(id: Int): Student? = Student.findById(id)
 
-    @CreatesTransaction
+    @Transactional
     override fun getStudents(page: Int): Pair<List<Student>, Long> {
         require(page >= 1) { "Page must be at least 1" }
 
@@ -239,7 +239,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun getTeachers(page: Int): Pair<List<Teacher>, Long> {
         require(page >= 1) { "Page must be at least 1" }
 
@@ -254,7 +254,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override suspend fun createSession(id: Int, password: String, aud: String): String =
         withMinimumDelay(config.minimumSessionCreationTime) {
             val password = password.assertPasswordRequirements()
@@ -282,7 +282,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             }
         }
 
-    @CreatesTransaction
+    @Transactional
     override fun insecurelyCreateSessionWithoutValidation(id: Int): String {
         val session = Base64.getUrlEncoder()
             .withoutPadding()

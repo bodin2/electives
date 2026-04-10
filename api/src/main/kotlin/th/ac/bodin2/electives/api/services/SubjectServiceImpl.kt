@@ -10,7 +10,7 @@ import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.Team
@@ -20,7 +20,7 @@ import th.ac.bodin2.electives.db.models.TeacherSubjects
 import th.ac.bodin2.electives.proto.api.SubjectTag
 
 class SubjectServiceImpl : SubjectService {
-    @CreatesTransaction
+    @Transactional
     override fun create(
         id: Int,
         name: String,
@@ -65,7 +65,7 @@ class SubjectServiceImpl : SubjectService {
         Subject.wrapRow(stmt.resultedValues!!.first())
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun delete(id: Int) {
         transaction {
             val rows = Subjects.deleteWhere { Subjects.id eq id }
@@ -75,7 +75,7 @@ class SubjectServiceImpl : SubjectService {
         }
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun update(id: Int, update: SubjectService.SubjectUpdate) {
         transaction {
             Subject.require(id)

@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.api.services.mock
 
 import th.ac.bodin2.electives.api.MockUtils
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.TeamService
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_TEAM_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_TEAM_ID
@@ -12,13 +12,13 @@ class TestTeamService : TeamService {
         val TEAM_IDS = listOf(ELECTIVE_TEAM_ID, SUBJECT_TEAM_ID)
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun create(id: Int, name: String): Team = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun delete(id: Int) = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun update(id: Int, update: TeamService.TeamUpdate) = error("Not testable")
 
     override fun getAll() = TEAM_IDS.map { id -> MockUtils.mockTeam(id) }

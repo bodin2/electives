@@ -3,7 +3,7 @@ package th.ac.bodin2.electives.api.services
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.proto.api.SubjectTag
 
@@ -14,7 +14,7 @@ interface SubjectService {
      * @throws EntityNotFoundException if the specified team or any of the specified teachers do not exist.
      * @throws ConflictException if a subject with the same ID already exists.
      */
-    @CreatesTransaction
+    @Transactional
     fun create(
         id: Int,
         name: String,
@@ -34,7 +34,7 @@ interface SubjectService {
      *
      * @throws EntityNotFoundException if the subject does not exist.
      */
-    @CreatesTransaction
+    @Transactional
     fun delete(id: Int)
 
     /**
@@ -43,7 +43,7 @@ interface SubjectService {
      * @throws EntityNotFoundException if the subject or team does not exist.
      * @throws NothingToUpdateException if there's nothing to update.
      */
-    @CreatesTransaction
+    @Transactional
     fun update(id: Int, update: SubjectUpdate)
 
     data class SubjectUpdate(

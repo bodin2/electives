@@ -1,7 +1,7 @@
 package th.ac.bodin2.electives.api.services.mock
 
 import th.ac.bodin2.electives.api.MockUtils
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveService
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_WITHOUT_SUBJECTS_ID
@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 
 class TestElectiveService : ElectiveService {
 
-    @CreatesTransaction
+    @Transactional
     override fun create(
         id: Int,
         name: String,
@@ -25,13 +25,13 @@ class TestElectiveService : ElectiveService {
         endDate: LocalDateTime?
     ): Elective = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun delete(id: Int) = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun update(id: Int, update: ElectiveService.ElectiveUpdate) = error("Not testable")
 
-    @CreatesTransaction
+    @Transactional
     override fun setSubjects(electiveId: Int, subjectIds: List<Int>) = error("Not testable")
 
     companion object {

@@ -7,4 +7,4 @@ package th.ac.bodin2.electives.api.annotations
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)
 @RequiresOptIn
-annotation class CreatesTransaction
+annotation class Transactional

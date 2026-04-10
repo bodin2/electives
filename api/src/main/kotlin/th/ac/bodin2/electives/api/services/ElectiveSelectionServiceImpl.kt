@@ -10,7 +10,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.db.Student
@@ -50,7 +50,7 @@ class ElectiveSelectionServiceImpl(
         """.trimIndent()
     }
 
-    @CreatesTransaction
+    @Transactional
     override fun forceSetAllStudentSelections(userId: Int, selections: Map<Int, Int>) {
         transaction {
             Student.require(userId)
@@ -77,7 +77,7 @@ class ElectiveSelectionServiceImpl(
 
     // We want to prevent overbooking: Thread A reads (29/30) -> Thread B reads (29/30) -> A inserts (30/30) -> B inserts (31/30)
     // SERIALIZABLE will ensure that if two transactions try to do this at the same time, one of them will be fail.
-    @CreatesTransaction
+    @Transactional
     override suspend fun setStudentSelection(
         executorId: Int,
         userId: Int,
@@ -155,7 +155,7 @@ class ElectiveSelectionServiceImpl(
         return result
     }
 
-    @CreatesTransaction
+    @Transactional
     override suspend fun deleteStudentSelection(executorId: Int, userId: Int, electiveId: Int): ModifySelectionResult =
         suspendTransaction {
             try {

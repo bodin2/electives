@@ -3,7 +3,7 @@ package th.ac.bodin2.electives.api.services
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.UserType
@@ -54,7 +54,7 @@ interface UsersService {
      *
      * @throws EntityNotFoundException if the user does not exist.
      */
-    @CreatesTransaction
+    @Transactional
     fun deleteUser(id: Int)
 
     /**
@@ -63,7 +63,7 @@ interface UsersService {
      * @throws EntityNotFoundException if the user or team does not exist.
      * @throws NothingToUpdateException if there's nothing to update.
      */
-    @CreatesTransaction
+    @Transactional
     fun updateStudent(
         id: Int,
         update: StudentUpdate,
@@ -75,7 +75,7 @@ interface UsersService {
      * @throws EntityNotFoundException if the user does not exist.
      * @throws NothingToUpdateException if there's nothing to update.
      */
-    @CreatesTransaction
+    @Transactional
     fun updateTeacher(
         id: Int,
         update: TeacherUpdate,
@@ -114,7 +114,7 @@ interface UsersService {
      * @throws EntityNotFoundException if the user does not exist.
      * @throws IllegalArgumentException if the new password does not meet the requirements.
      */
-    @CreatesTransaction
+    @Transactional
     fun setPassword(id: Int, newPassword: String)
 
     fun getTeacherById(id: Int): Teacher?
@@ -127,7 +127,7 @@ interface UsersService {
      *
      * @return A pair of the list of students and the total number of students (for pagination purposes).
      */
-    @CreatesTransaction
+    @Transactional
     fun getStudents(page: Int = 1): Pair<List<Student>, Long>
 
     /**
@@ -137,7 +137,7 @@ interface UsersService {
      *
      * @return A pair of the list of teachers and the total number of teachers (for pagination purposes).
      */
-    @CreatesTransaction
+    @Transactional
     fun getTeachers(page: Int = 1): Pair<List<Teacher>, Long>
 
     /**
@@ -146,14 +146,14 @@ interface UsersService {
      * @throws EntityNotFoundException if the user does not exist.
      * @throws IllegalArgumentException if the token or session is invalid.
      */
-    @CreatesTransaction
+    @Transactional
     suspend fun createSession(id: Int, password: String, aud: String): String
 
     /**
      * Creates a new session for the given user ID without validating the password.
      * Assumes the user exists.
      */
-    @CreatesTransaction
+    @Transactional
     fun insecurelyCreateSessionWithoutValidation(id: Int): String
 
     /**

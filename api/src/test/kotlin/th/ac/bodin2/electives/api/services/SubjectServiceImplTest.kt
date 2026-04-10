@@ -8,7 +8,7 @@ import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import kotlin.test.*
@@ -42,7 +42,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `create subject`() = runTest {
         val newId = 500
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         val created = subjectService.create(
             id = newId,
             name = "Biology",
@@ -65,7 +65,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `create subject with duplicate id throws conflict`() = runTest {
         assertFailsWith<ConflictException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.create(
                 id = TestConstants.Subjects.PHYSICS_ID,
                 name = "Duplicate Subject",
@@ -84,7 +84,7 @@ class SubjectServiceImplTest : ApplicationTest() {
 
     @Test
     fun `delete subject`() = runTest {
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         subjectService.delete(TestConstants.Subjects.PHYSICS_ID)
 
         val fetched = transaction { subjectService.getById(TestConstants.Subjects.PHYSICS_ID) }
@@ -94,14 +94,14 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `delete subject not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.delete(UNUSED_ID)
         }
     }
 
     @Test
     fun `update subject name`() = runTest {
-        @OptIn(CreatesTransaction::class)
+        @OptIn(Transactional::class)
         subjectService.update(
             TestConstants.Subjects.PHYSICS_ID,
             SubjectService.SubjectUpdate(name = "Advanced Physics")
@@ -115,7 +115,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `update subject with nothing`() = runTest {
         assertFailsWith<NothingToUpdateException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.update(
                 TestConstants.Subjects.PHYSICS_ID,
                 SubjectService.SubjectUpdate()
@@ -126,7 +126,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `update subject not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.update(
                 UNUSED_ID,
                 SubjectService.SubjectUpdate(name = "Does not exist")
@@ -137,7 +137,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `create subject with non-existent team throws not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.create(
                 id = 600,
                 name = "Invalid Team Subject",
@@ -157,7 +157,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `create subject with non-existent teacher throws not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.create(
                 id = 601,
                 name = "Invalid Teacher Subject",
@@ -177,7 +177,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `update subject with non-existent team throws not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.update(
                 TestConstants.Subjects.PHYSICS_ID,
                 SubjectService.SubjectUpdate(setTeam = true, team = UNUSED_ID)
@@ -188,7 +188,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `update subject with non-existent teacher throws not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            @OptIn(CreatesTransaction::class)
+            @OptIn(Transactional::class)
             subjectService.update(
                 TestConstants.Subjects.PHYSICS_ID,
                 SubjectService.SubjectUpdate(teacherIds = listOf(UNUSED_ID))

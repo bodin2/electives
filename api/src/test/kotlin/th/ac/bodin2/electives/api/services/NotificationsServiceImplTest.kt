@@ -16,7 +16,7 @@ import th.ac.bodin2.electives.api.TestConstants.Students
 import th.ac.bodin2.electives.api.TestConstants.Subjects
 import th.ac.bodin2.electives.api.TestConstants.Teams
 import th.ac.bodin2.electives.api.TestConstants.TestData.CLIENT_NAME
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.utils.send
 import th.ac.bodin2.electives.db.Elective
@@ -31,7 +31,7 @@ import kotlin.test.*
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-@OptIn(DelicateCoroutinesApi::class, CreatesTransaction::class)
+@OptIn(DelicateCoroutinesApi::class, Transactional::class)
 class NotificationsServiceImplTest : ApplicationTest() {
     private val ApplicationTestBuilder.usersService: UsersService
         get() {

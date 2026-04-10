@@ -5,7 +5,7 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.*
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
@@ -21,7 +21,7 @@ import th.ac.bodin2.electives.proto.api.UsersServiceKt.setStudentElectiveSelecti
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-@OptIn(CreatesTransaction::class)
+@OptIn(Transactional::class)
 class UsersRoutesTest : ApplicationTest() {
     private val ApplicationTestBuilder.usersService: UsersService
         get() {

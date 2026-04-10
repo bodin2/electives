@@ -10,7 +10,7 @@ import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
-import th.ac.bodin2.electives.api.annotations.CreatesTransaction
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.db.models.ElectiveSubjects
 import th.ac.bodin2.electives.db.models.Electives
@@ -19,7 +19,7 @@ import th.ac.bodin2.electives.proto.api.SubjectTag
 import java.time.LocalDateTime
 import kotlin.test.*
 
-@OptIn(CreatesTransaction::class)
+@OptIn(Transactional::class)
 class ElectiveSelectionServiceImplTest : ApplicationTest() {
     private val ApplicationTestBuilder.electiveSelectionService: ElectiveSelectionService
         get() {
