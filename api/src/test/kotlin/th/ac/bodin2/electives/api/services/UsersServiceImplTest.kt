@@ -21,6 +21,7 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
 
@@ -291,7 +292,7 @@ class UsersServiceImplTest : ApplicationTest() {
         val token = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
 
         // Wait for session to expire
-        delay(1001L)
+        delay(1001.milliseconds)
 
         assertFailsWith<IllegalArgumentException> {
             transaction { usersService.getSessionUserId(token) }

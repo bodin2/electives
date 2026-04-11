@@ -213,7 +213,7 @@ class AdminAuthServiceImplTest : ApplicationTest() {
 
         assertTrue(adminAuthService.hasSession(result.token, "127.0.0.1"))
 
-        delay(1250)
+        delay(1250.milliseconds)
 
         assertFalse(adminAuthService.hasSession(result.token, "127.0.0.1"))
     }
@@ -267,12 +267,12 @@ class AdminAuthServiceImplTest : ApplicationTest() {
             val challenge = adminAuthService.newChallenge()
             val signature = sign(challenge)
 
-            advanceTimeBy(999)
+            advanceTimeBy(999.milliseconds)
 
             val result1 = adminAuthService.createSession(signature, "127.0.0.1")
             assertIs<CreateSessionResult.Success>(result1)
 
-            advanceTimeBy(1)
+            advanceTimeBy(1.milliseconds)
 
             val result2 = adminAuthService.createSession(signature, "127.0.0.1")
 

@@ -40,8 +40,8 @@ interface UsersService {
     /**
      * Creates multiple students in a batch operation.
      *
-     * @throws BatchOperationException.MissingTeams if any of the specified teams do not exist, with the list of missing team IDs in [MissingTeamsException.ids].
-     * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [ConflictingEntitiesException.ids].
+     * @throws BatchOperationException.MissingTeams if any of the specified teams do not exist, with the list of missing team IDs in [UsersService.BatchOperationException.MissingTeams.ids].
+     * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [UsersService.BatchOperationException.ConflictingEntities.ids].
      * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
      *   - [IllegalArgumentException] if the password does not meet the requirements.
      */
@@ -66,7 +66,7 @@ interface UsersService {
     /**
      * Creates multiple teachers in a batch operation.
      *
-     * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [ConflictingEntitiesException.ids].
+     * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [BatchOperationException.ConflictingEntities.ids].
      * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
      *   - [IllegalArgumentException] if the password does not meet the requirements.
      */
