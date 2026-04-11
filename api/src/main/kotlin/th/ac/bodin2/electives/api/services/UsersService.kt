@@ -35,6 +35,17 @@ interface UsersService {
     ): Student
 
     /**
+     * Creates multiple students in a batch operation.
+     *
+     * @throws BatchOperationException.MissingTeams if any of the specified teams do not exist, with the list of missing team IDs in [MissingTeamsException.ids].
+     * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [ConflictingEntitiesException.ids].
+     * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
+     *   - [IllegalArgumentException] if the password does not meet the requirements.
+     */
+    @Transactional
+    fun createStudents(inserts: List<StudentInsert>): List<Student>
+
+    /**
      * Creates a new teacher with the given information.
      *
      * @throws ConflictException if a user/teacher with the same ID already exists.
@@ -50,12 +61,30 @@ interface UsersService {
     ): Teacher
 
     /**
-     * Deletes the teacher or student with the given ID.
+     * Creates multiple teachers in a batch operation.
+     *
+     * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [ConflictingEntitiesException.ids].
+     * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
+     *   - [IllegalArgumentException] if the password does not meet the requirements.
+     */
+    @Transactional
+    fun createTeachers(inserts: List<TeacherInsert>): List<Teacher>
+
+    /**
+     * Deletes the user with the given ID.
      *
      * @throws EntityNotFoundException if the user does not exist.
      */
     @Transactional
     fun deleteUser(id: Int)
+
+    /**
+     * Deletes the users with the given ID.
+     *
+     * @throws BatchOperationException.NotFoundEntities if any of the specified IDs do not exist, with the list of missing IDs in [BatchOperationException.NotFoundEntities.ids].
+     */
+    @Transactional
+    suspend fun deleteUsers(id: List<Int>)
 
     /**
      * Updates the student's profile information.
@@ -80,6 +109,28 @@ interface UsersService {
         id: Int,
         update: TeacherUpdate,
     )
+
+    sealed class BatchOperationException(msg: String, cause: Throwable?) : Exception(msg, cause) {
+        constructor(msg: String) : this(msg, null)
+
+        class NotFoundEntities(val ids: List<Int>) : BatchOperationException("Entity with the given IDs does not exist")
+        class ConflictingEntities(val ids: List<Int>) : BatchOperationException("Entity with the same IDs already exists")
+        class MissingTeams(val ids: List<Int>) : BatchOperationException("Teams are missing")
+        class InvalidUserData(val id: Int, cause: Throwable) : BatchOperationException("Invalid user data", cause)
+    }
+
+    class UserData(
+        val id: Int,
+        val firstName: String,
+        val middleName: String? = null,
+        val lastName: String? = null,
+        val avatarUrl: String? = null,
+        val password: String,
+    )
+
+    sealed class UserInsert(val user: UserData)
+    class StudentInsert(user: UserData, val teams: List<Int> = emptyList()) : UserInsert(user)
+    class TeacherInsert(user: UserData) : UserInsert(user)
 
     /**
      * If [setMiddleName] is true, the middle name is updated to the given value (which may be null).

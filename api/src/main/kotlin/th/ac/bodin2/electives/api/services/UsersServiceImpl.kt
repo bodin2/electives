@@ -6,8 +6,10 @@ import io.ktor.server.plugins.di.*
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.not
 import org.jetbrains.exposed.v1.dao.load
 import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.ConflictException
@@ -110,11 +112,69 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         avatarUrl: String?,
         teams: List<Int>?,
     ): Student {
-        return Student.new(id) {
-            user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
-            if (teams != null) this.teams = Team.find { Teams.id inList teams }
-        }.also { it.refresh(flush = true) }
+        val user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
+        val studentRow = Students
+            .insert {
+                it[Students.id] = user.id
+                it[Students.user] = user.id
+            }
+            .resultedValues!!
+            .first()
+
+        StudentTeams.batchInsert(teams ?: emptyList()) {
+            Team.assertExists(it)
+
+            this[StudentTeams.student] = id
+            this[StudentTeams.team] = it
+        }
+
+        return Student.wrapRow(studentRow).load(Student::teams)
     }
+
+    @Transactional
+    override fun createStudents(inserts: List<UsersService.StudentInsert>) = transaction {
+        if (inserts.isEmpty()) return@transaction emptyList()
+
+        val requestedTeamIds = inserts
+            .flatMap { it.teams }
+            .toSet()
+
+        val existingTeamIds = Teams
+            .select(Teams.id)
+            .where { Teams.id inList requestedTeamIds.toList() }
+            .map { it[Teams.id].value }
+            .toSet()
+
+        val missingTeamIds = requestedTeamIds.filter { it !in existingTeamIds }
+        if (!missingTeamIds.isEmpty()) throw UsersService.BatchOperationException.MissingTeams(missingTeamIds)
+
+        val prepared = insertUserBatch(inserts)
+
+        Students.batchInsert(prepared) { item ->
+            val uid = item.request.user.id
+
+            this[Students.user] = uid
+            this[Students.id] = uid
+        }
+
+        val studentTeams = prepared.flatMap { item ->
+            item.request.teams
+                .distinct()
+                .map { teamId -> item.request.user.id to teamId }
+        }
+
+        StudentTeams.batchInsert(studentTeams) { (studentId, teamId) ->
+            this[StudentTeams.student] = studentId
+            this[StudentTeams.team] = teamId
+        }
+
+        return@transaction Student.find { Students.id inList prepared.map { it.request.user.id } }.toList()
+    }
+
+    private data class PreparedUserInsert<T>(
+        val request: T,
+        val passwordHash: String
+    )
 
     override fun createTeacher(
         id: Int,
@@ -123,10 +183,63 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
-    ): Teacher {
-        return Teacher.new(id) {
-            user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
-        }.also { it.refresh(flush = true) }
+    ) = Teacher.new(id) {
+        user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
+    }
+
+    @Transactional
+    override fun createTeachers(inserts: List<UsersService.TeacherInsert>) = transaction {
+        if (inserts.isEmpty()) return@transaction emptyList()
+
+        val prepared = insertUserBatch(inserts)
+
+        Teachers.batchInsert(prepared) { item ->
+            val uid = item.request.user.id
+
+            this[Teachers.user] = uid
+            this[Teachers.id] = uid
+        }
+
+        return@transaction Teacher.find { Teachers.id inList prepared.map { it.request.user.id } }.toList()
+    }
+
+    private fun <T : UsersService.UserInsert> insertUserBatch(inserts: List<T>): List<PreparedUserInsert<T>> {
+        val conflicts = Users
+            .select(Users.id)
+            .where { Users.id inList inserts.map { it.user.id } }
+            .map { it[Users.id].value }
+            .toList()
+
+        if (conflicts.isNotEmpty()) {
+            throw UsersService.BatchOperationException.ConflictingEntities(conflicts)
+        }
+
+        val prepared = inserts.map { req ->
+            val user = req.user
+            val passwordHash = try {
+                argon2.hash(user.password.assertPasswordRequirements().toCharArray())
+            } catch (e: IllegalArgumentException) {
+                throw UsersService.BatchOperationException.InvalidUserData(user.id, e)
+            }
+
+            PreparedUserInsert(
+                request = req,
+                passwordHash = passwordHash
+            )
+        }
+
+        Users.batchInsert(prepared) { item ->
+            val user = item.request.user
+
+            this[Users.id] = user.id
+            this[Users.avatarUrl] = user.avatarUrl
+            this[Users.firstName] = user.firstName
+            this[Users.middleName] = user.middleName
+            this[Users.lastName] = user.lastName
+            this[Users.passwordHash] = item.passwordHash
+        }
+
+        return prepared
     }
 
     @Transactional
@@ -140,6 +253,28 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             val lastKnownType = userTypeCache.remove(id)
             logger.info("Deleted user (type: ${lastKnownType ?: "<not cached>"}): $id")
         }
+    }
+
+    @Transactional
+    override suspend fun deleteUsers(id: List<Int>) {
+        if (id.isEmpty()) return
+
+        suspendTransaction {
+            val notFoundIds = Users
+                .select(Users.id)
+                .where { not(Users.id inList id) }
+                .map { it[Users.id].value }
+                .toList()
+
+            if (notFoundIds.isNotEmpty()) {
+                throw UsersService.BatchOperationException.NotFoundEntities(notFoundIds)
+            }
+
+            Users.deleteWhere { Users.id inList id }
+        }
+
+        id.forEach { userTypeCache.remove(it) }
+        logger.info("Deleted users: ${id.joinToString(", ")}")
     }
 
     @Transactional

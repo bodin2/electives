@@ -603,6 +603,183 @@ class UsersServiceImplTest : ApplicationTest() {
         val token = usersService.createSession(Students.JOHN_ID, longPassword, TestData.CLIENT_NAME)
         assertNotNull(token)
     }
+
+    @Test
+    fun `create students batch`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(3001, "Alice", null, "Smith", password = "testpass"),
+                teams = listOf(TestConstants.Teams.TEAM_1_ID)
+            ),
+            UsersService.StudentInsert(
+                UsersService.UserData(3002, "Bob", null, "Jones", password = "testpass"),
+                teams = emptyList()
+            ),
+        )
+
+        val students = transaction { usersService.createStudents(inserts) }
+
+        assertEquals(2, students.size)
+        assertTrue(students.any { it.id.value == 3001 })
+        assertTrue(students.any { it.id.value == 3002 })
+
+        transaction {
+            val alice = usersService.getStudentById(3001)
+            assertNotNull(alice)
+            assertEquals(TestConstants.Teams.TEAM_1_ID, alice.teams.first().id.value)
+        }
+    }
+
+    @Test
+    fun `create students batch empty list`() = runTest {
+        val students = transaction { usersService.createStudents(emptyList()) }
+        assertTrue(students.isEmpty())
+    }
+
+    @Test
+    fun `create students batch with missing team throws`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(3003, "Charlie", password = "testpass"),
+                teams = listOf(UNUSED_ID)
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.MissingTeams> {
+            transaction { usersService.createStudents(inserts) }
+        }
+        assertTrue(UNUSED_ID in ex.ids)
+    }
+
+    @Test
+    fun `create students batch with duplicate id throws`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(Students.JOHN_ID, "Duplicate", password = "testpass")
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.ConflictingEntities> {
+            transaction { usersService.createStudents(inserts) }
+        }
+        assertTrue(Students.JOHN_ID in ex.ids)
+    }
+
+    @Test
+    fun `create students batch multiple duplicates reports all ids`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(Students.JOHN_ID, "Dup1", password = "testpass")
+            ),
+            UsersService.StudentInsert(
+                UsersService.UserData(Students.JANE_ID, "Dup2", password = "testpass")
+            ),
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.ConflictingEntities> {
+            transaction { usersService.createStudents(inserts) }
+        }
+        assertTrue(Students.JOHN_ID in ex.ids)
+        assertTrue(Students.JANE_ID in ex.ids)
+    }
+
+    @Test
+    fun `create students batch with short password throws`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(3004, "Short", password = "abc")
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
+            transaction { usersService.createStudents(inserts) }
+        }
+        assertEquals(3004, ex.id)
+        assertIs<IllegalArgumentException>(ex.cause)
+    }
+
+    @Test
+    fun `create students batch with long password throws`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(3005, "Long", password = "a".repeat(4097))
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
+            transaction { usersService.createStudents(inserts) }
+        }
+        assertEquals(3005, ex.id)
+        assertIs<IllegalArgumentException>(ex.cause)
+    }
+
+    @Test
+    fun `create teachers batch`() = runTest {
+        val inserts = listOf(
+            UsersService.TeacherInsert(
+                UsersService.UserData(4001, "Carol", null, "White", password = "testpass")
+            ),
+            UsersService.TeacherInsert(
+                UsersService.UserData(4002, "Dave", null, "Black", password = "testpass")
+            ),
+        )
+
+        val teachers = transaction { usersService.createTeachers(inserts) }
+
+        assertEquals(2, teachers.size)
+        assertTrue(teachers.any { it.id.value == 4001 })
+        assertTrue(teachers.any { it.id.value == 4002 })
+    }
+
+    @Test
+    fun `create teachers batch empty list`() = runTest {
+        val teachers = transaction { usersService.createTeachers(emptyList()) }
+        assertTrue(teachers.isEmpty())
+    }
+
+    @Test
+    fun `create teachers batch with duplicate id throws`() = runTest {
+        val inserts = listOf(
+            UsersService.TeacherInsert(
+                UsersService.UserData(Teachers.BOB_ID, "Duplicate", password = "testpass")
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.ConflictingEntities> {
+            transaction { usersService.createTeachers(inserts) }
+        }
+        assertTrue(Teachers.BOB_ID in ex.ids)
+    }
+
+    @Test
+    fun `create teachers batch with short password throws`() = runTest {
+        val inserts = listOf(
+            UsersService.TeacherInsert(
+                UsersService.UserData(4003, "Short", password = "abc")
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
+            transaction { usersService.createTeachers(inserts) }
+        }
+        assertEquals(4003, ex.id)
+        assertIs<IllegalArgumentException>(ex.cause)
+    }
+
+    @Test
+    fun `create teachers batch with long password throws`() = runTest {
+        val inserts = listOf(
+            UsersService.TeacherInsert(
+                UsersService.UserData(4004, "Long", password = "a".repeat(4097))
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
+            transaction { usersService.createTeachers(inserts) }
+        }
+        assertEquals(4004, ex.id)
+        assertIs<IllegalArgumentException>(ex.cause)
+    }
 }
 
 

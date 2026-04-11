@@ -26,6 +26,9 @@ class TestUsersService : UsersService {
         teams: List<Int>?,
     ) = error("Not testable")
 
+    @Transactional
+    override fun createStudents(inserts: List<UsersService.StudentInsert>) = error("Not testable")
+
     override fun createTeacher(
         id: Int,
         firstName: String,
@@ -36,7 +39,13 @@ class TestUsersService : UsersService {
     ) = error("Not testable")
 
     @Transactional
+    override fun createTeachers(inserts: List<UsersService.TeacherInsert>) = error("Not testable")
+
+    @Transactional
     override fun deleteUser(id: Int) = error("Not testable")
+
+    @Transactional
+    override suspend fun deleteUsers(id: List<Int>) = error("Not testable")
 
     @Transactional
     override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = error("Not testable")

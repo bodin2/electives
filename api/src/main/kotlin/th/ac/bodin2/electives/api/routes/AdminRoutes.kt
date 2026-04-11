@@ -26,18 +26,19 @@ import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN_AUTH
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
+import th.ac.bodin2.electives.api.services.NotificationsService
+import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.api.utils.unauthorized
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.toProto
+import th.ac.bodin2.electives.proto.api.*
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.challengeResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listTeamsResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
-import th.ac.bodin2.electives.proto.api.AuthService
 import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
-import th.ac.bodin2.electives.proto.api.UserType
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -156,11 +157,15 @@ class AdminUsersController(
             patch<Admin.Users.Id> { params -> handlePatchUser(params.id) }
 
             delete<Admin.Users.Id> { params -> handleDeleteUser(params.id) }
+
+            post<Admin.Users.Bulk> { handleBulkAddUsers() }
+
+            delete<Admin.Users.Bulk> { handleBulkDeleteUsers() }
         }
     }
 
     private suspend fun RoutingContext.handlePutUser(id: Int) {
-        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.AddUserRequest>()
+        val req = call.parseOrNull<AdminService.AddUserRequest>()
             ?: return badRequest()
         val user = req.user
         if (user.id != id) return badRequest("ID in URL does not match body")
@@ -195,7 +200,7 @@ class AdminUsersController(
                 is Student -> call.respond(userOrNull.toProto())
                 is Teacher -> call.respond(userOrNull.toProto())
 
-                else -> badRequest()
+                else -> badRequest("Unsupported user type")
             }
         } catch (_: IllegalArgumentException) {
             badRequest("Password does not meet the requirements")
@@ -209,7 +214,7 @@ class AdminUsersController(
     }
 
     private suspend fun RoutingContext.handlePatchUser(id: Int) {
-        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.UserPatch>()
+        val req = call.parseOrNull<AdminService.UserPatch>()
             ?: return badRequest()
 
         try {
@@ -275,6 +280,94 @@ class AdminUsersController(
             badRequest(e.message ?: "SQL exception occurred")
         }
     }
+
+    private fun AdminService.AddUserRequest.toUserInsert(): UsersService.UserData {
+        return UsersService.UserData(
+            id = user.id,
+            firstName = user.firstName,
+            middleName = if (user.hasMiddleName()) user.middleName else null,
+            lastName = user.lastName,
+            avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,
+            password = password,
+        )
+    }
+
+    private val supportedBulkAddTypes = setOf(UserType.STUDENT, UserType.TEACHER)
+
+    // @TODO: Create user with one single method call: createUsers()
+    private suspend fun RoutingContext.handleBulkAddUsers() {
+        val req = call.parseOrNull<AdminService.BulkAddUsersRequest>()
+            ?: return badRequest()
+
+        val inserts = req.valuesList.groupBy { it.user.type }
+
+        if (!inserts.keys.minus(supportedBulkAddTypes).any { key ->
+                (inserts[key]?.let { !it.isEmpty() }) ?: false
+            }) {
+            return badRequest("Unsupported user types")
+        }
+
+        val teacherInserts = inserts[UserType.TEACHER]?.map {
+            UsersService.TeacherInsert(
+                user = it.toUserInsert(),
+            )
+        }
+
+        val studentInserts = inserts[UserType.STUDENT]?.map {
+            UsersService.StudentInsert(
+                user = it.toUserInsert(),
+                teams = it.teamIdsList,
+            )
+        }
+
+        try {
+            // Dedupe transactions
+            @OptIn(Transactional::class)
+            val created = transaction {
+                buildList {
+                    if (!teacherInserts.isNullOrEmpty()) {
+                        usersService.createTeachers(teacherInserts).forEach { add(it.toProto()) }
+                    }
+
+                    if (!studentInserts.isNullOrEmpty()) {
+                        usersService.createStudents(studentInserts).forEach { add(it.toProto()) }
+                    }
+                }
+            }
+
+            call.respond(
+                listUsersResponse {
+                    users += created
+                    total = created.size
+                }
+            )
+        } catch (e: UsersService.BatchOperationException) {
+            when (e) {
+                is UsersService.BatchOperationException.InvalidUserData -> when (e.cause) {
+                    is IllegalArgumentException -> badRequest("Password for user ${e.id} does not meet requirements")
+                }
+
+                is UsersService.BatchOperationException.MissingTeams -> badRequest("One or more specified teams not found")
+
+                is UsersService.BatchOperationException.ConflictingEntities -> conflict("One or more users with the same ID already exists")
+
+                else -> throw e
+            }
+        }
+    }
+
+    private suspend fun RoutingContext.handleBulkDeleteUsers() {
+        val req = call.parseOrNull<AdminService.BulkDeleteUsersRequest>()
+            ?: return badRequest()
+
+        try {
+            @OptIn(Transactional::class)
+            usersService.deleteUsers(req.userIdsList)
+            ok()
+        } catch (e: UsersService.BatchOperationException.NotFoundEntities) {
+            return badRequest("Users not found: ${e.ids.joinToString(", ")}")
+        }
+    }
 }
 
 class AdminUsersSelectionsController(
@@ -293,7 +386,7 @@ class AdminUsersSelectionsController(
     }
 
     private suspend fun RoutingContext.handlePutStudentSelections(id: Int) {
-        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.SetStudentSelectionsRequest>()
+        val req = call.parseOrNull<AdminService.SetStudentSelectionsRequest>()
             ?: return badRequest()
 
         try {
@@ -335,7 +428,7 @@ class AdminElectivesController(
     }
 
     private suspend fun RoutingContext.handlePutElective(id: Int) {
-        val elective = call.parseOrNull<th.ac.bodin2.electives.proto.api.Elective>()
+        val elective = call.parseOrNull<Elective>()
             ?: return badRequest()
 
         if (elective.id != id) return badRequest("ID in URL does not match body")
@@ -373,7 +466,7 @@ class AdminElectivesController(
     }
 
     private suspend fun RoutingContext.handlePatchElective(id: Int) {
-        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.ElectivePatch>()
+        val req = call.parseOrNull<AdminService.ElectivePatch>()
             ?: return badRequest()
 
         val update = ElectiveService.ElectiveUpdate(
@@ -415,7 +508,7 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
     }
 
     private suspend fun RoutingContext.handlePutElectiveSubjects(electiveId: Int) {
-        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.SetElectiveSubjectsRequest>()
+        val req = call.parseOrNull<AdminService.SetElectiveSubjectsRequest>()
             ?: return badRequest()
 
         try {
@@ -465,7 +558,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
     }
 
     private suspend fun RoutingContext.handlePutSubject(id: Int) {
-        val subject = call.parseOrNull<th.ac.bodin2.electives.proto.api.Subject>()
+        val subject = call.parseOrNull<Subject>()
             ?: return badRequest()
 
         if (subject.id != id) return badRequest("ID in URL does not match body")
@@ -514,7 +607,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
     }
 
     private suspend fun RoutingContext.handlePatchSubject(id: Int) {
-        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.SubjectPatch>()
+        val req = call.parseOrNull<AdminService.SubjectPatch>()
             ?: return badRequest()
 
         val update = SubjectService.SubjectUpdate(
@@ -585,7 +678,7 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
     }
 
     private suspend fun RoutingContext.handlePutTeam(id: Int) {
-        val team = call.parseOrNull<th.ac.bodin2.electives.proto.api.Team>()
+        val team = call.parseOrNull<Team>()
             ?: return badRequest()
 
         if (team.id != id) return badRequest("ID in URL does not match body")
@@ -614,7 +707,7 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
     }
 
     private suspend fun RoutingContext.handlePatchTeam(id: Int) {
-        val req = call.parseOrNull<th.ac.bodin2.electives.proto.api.AdminService.TeamPatch>()
+        val req = call.parseOrNull<AdminService.TeamPatch>()
             ?: return badRequest()
 
         val update = TeamService.TeamUpdate(
@@ -659,6 +752,11 @@ private class Admin {
 
     @Resource("users")
     class Users(val parent: Admin) {
+        // @TODO: Add route tests
+        // POST: BulkAddUsersRequest, DELETE: BulkDeleteUsersRequest
+        @Resource("bulk")
+        class Bulk(val parent: Users)
+
         // GET: ListUsersResponse
         @Resource("students")
         class Students(val parent: Users, val page: Int = 1)
