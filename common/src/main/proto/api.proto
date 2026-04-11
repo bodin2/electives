@@ -37,6 +37,14 @@ message AdminService {
     repeated uint32 team_ids = 3;
   }
 
+  message BulkAddUsersRequest {
+    repeated AddUserRequest values = 1;
+  }
+
+  message BulkDeleteUsersRequest {
+    repeated uint32 user_ids = 1;
+  }
+
   message SetElectiveSubjectsRequest {
     repeated uint32 subject_ids = 1;
   }
@@ -256,6 +264,7 @@ message User {
 enum UserType {
   STUDENT = 0;
   TEACHER = 1;
+  ADMIN = 2;
 }
 
 enum SubjectTag {

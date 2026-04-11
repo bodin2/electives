@@ -53,7 +53,7 @@ class Argon2Test {
 
     @Test
     fun `finding iterations works`() {
-        val iterations = Argon2.findIterations(maxTime = 50.milliseconds)
+        val iterations = Argon2.findIterations(maxTime = 250.milliseconds, memory = 16.MiB)
         assertTrue(iterations > 0)
     }
 
