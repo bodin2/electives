@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.services.mock
 
+import kotlinx.coroutines.flow.SharedFlow
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.MockUtils.mockStudent
@@ -15,6 +16,9 @@ import th.ac.bodin2.electives.proto.api.UserType
 
 class TestUsersService : UsersService {
     private val hasSessions = mutableSetOf<Int>()
+
+    override val sessionCreationFlow: SharedFlow<Int>
+        get() = error("Not testable")
 
     override fun createStudent(
         id: Int,

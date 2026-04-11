@@ -735,6 +735,22 @@ class NotificationsServiceImplTest : ApplicationTest() {
     }
 
     @Test
+    fun `websocket disconnects when new user session is created (re-login)`() = runTest {
+        webSocket {
+            // Create a new session for the same user, which should invalidate the current session
+            usersService.createSession(
+                Students.JOHN_ID,
+                Students.JOHN_PASSWORD,
+                CLIENT_NAME
+            )
+
+            assertFailsWith<ClosedReceiveChannelException>("Expected connection to be closed by server") {
+                incoming.receive()
+            }
+        }
+    }
+
+    @Test
     fun `admin websocket connection fails with invalid token`() = runTest {
         assertFailsWith<CancellationException> {
             try {

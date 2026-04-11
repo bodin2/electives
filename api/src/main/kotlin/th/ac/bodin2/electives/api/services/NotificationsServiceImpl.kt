@@ -85,6 +85,7 @@ class NotificationsServiceImpl(
      */
     internal val bulkUpdateFlows = MutableStateFlow<Map<Int, MutableStateFlow<Envelope?>>>(emptyMap())
 
+    private val globalScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val bulkUpdateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val updateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -92,6 +93,13 @@ class NotificationsServiceImpl(
 
     private val subjectSelectionSubscriptions =
         ConcurrentHashMap<Int, ConcurrentHashMap<Int, CopyOnWriteArrayList<SubjectSelectionUpdateListener>>>()
+
+    init {
+        globalScope.launch {
+            // Disconnect when user creates a new session (re-login)
+            usersService.sessionCreationFlow.collect { id -> connections[id]?.close() }
+        }
+    }
 
     internal fun isBulkUpdatesEnabled() = config.bulkUpdatesEnabled
 

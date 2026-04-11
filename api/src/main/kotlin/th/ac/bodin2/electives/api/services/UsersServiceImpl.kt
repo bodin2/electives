@@ -3,6 +3,9 @@ package th.ac.bodin2.electives.api.services
 import com.mayakapps.kache.InMemoryKache
 import com.mayakapps.kache.KacheStrategy
 import io.ktor.server.plugins.di.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -50,6 +53,9 @@ fun DependencyRegistry.provideUsersService() = provide<UsersService> {
 
 class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     class Config(val sessionDurationSeconds: Long, val minimumSessionCreationTime: Duration)
+
+    private val _sessionCreationFlow = MutableSharedFlow<Int>()
+    override val sessionCreationFlow: SharedFlow<Int> = _sessionCreationFlow.asSharedFlow()
 
     companion object {
         private const val PAGE_SIZE = 50
@@ -389,7 +395,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
                 require(length <= 256) { "Audience string too long for user: $id (aud = ${slice(0..32)}...)" }
             }
 
-            transaction {
+            suspendTransaction {
                 val user = Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull()
                     ?: throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
 
@@ -401,6 +407,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
                 val token = insecurelyCreateSessionWithoutValidation(id)
 
+                _sessionCreationFlow.emit(id)
                 logger.debug("New session created, user: $id, aud: $aud")
 
                 token

@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
+import kotlinx.coroutines.flow.SharedFlow
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
@@ -9,6 +10,8 @@ import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.UserType
 
 interface UsersService {
+    val sessionCreationFlow: SharedFlow<Int>
+
     /**
      * Gets the [UserType] of the given user ID.
      *
@@ -114,7 +117,9 @@ interface UsersService {
         constructor(msg: String) : this(msg, null)
 
         class NotFoundEntities(val ids: List<Int>) : BatchOperationException("Entity with the given IDs does not exist")
-        class ConflictingEntities(val ids: List<Int>) : BatchOperationException("Entity with the same IDs already exists")
+        class ConflictingEntities(val ids: List<Int>) :
+            BatchOperationException("Entity with the same IDs already exists")
+
         class MissingTeams(val ids: List<Int>) : BatchOperationException("Teams are missing")
         class InvalidUserData(val id: Int, cause: Throwable) : BatchOperationException("Invalid user data", cause)
     }

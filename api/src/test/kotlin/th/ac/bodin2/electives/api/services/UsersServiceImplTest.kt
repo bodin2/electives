@@ -2,7 +2,11 @@ package th.ac.bodin2.electives.api.services
 
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
@@ -779,6 +783,27 @@ class UsersServiceImplTest : ApplicationTest() {
         }
         assertEquals(4004, ex.id)
         assertIs<IllegalArgumentException>(ex.cause)
+    }
+
+    @Test
+    fun `session creation flow triggers on session create`() = runTest {
+        coroutineScope {
+            val collectJob = launch {
+                usersService.sessionCreationFlow.first()
+            }
+
+            yield() // let the collector start before we emit
+
+            suspendTransaction {
+                usersService.createSession(
+                    Students.JOHN_ID,
+                    Students.JOHN_PASSWORD,
+                    TestData.CLIENT_NAME
+                )
+            }
+
+            collectJob.join()
+        }
     }
 }
 
