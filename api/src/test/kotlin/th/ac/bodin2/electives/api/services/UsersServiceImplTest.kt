@@ -35,14 +35,14 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `get student user type`() = runTest {
-        val userType = suspendTransaction { usersService.getUserType(Students.JOHN_ID) }
+        val userType = transaction { usersService.getUserType(Students.JOHN_ID) }
         assertEquals(UserType.STUDENT, userType)
 
     }
 
     @Test
     fun `get teacher user type`() = runTest {
-        val userType = suspendTransaction { usersService.getUserType(Teachers.BOB_ID) }
+        val userType = transaction { usersService.getUserType(Teachers.BOB_ID) }
         assertEquals(UserType.TEACHER, userType)
 
     }
@@ -50,7 +50,7 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `get non existent user type`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            suspendTransaction { usersService.getUserType(UNUSED_ID) }
+            transaction { usersService.getUserType(UNUSED_ID) }
         }
     }
 
@@ -124,16 +124,33 @@ class UsersServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `create user session`() = runTest {
+    fun `create student session`() = runTest {
         val token = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
 
         assertNotNull(token)
         assertTrue(token.isNotBlank())
 
-        val userId = transaction {
-            usersService.getSessionUserId(token)
+        val user = transaction {
+            usersService.getSessionUser(token)
         }
-        assertEquals(Students.JOHN_ID, userId)
+
+        assertEquals(Students.JOHN_ID, user.id)
+        assertEquals(UserType.STUDENT, user.type)
+    }
+
+    @Test
+    fun `create teacher session`() = runTest {
+        val token = usersService.createSession(Teachers.BOB_ID, Teachers.BOB_PASSWORD, TestData.CLIENT_NAME)
+
+        assertNotNull(token)
+        assertTrue(token.isNotBlank())
+
+        val user = transaction {
+            usersService.getSessionUser(token)
+        }
+
+        assertEquals(Teachers.BOB_ID, user.id)
+        assertEquals(UserType.TEACHER, user.type)
     }
 
     @Test
@@ -154,7 +171,7 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `get session with invalid token`() = runTest {
         assertFailsWith<Exception> {
             transaction {
-                usersService.getSessionUserId("")
+                usersService.getSessionUser("")
             }
         }
     }
@@ -169,7 +186,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
         assertFailsWith<IllegalArgumentException> {
             transaction {
-                usersService.getSessionUserId(token)
+                usersService.getSessionUser(token)
             }
         }
     }
@@ -261,14 +278,14 @@ class UsersServiceImplTest : ApplicationTest() {
 
         assertFailsWith<IllegalArgumentException> {
             transaction {
-                usersService.getSessionUserId(token1)
+                usersService.getSessionUser(token1)
             }
         }
 
-        val userId = transaction {
-            usersService.getSessionUserId(token2)
+        val user = transaction {
+            usersService.getSessionUser(token2)
         }
-        assertEquals(Students.JOHN_ID, userId)
+        assertEquals(Students.JOHN_ID, user.id)
     }
 
     @Test
@@ -295,7 +312,7 @@ class UsersServiceImplTest : ApplicationTest() {
         delay(1001.milliseconds)
 
         assertFailsWith<IllegalArgumentException> {
-            transaction { usersService.getSessionUserId(token) }
+            transaction { usersService.getSessionUser(token) }
         }
     }
 

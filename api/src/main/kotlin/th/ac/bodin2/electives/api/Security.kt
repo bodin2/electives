@@ -27,7 +27,6 @@ fun DependencyRegistry.provideArgon2() {
 const val USER_AUTHENTICATION = "user"
 const val ADMIN_AUTHENTICATION = "admin"
 
-class UserPrincipal(val userId: Int)
 class AdminPrincipal
 
 fun Application.configureSecurity() {
@@ -56,9 +55,9 @@ fun AdminAuthService.toPrincipal(token: String, call: ApplicationCall): AdminPri
     }
 }
 
-fun UsersService.toPrincipal(token: String, call: ApplicationCall): UserPrincipal? =
+fun UsersService.toPrincipal(token: String, call: ApplicationCall): UsersService.SessionUser? =
     try {
-        UserPrincipal(transaction { getSessionUserId(token) })
+        transaction { getSessionUser(token) }
     } catch (e: Exception) {
         logger.debug("Cannot authenticate user (address: ${call.request.origin.remoteAddress}, hash: ${token.toHash()}): ${e.message}")
         null

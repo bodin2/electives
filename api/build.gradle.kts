@@ -33,7 +33,6 @@ dependencies {
     implementation(libs.ktor.server.rate.limit)
     implementation(libs.ktor.server.call.logging)
     implementation(libs.logback.classic)
-    implementation(libs.kache)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)

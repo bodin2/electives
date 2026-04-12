@@ -1,5 +1,10 @@
 package th.ac.bodin2.electives.api
 
+import io.mockk.every
+import io.mockk.mockk
+import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.proto.api.UserType
+
 object TestConstants {
     object Students {
         const val JOHN_ID = 1001
@@ -68,5 +73,26 @@ object TestConstants {
     object Limits {
         const val PASSWORD_TOO_LONG = 4097
         const val CLIENT_NAME_TOO_LONG = 257
+    }
+}
+
+object SessionUserMocks {
+    val johnSessionUser: UsersService.SessionUser = mockk()
+    val janeSessionUser: UsersService.SessionUser = mockk()
+    val bobSessionUser: UsersService.SessionUser = mockk()
+    val aliceSessionUser: UsersService.SessionUser = mockk()
+
+    init {
+        every { johnSessionUser.id } returns TestConstants.Students.JOHN_ID
+        every { johnSessionUser.type } returns UserType.STUDENT
+
+        every { janeSessionUser.id } returns TestConstants.Students.JANE_ID
+        every { janeSessionUser.type } returns UserType.STUDENT
+
+        every { bobSessionUser.id } returns TestConstants.Teachers.BOB_ID
+        every { bobSessionUser.type } returns UserType.TEACHER
+
+        every { aliceSessionUser.id } returns TestConstants.Teachers.ALICE_ID
+        every { aliceSessionUser.type } returns UserType.TEACHER
     }
 }

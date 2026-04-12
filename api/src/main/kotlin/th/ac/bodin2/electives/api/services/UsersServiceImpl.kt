@@ -1,12 +1,9 @@
 package th.ac.bodin2.electives.api.services
 
-import com.mayakapps.kache.InMemoryKache
-import com.mayakapps.kache.KacheStrategy
 import io.ktor.server.plugins.di.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.not
@@ -36,7 +33,6 @@ import java.util.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 fun DependencyRegistry.provideUsersService() = provide<UsersService> {
@@ -72,41 +68,21 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         )
     }
 
-    // 4 MB cache for user types
-    private val userTypeCache = InMemoryKache<Int, UserType>(maxSize = 4 * 1024 * 1024) {
-        strategy = KacheStrategy.LRU
-        expireAfterWriteDuration = 10.minutes
-    }
-
-    /**
-     * Gets the [UserType] of the given user ID.
-     *
-     * **Do not assume the user's existence after calling this method successfully.**
-     * Values are LRU-cached with TTL after each database read, see [userTypeCache].
-     *
-     * @throws EntityNotFoundException if the user does not exist.
-     * @throws IllegalStateException if the user is neither a Student nor a Teacher.
-     */
-    override suspend fun getUserType(id: Int): UserType {
-        userTypeCache.get(id)?.let { return@getUserType it }
-
+    override fun getUserType(id: Int): UserType {
         val query = Users
             .leftJoin(Students)
             .leftJoin(Teachers)
             .select(Users.id, Students.id, Teachers.id)
             .where { Users.id eq id }
-            .map {
-                when {
-                    it.getOrNull(Students.id) != null -> UserType.STUDENT
-                    it.getOrNull(Teachers.id) != null -> UserType.TEACHER
-                    else -> throw IllegalStateException("User is not a Student or a Teacher: $id")
-                }
-            }.firstOrNull()
+            .firstOrNull()
 
         query ?: throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
 
-        userTypeCache.put(id, query)
-        return query
+        return when {
+            query.getOrNull(Students.id) != null -> UserType.STUDENT
+            query.getOrNull(Teachers.id) != null -> UserType.TEACHER
+            else -> throw IllegalStateException("User is not a Student or a Teacher: $id")
+        }
     }
 
     override fun createStudent(
@@ -255,10 +231,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
         }
 
-        runBlocking {
-            val lastKnownType = userTypeCache.remove(id)
-            logger.info("Deleted user (type: ${lastKnownType ?: "<not cached>"}): $id")
-        }
+        logger.info("Deleted user: $id")
     }
 
     @Transactional
@@ -279,7 +252,6 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             Users.deleteWhere { Users.id inList id }
         }
 
-        id.forEach { userTypeCache.remove(it) }
         logger.info("Deleted users: ${id.joinToString(", ")}")
     }
 
@@ -428,7 +400,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         return "$id.$session"
     }
 
-    override fun getSessionUserId(token: String): Int {
+    override fun getSessionUser(token: String): UsersService.SessionUser {
         val (subject, session) = token.split(".", limit = 2).takeIf { it.size == 2 }
             ?: throw IllegalArgumentException("Invalid session token format")
 
@@ -451,9 +423,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
         logger.debug("Validated session token, user: $userId")
 
-        return userId
+        return UsersService.SessionUser(userId, getUserType(userId))
     }
-
 
     override fun clearSession(userId: Int) {
         Users.update({ Users.id eq userId }) {

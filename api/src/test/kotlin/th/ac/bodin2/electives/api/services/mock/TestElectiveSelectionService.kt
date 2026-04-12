@@ -6,6 +6,7 @@ import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.ModifySelectionResult
+import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
@@ -21,7 +22,7 @@ class TestElectiveSelectionService : ElectiveSelectionService {
 
     @Transactional
     override suspend fun setStudentSelection(
-        executorId: Int,
+        executor: UsersService.SessionUser,
         studentId: Int,
         electiveId: Int,
         subjectId: Int,
@@ -29,7 +30,7 @@ class TestElectiveSelectionService : ElectiveSelectionService {
 
     @Transactional
     override suspend fun deleteStudentSelection(
-        executorId: Int,
+        executor: UsersService.SessionUser,
         studentId: Int,
         electiveId: Int,
     ) = testElectiveSelectionServiceResponse

@@ -23,22 +23,22 @@ interface ElectiveSelectionService {
     /**
      * Sets the subject selection for a student in a given elective.
      *
-     * @param executorId The ID of the user performing the operation.
+     * @param executor The user performing the operation.
      *
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student, elective, or subject does not exist.
      */
     @Transactional
-    suspend fun setStudentSelection(executorId: Int, studentId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult
+    suspend fun setStudentSelection(executor: UsersService.SessionUser, studentId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult
 
     /**
      * Deletes the subject selection for a student in a given elective.
      *
-     * @param executorId The ID of the user performing the operation.
+     * @param executor The user performing the operation.
      *
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student or elective does not exist.
      */
     @Transactional
-    suspend fun deleteStudentSelection(executorId: Int, studentId: Int, electiveId: Int): ModifySelectionResult
+    suspend fun deleteStudentSelection(executor: UsersService.SessionUser, studentId: Int, electiveId: Int): ModifySelectionResult
 
     /**
      * Gets all subject selections for a student.

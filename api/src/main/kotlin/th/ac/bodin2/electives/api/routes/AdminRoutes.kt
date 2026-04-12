@@ -14,7 +14,6 @@ import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
-import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
@@ -218,7 +217,7 @@ class AdminUsersController(
             ?: return badRequest()
 
         try {
-            suspendTransaction {
+            transaction {
                 val type = usersService.getUserType(id)
 
                 val update = UsersService.UserUpdate(

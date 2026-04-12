@@ -6,9 +6,13 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.ApplicationTest
+import th.ac.bodin2.electives.api.SessionUserMocks.aliceSessionUser
+import th.ac.bodin2.electives.api.SessionUserMocks.bobSessionUser
+import th.ac.bodin2.electives.api.SessionUserMocks.janeSessionUser
+import th.ac.bodin2.electives.api.SessionUserMocks.johnSessionUser
 import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
@@ -30,7 +34,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `put student elective selection`() = runTest {
         electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.PHYSICS_ID
@@ -59,7 +63,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.OTHER_ID
@@ -72,7 +76,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `put student elective selection as teacher`() = runTest {
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Teachers.BOB_ID,
+            bobSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.PHYSICS_ID
@@ -84,7 +88,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `put student elective selection as teacher not teaching subject`() = runTest {
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Teachers.ALICE_ID,
+            aliceSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.PHYSICS_ID
@@ -97,7 +101,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `delete student elective selection`() = runTest {
         electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.PHYSICS_ID
@@ -106,7 +110,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result = electiveSelectionService.deleteStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID
         )
@@ -120,7 +124,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `delete non existent selection`() = runTest {
         val result = electiveSelectionService.deleteStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID
         )
@@ -135,7 +139,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `put student elective selection with invalid elective id`() = runTest {
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             UNUSED_ID,
             TestConstants.Subjects.PHYSICS_ID
@@ -148,7 +152,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `put student elective selection with invalid subject id`() = runTest {
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             UNUSED_ID,
@@ -161,7 +165,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `put student elective selection as other student`() = runTest {
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JANE_ID,
+            janeSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.PHYSICS_ID
@@ -174,7 +178,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `delete student elective selection as other student`() = runTest {
         electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.PHYSICS_ID
@@ -183,7 +187,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result = electiveSelectionService.deleteStudentSelection(
-            TestConstants.Students.JANE_ID,
+            janeSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID
         )
@@ -195,7 +199,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `delete student elective selection as teacher`() = runTest {
         electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.PHYSICS_ID
@@ -204,7 +208,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result = electiveSelectionService.deleteStudentSelection(
-            TestConstants.Teachers.BOB_ID,
+            bobSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID
         )
@@ -218,7 +222,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `put student elective selection update existing`() = runTest {
         electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.PHYSICS_ID
@@ -227,7 +231,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.CHEMISTRY_ID
@@ -240,7 +244,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     @Test
     fun `delete selection with invalid elective id`() = runTest {
         val result = electiveSelectionService.deleteStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             UNUSED_ID,
         )
@@ -269,7 +273,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.OTHER_ID,
@@ -300,7 +304,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
 
         // JANE is in TEAM_2, SCIENCE elective requires TEAM_1
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JANE_ID,
+            janeSessionUser,
             TestConstants.Students.JANE_ID,
             TestConstants.Electives.SCIENCE_ID,
             TestConstants.Subjects.OTHER_ID,
@@ -327,7 +331,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result1 = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.OUT_OF_DATE_ID,
             TestConstants.Subjects.PHYSICS_ID,
@@ -341,7 +345,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result2 = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.OUT_OF_DATE_ID,
             TestConstants.Subjects.PHYSICS_ID,
@@ -360,7 +364,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result3 = electiveSelectionService.setStudentSelection(
-            TestConstants.Students.JOHN_ID,
+            johnSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.OUT_OF_DATE_ID,
             TestConstants.Subjects.PHYSICS_ID,
@@ -388,7 +392,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         }
 
         val result = electiveSelectionService.setStudentSelection(
-            TestConstants.Teachers.BOB_ID,
+            bobSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.OUT_OF_DATE_ID,
             TestConstants.Subjects.PHYSICS_ID,

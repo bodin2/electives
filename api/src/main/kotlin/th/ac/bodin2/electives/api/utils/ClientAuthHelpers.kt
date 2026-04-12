@@ -2,12 +2,9 @@ package th.ac.bodin2.electives.api.utils
 
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.plugins.di.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import th.ac.bodin2.electives.api.AdminPrincipal
 import th.ac.bodin2.electives.api.USER_AUTHENTICATION
-import th.ac.bodin2.electives.api.UserPrincipal
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.UserType
 
@@ -23,13 +20,12 @@ val ALL_USER_TYPES = UserType.entries.toList()
  */
 suspend fun RoutingContext.authenticated(
     types: List<UserType> = ALL_USER_TYPES,
-    block: suspend RoutingContext.(userId: Int) -> Unit
+    block: suspend RoutingContext.(user: UsersService.SessionUser) -> Unit
 ) {
-    val userId = call.userId() ?: return unauthorized()
-    val usersService: UsersService by call.application.dependencies
-    if (usersService.missingType(userId, types)) return unauthorized()
+    val user = call.user ?: return unauthorized()
+    if (user.type !in types) return unauthorized()
 
-    block(userId)
+    block(user)
 }
 
 /**
@@ -41,18 +37,12 @@ suspend fun RoutingContext.authenticated(
  */
 suspend fun RoutingContext.authenticated(
     getTypes: (userId: Int) -> List<UserType>,
-    block: suspend RoutingContext.(userId: Int) -> Unit
+    block: suspend RoutingContext.(user: UsersService.SessionUser) -> Unit
 ) {
-    val userId = call.userId() ?: return unauthorized()
-    val usersService: UsersService by call.application.dependencies
-    if (usersService.missingType(userId, getTypes(userId))) return unauthorized()
+    val user = call.user ?: return unauthorized()
+    if (user.type !in getTypes(user.id)) return unauthorized()
 
-    block(userId)
-}
-
-@Suppress("NOTHING_TO_INLINE")
-private suspend inline fun UsersService.missingType(userId: Int, types: List<UserType>): Boolean {
-    return suspendTransaction { getUserType(userId) } !in types
+    block(user)
 }
 
 // NOTE TO SELF: DO NOT CHANGE TO Routing.() -> Unit
@@ -63,8 +53,10 @@ fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
     }
 }
 
+val ApplicationCall.user get() = principal<UsersService.SessionUser>()
+
 fun ApplicationCall.userId(): Int? {
-    return principal<UserPrincipal>()?.userId
+    return principal<UsersService.SessionUser>()?.id
 }
 
 fun ApplicationCall.isAdmin(): Boolean = principal<AdminPrincipal>() != null

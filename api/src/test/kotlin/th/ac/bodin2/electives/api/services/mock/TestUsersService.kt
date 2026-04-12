@@ -60,7 +60,7 @@ class TestUsersService : UsersService {
     @Transactional
     override fun setPassword(id: Int, newPassword: String) = error("Not testable")
 
-    override suspend fun getUserType(id: Int) = when (id) {
+    override fun getUserType(id: Int) = when (id) {
         TEACHER_ID -> UserType.TEACHER
         STUDENT_ID -> UserType.STUDENT
         else -> throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
@@ -81,12 +81,15 @@ class TestUsersService : UsersService {
         return id.toString()
     }
 
-    override fun getSessionUserId(token: String): Int {
+    override fun getSessionUser(token: String): UsersService.SessionUser {
         if (!hasSessions.contains(token.toInt())) {
             throw IllegalArgumentException("No session for user ID: $token")
         }
 
-        return token.toInt()
+        return UsersService.SessionUser(
+            id = token.toInt(),
+            type = getUserType(token.toInt())
+        )
     }
 
     override fun clearSession(userId: Int) {

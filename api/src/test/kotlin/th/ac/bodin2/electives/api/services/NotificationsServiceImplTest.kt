@@ -11,6 +11,8 @@ import kotlinx.coroutines.withTimeout
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.ApplicationTest
+import th.ac.bodin2.electives.api.SessionUserMocks.janeSessionUser
+import th.ac.bodin2.electives.api.SessionUserMocks.johnSessionUser
 import th.ac.bodin2.electives.api.TestConstants.Electives
 import th.ac.bodin2.electives.api.TestConstants.Students
 import th.ac.bodin2.electives.api.TestConstants.Subjects
@@ -453,7 +455,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
 
             // Trigger a selection
             electiveSelectionService.setStudentSelection(
-                Students.JOHN_ID,
+                johnSessionUser,
                 Students.JOHN_ID,
                 Electives.SCIENCE_ID,
                 Subjects.PHYSICS_ID,
@@ -548,7 +550,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
 
             assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
                 electiveSelectionService.setStudentSelection(
-                    Students.JANE_ID,
+                    janeSessionUser,
                     Students.JANE_ID,
                     Electives.SCIENCE_ID,
                     Subjects.PHYSICS_ID
@@ -604,7 +606,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
             // Enroll John in Physics
             assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
                 electiveSelectionService.setStudentSelection(
-                    Students.JOHN_ID,
+                    johnSessionUser,
                     Students.JOHN_ID,
                     Electives.SCIENCE_ID,
                     Subjects.PHYSICS_ID
@@ -671,7 +673,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
             // Trigger update for chemistry
             assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
                 electiveSelectionService.setStudentSelection(
-                    Students.JOHN_ID,
+                    johnSessionUser,
                     Students.JOHN_ID,
                     Electives.SCIENCE_ID,
                     Subjects.CHEMISTRY_ID,

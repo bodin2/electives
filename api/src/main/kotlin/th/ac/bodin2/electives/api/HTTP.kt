@@ -6,13 +6,12 @@ import io.ktor.server.plugins.*
 import io.ktor.server.plugins.bodylimit.*
 import io.ktor.server.plugins.conditionalheaders.*
 import io.ktor.server.plugins.cors.routing.*
-import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.resources.*
-import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.api.utils.user
 import th.ac.bodin2.electives.api.utils.userId
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.KiB
@@ -77,10 +76,8 @@ fun Application.configureHTTP() {
 }
 
 private fun Application.configureRateLimits() {
-    val usersService: UsersService by dependencies
-
     install(RateLimit) {
-        val authenticated: suspend (ApplicationCall) -> Any = { it.userId() ?: Unit }
+        val authenticated: suspend (ApplicationCall) -> Any = { it.user ?: Unit }
 
         register(RATE_LIMIT_ADMIN) {
             rateLimiter(limit = 10, refillPeriod = 10.seconds)
@@ -125,12 +122,10 @@ private fun Application.configureRateLimits() {
             rateLimiter(limit = 15, refillPeriod = 1.minutes)
             requestKey(authenticated)
             requestWeight { _, key ->
-                if (key is Int)
-                    return@requestWeight when (suspendTransaction { usersService.getUserType(key) }) {
-                        // Teachers are not affected by elective selection limits
-                        UserType.TEACHER -> 0
-                        else -> 1
-                    }
+                // Teachers are not affected by elective selection limits
+                if (key is UsersService.SessionUser && key.type == UserType.TEACHER) {
+                    return@requestWeight 0
+                }
 
                 return@requestWeight 1
             }

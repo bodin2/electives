@@ -6,7 +6,6 @@ import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.routing
-import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
@@ -88,7 +87,7 @@ suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
 
 context(usersService: UsersService)
 suspend fun RoutingContext.handleGetUser(userId: Int) {
-    val userProto = suspendTransaction {
+    val userProto = transaction {
         try {
             when (val type = usersService.getUserType(userId)) {
                 UserType.STUDENT -> usersService.getStudentById(userId)?.toProto()
@@ -107,14 +106,14 @@ suspend fun RoutingContext.handleGetUser(userId: Int) {
 context(electiveSelectionService: ElectiveSelectionService)
 private suspend fun RoutingContext.handlePutStudentElectiveSelection(
     electiveId: Int,
-    userId: Int,
-    authenticatedUserId: Int
+    studentId: Int,
+    executor: UsersService.SessionUser
 ) {
     val req = call.parseOrNull<SetStudentElectiveSelectionRequest>() ?: return badRequest()
 
     @OptIn(Transactional::class)
     when (val result =
-        electiveSelectionService.setStudentSelection(authenticatedUserId, userId, electiveId, req.subjectId)) {
+        electiveSelectionService.setStudentSelection(executor, studentId, electiveId, req.subjectId)) {
         ModifySelectionResult.Success -> ok()
 
         is ModifySelectionResult.NotFound -> {
@@ -163,11 +162,11 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
 context(electiveSelectionService: ElectiveSelectionService)
 private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
     electiveId: Int,
-    userId: Int,
-    authenticatedUserId: Int
+    studentId: Int,
+    executor: UsersService.SessionUser
 ) {
     @OptIn(Transactional::class)
-    when (val result = electiveSelectionService.deleteStudentSelection(authenticatedUserId, userId, electiveId)) {
+    when (val result = electiveSelectionService.deleteStudentSelection(executor, studentId, electiveId)) {
         ModifySelectionResult.Success -> ok()
 
         is ModifySelectionResult.CannotModify -> {
@@ -200,7 +199,7 @@ private const val ME_USER_ID = "@me"
  */
 private suspend inline fun RoutingContext.resolveUserIdEnforced(
     idParam: String,
-    crossinline block: suspend (gettingUserId: Int, authenticatedUserId: Int) -> Unit
+    crossinline block: suspend (gettingUserId: Int, executor: UsersService.SessionUser) -> Unit
 ) {
     authenticated({ userId ->
         // If accessing own data, allow all user types
@@ -211,14 +210,14 @@ private suspend inline fun RoutingContext.resolveUserIdEnforced(
         }
 
         if (idParam == ME_USER_ID) ALL_USER_TYPES else TEACHER_USER_ONLY
-    }) { userId ->
+    }) { user ->
         val gettingUserId = if (idParam == ME_USER_ID) {
-            userId
+            user.id
         } else {
             idParam.toIntOrNull() ?: return@authenticated badRequest()
         }
 
-        block(gettingUserId, userId)
+        block(gettingUserId, user)
     }
 }
 

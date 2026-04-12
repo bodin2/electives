@@ -85,7 +85,7 @@ class AuthRoutesTest : ApplicationTest() {
         }.assertOK()
 
         assertFailsWith<IllegalArgumentException> {
-            transaction { usersService.getSessionUserId(token) }
+            transaction { usersService.getSessionUser(token) }
         }
     }
 

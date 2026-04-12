@@ -113,12 +113,7 @@ fun Application.provideDependencies() = dependencies {
     provide<ElectiveService> { ElectiveServiceImpl() }
     provide<SubjectService> { SubjectServiceImpl() }
     provide<TeamService> { TeamServiceImpl() }
-    provide<ElectiveSelectionService> {
-        ElectiveSelectionServiceImpl(
-            resolve<UsersService>(),
-            resolve<NotificationsService>()
-        )
-    }
+    provide<ElectiveSelectionService> { ElectiveSelectionServiceImpl(resolve<NotificationsService>()) }
 
     if (isAdminEnabled) {
         provideAdminAuthService()

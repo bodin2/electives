@@ -18,7 +18,7 @@ interface UsersService {
      * @throws EntityNotFoundException if the user does not exist.
      * @throws IllegalStateException if the user is neither a Student nor a Teacher.
      */
-    suspend fun getUserType(id: Int): UserType
+    fun getUserType(id: Int): UserType
 
     /**
      * Creates a new student with the given information.
@@ -213,12 +213,14 @@ interface UsersService {
     fun insecurelyCreateSessionWithoutValidation(id: Int): String
 
     /**
-     * Gets the user ID associated with the given session token.
+     * Gets the basic user data associated with the given session token.
      *
      * @throws EntityNotFoundException if the user does not exist.
      * @throws IllegalArgumentException if the token or session is invalid.
      */
-    fun getSessionUserId(token: String): Int
+    fun getSessionUser(token: String): SessionUser
+
+    class SessionUser(val id: Int, val type: UserType)
 
     /**
      * Clears the session (logs out) for the user with the given ID.

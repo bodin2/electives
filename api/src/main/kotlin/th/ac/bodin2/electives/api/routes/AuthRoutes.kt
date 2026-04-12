@@ -51,8 +51,8 @@ suspend fun RoutingContext.handleAuth() {
 
 context(usersService: UsersService)
 private suspend fun RoutingContext.handleLogOut() {
-    authenticated { userId ->
-        transaction { usersService.clearSession(userId) }
+    authenticated { user ->
+        transaction { usersService.clearSession(user.id) }
         ok()
     }
 }
