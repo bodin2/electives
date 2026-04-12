@@ -76,9 +76,7 @@ function RouteComponent() {
     const [membersTabOpened, setMembersTabOpened] = createSignal(false)
 
     createEffect(() => {
-        if (tab() === 'members') {
-            setMembersTabOpened(true)
-        }
+        setMembersTabOpened(tab() === 'members')
     })
 
     createEffect(() => {
