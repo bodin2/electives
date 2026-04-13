@@ -1,0 +1,77 @@
+.tabs {
+    position: sticky;
+    top: 64px;
+    outline: 1px solid transparent;
+    z-index: var(--layer-overlay-high);
+    transition: background-color var(--m3-easing-slow), outline-color var(--m3-easing);
+}
+
+.tabContent {
+    max-width: 640px;
+    margin: 0 auto;
+    /* Gap for the enroll button stuff */
+    padding-bottom: 128px;
+    width: 100%;
+}
+
+.image {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--m3-shape-medium);
+    background-color: var(--m3c-surface-container-lowest);
+
+    &.placeholder {
+        object-fit: scale-down;
+    }
+}
+
+.description {
+    color: var(--m3c-on-surface-variant);
+}
+
+.enrollButtonContainer {
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    padding: 16px;
+    background-color: var(--m3c-surface);
+    transition: background-color var(--m3-easing-slow), outline-color var(--m3-easing);
+    outline: 1px solid transparent;
+}
+
+.membersGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(384px, 1fr));
+
+    @media (max-width: 384px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.membersHeader {
+    padding-block: 8px;
+    padding-inline: 16px;
+    position: sticky;
+    /* Top app bar height + tabs height (+ outline) */
+    top: 113px;
+    background-color: var(--m3c-surface);
+    z-index: var(--layer-overlay);
+}
+
+.membersList {
+    z-index: var(--layer-content);
+
+    a, button {
+        width: 100%;
+    }
+}
+
+.noMembers {
+    padding-inline: 16px;
+    padding-block: 8px;
+}
+
+.actionButton {
+    width: 100%;
+    max-width: calc(640px - 32px);
+}

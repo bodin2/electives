@@ -1,16 +1,15 @@
 import SettingsIcon from '@iconify-icons/mdi/cog'
-import { createFileRoute } from '@tanstack/solid-router'
-import { createSignal, For, Show } from 'solid-js'
+import { createFileRoute, useNavigate } from '@tanstack/solid-router'
+import { createSignal } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { Button } from '../../components/Button'
 import SettingsDialog from '../../components/dialogs/SettingsDialog'
-import ElectiveCard from '../../components/electives/ElectiveCard'
+import ElectiveList from '../../components/electives/ElectiveList'
 import UserInfoCard from '../../components/electives/UserInfoCard'
 import Page from '../../components/Page'
-import { HStack, VStack } from '../../components/Stack'
-import { useAPI } from '../../providers/APIProvider'
+import { VStack } from '../../components/Stack'
 import { useI18n } from '../../providers/I18nProvider'
-import { electiveSorter, groupItems, nonNull } from '../../utils'
+import { electiveSorter, nonNull } from '../../utils'
 import { AUTHENTICATED_ROUTE_DEFAULTS } from '../_authenticated'
 import styles from './index.module.css'
 
@@ -41,17 +40,18 @@ export const Route = createFileRoute('/_authenticated/')({
 })
 
 function Home() {
-    const api = useAPI()
-    const { string } = useI18n()
     const data = Route.useLoaderData()
+    const navigate = useNavigate()
+    const { string } = useI18n()
 
     const [settingsOpen, setSettingsOpen] = createSignal(false)
 
-    const electives = () =>
-        groupItems(data().electives, elective => {
-            if (api.client.selections.resolveSelection(data().user.id, elective.id)) return 'selected' as const
-            return 'unselected' as const
+    const onCardClick = (id: number) => {
+        navigate({
+            to: '/enroll/$electiveId',
+            params: { electiveId: id },
         })
+    }
 
     return (
         <Page
@@ -71,20 +71,7 @@ function Home() {
             <VStack gap={16} class="padded">
                 <UserInfoCard class={styles.card} />
             </VStack>
-            <Show when={electives().unselected?.length}>
-                <HStack gap={16} class="padded" wrap>
-                    <For each={electives().unselected}>
-                        {elective => <ElectiveCard elective={elective} class={styles.card} />}
-                    </For>
-                </HStack>
-            </Show>
-            <Show when={electives().selected?.length}>
-                <HStack gap={16} class="padded" wrap>
-                    <For each={electives().selected}>
-                        {elective => <ElectiveCard elective={elective} class={styles.card} />}
-                    </For>
-                </HStack>
-            </Show>
+            <ElectiveList electives={data().electives} user={data().user} onCardClick={onCardClick} />
             <Portal>
                 <SettingsDialog open={settingsOpen()} onClose={() => setSettingsOpen(false)} />
             </Portal>

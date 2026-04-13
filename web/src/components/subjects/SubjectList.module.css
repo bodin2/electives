@@ -1,0 +1,47 @@
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(448px, 1fr));
+
+    @media (max-width: 448px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.header {
+    padding-block: 8px;
+    padding-inline-start: 16px;
+    padding-inline-end: 8px;
+    position: sticky;
+    /* Top app bar height + search + padding */
+    top: 136px;
+    background-color: var(--m3c-surface);
+    z-index: var(--layer-overlay);
+}
+
+.list {
+    a, button {
+        width: 100%;
+    }
+}
+
+.subjectThumbnail {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: var(--m3-shape-medium);
+    background-color: var(--m3c-surface-container-lowest);
+    z-index: var(--layer-content);
+}
+
+.searchContainer {
+    padding-inline: 16px;
+    padding-block: 8px;
+    background-color: var(--m3c-background);
+    position: sticky;
+    top: 64px;
+    z-index: var(--layer-overlay-high);
+}
+
+.search {
+    transition: background-color var(--m3-easing-slow), outline-color var(--m3-easing);
+}

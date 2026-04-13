@@ -50,7 +50,7 @@ function AdminDashboard() {
                     <IconLabel icon={TeamIcon} text={string.USERS()} class={styles.label} />
                     <VStack gap={16} class={styles.cardGrid}>
                         <GridCard icon={PeopleIcon} title={string.STUDENTS()} to="/manage/students" />
-                        <GridCard icon={TeacherIcon} title={string.TEACHER()} to="/manage/teachers" />
+                        <GridCard icon={TeacherIcon} title={string.TEACHERS()} to="/manage/teachers" />
                         <GridCard icon={TeamIcon} title={string.TEAMS()} to="/manage/teams" />
                     </VStack>
                 </VStack>

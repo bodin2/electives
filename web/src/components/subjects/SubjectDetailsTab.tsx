@@ -26,7 +26,7 @@ export default function SubjectDetailsTab(props: SubjectDetailsTabProps) {
 
     const teachersText = () => {
         const teachers = props.subject.teachers.map(t => new User(t).fullName).join(', ') || '-'
-        return `${string.TEACHER()}: ${teachers}`
+        return `${string.TEACHERS()}: ${teachers}`
     }
 
     return (

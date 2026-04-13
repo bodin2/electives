@@ -55,7 +55,7 @@ export default function SubjectListItem(props: SubjectListItemProps) {
                 // @once
                 <>
                     <p>{`${string.CLASS()}: ${props.subject.location}`}</p>
-                    <p>{`${string.TEACHER()}: ${teacherNames()}`}</p>
+                    <p>{`${string.TEACHERS()}: ${teacherNames()}`}</p>
                 </>
             }
         />

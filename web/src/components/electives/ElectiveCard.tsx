@@ -3,7 +3,6 @@ import BookIcon from '@iconify-icons/mdi/book-outline'
 import LocationIcon from '@iconify-icons/mdi/location-on-outline'
 import PencilIcon from '@iconify-icons/mdi/pencil'
 import TeachIcon from '@iconify-icons/mdi/teach'
-import { useNavigate } from '@tanstack/solid-router'
 import { Card, Icon, mergeClasses } from 'm3-solid'
 import { createSignal, Show } from 'solid-js'
 import { User } from '../../api'
@@ -21,11 +20,11 @@ import type { Elective, Subject } from '../../api'
 interface ElectiveCardProps {
     elective: Elective
     class?: string
+    onClick: (id: number) => void
 }
 
 export default function ElectiveCard(props: ElectiveCardProps) {
     const { string, locale } = useI18n()
-    const navigate = useNavigate()
     const api = useAPI()
     const [countdown, setCountdown] = createSignal<number | null>(null)
     const isOpen = useElectiveOpen(props.elective, {
@@ -73,16 +72,7 @@ export default function ElectiveCard(props: ElectiveCardProps) {
             data-open={isOpen()}
             data-has-selection={hasSelection()}
             class={mergeClasses(props.class, styles.card)}
-            onClick={
-                hasSelection()
-                    ? undefined
-                    : () => {
-                          navigate({
-                              to: '/enroll/$electiveId',
-                              params: { electiveId: props.elective.id },
-                          })
-                      }
-            }
+            onClick={hasSelection() ? undefined : () => props.onClick(props.elective.id)}
         >
             <Show
                 when={hasSelection()}
@@ -124,7 +114,7 @@ export default function ElectiveCard(props: ElectiveCardProps) {
                                 />
                                 <IconLabel
                                     icon={TeachIcon}
-                                    text={`${string.TEACHER()}: ${teacherNames()}`}
+                                    text={`${string.TEACHERS()}: ${teacherNames()}`}
                                     iconSize={16}
                                     class="m3-body-medium"
                                 />
