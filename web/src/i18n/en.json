@@ -9,8 +9,8 @@
   "ELECTIVES": "Electives",
   "CLASS_LEVEL": "Class Level",
   "SUBJECT": "Subject",
-  "STUDENT": "Students",
-  "TEACHER": "Teachers",
+  "STUDENTS": "Students",
+  "TEACHERS": "Teachers",
   "SUBJECT_CATEGORY": "Category",
   "CLASS": "Class",
   "ENROLLMENT_OPEN": "Tap to enroll",
@@ -81,5 +81,10 @@
   "SWITCH_TO_ADMIN_LOGIN": "Switch to admin login",
   "IMPORT_PRIVATE_KEY": "Log in with key",
   "ERROR_INVALID_PRIVATE_KEY": "Invalid private key.",
-  "ADMIN_DASHBOARD": "Dashboard"
+  "ADMIN_DASHBOARD": "Dashboard",
+  "SUBJECTS": "Subjects",
+  "TEAMS": "Teams",
+  "TEAM": "Team",
+  "CLASSES": "Classes",
+  "USERS": "Users"
 }

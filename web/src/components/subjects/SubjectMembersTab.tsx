@@ -38,7 +38,7 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
                         />
                         <SubjectMembersSection
                             users={data().students}
-                            title={string.STUDENT()}
+                            title={string.STUDENTS()}
                             headerClass={props.headerClass}
                             listClass={props.listClass}
                             noMembersClass={props.noMembersClass}

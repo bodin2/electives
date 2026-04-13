@@ -1,0 +1,22 @@
+.card {
+    color: var(--m3c-on-surface);
+
+    .icon {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+.content {
+    padding: 16px;
+}
+
+.cardGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+    gap: 16px;
+}
+
+.label {
+    color: var(--m3c-primary);
+}

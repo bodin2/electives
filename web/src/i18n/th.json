@@ -10,7 +10,7 @@
   "CLASS_LEVEL": "ระดับชั้น",
   "SUBJECT": "วิชา",
   "TEACHER": "ครูผู้สอน",
-  "STUDENT": "นักเรียน",
+  "STUDENTS": "นักเรียน",
   "SUBJECT_CATEGORY": "กลุ่มสาระการเรียน",
   "CLASS": "ห้องเรียน",
   "ENROLLMENT_OPEN": "แตะเพื่อลงทะเบียน",
@@ -81,5 +81,10 @@
   "SWITCH_TO_ADMIN_LOGIN": "เข้าสู่ระบบสำหรับผู้ดูแล",
   "IMPORT_PRIVATE_KEY": "เข้าสู่ระบบด้วยไฟล์คีย์",
   "ERROR_INVALID_PRIVATE_KEY": "ไฟล์คีย์ไม่ถูกต้อง",
-  "ADMIN_DASHBOARD": "แดชบอร์ด"
+  "ADMIN_DASHBOARD": "แดชบอร์ด",
+  "SUBJECTS": "วิชา",
+  "TEAMS": "ทีม",
+  "TEAM": "ทีม",
+  "CLASSES": "ชั้นเรียน",
+  "USERS": "ผู้ใช้งาน"
 }
