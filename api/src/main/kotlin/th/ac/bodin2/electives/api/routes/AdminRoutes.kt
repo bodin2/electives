@@ -61,12 +61,14 @@ val adminController = controller {
     ).forEach { ctl -> ctl.apply { this@controller.register() } }
 
     routing {
-        head<Admin> {
-            if (call.isAdmin()) {
-                return@head ok()
-            }
+        authenticate(ADMIN_AUTHENTICATION, optional = true) {
+            head<Admin> {
+                if (call.isAdmin()) {
+                    return@head ok()
+                }
 
-            call.response.status(HttpStatusCode.NotFound)
+                call.response.status(HttpStatusCode.NotFound)
+            }
         }
 
         resource<Admin.Notifications> {
