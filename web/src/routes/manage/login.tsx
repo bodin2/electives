@@ -5,6 +5,7 @@ import { createSignal } from 'solid-js'
 import { importPrivateKey } from '../../api/ssh'
 import { Button } from '../../components/Button'
 import SchoolLogo from '../../components/images/SchoolLogo'
+import LinkButton from '../../components/LinkButton'
 import Page from '../../components/Page'
 import { VStack } from '../../components/Stack'
 import Version from '../../components/Version'
@@ -69,9 +70,14 @@ function AdminLogin() {
                     </VStack>
                 }
                 actions={
-                    <Button style={{ flex: 1 }} loading={loading()} onClick={handleImport}>
-                        {string.IMPORT_PRIVATE_KEY()}
-                    </Button>
+                    <VStack gap={8} style={{ flex: 1 }}>
+                        <LinkButton variant="tonal" to="/login" search={{ from_admin: true }}>
+                            {string.SWITCH_TO_USER_LOGIN()}
+                        </LinkButton>
+                        <Button loading={loading()} onClick={handleImport}>
+                            {string.IMPORT_PRIVATE_KEY()}
+                        </Button>
+                    </VStack>
                 }
                 open={api.authState() === AuthenticationState.LoggedOut}
             >

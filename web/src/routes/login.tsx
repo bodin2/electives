@@ -1,10 +1,11 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { createFileRoute, useSearch } from '@tanstack/solid-router'
 import { Dialog, TextField, type TextFieldProps } from 'm3-solid'
-import { createSignal } from 'solid-js'
+import { createEffect, createSignal, Show } from 'solid-js'
 import { UnauthorizedError } from '../api'
 import { Button } from '../components/Button'
 import SchoolLogo from '../components/images/SchoolLogo'
+import LinkButton from '../components/LinkButton'
 import Page from '../components/Page'
 import { VStack } from '../components/Stack'
 import Version from '../components/Version'
@@ -18,6 +19,7 @@ const log = new Logger('routes/login')
 type LoginSearch = {
     to?: string
     search?: string
+    from_admin: boolean
 }
 
 export const Route = createFileRoute('/login')({
@@ -25,6 +27,7 @@ export const Route = createFileRoute('/login')({
     validateSearch: (search: Record<string, unknown>): LoginSearch => ({
         to: typeof search.to === 'string' ? search.to : undefined,
         search: typeof search.search === 'string' ? search.search : undefined,
+        from_admin: typeof search.from_admin === 'boolean' ? search.from_admin : false,
     }),
 })
 
@@ -42,6 +45,10 @@ function Login() {
         altPath: '/manage',
         search: () => search().search,
         delay: 350,
+    })
+
+    createEffect(() => {
+        console.log(search())
     })
 
     let form!: HTMLFormElement
@@ -62,9 +69,16 @@ function Login() {
                     </VStack>
                 }
                 actions={
-                    <Button style={{ flex: 1 }} loading={loading()} onClick={() => form.requestSubmit()}>
-                        {string.LOGIN()}
-                    </Button>
+                    <VStack gap={8} style={{ flex: 1 }}>
+                        <Show when={search().from_admin}>
+                            <LinkButton variant="tonal" to="/manage/login">
+                                {string.SWITCH_TO_ADMIN_LOGIN()}
+                            </LinkButton>
+                        </Show>
+                        <Button loading={loading()} onClick={() => form.requestSubmit()}>
+                            {string.LOGIN()}
+                        </Button>
+                    </VStack>
                 }
                 open={api.authState() === AuthenticationState.LoggedOut}
             >

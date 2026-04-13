@@ -77,6 +77,8 @@
   "CLOSE": "Close",
   "ADMIN_LOGIN": "Admin Login",
   "ADMIN_LOGIN_HINT": "Import your key to continue.",
+  "SWITCH_TO_USER_LOGIN": "Switch to user login",
+  "SWITCH_TO_ADMIN_LOGIN": "Switch to admin login",
   "IMPORT_PRIVATE_KEY": "Log in with key",
   "ERROR_INVALID_PRIVATE_KEY": "Invalid private key.",
   "ADMIN_DASHBOARD": "Dashboard"
