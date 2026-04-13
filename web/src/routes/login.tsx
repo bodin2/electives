@@ -19,7 +19,7 @@ const log = new Logger('routes/login')
 type LoginSearch = {
     to?: string
     search?: string
-    from_admin: boolean
+    from_admin?: boolean
 }
 
 export const Route = createFileRoute('/login')({
@@ -27,7 +27,7 @@ export const Route = createFileRoute('/login')({
     validateSearch: (search: Record<string, unknown>): LoginSearch => ({
         to: typeof search.to === 'string' ? search.to : undefined,
         search: typeof search.search === 'string' ? search.search : undefined,
-        from_admin: typeof search.from_admin === 'boolean' ? search.from_admin : false,
+        from_admin: typeof search.from_admin === 'boolean' ? search.from_admin : undefined,
     }),
 })
 
