@@ -9,5 +9,9 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/students')({
 function RouteComponent() {
     const { string } = useI18n()
 
-    return <Page name={string.STUDENTS()}>Students</Page>
+    return (
+        <Page name={string.STUDENTS()} trailing={null}>
+            Students
+        </Page>
+    )
 }
