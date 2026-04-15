@@ -4,8 +4,14 @@ import LoadingPage from './pages/LoadingPage'
 import { VStack } from './Stack'
 
 interface PageProps extends JSX.HTMLAttributes<HTMLElement> {
-    name?: JSXElement
-    trailing?: JSXElement
+    /**
+     * null = inherit
+     */
+    name?: JSXElement | null
+    /**
+     * null = inherit
+     */
+    trailing?: JSXElement | null
     style?: JSX.CSSProperties
     resources?: Resource<unknown>[]
     showLoading?: boolean
@@ -19,8 +25,8 @@ export default function Page(props: PageProps) {
         // so ErrorPage works without PageProvider
         if (!pageData) return
 
-        pageData.setTitle(local.name ? () => local.name : '')
-        pageData.setTrailing(local.trailing ? () => local.trailing : undefined)
+        if (local.name !== null) pageData.setTitle(local.name ? () => local.name : '')
+        if (local.trailing !== null) pageData.setTrailing(local.trailing ? () => local.trailing : undefined)
     })
 
     const allReady = () => {
