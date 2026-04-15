@@ -4,10 +4,10 @@ import { useI18n } from '../providers/I18nProvider'
 import styles from './Button.module.css'
 
 export function Button(
-    props: Omit<Extract<ButtonProps, JSX.HTMLAttributes<HTMLButtonElement>>, 'variant'> & {
+    props: Omit<Extract<ButtonProps, JSX.HTMLAttributes<HTMLButtonElement>>, 'variant' | 'onClick'> & {
         variant?: ButtonProps['variant'] | 'tonal-error'
         loading?: boolean
-        onClick: () => unknown | Promise<unknown>
+        onClick: (e: Event) => unknown | Promise<unknown>
     },
 ) {
     const { string } = useI18n()
