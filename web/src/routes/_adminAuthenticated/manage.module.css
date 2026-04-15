@@ -1,0 +1,38 @@
+.sep {
+    margin-inline: 32px;
+    color: var(--m3c-outline-variant);
+    margin-block: 16px;
+    border-radius: var(--m3-shape-full);
+}
+
+.navContainer {
+    height: 100%;
+}
+
+.outer {
+    background-color: var(--m3c-surface-container);
+    width: 100%;
+}
+
+.inner {
+    background-color: var(--m3c-surface);
+    border-radius: var(--m3-shape-large-increased) 0 0 0;
+    overflow-y: auto;
+}
+
+.toggleContainer {
+    padding-inline: 16px;
+    padding-inline-end: 20px;
+    transition: padding-inline-end var(--m3-easing-spatial);
+
+    &.open {
+        padding-inline-end: 144px;
+    }
+}
+
+:global(#app) {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+}
