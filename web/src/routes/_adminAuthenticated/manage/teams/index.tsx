@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate, useRouter } from '@tanstack/solid-router'
-import TeamList from '../../../components/admin/TeamList'
-import Page from '../../../components/Page'
-import { useAPI } from '../../../providers/APIProvider'
-import { useI18n } from '../../../providers/I18nProvider'
-import type { Team } from '../../../api/structures'
+import TeamList from '../../../../components/admin/TeamList'
+import Page from '../../../../components/Page'
+import { useAPI } from '../../../../providers/APIProvider'
+import { useI18n } from '../../../../providers/I18nProvider'
+import type { Team } from '../../../../api/structures'
 
-export const Route = createFileRoute('/_adminAuthenticated/manage/teams')({
+export const Route = createFileRoute('/_adminAuthenticated/manage/teams/')({
     component: RouteComponent,
     loader: async ({ context: { client } }) => {
         const teams = await client.teams.fetchAll()
@@ -22,11 +22,11 @@ function RouteComponent() {
     const router = useRouter()
 
     const handleCreate = () => {
-        navigate({ to: '/manage/team/$teamId', params: { teamId: 'new' } })
+        navigate({ to: '/manage/teams/$teamId', params: { teamId: 'new' } })
     }
 
     const handleEdit = (team: Team) => {
-        navigate({ to: '/manage/team/$teamId', params: { teamId: team.id.toString() } })
+        navigate({ to: '/manage/teams/$teamId', params: { teamId: team.id.toString() } })
     }
 
     const handleDelete = async (team: Team) => {

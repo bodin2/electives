@@ -1,13 +1,13 @@
 import { createFileRoute, useRouter } from '@tanstack/solid-router'
 import { TextField } from 'm3-solid'
 import { createSignal } from 'solid-js'
-import { Button } from '../../../components/Button'
-import Page from '../../../components/Page'
-import { VStack } from '../../../components/Stack'
-import { useAPI } from '../../../providers/APIProvider'
-import { useI18n } from '../../../providers/I18nProvider'
+import { Button } from '../../../../components/Button'
+import Page from '../../../../components/Page'
+import { VStack } from '../../../../components/Stack'
+import { useAPI } from '../../../../providers/APIProvider'
+import { useI18n } from '../../../../providers/I18nProvider'
 
-export const Route = createFileRoute('/_adminAuthenticated/manage/team/$teamId')({
+export const Route = createFileRoute('/_adminAuthenticated/manage/teams/$teamId')({
     component: RouteComponent,
     loader: async ({ params: { teamId }, context: { client } }) => {
         if (teamId === 'new') return null
