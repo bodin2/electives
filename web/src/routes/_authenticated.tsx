@@ -7,6 +7,7 @@ import LoadingPage from '../components/pages/LoadingPage'
 import { useLogoutRedirect } from '../hooks/useAuthRedirect'
 import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
 import { useI18n } from '../providers/I18nProvider'
+import { usePageData } from '../providers/PageProvider'
 import { catchErrors } from '../utils/error-component'
 
 export const AUTHENTICATED_ROUTE_DEFAULTS = {
@@ -25,13 +26,14 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedLayout() {
     const api = useAPI()
+    const pageData = usePageData()
 
     useUserLogoutRedirect()
 
     return (
         <Switch>
             <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.User}>
-                <PageTopAppBar />
+                <PageTopAppBar elevated={pageData.topAppBarElevated} />
                 <Outlet />
             </Match>
             <Match when={api.authState() === AuthenticationState.Loading}>

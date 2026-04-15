@@ -8,24 +8,30 @@ import SchoolLogo from './images/SchoolLogo'
 import { HStack } from './Stack'
 import TopAppBar from './TopAppBar'
 
-export function PageTopAppBar() {
+export function PageTopAppBar(props: { elevated?: boolean }) {
     const pageData = usePageData()
     const canGoBack = useCanGoBack()
     const { string } = useI18n()
 
     return (
         <TopAppBar
+            elevated={props.elevated}
             variant="small"
             leading={() => (
-                <Show when={canGoBack()}>
-                    <Button
-                        aria-label={string.BACK()}
-                        variant="text"
-                        icon={ArrowLeftIcon}
-                        iconType="only"
-                        onClick={() => history.back()}
-                    />
-                </Show>
+                <HStack gap={8}>
+                    <Show when={pageData.leading}>
+                        {typeof pageData.leading === 'function' ? pageData.leading() : pageData.leading}
+                    </Show>
+                    <Show when={pageData.allowBacking && canGoBack()}>
+                        <Button
+                            aria-label={string.BACK()}
+                            variant="text"
+                            icon={ArrowLeftIcon}
+                            iconType="only"
+                            onClick={() => history.back()}
+                        />
+                    </Show>
+                </HStack>
             )}
             headline={() => (
                 <HStack

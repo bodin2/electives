@@ -7,6 +7,7 @@ import LoadingPage from '../components/pages/LoadingPage'
 import { useLogoutRedirect } from '../hooks/useAuthRedirect'
 import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
 import { useI18n } from '../providers/I18nProvider'
+import { usePageData } from '../providers/PageProvider'
 
 export const ADMIN_AUTHENTICATED_ROUTE_DEFAULTS = {
     errorComponent: props => {
@@ -28,13 +29,14 @@ export const Route = createFileRoute('/_adminAuthenticated')({
 function AdminAuthenticatedLayout() {
     const api = useAPI()
     const { string } = useI18n()
+    const pageData = usePageData()
 
     useAdminLogoutRedirect()
 
     return (
         <Switch>
             <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.Admin}>
-                <PageTopAppBar />
+                <PageTopAppBar elevated={pageData.topAppBarElevated} />
                 <Outlet />
             </Match>
             <Match when={api.authState() === AuthenticationState.Loading}>

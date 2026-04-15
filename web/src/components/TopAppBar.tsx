@@ -94,7 +94,7 @@ export default function TopAppBar(props: TopAppBarProps) {
         <>
             <TopAppBarCompactPart
                 justify={props.variant === 'small-centered' ? 'space-between' : undefined}
-                scrolledVertical={sd.scrolledVertical}
+                scrolledVertical={props.elevated || sd.scrolledVertical}
                 leading={props.leading}
                 headline={props.headline}
                 headlineOpacity={headlineOpacity()}
@@ -112,6 +112,7 @@ export default function TopAppBar(props: TopAppBarProps) {
 }
 
 interface TopAppBarProps {
+    elevated?: boolean
     headline: Component
     leading?: Component
     trailing?: Component
@@ -129,9 +130,7 @@ function TopAppBarCompactPart(props: TopAppBarCompactPartProps) {
                 [styles.scrolled]: props.scrolledVertical,
             }}
         >
-            <Show when={props.leading}>
-                <div>{props.leading!({})}</div>
-            </Show>
+            <Show when={props.leading}>{props.leading!({})}</Show>
             <HStack class="m3-title-large" as="h1" grow style={{ opacity: props.headlineOpacity }}>
                 <Show when={props.headline}>{props.headline!({})}</Show>
             </HStack>
