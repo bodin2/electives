@@ -130,11 +130,11 @@ function TopAppBarCompactPart(props: TopAppBarCompactPartProps) {
                 [styles.scrolled]: props.scrolledVertical,
             }}
         >
-            <Show when={props.leading}>{props.leading!({})}</Show>
+            <Show when={props.leading}>{x => x()({})}</Show>
             <HStack class="m3-title-large" as="h1" grow style={{ opacity: props.headlineOpacity }}>
-                <Show when={props.headline}>{props.headline!({})}</Show>
+                <Show when={props.headline}>{x => x()({})}</Show>
             </HStack>
-            <Show when={props.trailing}>{props.trailing!({})}</Show>
+            <Show when={props.trailing}>{x => x()({})}</Show>
         </HStack>
     )
 }

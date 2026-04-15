@@ -1,7 +1,7 @@
 import { createContext, type JSXElement, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
 
-interface PageData {
+export interface PageData {
     title: string | (() => JSXElement)
     leading?: string | (() => JSXElement)
     trailing?: () => JSXElement
@@ -9,7 +9,7 @@ interface PageData {
     setLeading: (leading: string | (() => JSXElement) | undefined) => void
     setTrailing: (trailing: (() => JSXElement) | undefined) => void
     topAppBarElevated: boolean
-    setTopAppBarElevated?: (elevated: boolean) => void
+    setTopAppBarElevated: (elevated: boolean) => void
     allowBacking: boolean
     setAllowBacking: (canBack: boolean) => void
 }

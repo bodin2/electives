@@ -18,7 +18,7 @@ export function PageTopAppBar(props: { elevated?: boolean }) {
             elevated={props.elevated}
             variant="small"
             leading={() => (
-                <HStack gap={8}>
+                <HStack gap={8} alignVertical="center">
                     <Show when={pageData.leading}>
                         {typeof pageData.leading === 'function' ? pageData.leading() : pageData.leading}
                     </Show>
@@ -46,7 +46,7 @@ export function PageTopAppBar(props: { elevated?: boolean }) {
                     {typeof pageData.title === 'function' ? pageData.title() : pageData.title}
                 </HStack>
             )}
-            trailing={pageData.trailing ? () => pageData.trailing?.() : undefined}
+            trailing={pageData.trailing}
         />
     )
 }
