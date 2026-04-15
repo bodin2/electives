@@ -86,5 +86,15 @@
   "TEAMS": "ทีม",
   "TEAM": "ทีม",
   "CLASSES": "ชั้นเรียน",
-  "USERS": "ผู้ใช้งาน"
+  "USERS": "ผู้ใช้งาน",
+  "CREATE_TEAM": "สร้างทีม",
+  "EDIT_TEAM": "แก้ไขทีม",
+  "DELETE_TEAM": "ลบทีม",
+  "SAVE": "บันทึก",
+  "SEARCH_TEAMS": "ค้นหาทีม",
+  "NAME": "ชื่อ",
+  "ACTIONS": "การกระทำ",
+  "MEMBER_COUNT": "{{ count }} สมาชิก",
+  "CONFIRM_DELETE_TEAM": "คุณแน่ใจหรือไม่ว่าต้องการลบทีม: {{ name }}?",
+  "ID": "ID"
 }

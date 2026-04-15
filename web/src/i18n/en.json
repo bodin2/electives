@@ -86,5 +86,15 @@
   "TEAMS": "Teams",
   "TEAM": "Team",
   "CLASSES": "Classes",
-  "USERS": "Users"
+  "USERS": "Users",
+  "CREATE_TEAM": "Create team",
+  "EDIT_TEAM": "Edit team",
+  "DELETE_TEAM": "Delete team",
+  "SAVE": "Save",
+  "SEARCH_TEAMS": "Search teams",
+  "NAME": "Name",
+  "ACTIONS": "Actions",
+  "MEMBER_COUNT": "{{ count }} members",
+  "CONFIRM_DELETE_TEAM": "Are you sure you want to delete team: {{ name }}?",
+  "ID": "ID"
 }
