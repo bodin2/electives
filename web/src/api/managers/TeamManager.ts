@@ -1,3 +1,4 @@
+import { AdminService_TeamMemberCounts } from '@bodin2/electives-common/proto/api'
 import { Team } from '../structures'
 import { AdminListTeamsResponse, AdminTeamPatch, RawTeam } from '../types'
 import type { Cache } from '../cache'
@@ -124,5 +125,17 @@ export class TeamAdminActions {
     async delete(id: number): Promise<void> {
         await this.rest.delete(`/admin/teams/${id}`)
         this.manager.cache.delete(id)
+    }
+
+    /**
+     * Fetch member counts for all teams
+     *
+     * @returns A record mapping team IDs to member counts
+     */
+    async fetchMemberCounts(): Promise<Record<number, number>> {
+        const data = await this.rest.get<AdminService_TeamMemberCounts>('/admin/teams/member-counts', {
+            decoder: AdminService_TeamMemberCounts,
+        })
+        return data.memberCounts
     }
 }
