@@ -21,7 +21,7 @@ function AdminDashboard() {
     const { string } = useI18n()
 
     return (
-        <Page name={string.ADMIN_DASHBOARD()} trailing={null}>
+        <Page name={string.ADMIN_DASHBOARD()} leading={null} trailing={null}>
             <VStack class={styles.content} gap={16}>
                 <VStack gap={8}>
                     <IconLabel icon={TeamIcon} text={string.USERS()} class={styles.label} />

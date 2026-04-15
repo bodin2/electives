@@ -10,7 +10,7 @@ function RouteComponent() {
     const { string } = useI18n()
 
     return (
-        <Page name={string.TEACHERS()} trailing={null}>
+        <Page name={string.TEACHERS()} leading={null} trailing={null}>
             Teachers
         </Page>
     )

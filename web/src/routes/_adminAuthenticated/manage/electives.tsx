@@ -17,7 +17,7 @@ function RouteComponent() {
     const data = Route.useLoaderData()
 
     return (
-        <Page name={string.ELECTIVES()} trailing={null}>
+        <Page name={string.ELECTIVES()} leading={null} trailing={null}>
             <ElectiveList electives={data()} onCardClick={() => alert('TODO?')} />
         </Page>
     )

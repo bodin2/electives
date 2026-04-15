@@ -40,7 +40,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={string.TEAMS()} trailing={null}>
+        <Page name={string.TEAMS()} leading={null} trailing={null}>
             <TeamList
                 teams={data().teams}
                 memberCounts={data().memberCounts}

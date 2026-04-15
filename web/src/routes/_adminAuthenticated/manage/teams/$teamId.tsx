@@ -57,7 +57,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={isNew ? string.CREATE_TEAM() : string.EDIT_TEAM()} trailing={null} allowBacking>
+        <Page name={isNew ? string.CREATE_TEAM() : string.EDIT_TEAM()} leading={null} trailing={null} allowBacking>
             <VStack gap={16} style={{ padding: '16px' }}>
                 <TextField
                     label={string.ID()}
