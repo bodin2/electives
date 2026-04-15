@@ -327,6 +327,6 @@ export class Gateway {
 }
 
 export const GatewayEndpoints = {
-    AdminNotifications: '/notifications',
+    AdminNotifications: '/admin/notifications',
     Notifications: '/notifications',
 } as const
