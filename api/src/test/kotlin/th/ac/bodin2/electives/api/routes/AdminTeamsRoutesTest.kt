@@ -73,4 +73,24 @@ class AdminTeamsRoutesTest : ApplicationTest() {
     fun `delete team without auth returns unauthorized`() = runRouteTest {
         client.delete("/admin/teams/$ELECTIVE_TEAM_ID").assertUnauthorized()
     }
+
+    @Test
+    fun `get team member counts without auth returns unauthorized`() = runRouteTest {
+        client.get("/admin/teams/member-counts").assertUnauthorized()
+    }
+
+    @Test
+    fun `get team member counts`() = runRouteTest {
+        startApplication()
+        enableAdminAuth()
+
+        val response = client.adminGet("/admin/teams/member-counts")
+            .assertOK()
+            .parse<AdminService.TeamMemberCounts>()
+
+        assertEquals(TestTeamService.TEAM_IDS.size, response.memberCountsCount)
+        TestTeamService.TEAM_IDS.forEach { teamId ->
+            assertEquals(0, response.memberCountsMap[teamId])
+        }
+    }
 }

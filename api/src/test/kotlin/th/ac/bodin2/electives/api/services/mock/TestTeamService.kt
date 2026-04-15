@@ -26,4 +26,6 @@ class TestTeamService : TeamService {
     override fun getById(teamId: Int) =
         if (teamId in TEAM_IDS) MockUtils.mockTeam(teamId)
         else null
+
+    override fun getMemberCounts() = TEAM_IDS.associateWith { 0 }
 }

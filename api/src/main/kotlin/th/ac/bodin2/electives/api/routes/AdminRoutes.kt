@@ -36,6 +36,7 @@ import th.ac.bodin2.electives.proto.api.*
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.challengeResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listTeamsResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.teamMemberCounts
 import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
 import java.time.Instant
@@ -660,6 +661,8 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
             delete<Admin.Teams.Id> { params -> handleDeleteTeam(params.id) }
 
             patch<Admin.Teams.Id> { params -> handlePatchTeam(params.id) }
+
+            get<Admin.Teams.MemberCounts> { handleGetTeamMemberCounts() }
         }
     }
 
@@ -728,6 +731,13 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
         } catch (_: NothingToUpdateException) {
             badRequest("Nothing to update")
         }
+    }
+
+    private suspend fun RoutingContext.handleGetTeamMemberCounts() {
+        call.respond(teamMemberCounts {
+            val counts = transaction { teamService.getMemberCounts() }
+            memberCounts.putAll(counts)
+        })
     }
 }
 
@@ -801,6 +811,10 @@ private class Admin {
         // PUT: Team, GET: Team, DELETE, PATCH: TeamPatch
         @Resource("{id}")
         class Id(val parent: Teams, val id: Int)
+
+        // GET: TeamMemberCounts
+        @Resource("member-counts")
+        class MemberCounts(val parent: Teams)
     }
 }
 

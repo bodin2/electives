@@ -122,7 +122,10 @@ message AdminService {
     bool patch_thumbnail_url = 16;
     // Whether the `image_url` field should be considered during patching.
     bool patch_image_url = 17;
+  }
 
+  message TeamMemberCounts {
+    map<uint32, uint32> member_counts = 1;
   }
 }
 

@@ -1,8 +1,8 @@
 package th.ac.bodin2.electives.api.services
 
+import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
-import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Team
 
@@ -42,4 +42,6 @@ interface TeamService {
     fun getAll(): List<Team>
 
     fun getById(teamId: Int): Team?
+
+    fun getMemberCounts(): Map<Int, Int>
 }

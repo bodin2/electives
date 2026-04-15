@@ -1,16 +1,19 @@
 package th.ac.bodin2.electives.api.services
 
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.ConflictException
-import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Team
+import th.ac.bodin2.electives.db.models.StudentTeams
 import th.ac.bodin2.electives.db.models.Teams
 
 class TeamServiceImpl : TeamService {
@@ -53,4 +56,8 @@ class TeamServiceImpl : TeamService {
     override fun getAll() = Team.all().toList()
 
     override fun getById(teamId: Int) = Team.findById(teamId)
+
+    override fun getMemberCounts() = StudentTeams.select(StudentTeams.team, StudentTeams.student.count())
+        .groupBy(StudentTeams.team)
+        .associate { it[StudentTeams.team].value to it[StudentTeams.student.count()].toInt() }
 }

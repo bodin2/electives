@@ -116,4 +116,11 @@ class TeamServiceImplTest : ApplicationTest() {
             )
         }
     }
+
+    @Test
+    fun `get team member counts`() = runTest {
+        val counts = transaction { teamService.getMemberCounts() }
+        assertTrue(counts.containsKey(TestConstants.Teams.TEAM_1_ID))
+        assertTrue(counts.containsKey(TestConstants.Teams.TEAM_2_ID))
+    }
 }
