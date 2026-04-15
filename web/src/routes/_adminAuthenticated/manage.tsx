@@ -83,7 +83,7 @@ function RouteComponent() {
                     onChange={setNavOpen}
                     fill
                 >
-                    <LinkNavigationRailItem icon={AdminIcon} label={string.ADMIN_DASHBOARD()} to="/manage" />
+                    <LinkNavigationRailItem icon={AdminIcon} label={string.ADMIN_DASHBOARD()} to="/manage" exact />
                     <Separator />
                     <LinkNavigationRailItem icon={PeopleIcon} label={string.STUDENTS()} to="/manage/students" />
                     <LinkNavigationRailItem icon={TeacherIcon} label={string.TEACHERS()} to="/manage/teachers" />
@@ -109,11 +109,11 @@ function Separator() {
     return <hr class={styles.sep} />
 }
 
-function LinkNavigationRailItem(props: NavigationRailItemProps & { to: RoutePath }) {
-    const [local, others] = splitProps(props, ['to'])
+function LinkNavigationRailItem(props: NavigationRailItemProps & { to: RoutePath; exact?: boolean }) {
+    const [local, others] = splitProps(props, ['to', 'exact'])
 
     return (
-        <Link to={local.to} style={{ display: 'contents' }} activeOptions={{ exact: true }}>
+        <Link to={local.to} style={{ display: 'contents' }} activeOptions={{ exact: local.exact }}>
             {state => <NavigationRailItem {...others} active={state.isActive} />}
         </Link>
     )
