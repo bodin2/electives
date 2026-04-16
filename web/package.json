@@ -16,7 +16,7 @@
     "@tanstack/router-plugin": "1.167.22",
     "@tanstack/solid-router": "1.168.19",
     "@tanstack/solid-router-devtools": "1.166.13",
-    "m3-solid": "https://github.com/PalmDevs/m3-solid.git#87b7324",
+    "m3-solid": "https://github.com/PalmDevs/m3-solid.git#c509c69",
     "mitt": "3.0.1",
     "postcss": "8.5.10",
     "solid-js": "1.9.12"
