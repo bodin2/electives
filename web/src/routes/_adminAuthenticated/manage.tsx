@@ -74,7 +74,7 @@ function RouteComponent() {
     })
 
     return (
-        <HStack grow align="stretch" gap={0} style={{ 'min-height': 0 }}>
+        <HStack id="admin-app" grow align="stretch" gap={0} style={{ 'min-height': 0 }}>
             <div class={styles.navContainer}>
                 <NavigationRail
                     style={{ 'padding-block': '16px' }}
