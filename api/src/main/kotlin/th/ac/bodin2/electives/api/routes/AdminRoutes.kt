@@ -7,6 +7,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.ratelimit.*
+import io.ktor.server.request.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
@@ -62,13 +63,17 @@ val adminController = controller {
     ).forEach { ctl -> ctl.apply { this@controller.register() } }
 
     routing {
+        // Just preventing random crawlers from finding this route
+        // and potentially abusing it
         authenticate(ADMIN_AUTHENTICATION, optional = true) {
-            head<Admin> {
-                if (call.isAdmin()) {
-                    return@head ok()
-                }
+            resource<Admin> {
+                handle {
+                    if (call.request.httpMethod == HttpMethod.Head && call.isAdmin()) {
+                        return@handle ok()
+                    }
 
-                call.response.status(HttpStatusCode.NotFound)
+                    call.response.status(HttpStatusCode.NotFound)
+                }
             }
         }
 
