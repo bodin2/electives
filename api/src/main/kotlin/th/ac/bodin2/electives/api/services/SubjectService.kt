@@ -68,4 +68,6 @@ interface SubjectService {
     fun getAll(): List<Subject>
 
     fun getById(subjectId: Int): Subject?
+
+    fun getElectiveIds(subjectId: Int): List<Int>?
 }

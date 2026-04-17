@@ -10,12 +10,15 @@ import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.getWithAuth
 import th.ac.bodin2.electives.api.parse
 import th.ac.bodin2.electives.api.services.AdminAuthService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.mock.TestSubjectService
+import th.ac.bodin2.electives.proto.api.AdminService
 import th.ac.bodin2.electives.proto.api.ElectivesService
 import th.ac.bodin2.electives.proto.api.Subject
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 class AdminSubjectsRoutesTest : ApplicationTest() {
@@ -72,5 +75,23 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
     @Test
     fun `delete subject without auth returns unauthorized`() = runRouteTest {
         client.delete("/admin/subjects/$SUBJECT_ID").assertUnauthorized()
+    }
+
+    @Test
+    fun `get elective IDs for subject`() = runRouteTest {
+        startApplication()
+        enableAdminAuth()
+
+        val ids = client.adminGet("/admin/subjects/$SUBJECT_ID/elective-ids").parse<AdminService.SubjectElectiveIds>()
+        assertEquals(1, ids.electiveIdsCount)
+        assertContains(ids.electiveIdsList, ELECTIVE_ID)
+    }
+
+    @Test
+    fun `get elective IDs for not found subject`() = runRouteTest {
+        startApplication()
+        enableAdminAuth()
+
+        client.adminGet("/admin/subjects/$UNUSED_ID").assertNotFound()
     }
 }

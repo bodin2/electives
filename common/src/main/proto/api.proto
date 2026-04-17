@@ -127,6 +127,10 @@ message AdminService {
   message TeamMemberCounts {
     map<uint32, uint32> member_counts = 1;
   }
+
+  message SubjectElectiveIds {
+    repeated uint32 elective_ids = 1;
+  }
 }
 
 message AuthService {

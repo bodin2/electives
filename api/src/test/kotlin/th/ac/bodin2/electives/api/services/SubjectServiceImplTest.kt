@@ -42,6 +42,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     @Test
     fun `create subject`() = runTest {
         val newId = 500
+
         @OptIn(Transactional::class)
         val created = subjectService.create(
             id = newId,
@@ -194,5 +195,20 @@ class SubjectServiceImplTest : ApplicationTest() {
                 SubjectService.SubjectUpdate(teacherIds = listOf(UNUSED_ID))
             )
         }
+    }
+
+    @Test
+    fun `get elective IDs for subject`() = runTest {
+        val ids = transaction { subjectService.getElectiveIds(TestConstants.Subjects.PHYSICS_ID) }
+        assertNotNull(ids)
+        assertEquals(1, ids.size)
+        assertContains(ids, TestConstants.Electives.SCIENCE_ID)
+    }
+
+    @Test
+    fun `get elective IDs for not found subject`() = runTest {
+        assertNull(transaction {
+            subjectService.getElectiveIds(UNUSED_ID)
+        })
     }
 }

@@ -3,6 +3,7 @@ package th.ac.bodin2.electives.api.services.mock
 import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.SubjectService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.proto.api.SubjectTag
@@ -38,4 +39,6 @@ class TestSubjectService : SubjectService {
     override fun getById(subjectId: Int) =
         if (subjectId in SUBJECT_IDS) MockUtils.mockSubject(subjectId)
         else null
+
+    override fun getElectiveIds(subjectId: Int): List<Int> = listOf(ELECTIVE_ID)
 }

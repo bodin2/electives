@@ -37,6 +37,7 @@ import th.ac.bodin2.electives.proto.api.*
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.challengeResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listTeamsResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.subjectElectiveIds
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.teamMemberCounts
 import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
@@ -546,6 +547,8 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             delete<Admin.Subjects.Id> { params -> handleDeleteSubject(params.id) }
 
             patch<Admin.Subjects.Id> { params -> handlePatchSubject(params.id) }
+
+            get<Admin.Subjects.Id.ElectiveIds> { params -> handleGetSubjectElectiveIds(params.parent.id) }
         }
     }
 
@@ -651,6 +654,15 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
         } catch (_: NothingToUpdateException) {
             badRequest("Nothing to update")
         }
+    }
+
+    private suspend fun RoutingContext.handleGetSubjectElectiveIds(id: Int) {
+        val ids = transaction { subjectService.getElectiveIds(id) }
+            ?: return notFound()
+
+        call.respond(subjectElectiveIds {
+            electiveIds.addAll(ids)
+        })
     }
 }
 
@@ -807,7 +819,10 @@ private class Admin {
     class Subjects(val parent: Admin) {
         // PUT: Subject, GET: Subject, DELETE, PATCH: SubjectPatch
         @Resource("{id}")
-        class Id(val parent: Subjects, val id: Int)
+        class Id(val parent: Subjects, val id: Int) {
+            @Resource("elective-ids")
+            class ElectiveIds(val parent: Id)
+        }
     }
 
     // GET: ListTeamsResponse

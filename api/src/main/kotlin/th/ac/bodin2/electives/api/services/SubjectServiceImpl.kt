@@ -1,11 +1,8 @@
 package th.ac.bodin2.electives.api.services
 
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.batchInsert
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
@@ -15,6 +12,7 @@ import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.Team
 import th.ac.bodin2.electives.db.exists
+import th.ac.bodin2.electives.db.models.ElectiveSubjects
 import th.ac.bodin2.electives.db.models.Subjects
 import th.ac.bodin2.electives.db.models.TeacherSubjects
 import th.ac.bodin2.electives.proto.api.SubjectTag
@@ -83,7 +81,9 @@ class SubjectServiceImpl : SubjectService {
             try {
                 Subjects.update({ Subjects.id eq id }) {
                     if (update.setTeam) {
-                        if (update.team != null && !Team.exists(update.team)) throw EntityNotFoundException(ExceptionEntity.TEAM)
+                        if (update.team != null && !Team.exists(update.team)) throw EntityNotFoundException(
+                            ExceptionEntity.TEAM
+                        )
                         it[team] = update.team
                     }
 
@@ -119,4 +119,12 @@ class SubjectServiceImpl : SubjectService {
     override fun getAll() = Subject.all().toList()
 
     override fun getById(subjectId: Int) = Subject.findById(subjectId)
+
+    override fun getElectiveIds(subjectId: Int): List<Int>? {
+        if (!Subject.exists(subjectId)) return null
+
+        return ElectiveSubjects
+            .selectAll().where { ElectiveSubjects.subject eq subjectId }
+            .map { it[ElectiveSubjects.elective].value }
+    }
 }
