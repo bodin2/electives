@@ -130,11 +130,20 @@ function TopAppBarCompactPart(props: TopAppBarCompactPartProps) {
                 [styles.scrolled]: props.scrolledVertical,
             }}
         >
-            <Show when={props.leading}>{x => x()({})}</Show>
+            <Show when={props.leading}>
+                {/* @ts-expect-error: Incorrect types */}
+                {Leading => <Leading />}
+            </Show>
             <HStack class="m3-title-large" as="h1" grow style={{ opacity: props.headlineOpacity }}>
-                <Show when={props.headline}>{x => x()({})}</Show>
+                <Show when={props.headline}>
+                    {/* @ts-expect-error: Incorrect types */}
+                    {Headline => <Headline />}
+                </Show>
             </HStack>
-            <Show when={props.trailing}>{x => x()({})}</Show>
+            <Show when={props.trailing}>
+                {/* @ts-expect-error: Incorrect types */}
+                {Trailing => <Trailing />}
+            </Show>
         </HStack>
     )
 }
@@ -160,7 +169,7 @@ function TopAppBarCompressiblePart(props: TopAppBarCompressiblePartProps) {
                 opacity: props.headlineOpacity,
             }}
         >
-            {props.headline!({})}
+            <props.headline />
         </h1>
     )
 }

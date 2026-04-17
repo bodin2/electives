@@ -20,7 +20,7 @@ export function PageTopAppBar(props: { elevated?: boolean }) {
             leading={() => (
                 <HStack gap={8} alignVertical="center">
                     <Show when={pageData.leading}>
-                        {typeof pageData.leading === 'function' ? pageData.leading() : pageData.leading}
+                        {typeof pageData.leading === 'function' ? <pageData.leading /> : pageData.leading}
                     </Show>
                     <Show when={pageData.allowBacking && canGoBack()}>
                         <Button
@@ -43,7 +43,7 @@ export function PageTopAppBar(props: { elevated?: boolean }) {
                     }}
                 >
                     <SchoolLogo style={{ width: '32px', height: '36px' }} />
-                    {typeof pageData.title === 'function' ? pageData.title() : pageData.title}
+                    {typeof pageData.title === 'function' ? <pageData.title /> : pageData.title}
                 </HStack>
             )}
             trailing={pageData.trailing}

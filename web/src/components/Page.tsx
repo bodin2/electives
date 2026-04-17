@@ -57,9 +57,21 @@ export default function Page(props: PageProps) {
         // so ErrorPage works without PageProvider
         if (!pageData) return
 
-        if (local.name !== null) pageData.setTitle(local.name ? () => local.name : '')
-        if (local.leading !== null) pageData.setLeading(local.leading ? () => local.leading : undefined)
-        if (local.trailing !== null) pageData.setTrailing(local.trailing ? () => local.trailing : undefined)
+        if (local.name !== null) {
+            const name = local.name
+            pageData.setTitle(name !== undefined ? () => name : '')
+        }
+
+        if (local.leading !== null) {
+            const leading = local.leading
+            pageData.setLeading(leading !== undefined ? () => leading : undefined)
+        }
+
+        if (local.trailing !== null) {
+            const trailing = local.trailing
+            pageData.setTrailing(trailing !== undefined ? () => trailing : undefined)
+        }
+
         if (local.allowBacking !== undefined) pageData.setAllowBacking(local.allowBacking)
     })
 

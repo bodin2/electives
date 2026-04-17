@@ -1,12 +1,12 @@
-import { createContext, type JSXElement, useContext } from 'solid-js'
+import { type Component, createContext, type JSXElement, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
 
 export interface PageData {
-    title: string | (() => JSXElement)
-    leading?: string | (() => JSXElement)
+    title: string | Component
+    leading?: string | Component
     trailing?: () => JSXElement
-    setTitle: (title: string | (() => JSXElement)) => void
-    setLeading: (leading: string | (() => JSXElement) | undefined) => void
+    setTitle: (title: string | Component) => void
+    setLeading: (leading: string | Component | undefined) => void
     setTrailing: (trailing: (() => JSXElement) | undefined) => void
     topAppBarElevated: boolean
     setTopAppBarElevated: (elevated: boolean) => void
