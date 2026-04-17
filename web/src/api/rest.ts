@@ -226,7 +226,7 @@ export class RESTClient {
                 const buffer = await response.arrayBuffer()
                 if (decoder) return decoder.decode(new Uint8Array(buffer)) as TRes
 
-                throw new TypeError('No decoder provided for protobuf response')
+                throw new Error('No decoder provided for protobuf response')
             }
 
             throw new APIError(`Unsupported Content-Type: ${contentType}`, response.status)
@@ -245,8 +245,7 @@ export class RESTClient {
                 }
             }
 
-            err ??= new APIError(`Unknown error: ${String(error)}`, 0, 'UNKNOWN')
-            return this.handleError(err)
+            return this.handleError(err ?? error)
         }
     }
 
