@@ -203,6 +203,8 @@ export class Subject {
             capacity: this.capacity,
             teamId: this.teamId,
             teachers: this.teachers.map(t => t.toJSON()),
+            thumbnailUrl: this.thumbnailUrl,
+            imageUrl: this.imageUrl,
         }
     }
 }
