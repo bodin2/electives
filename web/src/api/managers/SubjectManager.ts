@@ -1,3 +1,4 @@
+import { AdminService_SubjectElectiveIds } from '@bodin2/electives-common/proto/api'
 import { Subject, User } from '../structures'
 import { AdminSubjectPatch, ListSubjectMembersResponse, ListSubjectsResponse, RawSubject } from '../types'
 import type { Cache } from '../cache'
@@ -328,5 +329,17 @@ export class SubjectAdminActions {
     async delete(id: number): Promise<void> {
         await this.rest.delete(`/admin/subjects/${id}`)
         this.manager.cache.delete(id)
+    }
+
+    /**
+     * Get elective IDs that a subject belongs to
+     *
+     * @param id The subject's ID
+     */
+    async fetchElectiveIds(id: number): Promise<number[]> {
+        const data = await this.rest.get<AdminService_SubjectElectiveIds>(`/admin/subjects/${id}/elective-ids`, {
+            decoder: AdminService_SubjectElectiveIds,
+        })
+        return data.electiveIds
     }
 }
