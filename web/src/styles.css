@@ -87,4 +87,5 @@ img {
 #app {
   display: flex;
   flex-direction: column;
+  --sticky-offset: 64px;
 }

@@ -6,7 +6,6 @@ import APIProvider, { type AuthenticationState } from '../providers/APIProvider'
 import { EnrollmentCountsProvider } from '../providers/EnrollmentCountsProvider'
 import { useI18n } from '../providers/I18nProvider'
 import PageDataProvider from '../providers/PageProvider'
-import ScrollDataProvider from '../providers/ScrollDataProvider'
 import type { Client } from '../api'
 
 export interface RouterContext {
@@ -23,14 +22,12 @@ function RootComponent() {
 
     return (
         <PageDataProvider>
-            <ScrollDataProvider>
-                <APIProvider client={context().client}>
-                    <EnrollmentCountsProvider client={context().client}>
-                        <I18nReadyOutlet />
-                        <TanStackRouterDevtools position="bottom-left" />
-                    </EnrollmentCountsProvider>
-                </APIProvider>
-            </ScrollDataProvider>
+            <APIProvider client={context().client}>
+                <EnrollmentCountsProvider client={context().client}>
+                    <I18nReadyOutlet />
+                    <TanStackRouterDevtools position="bottom-left" />
+                </EnrollmentCountsProvider>
+            </APIProvider>
         </PageDataProvider>
     )
 }

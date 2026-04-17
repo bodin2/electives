@@ -12,12 +12,14 @@
 .outer {
     background-color: var(--m3c-surface-container);
     width: 100%;
+    min-height: 0;
 }
 
 .inner {
     background-color: var(--m3c-surface);
     border-radius: var(--m3-shape-large-increased) 0 0 0;
     overflow-y: auto;
+    min-height: 0;
 }
 
 .toggleContainer {
@@ -30,9 +32,12 @@
     }
 }
 
-:global(#admin-app) {
+:global(#app):has(:global(#admin-app)) {
     height: 100vh;
     height: 100dvh;
-    max-height: 100vh;
-    max-height: 100dvh;
+    --sticky-offset: 0px;
+}
+
+:global(#admin-app) {
+    min-height: 0;
 }

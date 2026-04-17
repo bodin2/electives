@@ -1,5 +1,5 @@
 import { useRouterState } from '@tanstack/solid-router'
-import { createContext, createEffect, type JSXElement, onCleanup, onMount, useContext } from 'solid-js'
+import { createContext, createEffect, type JSXElement, onCleanup, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
 
 const ScrollContext = createContext({
@@ -11,25 +11,36 @@ const ScrollContext = createContext({
     maxScrollY: 0,
 })
 
-export default function ScrollDataProvider(props: { children: JSXElement }) {
+export default function ScrollDataProvider(props: { children: JSXElement; container?: HTMLElement }) {
     const [store, setStore] = createStore(ScrollContext.defaultValue)
     const routerState = useRouterState()
 
+    const el = () => props.container ?? document.documentElement
+
     const scrollListener = () => {
+        const target = el()
+        console.log('scroll event', {
+            scrollTop: target.scrollTop,
+            scrollLeft: target.scrollLeft,
+        })
         setStore({
-            scrolledVertical: window.scrollY > 0,
-            scrolledHorizontal: window.scrollX > 0,
-            maxScrollX: document.documentElement.scrollWidth - window.innerWidth,
-            maxScrollY: document.documentElement.scrollHeight - window.innerHeight,
-            scrollX: window.scrollX,
-            scrollY: window.scrollY,
+            scrolledVertical: target.scrollTop > 0,
+            scrolledHorizontal: target.scrollLeft > 0,
+            maxScrollX: target.scrollWidth - target.clientWidth,
+            maxScrollY: target.scrollHeight - target.clientHeight,
+            scrollX: target.scrollLeft,
+            scrollY: target.scrollTop,
         })
     }
 
-    onMount(() => {
+    createEffect(() => {
+        const target = el()
+        console.log('Initializing scroll listener', target)
+        target.addEventListener('scroll', scrollListener, { passive: true })
         window.addEventListener('scroll', scrollListener, { passive: true })
         window.addEventListener('resize', scrollListener, { passive: true })
         onCleanup(() => {
+            target.removeEventListener('scroll', scrollListener)
             window.removeEventListener('scroll', scrollListener)
             window.removeEventListener('resize', scrollListener)
         })

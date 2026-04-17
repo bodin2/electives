@@ -20,6 +20,7 @@ import SettingsDialog from '../../components/dialogs/SettingsDialog'
 import { HStack, VStack } from '../../components/Stack'
 import { useI18n } from '../../providers/I18nProvider'
 import { usePageData } from '../../providers/PageProvider'
+import ScrollDataProvider from '../../providers/ScrollDataProvider'
 import styles from './manage.module.css'
 import type { RoutePath } from '../../main'
 
@@ -32,6 +33,7 @@ function RouteComponent() {
     const [navOpen, setNavOpen] = createSignal(true)
     const [settingsOpen, setSettingsOpen] = createSignal(false)
     const pageData = usePageData()
+    const [containerRef, setContainerRef] = createSignal<HTMLDivElement | undefined>()
 
     const NavMenuToggle = () => (
         <div class={mergeClasses(styles.toggleContainer, navOpen() && styles.open)}>
@@ -73,8 +75,10 @@ function RouteComponent() {
         })
     })
 
+    onMount(() => {})
+
     return (
-        <HStack id="admin-app" grow align="stretch" gap={0} style={{ 'min-height': 0 }}>
+        <HStack id="admin-app" grow gap={0}>
             <div class={styles.navContainer}>
                 <NavigationRail
                     style={{ 'padding-block': '16px' }}
@@ -94,8 +98,10 @@ function RouteComponent() {
                 </NavigationRail>
             </div>
             <VStack tabindex="-1" grow class={styles.outer}>
-                <VStack tabindex="-1" grow class={styles.inner} gap={0}>
-                    <Outlet />
+                <VStack ref={setContainerRef} tabindex="-1" grow class={styles.inner} gap={0}>
+                    <ScrollDataProvider container={containerRef()}>
+                        <Outlet />
+                    </ScrollDataProvider>
                 </VStack>
             </VStack>
             <Portal>

@@ -8,12 +8,10 @@ import { useLogoutRedirect } from '../hooks/useAuthRedirect'
 import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
 import { useI18n } from '../providers/I18nProvider'
 import { usePageData } from '../providers/PageProvider'
+import { catchErrors } from '../utils/error-component'
 
 export const ADMIN_AUTHENTICATED_ROUTE_DEFAULTS = {
-    errorComponent: props => {
-        if (props.error instanceof UnauthorizedError) return <UnauthorizedRedirect />
-        throw props.error
-    },
+    errorComponent: catchErrors([UnauthorizedError, UnauthorizedRedirect]),
 } satisfies {
     errorComponent: ErrorRouteComponent
 }
