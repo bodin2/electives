@@ -19,10 +19,6 @@ export default function ScrollDataProvider(props: { children: JSXElement; contai
 
     const scrollListener = () => {
         const target = el()
-        console.log('scroll event', {
-            scrollTop: target.scrollTop,
-            scrollLeft: target.scrollLeft,
-        })
         setStore({
             scrolledVertical: target.scrollTop > 0,
             scrolledHorizontal: target.scrollLeft > 0,
@@ -35,7 +31,6 @@ export default function ScrollDataProvider(props: { children: JSXElement; contai
 
     createEffect(() => {
         const target = el()
-        console.log('Initializing scroll listener', target)
         target.addEventListener('scroll', scrollListener, { passive: true })
         window.addEventListener('scroll', scrollListener, { passive: true })
         window.addEventListener('resize', scrollListener, { passive: true })

@@ -1,7 +1,7 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { createFileRoute, useSearch } from '@tanstack/solid-router'
 import { Dialog, TextField, type TextFieldProps } from 'm3-solid'
-import { createEffect, createSignal, Show } from 'solid-js'
+import { createSignal, Show } from 'solid-js'
 import { UnauthorizedError } from '../api'
 import { Button } from '../components/Button'
 import SchoolLogo from '../components/images/SchoolLogo'
@@ -45,10 +45,6 @@ function Login() {
         altPath: '/manage',
         search: () => search().search,
         delay: 350,
-    })
-
-    createEffect(() => {
-        console.log(search())
     })
 
     let form!: HTMLFormElement
