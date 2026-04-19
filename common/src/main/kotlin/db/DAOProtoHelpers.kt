@@ -37,13 +37,16 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
  *
  * **A transaction must be active when calling this function with `electiveId`, or `withDescription = true`**
  *
- * @param electiveId Optional elective ID to include enrolled count.
+ * @param electiveId Optional elective ID to include enrolled count and teachers.
+ * @param withTeachers Whether to include the teachers field (requires `electiveId`).
  * @param withDescription Whether to include the description field.
+ * @param withEnrolledCounts Whether to include the enrolled count field.
  */
 fun Subject.toProto(
     electiveId: Int? = null,
     withTeachers: Boolean = false,
-    withDescription: Boolean = false
+    withDescription: Boolean = false,
+    withEnrolledCounts: Boolean = false
 ): th.ac.bodin2.electives.proto.api.Subject {
     val subject = this
 
@@ -63,15 +66,15 @@ fun Subject.toProto(
             subject.description?.let { description = it }
         }
 
-        if (withTeachers) {
-            subject.teachers.forEach { teachers += it.toProto() }
+        if (withTeachers && electiveId != null) {
+            subject.getTeachers(electiveId).forEach { teachers += it.toProto() }
         }
 
         this@toProto.teamId?.let { teamId = it.value }
 
-        electiveId?.let {
-            Elective.assertExists(it)
-            enrolledCount = getEnrolledCount(it)
+        if (withEnrolledCounts && electiveId != null) {
+            Elective.assertExists(electiveId)
+            enrolledCount = getEnrolledCount(electiveId)
         }
     }
 }

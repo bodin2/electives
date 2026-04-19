@@ -53,7 +53,6 @@ class SubjectServiceImplTest : ApplicationTest() {
             location = "Room B201",
             capacity = 20,
             team = TestConstants.Teams.TEAM_1_ID,
-            teacherIds = listOf(TestConstants.Teachers.BOB_ID),
         )
 
         assertEquals(newId, created.id.value)
@@ -76,7 +75,6 @@ class SubjectServiceImplTest : ApplicationTest() {
                 location = null,
                 capacity = 20,
                 team = null,
-                teacherIds = emptyList(),
                 thumbnailUrl = null,
                 imageUrl = null,
             )
@@ -148,27 +146,6 @@ class SubjectServiceImplTest : ApplicationTest() {
                 location = null,
                 capacity = 20,
                 team = UNUSED_ID,
-                teacherIds = emptyList(),
-                thumbnailUrl = null,
-                imageUrl = null,
-            )
-        }
-    }
-
-    @Test
-    fun `create subject with non-existent teacher throws not found`() = runTest {
-        assertFailsWith<EntityNotFoundException> {
-            @OptIn(Transactional::class)
-            subjectService.create(
-                id = 601,
-                name = "Invalid Teacher Subject",
-                description = null,
-                code = null,
-                tag = SubjectTag.SCIENCE_AND_TECHNOLOGY,
-                location = null,
-                capacity = 20,
-                team = null,
-                teacherIds = listOf(UNUSED_ID),
                 thumbnailUrl = null,
                 imageUrl = null,
             )
@@ -192,9 +169,52 @@ class SubjectServiceImplTest : ApplicationTest() {
             @OptIn(Transactional::class)
             subjectService.update(
                 TestConstants.Subjects.PHYSICS_ID,
-                SubjectService.SubjectUpdate(teacherIds = listOf(UNUSED_ID))
+                SubjectService.SubjectUpdate(
+                    teacherIds = listOf(UNUSED_ID),
+                    electiveId = TestConstants.Electives.SCIENCE_ID
+                )
             )
         }
+    }
+
+    @Test
+    fun `update subject with teachers`() = runTest {
+        @OptIn(Transactional::class)
+        subjectService.update(
+            TestConstants.Subjects.PHYSICS_ID,
+            SubjectService.SubjectUpdate(
+                teacherIds = listOf(TestConstants.Teachers.ALICE_ID),
+                electiveId = TestConstants.Electives.SCIENCE_ID
+            )
+        )
+
+        val teachers = transaction {
+            subjectService.getById(TestConstants.Subjects.PHYSICS_ID)!!
+                .getTeachers(TestConstants.Electives.SCIENCE_ID)
+        }
+
+        assertEquals(1, teachers.size)
+        assertEquals(TestConstants.Teachers.ALICE_ID, teachers.first().id.value)
+    }
+
+    @Test
+    fun `update subject with teachers without elective id does nothing`() = runTest {
+        @OptIn(Transactional::class)
+        subjectService.update(
+            TestConstants.Subjects.PHYSICS_ID,
+            SubjectService.SubjectUpdate(
+                teacherIds = listOf(TestConstants.Teachers.ALICE_ID)
+            )
+        )
+
+        val teachers = transaction {
+            subjectService.getById(TestConstants.Subjects.PHYSICS_ID)!!
+                .getTeachers(TestConstants.Electives.SCIENCE_ID)
+        }
+
+        // Bob is still there from mockData
+        assertEquals(1, teachers.size)
+        assertEquals(TestConstants.Teachers.BOB_ID, teachers.first().id.value)
     }
 
     @Test

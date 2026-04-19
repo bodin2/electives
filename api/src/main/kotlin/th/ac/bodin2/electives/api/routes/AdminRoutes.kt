@@ -59,7 +59,7 @@ val adminController = controller {
         AdminUsersSelectionsController(electiveSelectionService),
         AdminElectivesController(electiveService),
         AdminElectivesSubjectsController(electiveService),
-        AdminSubjectsController(subjectService),
+        AdminSubjectsController(subjectService, electiveService),
         AdminTeamsController(teamService),
     ).forEach { ctl -> ctl.apply { this@controller.register() } }
 
@@ -535,7 +535,10 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
     }
 }
 
-class AdminSubjectsController(private val subjectService: SubjectService) : Controller {
+class AdminSubjectsController(
+    private val subjectService: SubjectService,
+    private val electiveService: ElectiveService
+) : Controller {
     override fun Application.register() {
         adminRoutes {
             get<Admin.Subjects> { handleGetSubjects() }
@@ -549,6 +552,16 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             patch<Admin.Subjects.Id> { params -> handlePatchSubject(params.id) }
 
             get<Admin.Subjects.Id.ElectiveIds> { params -> handleGetSubjectElectiveIds(params.parent.id) }
+
+            context(electiveService) {
+                get<Admin.Subjects.Id.Members> { params ->
+                    handleGetElectiveSubjectMembers(
+                        params.elective_id,
+                        params.parent.id,
+                        true
+                    )
+                }
+            }
         }
     }
 
@@ -572,6 +585,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             ?: return badRequest()
 
         if (subject.id != id) return badRequest("ID in URL does not match body")
+        if (subject.teachersCount > 0) return badRequest("Can't add teachers into a subject immediately")
 
         try {
             @OptIn(Transactional::class)
@@ -584,7 +598,6 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
                 location = subject.location,
                 capacity = subject.capacity,
                 team = if (subject.hasTeamId()) subject.teamId else null,
-                teacherIds = subject.teachersList.map { it.id },
                 thumbnailUrl = if (subject.hasThumbnailUrl()) subject.thumbnailUrl else null,
                 imageUrl = if (subject.hasImageUrl()) subject.imageUrl else null,
             )
@@ -625,6 +638,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             tag = if (req.hasTag()) req.tag else null,
             capacity = if (req.hasCapacity()) req.capacity else null,
             teacherIds = if (req.patchTeachers) req.teachersList else null,
+            electiveId = if (req.hasElectiveId()) req.electiveId else null,
             description = if (req.hasDescription()) req.description else null,
             code = if (req.hasCode()) req.code else null,
             location = if (req.hasLocation()) req.location else null,
@@ -822,6 +836,10 @@ private class Admin {
         class Id(val parent: Subjects, val id: Int) {
             @Resource("elective-ids")
             class ElectiveIds(val parent: Id)
+
+            // GET: ListSubjectMembersResponse
+            @Resource("members")
+            class Members(val parent: Id, val elective_id: Int)
         }
     }
 

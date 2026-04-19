@@ -4,7 +4,7 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.Entity
 import org.jetbrains.exposed.v1.dao.EntityClass
-import org.jetbrains.exposed.v1.dao.load
+import org.jetbrains.exposed.v1.dao.with
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -71,23 +71,27 @@ class Student(id: EntityID<Int>) : Entity<Int>(id) {
 
 class Teacher(id: EntityID<Int>) : Entity<Int>(id) {
     var user by User referencedOn Teachers.user
-    val subjects by Subject via TeacherSubjects
 
     companion object : EntityClass<Int, Teacher>(Teachers) {
         fun assertExists(teacherId: Int) {
             if (!exists(teacherId)) throw EntityNotFoundException(ExceptionEntity.TEACHER)
         }
 
-        fun getSubjects(teacherId: Int): List<Subject> {
+        fun getSubjects(teacherId: Int, electiveId: Int): List<Subject> {
             return (TeacherSubjects innerJoin Subjects)
-                .selectAll().where { TeacherSubjects.teacher eq teacherId }
+                .selectAll()
+                .where { (TeacherSubjects.teacher eq teacherId) and (TeacherSubjects.elective eq electiveId) }
                 .map { Subject.wrapRow(it) }
         }
 
-        fun teachesSubject(teacherId: Int, subjectId: Int): Boolean {
+        fun teachesSubject(teacherId: Int, subjectId: Int, electiveId: Int): Boolean {
             return TeacherSubjects
                 .selectAll()
-                .where { (TeacherSubjects.teacher eq teacherId) and (TeacherSubjects.subject eq subjectId) }
+                .where {
+                    (TeacherSubjects.teacher eq teacherId) and
+                            (TeacherSubjects.subject eq subjectId) and
+                            (TeacherSubjects.elective eq electiveId)
+                }
                 .empty().not()
         }
     }
@@ -200,13 +204,14 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
     }
 
     /**
-     * Gets teachers for the specified subject.
+     * Gets teachers for the specified subject of the specified elective.
      */
-    fun getTeachers(subjectId: Int): List<Teacher> {
-        return (TeacherSubjects innerJoin Teachers innerJoin Users)
-            .selectAll()
-            .where { TeacherSubjects.subject eq subjectId }
-            .map { Teacher.wrapRow(it) }
+    fun getTeachers(subjectId: Int, electiveId: Int): List<Teacher> {
+        val query = (TeacherSubjects innerJoin Teachers)
+            .select(Teachers.columns)
+            .where { (TeacherSubjects.subject eq subjectId) and (TeacherSubjects.elective eq electiveId) }
+
+        return Teacher.wrapRows(query).with(Teacher::user).toList()
     }
 
     /**
@@ -217,17 +222,11 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
     fun getStudents(subjectId: Int, electiveId: Int): List<Student> {
         if (!isPartOfElective(subjectId, electiveId)) throw Subject.NotPartOfElectiveException(subjectId, electiveId)
 
-        val studentIds = StudentElectives
-            .select(StudentElectives.student)
+        val query = (StudentElectives innerJoin Students)
+            .select(Students.columns)
             .where { (StudentElectives.subject eq subjectId) and (StudentElectives.elective eq electiveId) }
-            .map { it[StudentElectives.student].value }
 
-        if (studentIds.isEmpty()) return emptyList()
-
-        return (Students innerJoin Users)
-            .selectAll()
-            .where { Students.id inList studentIds }
-            .map { Student.wrapRow(it).load(Student::teams) }
+        return Student.wrapRows(query).with(Student::user, Student::teams).toList()
     }
 
     /**
@@ -266,7 +265,7 @@ class Subject(id: EntityID<Int>) : Entity<Int>(id) {
 
     fun getEnrolledCount(electiveId: Int) = getEnrolledCount(this@Subject.id.value, electiveId)
 
-    val teachers by Teacher via TeacherSubjects
+    fun getTeachers(electiveId: Int) = getTeachers(this@Subject.id.value, electiveId)
 
     val description by lazy {
         Subjects.select(Subjects.description)

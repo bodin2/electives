@@ -24,7 +24,6 @@ interface SubjectService {
         location: String? = null,
         capacity: Int,
         team: Int? = null,
-        teacherIds: List<Int> = emptyList(),
         thumbnailUrl: String? = null,
         imageUrl: String? = null,
     ): Subject
@@ -55,6 +54,7 @@ interface SubjectService {
         val capacity: Int? = null,
         val team: Int? = null,
         val teacherIds: List<Int>? = null,
+        val electiveId: Int? = null,
         val thumbnailUrl: String? = null,
         val imageUrl: String? = null,
         val setDescription: Boolean = false,

@@ -19,6 +19,8 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.db.models.ElectiveSubjects
 import th.ac.bodin2.electives.db.models.Electives
 import th.ac.bodin2.electives.db.models.Subjects
+import th.ac.bodin2.electives.db.models.TeacherSubjects
+import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import java.time.LocalDateTime
 import kotlin.test.*
@@ -40,12 +42,10 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
             TestConstants.Subjects.PHYSICS_ID
         )
 
-        transaction {
-            electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID).apply {
-                val selectedSubject = this[TestConstants.Electives.SCIENCE_ID]
-                assertEquals(TestConstants.Subjects.PHYSICS_ID, selectedSubject?.id?.value)
-            }
+        val selectedSubject = transaction {
+            electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)[TestConstants.Electives.SCIENCE_ID]?.toProto()
         }
+        assertEquals(TestConstants.Subjects.PHYSICS_ID, selectedSubject?.id)
     }
 
     @Test
@@ -91,6 +91,34 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
             aliceSessionUser,
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.SCIENCE_ID,
+            TestConstants.Subjects.PHYSICS_ID
+        )
+
+        assertIs<ElectiveSelectionService.ModifySelectionResult.CannotModify>(result)
+        assertEquals(ElectiveSelectionService.ModifySelectionStatus.FORBIDDEN, result.status)
+    }
+
+    @Test
+    fun `put student elective selection as teacher not teaching subject in elective`() = runTest {
+        transaction {
+            Electives.insert {
+                it[id] = 3
+                it[name] = "Other Elective"
+                it[startDate] = null
+                it[endDate] = null
+                it[team] = TestConstants.Teams.TEAM_1_ID
+            }
+            ElectiveSubjects.insert {
+                it[elective] = 3
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+            // Bob teaches Physics in SCIENCE_ID, but not in elective 3
+        }
+
+        val result = electiveSelectionService.setStudentSelection(
+            bobSessionUser,
+            TestConstants.Students.JOHN_ID,
+            3,
             TestConstants.Subjects.PHYSICS_ID
         )
 
@@ -388,7 +416,11 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
                 it[subject] = TestConstants.Subjects.PHYSICS_ID
             }
 
-            // TeacherSubjects inserted in mocks
+            TeacherSubjects.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[elective] = TestConstants.Electives.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
         }
 
         val result = electiveSelectionService.setStudentSelection(
@@ -410,9 +442,10 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
 
         val selections = transaction {
             electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)
+                .mapValues { it.value.toProto() }
         }
 
-        assertEquals(TestConstants.Subjects.PHYSICS_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id?.value)
+        assertEquals(TestConstants.Subjects.PHYSICS_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id)
     }
 
     @Test

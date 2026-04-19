@@ -147,10 +147,12 @@ object TestDatabase {
         TeacherSubjects.insert {
             it[teacher] = TestConstants.Teachers.BOB_ID
             it[subject] = TestConstants.Subjects.PHYSICS_ID
+            it[elective] = TestConstants.Electives.SCIENCE_ID
         }
         TeacherSubjects.insert {
             it[teacher] = TestConstants.Teachers.ALICE_ID
             it[subject] = TestConstants.Subjects.CHEMISTRY_ID
+            it[elective] = TestConstants.Electives.SCIENCE_ID
         }
     }
 }

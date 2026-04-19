@@ -55,7 +55,8 @@ object MockUtils {
         val mock = mockk<Subject>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Subjects)
         every { mock.teamId } returns DaoEntityID(SUBJECT_TEAM_ID, Teams)
-        every { mock.teachers } returns SizedCollection(listOf(mockTeacher(TEACHER_ID, true)))
+        every { mock.getTeachers(any()) } returns listOf(mockTeacher(TEACHER_ID))
+        every { mock.getEnrolledCount(any()) } returns 0
 
         return mock
     }
@@ -67,12 +68,11 @@ object MockUtils {
         return mock
     }
 
-    fun mockTeacher(id: Int, noSubjects: Boolean = false): Teacher {
+    fun mockTeacher(id: Int): Teacher {
         val user = mockUser(id)
         val mock = mockk<Teacher>(relaxed = true)
         every { mock.user } returns user
         every { mock.id } returns mockId(id)
-        if (!noSubjects) every { mock.subjects } returns SizedCollection(listOf(mockSubject(SUBJECT_ID)))
 
         return mock
     }

@@ -50,6 +50,7 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
             .parse<ElectivesService.ListSubjectsResponse>()
 
         assertEquals(TestSubjectService.SUBJECT_IDS.size, response.subjectsCount)
+        assertEquals(0, response.subjectsList[0].teachersCount)
     }
 
     @Test
@@ -62,6 +63,7 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
             .parse<Subject>()
 
         assertEquals(SUBJECT_ID, subject.id)
+        assertEquals(0, subject.teachersCount)
     }
 
     @Test

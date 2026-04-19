@@ -72,7 +72,8 @@ suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
                         it.toProto(
                             withDescription = false,
                             withTeachers = true,
-                            electiveId = electiveId
+                            electiveId = electiveId,
+                            withEnrolledCounts = true,
                         )
                     }
                 }
@@ -92,7 +93,14 @@ private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, sub
             is QueryResult.SubjectNotFound -> Err(subjectNotFound)
             is QueryResult.SubjectNotPartOfElective -> Err(subjectNotPartOfElective(electiveId, subjectId))
 
-            is QueryResult.Success -> Ok(result.value.toProto(withDescription = true, withTeachers = true))
+            is QueryResult.Success -> Ok(
+                result.value.toProto(
+                    withDescription = true,
+                    withTeachers = true,
+                    electiveId = electiveId,
+                    withEnrolledCounts = true,
+                )
+            )
         }
     }
 
@@ -103,7 +111,7 @@ private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, sub
 }
 
 context(electiveService: ElectiveService)
-private suspend fun RoutingContext.handleGetElectiveSubjectMembers(
+suspend fun RoutingContext.handleGetElectiveSubjectMembers(
     electiveId: Int,
     subjectId: Int,
     withStudents: Boolean,

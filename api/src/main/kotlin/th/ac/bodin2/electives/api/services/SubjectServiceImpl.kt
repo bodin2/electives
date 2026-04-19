@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -28,7 +29,6 @@ class SubjectServiceImpl : SubjectService {
         location: String?,
         capacity: Int,
         team: Int?,
-        teacherIds: List<Int>,
         thumbnailUrl: String?,
         imageUrl: String?,
     ) = transaction {
@@ -49,16 +49,6 @@ class SubjectServiceImpl : SubjectService {
         }
 
         if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.SUBJECT)
-
-        if (teacherIds.isNotEmpty()) {
-            val teacherIds = teacherIds.distinct()
-            teacherIds.forEach { Teacher.assertExists(it) }
-
-            TeacherSubjects.batchInsert(teacherIds) { teacherId ->
-                this[TeacherSubjects.teacher] = teacherId
-                this[TeacherSubjects.subject] = id
-            }
-        }
 
         Subject.wrapRow(stmt.resultedValues!!.first())
     }
@@ -103,14 +93,18 @@ class SubjectServiceImpl : SubjectService {
                 update.teacherIds ?: throw e
             }
 
-            if (update.teacherIds != null) {
+            if (update.teacherIds != null && update.electiveId != null) {
                 val teacherIds = update.teacherIds.distinct()
                 teacherIds.forEach { Teacher.assertExists(it) }
 
-                TeacherSubjects.deleteWhere { TeacherSubjects.subject eq id }
+                TeacherSubjects.deleteWhere {
+                    (TeacherSubjects.subject eq id) and (TeacherSubjects.elective eq update.electiveId)
+                }
+
                 TeacherSubjects.batchInsert(teacherIds) { teacherId ->
                     this[TeacherSubjects.teacher] = teacherId
                     this[TeacherSubjects.subject] = id
+                    this[TeacherSubjects.elective] = update.electiveId
                 }
             }
         }

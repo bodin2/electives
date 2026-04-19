@@ -129,7 +129,7 @@ class ElectiveServiceImpl : ElectiveService {
                 return QueryResult.SubjectNotPartOfElective(subjectId, electiveId)
             }
 
-            val teachers = Subject.getTeachers(subjectId)
+            val teachers = Subject.getTeachers(subjectId, electiveId)
             val students = if (withStudents) Subject.getStudents(subjectId, electiveId) else emptyList()
 
             return QueryResult.Success(teachers to students)

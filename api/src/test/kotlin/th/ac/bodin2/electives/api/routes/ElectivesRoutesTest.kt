@@ -75,6 +75,8 @@ class ElectivesRoutesTest : ApplicationTest() {
 
         assertEquals(SUBJECT_ID, response.subjectsList[0].id)
         assertEquals(TEACHER_ID, response.subjectsList[0].teachersList[0].id)
+        assertTrue(response.subjectsList[0].hasEnrolledCount())
+        assertEquals(0, response.subjectsList[0].enrolledCount)
     }
 
     @Test
@@ -90,6 +92,8 @@ class ElectivesRoutesTest : ApplicationTest() {
 
         assertEquals(SUBJECT_ID, subject.id)
         assertEquals(TEACHER_ID, subject.teachersList[0].id)
+        assertTrue(subject.hasEnrolledCount())
+        assertEquals(0, subject.enrolledCount)
     }
 
     @Test

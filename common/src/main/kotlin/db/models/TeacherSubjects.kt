@@ -8,5 +8,7 @@ object TeacherSubjects : Table("teachers_to_subjects") {
         reference("teacher_id", Teachers, onDelete = ReferenceOption.CASCADE, onUpdate = ReferenceOption.CASCADE)
     val subject =
         reference("subject_id", Subjects, onDelete = ReferenceOption.CASCADE, onUpdate = ReferenceOption.CASCADE)
-    override val primaryKey = PrimaryKey(teacher, subject)
+    val elective =
+        reference("elective_id", Electives, onDelete = ReferenceOption.CASCADE, onUpdate = ReferenceOption.CASCADE)
+    override val primaryKey = PrimaryKey(teacher, subject, elective)
 }

@@ -122,6 +122,9 @@ message AdminService {
     bool patch_thumbnail_url = 16;
     // Whether the `image_url` field should be considered during patching.
     bool patch_image_url = 17;
+
+    // Elective ID to update teachers for (required if `patch_teachers` is true)
+    optional uint32 elective_id = 18;
   }
 
   message TeamMemberCounts {
@@ -250,6 +253,7 @@ message Subject {
   string location = 6;
   uint32 capacity = 7;
   optional uint32 team_id = 8;
+  // Only passed in ListSubjectsResponse and StudentSelections
   repeated User teachers = 9;
   // Only passed in ListSubjectsResponse
   optional uint32 enrolled_count = 10;

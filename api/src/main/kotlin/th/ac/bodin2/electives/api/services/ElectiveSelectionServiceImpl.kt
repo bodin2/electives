@@ -95,7 +95,7 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
                 val executorIsSomeoneElse = studentId != executor.id
                 if (executorIsSomeoneElse) {
                     if (executor.type == UserType.TEACHER) {
-                        if (!Teacher.teachesSubject(executor.id, subjectId)) {
+                        if (!Teacher.teachesSubject(executor.id, subjectId, electiveId)) {
                             return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                         }
                     } else {
@@ -168,7 +168,7 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
 
                 if (studentId != executor.id) {
                     if (executor.type == UserType.TEACHER) {
-                        if (!Teacher.teachesSubject(executor.id, selection.value)) {
+                        if (!Teacher.teachesSubject(executor.id, selection.value, electiveId)) {
                             return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                         }
                     } else {

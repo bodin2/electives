@@ -23,7 +23,6 @@ class TestSubjectService : SubjectService {
         location: String?,
         capacity: Int,
         team: Int?,
-        teacherIds: List<Int>,
         thumbnailUrl: String?,
         imageUrl: String?,
     ): Subject = error("Not testable")

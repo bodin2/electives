@@ -71,7 +71,12 @@ suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
 
             studentSelections {
                 subjects.putAll(selections.mapValues {
-                    it.value.toProto(withDescription = false, withTeachers = true)
+                    it.value.toProto(
+                        electiveId = it.key,
+                        withDescription = false,
+                        withTeachers = true,
+                        withEnrolledCounts = true,
+                    )
                 })
             }
         }
