@@ -308,6 +308,7 @@ export class Client<TCredentials> {
         })
 
         this.gateway.on('subjectEnrollmentUpdate', update => {
+            this.subjects._updateEnrolledCount(update.electiveId, update.subjectId, update.enrolledCount)
             this.emitter.emit('subjectEnrollmentUpdate', {
                 electiveId: update.electiveId,
                 subjectId: update.subjectId,
@@ -316,6 +317,9 @@ export class Client<TCredentials> {
         })
 
         this.gateway.on('bulkSubjectEnrollmentUpdate', update => {
+            for (const [subjectId, count] of Object.entries(update.subjectEnrolledCounts)) {
+                this.subjects._updateEnrolledCount(update.electiveId, Number(subjectId), count)
+            }
             this.emitter.emit('bulkSubjectEnrollmentUpdate', {
                 electiveId: update.electiveId,
                 subjectEnrolledCounts: update.subjectEnrolledCounts,

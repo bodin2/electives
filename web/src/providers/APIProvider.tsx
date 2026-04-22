@@ -224,6 +224,15 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             client.on('unauthorized', onUnauthorized)
             client.on('logout', onLogout)
 
+            // Handle events that might have already fired
+            if (client.user) {
+                onReady(client.user)
+            }
+
+            if (client.isGatewayConnected()) {
+                onGatewayConnect()
+            }
+
             onCleanup(() => {
                 client.off('ready', onReady)
                 client.off('error', onError)

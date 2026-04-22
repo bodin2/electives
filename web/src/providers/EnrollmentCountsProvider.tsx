@@ -55,7 +55,16 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
     }
 
     props.client.on('subjectEnrollmentUpdate', handleUpdate)
-    props.client.gateway.on('bulkSubjectEnrollmentUpdate', handleBulkUpdate)
+    props.client.on('bulkSubjectEnrollmentUpdate', handleBulkUpdate)
+
+    // Sync from cache in case we missed initial events
+    for (const [key, count] of props.client.subjects.enrolledCountCache.entries()) {
+        const [electiveId, subjectId] = key.split(':').map(Number)
+        if (!Number.isNaN(electiveId) && !Number.isNaN(subjectId)) {
+            setStore('counts', electiveId, { [subjectId]: count })
+            setStore('versions', electiveId, v => (v ?? 0) + 1)
+        }
+    }
 
     const value: EnrollmentContextValue = {
         getCount: (electiveId, subjectId) => store.counts[electiveId]?.[subjectId],
@@ -73,7 +82,7 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
 
     onCleanup(() => {
         props.client.off('subjectEnrollmentUpdate', handleUpdate)
-        props.client.gateway.off('bulkSubjectEnrollmentUpdate', handleBulkUpdate)
+        props.client.off('bulkSubjectEnrollmentUpdate', handleBulkUpdate)
     })
 
     return <EnrollmentContext.Provider value={value}>{props.children}</EnrollmentContext.Provider>
