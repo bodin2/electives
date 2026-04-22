@@ -1,10 +1,7 @@
 package th.ac.bodin2.electives.api.services
 
-import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.batchInsert
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.EntityNotFoundException
@@ -19,30 +16,12 @@ import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.models.StudentElectives
 import th.ac.bodin2.electives.db.models.Subjects
 import th.ac.bodin2.electives.proto.api.UserType
-import java.sql.Connection
 import java.sql.Connection.TRANSACTION_SERIALIZABLE
 import java.time.LocalDateTime
 
 class ElectiveSelectionServiceImpl(private val notificationsService: NotificationsService) : ElectiveSelectionService {
     companion object {
         private val logger = LoggerFactory.getLogger(ElectiveSelectionServiceImpl::class.java)
-        private val INSERT_SELECTION_QUERY = """
-            INSERT INTO ${StudentElectives.tableName}(
-              ${StudentElectives.student.name},
-              ${StudentElectives.elective.name},
-              ${StudentElectives.subject.name}
-            )
-            SELECT ?, ?, ?
-            WHERE (
-              SELECT COUNT(*)
-              FROM ${StudentElectives.tableName}
-              WHERE ${StudentElectives.elective.name} = ? AND ${StudentElectives.subject.name} = ?
-            ) < (
-              SELECT ${Subjects.capacity.name}
-              FROM ${Subjects.tableName}
-              WHERE id = ?
-            )
-        """.trimIndent()
     }
 
     @Transactional
@@ -98,7 +77,7 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
                         if (!Teacher.teachesSubject(executor.id, subjectId, electiveId)) {
                             return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                         }
-                    } else {
+                    } else if (executor.type != UserType.ADMIN) {
                         return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                     }
                 }
@@ -110,25 +89,34 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
                     else -> return@transaction ModifySelectionResult.CannotEnroll(result)
                 }
 
-                (connection.connection as Connection).prepareStatement(INSERT_SELECTION_QUERY).use { ps ->
-                    ps.setInt(1, studentId)
-                    ps.setInt(2, electiveId)
-                    ps.setInt(3, subjectId)
+                val currentCount = wrapAsExpression<Long>(
+                    StudentElectives
+                        .select(StudentElectives.student.count())
+                        .where {
+                            (StudentElectives.elective eq electiveId) and
+                                    (StudentElectives.subject eq subjectId)
+                        })
 
-                    ps.setInt(4, electiveId)
-                    ps.setInt(5, subjectId)
+                val capacity = wrapAsExpression<Int>(
+                    Subjects
+                        .select(Subjects.capacity)
+                        .where { Subjects.id eq subjectId })
 
-                    ps.setInt(6, subjectId)
+                val inserted = StudentElectives.insertIgnore(
+                    Subjects
+                        .select(intParam(studentId), intParam(electiveId), intParam(subjectId))
+                        .where {
+                            (Subjects.id eq subjectId) and (currentCount less capacity.castTo(LongColumnType()))
+                        },
+                )
 
-                    val inserted = ps.executeUpdate()
-                    if (inserted == 0) {
-                        logger.debug("Student elective selection failed due to full subject, user: $studentId, elective: $electiveId, subject: $subjectId, executor: ${executor.id}")
+                if (inserted == 0 || inserted == null) {
+                    logger.debug("Student elective selection failed due to full subject, user: $studentId, elective: $electiveId, subject: $subjectId, executor: ${executor.id}")
 
-                        // Not inserted, subject is full
-                        return@transaction ModifySelectionResult.CannotEnroll(
-                            CanEnrollStatus.SUBJECT_FULL
-                        )
-                    }
+                    // Not inserted, subject is full
+                    return@transaction ModifySelectionResult.CannotEnroll(
+                        CanEnrollStatus.SUBJECT_FULL
+                    )
                 }
 
                 onSuccess = {
