@@ -77,6 +77,15 @@ object MockUtils {
         return mock
     }
 
+    fun mockAdmin(id: Int): Admin {
+        val user = mockUser(id)
+        val mock = mockk<Admin>(relaxed = true)
+        every { mock.user } returns user
+        every { mock.id } returns mockId(id)
+
+        return mock
+    }
+
     fun mockStudent(id: Int): Student {
         val user = mockUser(id)
         val mock = mockk<Student>(relaxed = true)

@@ -3,13 +3,17 @@ package th.ac.bodin2.electives.api.services.mock
 import kotlinx.coroutines.flow.SharedFlow
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
+import th.ac.bodin2.electives.api.MockUtils.mockAdmin
 import th.ac.bodin2.electives.api.MockUtils.mockStudent
 import th.ac.bodin2.electives.api.MockUtils.mockTeacher
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.PASSWORD
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
+import th.ac.bodin2.electives.db.Admin
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.UserType
@@ -46,6 +50,9 @@ class TestUsersService : UsersService {
     override fun createTeachers(inserts: List<UsersService.TeacherInsert>) = error("Not testable")
 
     @Transactional
+    override fun createAdmin(insert: UsersService.AdminInsert) = error("Not testable")
+
+    @Transactional
     override fun deleteUser(id: Int) = error("Not testable")
 
     @Transactional
@@ -61,6 +68,7 @@ class TestUsersService : UsersService {
     override fun setPassword(id: Int, newPassword: String) = error("Not testable")
 
     override fun getUserType(id: Int) = when (id) {
+        ADMIN_ID -> UserType.ADMIN
         TEACHER_ID -> UserType.TEACHER
         STUDENT_ID -> UserType.STUDENT
         else -> throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
@@ -76,19 +84,29 @@ class TestUsersService : UsersService {
     }
 
     @Transactional
-    override fun insecurelyCreateSessionWithoutValidation(id: Int): String {
+    override fun insecurelyCreateSessionWithoutValidation(id: Int, customDurationSeconds: Long?): String {
         hasSessions.add(id)
         return id.toString()
     }
 
     override fun getSessionUser(token: String): UsersService.SessionUser {
-        if (!hasSessions.contains(token.toInt())) {
-            throw IllegalArgumentException("No session for user ID: $token")
+        if (token == ADMIN_TOKEN) {
+            return UsersService.SessionUser(
+                id = ADMIN_ID,
+                type = UserType.ADMIN
+            )
+        }
+
+        val id = token.toIntOrNull()
+            ?: throw IllegalArgumentException("No session for token: $token")
+
+        if (!hasSessions.contains(id)) {
+            throw IllegalArgumentException("No session for user ID: $id")
         }
 
         return UsersService.SessionUser(
-            id = token.toInt(),
-            type = getUserType(token.toInt())
+            id = id,
+            type = getUserType(id)
         )
     }
 
@@ -99,6 +117,14 @@ class TestUsersService : UsersService {
     override fun getTeacherById(id: Int): Teacher? {
         return if (id == TEACHER_ID) {
             mockTeacher(id)
+        } else {
+            null
+        }
+    }
+
+    override fun getAdminById(id: Int): Admin? {
+        return if (id == ADMIN_ID) {
+            mockAdmin(id)
         } else {
             null
         }

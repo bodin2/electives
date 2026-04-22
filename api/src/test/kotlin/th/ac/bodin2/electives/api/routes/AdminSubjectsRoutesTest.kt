@@ -3,13 +3,10 @@ package th.ac.bodin2.electives.api.routes
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import io.ktor.server.plugins.di.*
-import io.ktor.server.testing.*
-import io.mockk.every
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.getWithAuth
 import th.ac.bodin2.electives.api.parse
-import th.ac.bodin2.electives.api.services.AdminAuthService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
@@ -22,18 +19,8 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 class AdminSubjectsRoutesTest : ApplicationTest() {
-    private val ApplicationTestBuilder.adminAuthService: AdminAuthService
-        get() {
-            val service: AdminAuthService by application.dependencies
-            return service
-        }
-
-    private fun ApplicationTestBuilder.enableAdminAuth() {
-        every { adminAuthService.hasSession(any(), any()) } returns true
-    }
-
     private suspend fun HttpClient.adminGet(url: String): HttpResponse =
-        getWithAuth(url, "admin-token")
+        getWithAuth(url, ADMIN_TOKEN)
 
     @Test
     fun `get subjects without auth returns unauthorized`() = runRouteTest {
@@ -43,7 +30,6 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
     @Test
     fun `get subjects list`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         val response = client.adminGet("/admin/subjects")
             .assertOK()
@@ -56,7 +42,6 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
     @Test
     fun `get subject by id`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         val subject = client.adminGet("/admin/subjects/$SUBJECT_ID")
             .assertOK()
@@ -69,7 +54,6 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
     @Test
     fun `get subject not found`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         client.adminGet("/admin/subjects/$UNUSED_ID").assertNotFound()
     }
@@ -82,9 +66,10 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
     @Test
     fun `get elective IDs for subject`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
-        val ids = client.adminGet("/admin/subjects/$SUBJECT_ID/elective-ids").parse<AdminService.SubjectElectiveIds>()
+        val ids = client.adminGet("/admin/subjects/$SUBJECT_ID/elective-ids")
+            .assertOK()
+            .parse<AdminService.SubjectElectiveIds>()
         assertEquals(1, ids.electiveIdsCount)
         assertContains(ids.electiveIdsList, ELECTIVE_ID)
     }
@@ -92,7 +77,6 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
     @Test
     fun `get elective IDs for not found subject`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         client.adminGet("/admin/subjects/$UNUSED_ID").assertNotFound()
     }

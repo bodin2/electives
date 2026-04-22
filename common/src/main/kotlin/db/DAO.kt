@@ -97,6 +97,17 @@ class Teacher(id: EntityID<Int>) : Entity<Int>(id) {
     }
 }
 
+class Admin(id: EntityID<Int>) : Entity<Int>(id) {
+    var user by User referencedOn Admins.user
+    var publicKey by Admins.publicKey
+
+    companion object : EntityClass<Int, Admin>(Admins) {
+        fun assertExists(adminId: Int) {
+            if (!exists(adminId)) throw EntityNotFoundException(ExceptionEntity.USER)
+        }
+    }
+}
+
 class Team(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : EntityClass<Int, Team>(Teams) {
         fun assertExists(teamId: Int) {
@@ -157,11 +168,13 @@ open class ElectiveCompanion : EntityClass<Int, Elective>(Electives) {
         val subjectIds = getSubjectIds(electiveId)
         if (subjectIds.isEmpty()) return emptyMap()
 
-        return StudentElectives
+        val counts = StudentElectives
             .select(StudentElectives.subject, Count(StudentElectives.student))
             .where { (StudentElectives.elective eq electiveId) and (StudentElectives.subject inList subjectIds) }
             .groupBy(StudentElectives.subject)
             .associate { it[StudentElectives.subject].value to it[Count(StudentElectives.student)].toInt() }
+
+        return subjectIds.associate { it.value to (counts[it.value] ?: 0) }
     }
 
     fun getEnrollmentDateRange(electiveId: Int): Pair<LocalDateTime?, LocalDateTime?> {

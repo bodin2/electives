@@ -3,13 +3,10 @@ package th.ac.bodin2.electives.api.routes
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import io.ktor.server.plugins.di.*
-import io.ktor.server.testing.*
-import io.mockk.every
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.getWithAuth
 import th.ac.bodin2.electives.api.parse
-import th.ac.bodin2.electives.api.services.AdminAuthService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_TEAM_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.mock.TestTeamService
@@ -19,18 +16,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class AdminTeamsRoutesTest : ApplicationTest() {
-    private val ApplicationTestBuilder.adminAuthService: AdminAuthService
-        get() {
-            val service: AdminAuthService by application.dependencies
-            return service
-        }
-
-    private fun ApplicationTestBuilder.enableAdminAuth() {
-        every { adminAuthService.hasSession(any(), any()) } returns true
-    }
-
     private suspend fun HttpClient.adminGet(url: String): HttpResponse =
-        getWithAuth(url, "admin-token")
+        getWithAuth(url, ADMIN_TOKEN)
 
     @Test
     fun `get teams without auth returns unauthorized`() = runRouteTest {
@@ -40,7 +27,6 @@ class AdminTeamsRoutesTest : ApplicationTest() {
     @Test
     fun `get teams list`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         val response = client.adminGet("/admin/teams")
             .assertOK()
@@ -52,7 +38,6 @@ class AdminTeamsRoutesTest : ApplicationTest() {
     @Test
     fun `get team by id`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         val team = client.adminGet("/admin/teams/$ELECTIVE_TEAM_ID")
             .assertOK()
@@ -64,7 +49,6 @@ class AdminTeamsRoutesTest : ApplicationTest() {
     @Test
     fun `get team not found`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         client.adminGet("/admin/teams/$UNUSED_ID").assertNotFound()
     }
@@ -82,7 +66,6 @@ class AdminTeamsRoutesTest : ApplicationTest() {
     @Test
     fun `get team member counts`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         val response = client.adminGet("/admin/teams/member-counts")
             .assertOK()

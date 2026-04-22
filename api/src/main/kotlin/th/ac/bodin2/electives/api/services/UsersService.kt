@@ -5,9 +5,11 @@ import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
+import th.ac.bodin2.electives.db.Admin
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.UserType
+import java.security.PublicKey
 
 interface UsersService {
     val sessionCreationFlow: SharedFlow<Int>
@@ -16,7 +18,7 @@ interface UsersService {
      * Gets the [UserType] of the given user ID.
      *
      * @throws EntityNotFoundException if the user does not exist.
-     * @throws IllegalStateException if the user is neither a Student nor a Teacher.
+     * @throws IllegalStateException if the user is neither a Student, Teacher, nor Admin.
      */
     fun getUserType(id: Int): UserType
 
@@ -72,6 +74,15 @@ interface UsersService {
      */
     @Transactional
     fun createTeachers(inserts: List<TeacherInsert>): List<Teacher>
+
+    /**
+     * Creates a new admin with the given information.
+     *
+     * @throws ConflictException if a user/admin with the same ID already exists.
+     * @throws IllegalArgumentException if the pass
+     */
+    @Transactional
+    fun createAdmin(insert: AdminInsert): Admin
 
     /**
      * Deletes the user with the given ID.
@@ -136,6 +147,7 @@ interface UsersService {
     sealed class UserInsert(val user: UserData)
     class StudentInsert(user: UserData, val teams: List<Int> = emptyList()) : UserInsert(user)
     class TeacherInsert(user: UserData) : UserInsert(user)
+    class AdminInsert(user: UserData, val publicKey: PublicKey) : UserInsert(user)
 
     /**
      * If [setMiddleName] is true, the middle name is updated to the given value (which may be null).
@@ -175,6 +187,7 @@ interface UsersService {
 
     fun getTeacherById(id: Int): Teacher?
     fun getStudentById(id: Int): Student?
+    fun getAdminById(id: Int): Admin?
 
     /**
      * Gets a paginated list of students.
@@ -210,7 +223,7 @@ interface UsersService {
      * Assumes the user exists.
      */
     @Transactional
-    fun insecurelyCreateSessionWithoutValidation(id: Int): String
+    fun insecurelyCreateSessionWithoutValidation(id: Int, customDurationSeconds: Long? = null): String
 
     /**
      * Gets the basic user data associated with the given session token.

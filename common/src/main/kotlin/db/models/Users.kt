@@ -12,7 +12,7 @@ object Users : IdTable<Int>("users") {
 
     val avatarUrl = varchar("avatar_url", 1000).nullable()
 
-    val passwordHash = varchar("hash", 255)
+    val passwordHash = varchar("hash", 255).nullable()
 
     /**
      * Hash of the session token.

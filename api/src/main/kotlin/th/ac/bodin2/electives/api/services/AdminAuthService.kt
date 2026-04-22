@@ -7,29 +7,30 @@ interface AdminAuthService {
     fun newChallenge(): String
 
     /**
-     * Creates a new admin session, returning the session token, invalidating the old session and the challenge.
+     * Creates a new admin session, invalidating the current challenge.
      *
+     * @param id Admin user ID
      * @param signature A base64url-encoded signature of the current challenge.
+     * @param aud Client name
      * @param ip The IP address of the requester.
-     *
-     * @throws IllegalArgumentException if the token or session is invalid.
      */
-    suspend fun createSession(signature: String, ip: String): CreateSessionResult
+    suspend fun createSession(
+        id: Int,
+        signature: String,
+        aud: String,
+        ip: String,
+    ): CreateSessionResult
+
+    /**
+     * Returns whether the IP address is permitted to access admin routes.
+     */
+    fun permitsIP(ip: String): Boolean
 
     sealed class CreateSessionResult {
         data class Success(val token: String) : CreateSessionResult()
         data class IPNotAllowed(val ip: String) : CreateSessionResult()
         object InvalidSignature : CreateSessionResult()
         object NoChallenge : CreateSessionResult()
+        object UserNotAdmin : CreateSessionResult()
     }
-
-    /**
-     * Returns whether the token is still a valid session
-     */
-    fun hasSession(token: String, ip: String): Boolean
-
-    /**
-     * Clears the admin session.
-     */
-    fun clearSession()
 }

@@ -2,12 +2,26 @@ package th.ac.bodin2.electives.api.services
 
 import io.ktor.server.application.*
 import io.ktor.server.plugins.di.*
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
+import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.ExceptionEntity
+import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.contains
 import th.ac.bodin2.electives.api.logger
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
-import th.ac.bodin2.electives.utils.*
-import java.security.*
+import th.ac.bodin2.electives.db.models.Admins
+import th.ac.bodin2.electives.proto.api.UserType
+import th.ac.bodin2.electives.utils.CIDR
+import th.ac.bodin2.electives.utils.contains
+import th.ac.bodin2.electives.utils.env
+import th.ac.bodin2.electives.utils.withMinimumDelay
+import java.security.KeyFactory
+import java.security.PublicKey
+import java.security.Signature
+import java.security.SignatureException
 import java.security.interfaces.RSAPublicKey
 import java.security.spec.X509EncodedKeySpec
 import java.time.LocalDateTime
@@ -25,11 +39,14 @@ val isAdminEnabled
 val Application.isAdminAvailable
     get() = isAdminEnabled && dependencies.contains<AdminAuthService>()
 
-fun DependencyRegistry.provideAdminAuthService() {
+private fun tryGetDefaultPublicKey(): PublicKey? {
+    val env = env("ADMIN_PUBLIC_KEY")
+    if (env.isNullOrEmpty()) return null
+
     val keyFactory = KeyFactory.getInstance("RSA")
     val publicKey = keyFactory.generatePublic(
         X509EncodedKeySpec(
-            Base64.getDecoder().decode(requireEnvNonBlank("ADMIN_PUBLIC_KEY"))
+            Base64.getDecoder().decode(env)
         )
     )
 
@@ -41,6 +58,10 @@ fun DependencyRegistry.provideAdminAuthService() {
         logger.warn("Admin RSA public key is $bits bits (< 2048). Not recommended.")
     }
 
+    return publicKey
+}
+
+fun DependencyRegistry.provideAdminAuthService() {
     val allowedIPs = env("ADMIN_ALLOWED_IPS").let { ipString ->
         val ips = ipString.let {
             if (it.isNullOrBlank()) {
@@ -59,27 +80,29 @@ fun DependencyRegistry.provideAdminAuthService() {
 
     provide<AdminAuthService> {
         AdminAuthServiceImpl(
-            AdminAuthServiceImpl.Config(
-                sessionDurationSeconds =
-                    (env("ADMIN_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.hours).inWholeSeconds,
+            config = AdminAuthServiceImpl.Config(
                 minimumSessionCreationTime =
                     (env("ADMIN_SESSION_CREATION_MINIMUM_TIME")?.toIntOrNull()?.milliseconds
                         ?: 3.seconds),
                 allowedIPs = allowedIPs,
-                publicKey = publicKey,
                 challengeTimeoutSeconds =
-                    (env("ADMIN_CHALLENGE_TIMEOUT")?.toIntOrNull()?.seconds ?: 1.minutes).inWholeSeconds
-            )
+                    (env("ADMIN_CHALLENGE_TIMEOUT")?.toIntOrNull()?.seconds ?: 1.minutes).inWholeSeconds,
+                sessionDurationSeconds =
+                    (env("ADMIN_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.hours).inWholeSeconds,
+                defaultUserPublicKey = tryGetDefaultPublicKey()
+            ),
+            usersService = resolve<UsersService>(),
         )
     }
 }
 
-class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
-    private class SessionData(
-        val token: String,
-        val expires: LocalDateTime,
-    )
+// @TODO: Test this
+private fun isAdminResetEnabled() = !env("ADMIN_RESET").isNullOrBlank()
 
+class AdminAuthServiceImpl(
+    val config: Config,
+    val usersService: UsersService,
+) : AdminAuthService {
     private class Challenge(
         val bytes: ByteArray,
         val expires: LocalDateTime,
@@ -87,35 +110,95 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
 
     companion object {
         private const val CHALLENGE_SIZE = 128
-        private const val TOKEN_SIZE = 64
         private val logger = LoggerFactory.getLogger(AdminAuthServiceImpl::class.java)
-        private val secureRand = SecureRandom()
     }
 
     private val currentChallenge: AtomicReference<Challenge?> = AtomicReference(null)
-    private val sessionData: AtomicReference<SessionData?> = AtomicReference(null)
 
     class Config(
         val sessionDurationSeconds: Long,
         val minimumSessionCreationTime: Duration,
-        val publicKey: PublicKey,
         val allowedIPs: List<CIDR>?,
         val challengeTimeoutSeconds: Long,
+        // @TODO: Test this
+        val defaultUserId: Int = 0,
+        val defaultUserPublicKey: PublicKey? = null,
     )
 
     init {
         logger.warn("AdminAuthService is running!")
+
+        @OptIn(Transactional::class)
+        transaction {
+            try {
+                val type = usersService.getUserType(config.defaultUserId)
+                if (type != UserType.ADMIN) {
+                    logger.warn("Default admin user with ID ${config.defaultUserId} is a ${type.name}. You may need to recreate the database.")
+                }
+
+                if (isAdminResetEnabled()) {
+                    logger.warn("Resetting admin user with ID ${config.defaultUserId}")
+                    usersService.deleteUser(config.defaultUserId)
+                    throw EntityNotFoundException(ExceptionEntity.USER, "Admin reset, user ${config.defaultUserId} deleted")
+                }
+            } catch (_: EntityNotFoundException) {
+                if (config.defaultUserPublicKey == null) {
+                    logger.warn("Default admin user with ID ${config.defaultUserId} could not be created. ADMIN_PUBLIC_KEY is required during initial setup.")
+                    return@transaction
+                }
+
+                usersService.createAdmin(
+                    UsersService.AdminInsert(
+                        user = UsersService.UserData(
+                            id = config.defaultUserId,
+                            firstName = "Admin",
+                            password = "",
+                        ),
+                        publicKey = config.defaultUserPublicKey
+                    )
+                )
+            }
+        }
     }
 
-    private fun permitsIP(ip: String) =
+    override fun permitsIP(ip: String) =
         config.allowedIPs?.let { ip in it } ?: true
 
-    private fun verifySignature(signature: String, challenge: ByteArray): Boolean {
+    private fun getAdminPublicKey(id: Int): PublicKey? = transaction {
+        val publicKeyString = Admins
+            .select(Admins.publicKey)
+            .where { Admins.user eq id }
+            .singleOrNull()
+            ?.get(Admins.publicKey)
+            ?: return@transaction null
+
+        val publicKey = try {
+            val bytes = Base64.getDecoder().decode(publicKeyString)
+            KeyFactory
+                .getInstance("RSA")
+                .generatePublic(X509EncodedKeySpec(bytes))
+        } catch (e: Exception) {
+            logger.error("Invalid admin public key for admin user: $id", e)
+            return@transaction null
+        }
+
+        val rsa = publicKey as? RSAPublicKey
+            ?: return@transaction null
+
+        val bits = rsa.modulus.bitLength()
+        if (bits < 2048) {
+            logger.warn("Admin RSA public key is $bits bits (< 2048), admin user: $id")
+        }
+
+        return@transaction publicKey
+    }
+
+    private fun verifySignature(signature: String, challenge: ByteArray, publicKey: PublicKey): Boolean {
         return try {
             val sigBytes = Base64.getUrlDecoder().decode(signature)
 
             val sig = Signature.getInstance("SHA256withRSA")
-            sig.initVerify(config.publicKey)
+            sig.initVerify(publicKey)
             sig.update(challenge)
 
             sig.verify(sigBytes)
@@ -128,7 +211,7 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
     }
 
     override fun newChallenge(): String {
-        val challengeBytes = ByteArray(CHALLENGE_SIZE).apply { secureRand.nextBytes(this) }
+        val challengeBytes = ByteArray(CHALLENGE_SIZE).also { java.security.SecureRandom().nextBytes(it) }
         val challenge = Challenge(
             bytes = challengeBytes,
             expires = LocalDateTime.now().plusSeconds(config.challengeTimeoutSeconds),
@@ -141,7 +224,13 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
             .encodeToString(challengeBytes)
     }
 
-    override suspend fun createSession(signature: String, ip: String): CreateSessionResult {
+    @OptIn(Transactional::class)
+    override suspend fun createSession(
+        id: Int,
+        signature: String,
+        aud: String,
+        ip: String,
+    ): CreateSessionResult {
         if (!permitsIP(ip)) {
             return CreateSessionResult.IPNotAllowed(ip)
         }
@@ -151,43 +240,19 @@ class AdminAuthServiceImpl(val config: Config) : AdminAuthService {
             if (challenge == null || challenge.expires.isBefore(LocalDateTime.now()))
                 return@withMinimumDelay CreateSessionResult.NoChallenge
 
-            if (verifySignature(signature, challenge.bytes)) {
-                val session = Base64.getUrlEncoder()
-                    .withoutPadding()
-                    .encodeToString(ByteArray(TOKEN_SIZE).apply { secureRand.nextBytes(this) })
+            val adminPublicKey = getAdminPublicKey(id)
+                ?: return@withMinimumDelay CreateSessionResult.UserNotAdmin
 
-                val data = SessionData(
-                    token = session,
-                    expires = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds),
-                )
-
-                sessionData.set(data)
-
-                logger.info("New admin session created (IP: $ip)")
-
-                CreateSessionResult.Success(session)
-            } else {
-                CreateSessionResult.InvalidSignature
+            if (!verifySignature(signature, challenge.bytes, adminPublicKey)) {
+                return@withMinimumDelay CreateSessionResult.InvalidSignature
             }
+
+            val token = transaction {
+                usersService.insecurelyCreateSessionWithoutValidation(id, config.sessionDurationSeconds)
+            }
+
+            logger.info("New admin session created, user: $id, aud: $aud, ip: $ip")
+            CreateSessionResult.Success(token)
         }
-    }
-
-    override fun hasSession(token: String, ip: String): Boolean {
-        if (!permitsIP(ip)) {
-            return false
-        }
-
-        val session = sessionData.get()
-        session ?: return false
-
-        if (session.expires.isBefore(LocalDateTime.now())) {
-            return false
-        }
-
-        return MessageDigest.isEqual(session.token.toByteArray(), token.toByteArray())
-    }
-
-    override fun clearSession() {
-        sessionData.set(null)
     }
 }

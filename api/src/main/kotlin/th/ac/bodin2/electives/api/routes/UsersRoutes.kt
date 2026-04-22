@@ -97,6 +97,7 @@ suspend fun RoutingContext.handleGetUser(userId: Int) {
             when (val type = usersService.getUserType(userId)) {
                 UserType.STUDENT -> usersService.getStudentById(userId)?.toProto()
                 UserType.TEACHER -> usersService.getTeacherById(userId)?.toProto()
+                UserType.ADMIN -> usersService.getAdminById(userId)?.toProto()
 
                 else -> throw IllegalStateException("Unknown user type: $type (id: $userId)")
             }
@@ -214,7 +215,7 @@ private suspend inline fun RoutingContext.resolveUserIdEnforced(
             }
         }
 
-        if (idParam == ME_USER_ID) ALL_USER_TYPES else TEACHER_USER_ONLY
+        if (idParam == ME_USER_ID) ALL_USER_TYPES else ELEVATED_USER_ONLY
     }) { user ->
         val gettingUserId = if (idParam == ME_USER_ID) {
             user.id

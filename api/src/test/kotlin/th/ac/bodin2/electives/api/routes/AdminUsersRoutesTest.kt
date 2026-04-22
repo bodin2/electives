@@ -3,73 +3,27 @@ package th.ac.bodin2.electives.api.routes
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import io.ktor.server.plugins.di.*
-import io.ktor.server.testing.*
-import io.mockk.every
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.deleteWithAuth
 import th.ac.bodin2.electives.api.getWithAuth
 import th.ac.bodin2.electives.api.parse
-import th.ac.bodin2.electives.api.services.AdminAuthService
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
-import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.AdminService
-import th.ac.bodin2.electives.proto.api.User
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class AdminUsersRoutesTest : ApplicationTest() {
-    private val ApplicationTestBuilder.adminAuthService: AdminAuthService
-        get() {
-            val service: AdminAuthService by application.dependencies
-            return service
-        }
-
-    private fun ApplicationTestBuilder.enableAdminAuth() {
-        every { adminAuthService.hasSession(any(), any()) } returns true
-    }
-
     private suspend fun HttpClient.adminGet(url: String): HttpResponse =
-        getWithAuth(url, "admin-token")
+        getWithAuth(url, ADMIN_TOKEN)
 
     private suspend fun HttpClient.adminDelete(url: String): HttpResponse =
-        deleteWithAuth(url, "admin-token")
-
-    @Test
-    fun `get user without auth returns unauthorized`() = runRouteTest {
-        client.get("/admin/users/$STUDENT_ID").assertUnauthorized()
-    }
-
-    @Test
-    fun `get student user`() = runRouteTest {
-        startApplication()
-        enableAdminAuth()
-
-        val user = client.adminGet("/admin/users/$STUDENT_ID")
-            .assertOK()
-            .parse<User>()
-
-        assertEquals(STUDENT_ID, user.id)
-    }
-
-    @Test
-    fun `get teacher user`() = runRouteTest {
-        startApplication()
-        enableAdminAuth()
-
-        val user = client.adminGet("/admin/users/$TEACHER_ID")
-            .assertOK()
-            .parse<User>()
-
-        assertEquals(TEACHER_ID, user.id)
-    }
+        deleteWithAuth(url, ADMIN_TOKEN)
 
     @Test
     fun `get user not found`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         client.adminGet("/admin/users/$UNUSED_ID").assertNotFound()
     }
@@ -77,7 +31,6 @@ class AdminUsersRoutesTest : ApplicationTest() {
     @Test
     fun `get students list`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         val response = client.adminGet("/admin/users/students")
             .assertOK()
@@ -89,7 +42,6 @@ class AdminUsersRoutesTest : ApplicationTest() {
     @Test
     fun `get teachers list`() = runRouteTest {
         startApplication()
-        enableAdminAuth()
 
         val response = client.adminGet("/admin/users/teachers")
             .assertOK()

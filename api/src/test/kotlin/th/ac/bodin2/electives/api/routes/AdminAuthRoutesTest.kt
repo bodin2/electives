@@ -39,7 +39,7 @@ class AdminAuthRoutesTest : ApplicationTest() {
     @Test
     fun `authenticate success`() = runRouteTest {
         startApplication()
-        coEvery { adminAuthService.createSession(any(), any()) } returns
+        coEvery { adminAuthService.createSession(any(), any(), any(), any()) } returns
                 CreateSessionResult.Success("admin-token-123")
 
         val response = client.postProto(
@@ -55,7 +55,7 @@ class AdminAuthRoutesTest : ApplicationTest() {
     @Test
     fun `authenticate no challenge`() = runRouteTest {
         startApplication()
-        coEvery { adminAuthService.createSession(any(), any()) } returns
+        coEvery { adminAuthService.createSession(any(), any(), any(), any()) } returns
                 CreateSessionResult.NoChallenge
 
         client.postProto(
@@ -69,7 +69,7 @@ class AdminAuthRoutesTest : ApplicationTest() {
     @Test
     fun `authenticate invalid signature`() = runRouteTest {
         startApplication()
-        coEvery { adminAuthService.createSession(any(), any()) } returns
+        coEvery { adminAuthService.createSession(any(), any(), any(), any()) } returns
                 CreateSessionResult.InvalidSignature
 
         val response = client.postProto(
@@ -85,7 +85,7 @@ class AdminAuthRoutesTest : ApplicationTest() {
     @Test
     fun `authenticate ip not allowed`() = runRouteTest {
         startApplication()
-        coEvery { adminAuthService.createSession(any(), any()) } returns
+        coEvery { adminAuthService.createSession(any(), any(), any(), any()) } returns
                 CreateSessionResult.IPNotAllowed("192.168.1.1")
 
         client.postProto(
@@ -109,7 +109,7 @@ class AdminAuthRoutesTest : ApplicationTest() {
     @Test
     fun `authenticate exception returns unauthorized`() = runRouteTest {
         startApplication()
-        coEvery { adminAuthService.createSession(any(), any()) } throws
+        coEvery { adminAuthService.createSession(any(), any(), any(), any()) } throws
                 RuntimeException("Something went wrong")
 
         val response = client.postProto(

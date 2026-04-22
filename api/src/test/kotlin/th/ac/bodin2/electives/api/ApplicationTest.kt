@@ -56,31 +56,38 @@ abstract class ApplicationTest {
 
     open fun runRouteTest(block: suspend ApplicationTestBuilder.() -> Unit) {
         setupTestEnvironment()
+
         mockTransactions()
         MockUtils.mockDAOHelpers()
 
-        testApplication {
-            application {
-                dependencies {
-                    provide<Argon2> { Argon2(16.MiB, 5) }
-                    provide<UsersService> { TestUsersService() }
-                    provide<NotificationsService> { mockk(relaxed = true) }
-                    provide<ElectiveService> { TestElectiveService() }
-                    provide<ElectiveSelectionService> { TestElectiveSelectionService() }
-                    provide<SubjectService> { TestSubjectService() }
-                    provide<TeamService> { TestTeamService() }
-                    provide<AdminAuthService> { mockk(relaxed = true) }
+        try {
+            testApplication {
+                application {
+                    dependencies {
+                        provide<Argon2> { Argon2(16.MiB, 5) }
+                        provide<UsersService> { TestUsersService() }
+                        provide<NotificationsService> { mockk(relaxed = true) }
+                        provide<ElectiveService> { TestElectiveService() }
+                        provide<ElectiveSelectionService> { TestElectiveSelectionService() }
+                        provide<SubjectService> { TestSubjectService() }
+                        provide<TeamService> { TestTeamService() }
+                        provide<AdminAuthService> {
+                            mockk<AdminAuthService>(relaxed = true).apply {
+                                every { permitsIP(any()) } returns true
+                            }
+                        }
+                    }
+
+                    mockRateLimits()
+                    module()
                 }
 
-                mockRateLimits()
-                module()
+                block()
             }
-
-            block()
+        } finally {
+            unmockTransactions()
+            MockUtils.unmockDAOHelpers()
         }
-
-        unmockTransactions()
-        MockUtils.unmockDAOHelpers()
     }
 
     open fun runTest(setup: TestApplicationBuilder.() -> Unit, block: suspend ApplicationTestBuilder.() -> Unit) {

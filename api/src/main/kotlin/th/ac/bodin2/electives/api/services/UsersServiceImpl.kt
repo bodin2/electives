@@ -18,10 +18,7 @@ import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersServiceImpl.Config
-import th.ac.bodin2.electives.db.Student
-import th.ac.bodin2.electives.db.Teacher
-import th.ac.bodin2.electives.db.Team
-import th.ac.bodin2.electives.db.User
+import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.*
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
@@ -72,7 +69,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         val query = Users
             .leftJoin(Students)
             .leftJoin(Teachers)
-            .select(Users.id, Students.id, Teachers.id)
+            .leftJoin(Admins)
+            .select(Users.id, Students.id, Teachers.id, Admins.id)
             .where { Users.id eq id }
             .firstOrNull()
 
@@ -81,7 +79,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         return when {
             query.getOrNull(Students.id) != null -> UserType.STUDENT
             query.getOrNull(Teachers.id) != null -> UserType.TEACHER
-            else -> throw IllegalStateException("User is not a Student or a Teacher: $id")
+            query.getOrNull(Admins.id) != null -> UserType.ADMIN
+            else -> throw IllegalStateException("User is not a Student, Teacher, or Admin: $id")
         }
     }
 
@@ -183,6 +182,24 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
 
         return@transaction Teacher.find { Teachers.id inList prepared.map { it.request.user.id } }.toList()
+    }
+
+    // @TODO: Test this
+    @Transactional
+    override fun createAdmin(insert: UsersService.AdminInsert) = transaction {
+        Admin.new(insert.user.id) {
+            user = createUser(
+                id = insert.user.id,
+                firstName = insert.user.firstName,
+                middleName = insert.user.middleName,
+                lastName = insert.user.lastName,
+                password = insert.user.password,
+                avatarUrl = insert.user.avatarUrl,
+                assertPassword = false
+            )
+
+            publicKey = Base64.getEncoder().encodeToString(insert.publicKey.encoded)
+        }
     }
 
     private fun <T : UsersService.UserInsert> insertUserBatch(inserts: List<T>): List<PreparedUserInsert<T>> {
@@ -316,6 +333,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
     override fun getStudentById(id: Int): Student? = Student.findById(id)
 
+    override fun getAdminById(id: Int): Admin? = Admin.findById(id)
+
     @Transactional
     override fun getStudents(page: Int): Pair<List<Student>, Long> {
         require(page >= 1) { "Page must be at least 1" }
@@ -373,6 +392,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
                 val passwordHash = user[Users.passwordHash]
 
+                require(passwordHash != null) { "User not password authenticatable: $id" }
+
                 require(
                     argon2.verify(passwordHash, password.toCharArray())
                 ) { "Invalid password for user: $id" }
@@ -387,13 +408,15 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
 
     @Transactional
-    override fun insecurelyCreateSessionWithoutValidation(id: Int): String {
+    override fun insecurelyCreateSessionWithoutValidation(id: Int, customDurationSeconds: Long?): String {
         val session = Base64.getUrlEncoder()
             .withoutPadding()
             .encodeToString(ByteArray(TOKEN_SIZE).apply { secureRand.nextBytes(this) })
 
         Users.update({ Users.id eq id }) {
-            it[Users.sessionExpiry] = LocalDateTime.now().plusSeconds(config.sessionDurationSeconds)
+            it[Users.sessionExpiry] =
+                LocalDateTime.now().plusSeconds(customDurationSeconds ?: config.sessionDurationSeconds)
+
             it[Users.sessionHash] = argon2.hash(session.toCharArray())
         }
 
@@ -442,15 +465,16 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
+        assertPassword: Boolean = true
     ): User {
-        val password = password.assertPasswordRequirements()
+        val password = if (assertPassword) password.assertPasswordRequirements() else password
 
         val stmt = Users.insertIgnore {
             it[Users.id] = id
             it[Users.firstName] = firstName
             it[Users.middleName] = middleName
             it[Users.lastName] = lastName
-            it[Users.passwordHash] = argon2.hash(password.toCharArray())
+            it[Users.passwordHash] = if (password.isBlank()) null else argon2.hash(password.toCharArray())
             it[Users.avatarUrl] = avatarUrl
         }
 

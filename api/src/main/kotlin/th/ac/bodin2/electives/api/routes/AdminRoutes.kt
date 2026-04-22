@@ -13,7 +13,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
-import io.ktor.server.websocket.*
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
@@ -26,7 +25,6 @@ import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN_AUTH
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
-import th.ac.bodin2.electives.api.services.NotificationsService
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.api.utils.unauthorized
@@ -46,7 +44,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 val adminController = controller {
-    val notificationsService: NotificationsService by dependencies
     val usersService: UsersService by dependencies
     val electiveSelectionService: ElectiveSelectionService by dependencies
     val electiveService: ElectiveService by dependencies
@@ -59,7 +56,7 @@ val adminController = controller {
         AdminUsersSelectionsController(electiveSelectionService),
         AdminElectivesController(electiveService),
         AdminElectivesSubjectsController(electiveService),
-        AdminSubjectsController(subjectService, electiveService),
+        AdminSubjectsController(subjectService),
         AdminTeamsController(teamService),
     ).forEach { ctl -> ctl.apply { this@controller.register() } }
 
@@ -75,12 +72,6 @@ val adminController = controller {
 
                     call.response.status(HttpStatusCode.NotFound)
                 }
-            }
-        }
-
-        resource<Admin.Notifications> {
-            webSocket {
-                notificationsService.apply { handleAdminConnection() }
             }
         }
     }
@@ -101,8 +92,12 @@ val adminAuthController = controller {
                 val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post notFound()
 
                 try {
-                    when (val result =
-                        adminAuthService.createSession(req.password, call.request.origin.remoteAddress)) {
+                    when (val result = adminAuthService.createSession(
+                        id = req.id,
+                        signature = req.password,
+                        aud = req.clientName,
+                        ip = call.request.origin.remoteAddress,
+                    )) {
                         is CreateSessionResult.Success -> {
                             call.respond(authenticateResponse {
                                 token = result.token
@@ -110,7 +105,8 @@ val adminAuthController = controller {
                         }
 
                         is CreateSessionResult.NoChallenge,
-                        is CreateSessionResult.IPNotAllowed -> notFound()
+                        is CreateSessionResult.IPNotAllowed,
+                        is CreateSessionResult.UserNotAdmin -> notFound()
 
                         is CreateSessionResult.InvalidSignature -> unauthorized()
                     }
@@ -119,13 +115,6 @@ val adminAuthController = controller {
                     application.log.error("Attempt create admin session failed: ${e.message}")
                     unauthorized()
                 }
-            }
-        }
-
-        adminRoutes {
-            post<Admin.LogOut> {
-                adminAuthService.clearSession()
-                ok()
             }
         }
     }
@@ -157,8 +146,6 @@ class AdminUsersController(
                     total = count.toInt()
                 })
             }
-
-            get<Admin.Users.Id> { params -> context(usersService) { handleGetUser(params.id) } }
 
             put<Admin.Users.Id> { params -> handlePutUser(params.id) }
 
@@ -383,12 +370,6 @@ class AdminUsersSelectionsController(
 ) : Controller {
     override fun Application.register() {
         adminRoutes {
-            get<Admin.Users.Id.Selections> { params ->
-                context(electiveSelectionService) {
-                    handleGetStudentSelections(params.parent.id)
-                }
-            }
-
             put<Admin.Users.Id.Selections> { params -> handlePutStudentSelections(params.parent.id) }
         }
     }
@@ -422,10 +403,6 @@ class AdminElectivesController(
     override fun Application.register() {
         adminRoutes {
             context(electiveService) {
-                get<Admin.Electives> { handleGetElectives() }
-
-                get<Admin.Electives.Id> { params -> handleGetElective(params.id) }
-
                 put<Admin.Electives.Id> { params -> handlePutElective(params.id) }
 
                 delete<Admin.Electives.Id> { params -> handleDeleteElective(params.id) }
@@ -508,8 +485,6 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
     override fun Application.register() {
         adminRoutes {
             context(electiveService) {
-                get<Admin.Electives.Id.Subjects> { params -> handleGetElectiveSubjects(params.parent.id) }
-
                 put<Admin.Electives.Id.Subjects> { params -> handlePutElectiveSubjects(params.parent.id) }
             }
         }
@@ -535,10 +510,7 @@ class AdminElectivesSubjectsController(private val electiveService: ElectiveServ
     }
 }
 
-class AdminSubjectsController(
-    private val subjectService: SubjectService,
-    private val electiveService: ElectiveService
-) : Controller {
+class AdminSubjectsController(private val subjectService: SubjectService) : Controller {
     override fun Application.register() {
         adminRoutes {
             get<Admin.Subjects> { handleGetSubjects() }
@@ -552,16 +524,6 @@ class AdminSubjectsController(
             patch<Admin.Subjects.Id> { params -> handlePatchSubject(params.id) }
 
             get<Admin.Subjects.Id.ElectiveIds> { params -> handleGetSubjectElectiveIds(params.parent.id) }
-
-            context(electiveService) {
-                get<Admin.Subjects.Id.Members> { params ->
-                    handleGetElectiveSubjectMembers(
-                        params.elective_id,
-                        params.parent.id,
-                        true
-                    )
-                }
-            }
         }
     }
 
@@ -786,12 +748,6 @@ private class Admin {
     @Resource("auth")
     class Auth(val parent: Admin)
 
-    @Resource("logout")
-    class LogOut(val parent: Admin)
-
-    @Resource("notifications")
-    class Notifications(val parent: Admin)
-
     @Resource("users")
     class Users(val parent: Admin) {
         // @TODO: Add route tests
@@ -807,19 +763,18 @@ private class Admin {
         @Resource("teachers")
         class Teachers(val parent: Users, val page: Int = 1)
 
-        // GET: User, DELETE, PATCH: UserPatch, PUT: AddUserRequest
+        // DELETE, PATCH: UserPatch, PUT: AddUserRequest
         @Resource("{id}")
         class Id(val parent: Users, val id: Int) {
-            // GET: UsersService.StudentSelections, PUT: SetStudentSelectionsRequest
+            // PUT: SetStudentSelectionsRequest
             @Resource("selections")
             class Selections(val parent: Id)
         }
     }
 
-    // GET: ElectivesService.ListResponse
     @Resource("electives")
     class Electives(val parent: Admin) {
-        // PUT: Elective, GET: Elective, DELETE, PATCH: ElectivePatch
+        // PUT: Elective, DELETE, PATCH: ElectivePatch
         @Resource("{id}")
         class Id(val parent: Electives, val id: Int) {
             // GET, PUT
@@ -836,10 +791,6 @@ private class Admin {
         class Id(val parent: Subjects, val id: Int) {
             @Resource("elective-ids")
             class ElectiveIds(val parent: Id)
-
-            // GET: ListSubjectMembersResponse
-            @Resource("members")
-            class Members(val parent: Id, val elective_id: Int)
         }
     }
 

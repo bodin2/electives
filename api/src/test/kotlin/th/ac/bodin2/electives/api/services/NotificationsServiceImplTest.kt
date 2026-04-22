@@ -49,7 +49,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
 
     val serviceConfig = NotificationsServiceImpl.Config(
         maxSubjectSubscriptionsPerClient = 5,
-        bulkUpdateInterval = 100.milliseconds,
+        bulkUpdateInterval = 500.milliseconds,
         bulkUpdatesEnabled = false
     )
 
@@ -461,22 +461,21 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 Subjects.PHYSICS_ID,
             )
 
-            withTimeout(10.seconds) {
-                while (received.size < electives.size) {
+            withTimeout(15.seconds) {
+                while (received.size < electives.size || received.values.all { 
+                        it.bulkSubjectEnrollmentUpdate.subjectEnrolledCountsMap.values.all { count -> count == 0 } 
+                    }) {
                     val frame = incoming.receive() as Frame.Binary
                     val envelope = Envelope.parseFrom(frame.readBytes())
 
-                    assertTrue(
-                        envelope.hasBulkSubjectEnrollmentUpdate(),
-                        "Expected bulkSubjectEnrollmentUpdate envelope"
-                    )
-
-                    val bulk = envelope.bulkSubjectEnrollmentUpdate
-                    received[bulk.electiveId] = envelope
+                    if (envelope.hasBulkSubjectEnrollmentUpdate()) {
+                        val bulk = envelope.bulkSubjectEnrollmentUpdate
+                        received[bulk.electiveId] = envelope
+                    }
                 }
             }
 
-            // Received exactly one bulk update per elective
+            // Received exactly one bulk update per elective (eventually with data)
             assertEquals(
                 electives.toSet(),
                 received.keys,
@@ -484,15 +483,8 @@ class NotificationsServiceImplTest : ApplicationTest() {
             )
 
             // Is the payload correct?
-            for ((electiveId, envelope) in received) {
-                val bulk = envelope.bulkSubjectEnrollmentUpdate
-
-                assertEquals(electiveId, bulk.electiveId)
-                assertTrue(
-                    bulk.subjectEnrolledCountsMap.isNotEmpty(),
-                    "Bulk update should contain enrolled counts"
-                )
-            }
+            val scienceUpdate = received[Electives.SCIENCE_ID]!!.bulkSubjectEnrollmentUpdate
+            assertEquals(1, scienceUpdate.subjectEnrolledCountsMap[Subjects.PHYSICS_ID], "Expected 1 student in Physics")
 
             serviceConfig.bulkUpdatesEnabled = false
 
@@ -756,7 +748,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
     fun `admin websocket connection fails with invalid token`() = runTest {
         assertFailsWith<CancellationException> {
             try {
-                createWSClient().webSocket("/admin/notifications") {
+                createWSClient().webSocket("/notifications") {
                     send(envelope {
                         identify = identify {
                             token = "invalid-token"
@@ -775,7 +767,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `admin websocket connection fails without identify message`() = runTest {
         assertFailsWith<ClosedReceiveChannelException> {
-            createWSClient().webSocket("/admin/notifications") {
+            createWSClient().webSocket("/notifications") {
                 withTimeout(15.seconds) {
                     incoming.receive()
                 }

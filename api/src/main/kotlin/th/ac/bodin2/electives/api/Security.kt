@@ -8,6 +8,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.services.AdminAuthService
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.services.isAdminAvailable
+import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.KiB
 import th.ac.bodin2.electives.utils.env
@@ -27,7 +28,7 @@ fun DependencyRegistry.provideArgon2() {
 const val USER_AUTHENTICATION = "user"
 const val ADMIN_AUTHENTICATION = "admin"
 
-class AdminPrincipal
+class AdminPrincipal(val id: Int)
 
 fun Application.configureSecurity() {
     val usersService: UsersService by dependencies
@@ -41,19 +42,21 @@ fun Application.configureSecurity() {
         if (app.isAdminAvailable) {
             bearer(ADMIN_AUTHENTICATION) {
                 val adminAuthService: AdminAuthService by app.dependencies
-                authenticate { tokenCredential -> adminAuthService.toPrincipal(tokenCredential.token, this) }
+                authenticate { tokenCredential ->
+                    if (!adminAuthService.permitsIP(this.request.origin.remoteAddress)) {
+                        return@authenticate null
+                    }
+
+                    val user = usersService.toPrincipal(tokenCredential.token, this)
+                    if (user == null || user.type != UserType.ADMIN) return@authenticate null
+
+                    AdminPrincipal(user.id)
+                }
             }
         }
     }
 }
 
-fun AdminAuthService.toPrincipal(token: String, call: ApplicationCall): AdminPrincipal? {
-    if (hasSession(token, call.request.origin.remoteAddress)) return AdminPrincipal()
-    else {
-        logger.debug("Cannot authenticate admin (address: ${call.request.origin.remoteAddress}, hash: ${token.toHash()})")
-        return null
-    }
-}
 
 fun UsersService.toPrincipal(token: String, call: ApplicationCall): UsersService.SessionUser? =
     try {

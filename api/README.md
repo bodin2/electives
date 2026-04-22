@@ -57,7 +57,16 @@ The server can be configured using the following environment variables:
 | `ADMIN_PUBLIC_KEY`                                  | A base64-encoded X.509 SubjectPublicKeyInfo RSA public key without PEM headers/footers          | (None)<br>**Required if `ADMIN_ENABLED` is set.**                                                                                   |
 | `ADMIN_CHALLENGE_TIMEOUT`                           | Duration of admin authentication challenge in seconds                                           | `60` (1 minute)                                                                                                                     |
 | `ADMIN_SESSION_DURATION`                            | Duration of admin sessions in seconds                                                           | `3600` (1 hour)                                                                                                                     |
-| `ADMIN_SESSION_CREATION_MINIMUM_TIME`               | Minimum time in milliseconds for creating new admin sessions. Prevents spam and timing attacks. | `3000` (3 seconds)                                                                                                                  ||
+| `ADMIN_SESSION_CREATION_MINIMUM_TIME`               | Minimum time in milliseconds for creating new admin sessions. Prevents spam and timing attacks. | `3000` (3 seconds)                                                                                                                  |
+| `ADMIN_RESET`                                       | Set to a non-empty value to reset the admin user. Use if private key was compromised.           | (None)                                                                                                                              |
+
+## Admin Authentication
+
+The admin authentication system uses RSA key pairs to authenticate admin users.
+To enable admin endpoints, set the `ADMIN_ENABLED` environment variable to a non-empty value and provide a valid RSA public key in the `ADMIN_PUBLIC_KEY` environment variable.
+
+On initial database setup, a user with the ID `0` will be created as an admin user.
+This user will not have a password and cannot be authenticated using regular user authentication methods. Instead, it must be authenticated using the matching RSA private key.
 
 ### Admin Key Generation
 
@@ -98,3 +107,4 @@ You can copy the resulting string and set it as the value of the `ADMIN_PUBLIC_K
 >
 > If the private key is compromised, a new key pair should be generated immediately, and the `ADMIN_PUBLIC_KEY`
 > environment variable should be updated with the new public key.
+> Additionally, restart the server with `ADMIN_RESET` set to a non-empty value to invalidate an existing session and require re-authentication with the new key.

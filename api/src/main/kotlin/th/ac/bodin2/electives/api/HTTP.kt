@@ -122,8 +122,8 @@ private fun Application.configureRateLimits() {
             rateLimiter(limit = 15, refillPeriod = 1.minutes)
             requestKey(authenticated)
             requestWeight { _, key ->
-                // Teachers are not affected by elective selection limits
-                if (key is UsersService.SessionUser && key.type == UserType.TEACHER) {
+                // Teachers and admins are not affected by elective selection limits
+                if (key is UsersService.SessionUser && (key.type == UserType.TEACHER || key.type == UserType.ADMIN)) {
                     return@requestWeight 0
                 }
 

@@ -32,6 +32,19 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
     }
 }
 
+fun Admin.toProto(): th.ac.bodin2.electives.proto.api.User {
+    return user {
+        id = user.id.value
+        firstName = user.firstName
+        type = UserType.ADMIN
+
+        user.middleName?.let { middleName = it }
+        user.lastName?.let { lastName = it }
+
+        user.avatarUrl?.let { avatarUrl = it }
+    }
+}
+
 /**
  * Convert Subject DAO to Proto representation.
  *

@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.isTest
-import th.ac.bodin2.electives.api.resolveOrNull
 import th.ac.bodin2.electives.api.services.NotificationsServiceImpl.Config
 import th.ac.bodin2.electives.api.toPrincipal
 import th.ac.bodin2.electives.api.utils.badFrame
@@ -45,20 +44,15 @@ fun DependencyRegistry.provideNotificationsService() = provide<NotificationsServ
                 env("NOTIFICATIONS_BULK_UPDATE_INTERVAL")?.toIntOrNull()?.milliseconds ?: 5.seconds,
             bulkUpdatesEnabled = true
         ),
-        resolve<UsersService>(),
-        resolveOrNull<AdminAuthService>()
+        resolve<UsersService>()
     )
 }
-
-// Fake ID for admin sessions
-private const val ADMIN_PSEUDO_ID = -1
 
 private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
 class NotificationsServiceImpl(
     val config: Config,
     val usersService: UsersService,
-    val adminAuthService: AdminAuthService? = null,
 ) : NotificationsService {
     class Config(
         val maxSubjectSubscriptionsPerClient: Int,
@@ -217,37 +211,6 @@ class NotificationsServiceImpl(
         }
 
         handleSession(userId)
-    }
-
-    override suspend fun WebSocketServerSession.handleAdminConnection() {
-        adminAuthService ?: throw IllegalStateException("Cannot get AdminAuthService")
-
-        try {
-            withTimeout(AUTHENTICATION_TIMEOUT) {
-                val authenticated = (incoming.receive() as? Frame.Binary)?.let {
-                    val token =
-                        it.parseOrNull<Envelope>()?.identify?.token
-                            ?: return@withTimeout null
-
-                    adminAuthService.hasSession(token, call.request.origin.remoteAddress)
-                }
-
-                if (authenticated != true) throw IllegalArgumentException()
-            }
-        } catch (e: Exception) {
-            when (e) {
-                // Client authentication failures
-                is IllegalArgumentException,
-                is TimeoutCancellationException -> {
-                }
-
-                else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteAddress}", e)
-            }
-
-            return unauthorized()
-        }
-
-        handleSession(ADMIN_PSEUDO_ID)
     }
 
     private suspend fun ClientConnection.handleFrame(frame: Frame) {

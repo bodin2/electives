@@ -8,7 +8,7 @@ import th.ac.bodin2.electives.api.USER_AUTHENTICATION
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.proto.api.UserType
 
-val TEACHER_USER_ONLY = listOf(UserType.TEACHER)
+val ELEVATED_USER_ONLY = listOf(UserType.TEACHER, UserType.ADMIN)
 val ALL_USER_TYPES = UserType.entries.toList()
 
 /**

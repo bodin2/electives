@@ -823,6 +823,26 @@ class UsersServiceImplTest : ApplicationTest() {
             collectJob.join()
         }
     }
+
+    @Test
+    fun `insecurely creating sessions with custom duration works`() = runTest {
+        val token = transaction {
+            usersService.insecurelyCreateSessionWithoutValidation(
+                Students.JOHN_ID,
+                customDurationSeconds = 1
+            )
+        }
+
+        assertNotNull(token)
+        assertTrue(token.isNotBlank())
+
+        // Wait for session to expire
+        delay(1001.milliseconds)
+
+        assertFailsWith<IllegalArgumentException> {
+            transaction { usersService.getSessionUser(token) }
+        }
+    }
 }
 
 

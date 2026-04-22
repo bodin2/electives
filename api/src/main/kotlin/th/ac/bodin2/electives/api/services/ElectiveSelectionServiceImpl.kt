@@ -171,7 +171,7 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
                         if (!Teacher.teachesSubject(executor.id, selection.value, electiveId)) {
                             return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                         }
-                    } else {
+                    } else if (executor.type != UserType.ADMIN) {
                         return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                     }
                 }
