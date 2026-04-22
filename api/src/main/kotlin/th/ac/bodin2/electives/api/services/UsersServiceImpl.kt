@@ -8,6 +8,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.not
 import org.jetbrains.exposed.v1.dao.load
+import org.jetbrains.exposed.v1.dao.with
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -149,7 +150,9 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             this[StudentTeams.team] = teamId
         }
 
-        return@transaction Student.find { Students.id inList prepared.map { it.request.user.id } }.toList()
+        return@transaction Student.find { Students.id inList prepared.map { it.request.user.id } }
+            .with(Student::user, Student::teams)
+            .toList()
     }
 
     private data class PreparedUserInsert<T>(
@@ -181,7 +184,9 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             this[Teachers.id] = uid
         }
 
-        return@transaction Teacher.find { Teachers.id inList prepared.map { it.request.user.id } }.toList()
+        return@transaction Teacher.find { Teachers.id inList prepared.map { it.request.user.id } }
+            .with(Teacher::user)
+            .toList()
     }
 
     // @TODO: Test this
@@ -338,26 +343,18 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     @Transactional
     override fun getStudents(page: Int): Pair<List<Student>, Long> {
         require(page >= 1) { "Page must be at least 1" }
-
         val offset = ((page - 1) * PAGE_SIZE).toLong()
-
         return transaction {
-            val studentIds = (Students innerJoin Users)
-                .select(Students.id)
+            val query = Students.selectAll()
                 .orderBy(Students.id)
                 .limit(PAGE_SIZE)
                 .offset(offset)
-                .map { it[Students.id].value }
 
-            val count = Students.selectAll().count()
+            val students = Student.wrapRows(query)
+                .with(Student::user, Student::teams)
+                .toList()
 
-            if (studentIds.isEmpty()) return@transaction (emptyList<Student>() to count)
-
-            ((Students innerJoin Users)
-                .select(Students.columns + userInfoFields)
-                .orderBy(Students.id)
-                .where { Students.id inList studentIds }
-                .map { Student.wrapRow(it).load(Student::teams) }) to (count)
+            students to Students.selectAll().count()
         }
     }
 
@@ -367,12 +364,16 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
         val offset = ((page - 1) * PAGE_SIZE).toLong()
         return transaction {
-            ((Teachers innerJoin Users)
-                .select(Teachers.columns + userInfoFields)
+            val query = Teachers.selectAll()
                 .orderBy(Teachers.id)
                 .limit(PAGE_SIZE)
                 .offset(offset)
-                .map { Teacher.wrapRow(it) }) to (Teachers.selectAll().count())
+
+            val teachers = Teacher.wrapRows(query)
+                .with(Teacher::user)
+                .toList()
+
+            teachers to Teachers.selectAll().count()
         }
     }
 
