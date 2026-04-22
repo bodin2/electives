@@ -1,5 +1,4 @@
 import { signChallenge } from './ssh'
-import { User } from './structures'
 import {
     AdminChallengeResponse,
     AuthenticateRequest,
@@ -7,7 +6,6 @@ import {
     type LoginOptions,
     RawUser,
     UnauthorizedError,
-    UserType,
 } from './types'
 import type { Gateway, GatewayAuthenticator } from './gateway'
 import type { RESTClient } from './rest'
@@ -41,11 +39,6 @@ export interface Authenticator<TCredentials> extends GatewayAuthenticator {
      * Should be called on client initialization to determine if the user is already logged in.
      */
     hasSession(): Promise<boolean>
-    /**
-     * Returns a synthetic `User` for non-standard accounts (e.g. admin), or
-     * `null` to signal that the client should fetch the user from the API.
-     */
-    syntheticUser(): User | null
     /**
      * The current authentication token, or `null` if not authenticated
      */
@@ -98,10 +91,6 @@ export class UserAuthenticator implements Authenticator<LoginOptions> {
             if (e instanceof UnauthorizedError) return false
             throw e
         }
-    }
-
-    syntheticUser(): null {
-        return null
     }
 
     identify(gateway: Gateway): void {
@@ -161,6 +150,7 @@ export class AdminAuthenticator implements Authenticator<AdminAuthenticateOption
     }
 
     async logout(): Promise<void> {
+        await this.rest.post('/logout')
         this._token = null
     }
 
@@ -172,16 +162,6 @@ export class AdminAuthenticator implements Authenticator<AdminAuthenticateOption
             if (e instanceof UnauthorizedError) return false
             throw e
         }
-    }
-
-    syntheticUser(): User {
-        return new User({
-            id: 0,
-            firstName: 'Admin',
-            lastName: 'User',
-            teams: [],
-            type: UserType.UNRECOGNIZED,
-        })
     }
 
     identify(gateway: Gateway): void {

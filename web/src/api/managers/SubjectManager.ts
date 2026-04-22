@@ -342,4 +342,20 @@ export class SubjectAdminActions {
         })
         return data.electiveIds
     }
+
+    /**
+     * Fetch members (teachers and students) of a subject within an elective
+     *
+     * @param subjectId The subject's ID
+     * @param electiveId The elective's ID
+     * @returns An object containing arrays of teachers and students, and the subject's capacity
+     */
+    async fetchMembers(subjectId: number, electiveId: number): Promise<ListSubjectMembersResponse> {
+        return await this.rest.get<ListSubjectMembersResponse>(
+            `/admin/subjects/${subjectId}/members?elective_id=${electiveId}`,
+            {
+                decoder: ListSubjectMembersResponse,
+            },
+        )
+    }
 }

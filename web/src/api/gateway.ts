@@ -213,24 +213,31 @@ export class Gateway {
     }
 
     private setupEventHandlers(authenticator: GatewayAuthenticator): void {
-        if (!this.ws) return
+        const ws = this.ws
+        if (!ws) return
 
-        this.ws.onopen = () => {
+        ws.onopen = () => {
+            if (this.ws !== ws) return
+
             this.status = GatewayStatus.IDENTIFYING
             this.reconnectAttempts = 0
 
             Promise.resolve(authenticator.identify(this))
                 .then(() => {
+                    if (this.ws !== ws) return
                     this.status = GatewayStatus.READY
                     this.emitter.emit('connect')
                 })
                 .catch(error => {
+                    if (this.ws !== ws) return
                     this.emitter.emit('error', error instanceof Error ? error : new Error(String(error)))
                     this.disconnect()
                 })
         }
 
-        this.ws.onclose = event => {
+        ws.onclose = event => {
+            if (this.ws !== ws) return
+
             const reason = event.reason || 'Connection closed'
             this.status = GatewayStatus.DISCONNECTED
 
@@ -264,11 +271,13 @@ export class Gateway {
             }
         }
 
-        this.ws.onerror = () => {
+        ws.onerror = () => {
+            if (this.ws !== ws) return
             this.emitter.emit('error', new Error('WebSocket error'))
         }
 
-        this.ws.onmessage = event => {
+        ws.onmessage = event => {
+            if (this.ws !== ws) return
             this.handleMessage(event.data).catch(error => {
                 this.emitter.emit(
                     'error',
@@ -327,6 +336,6 @@ export class Gateway {
 }
 
 export const GatewayEndpoints = {
-    AdminNotifications: '/admin/notifications',
+    AdminNotifications: '/notifications',
     Notifications: '/notifications',
 } as const

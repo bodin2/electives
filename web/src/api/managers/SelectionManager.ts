@@ -1,10 +1,5 @@
 import { Subject } from '../structures'
-import {
-    AdminSetStudentSelectionsRequest,
-    type RawSubject,
-    SetStudentElectiveSelectionRequest,
-    StudentSelections,
-} from '../types'
+import { AdminSetStudentSelectionsRequest, SetStudentElectiveSelectionRequest, StudentSelections } from '../types'
 import type { Cache } from '../cache'
 import type { RESTClient } from '../rest'
 import type { CacheableManager, FetchOptions } from '.'
@@ -124,28 +119,6 @@ export class SelectionAdminActions {
         private readonly rest: RESTClient,
         private readonly manager: SelectionManager,
     ) {}
-
-    /**
-     * Fetch all selections for a student via admin route
-     *
-     * @param studentId The student's ID
-     */
-    async fetch(studentId: number): Promise<Map<number, Subject>> {
-        const data = await this.rest.get<StudentSelections>(`/admin/users/${studentId}/selections`, {
-            decoder: StudentSelections,
-        })
-
-        const selections = new Map<number, Subject>()
-        for (const [electiveIdStr, rawSubject] of Object.entries(data.subjects)) {
-            const electiveId = Number.parseInt(electiveIdStr, 10)
-            selections.set(electiveId, new Subject(rawSubject as RawSubject))
-        }
-
-        // Cache in shared cache
-        this.manager.cache.set(studentId, selections)
-
-        return selections
-    }
 
     /**
      * Set all selections for a student

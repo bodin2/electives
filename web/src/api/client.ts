@@ -139,9 +139,7 @@ export class Client<TCredentials> {
     async login(credentials: TCredentials): Promise<void> {
         const token = await this.authenticator.login(credentials)
         this.rest.token = token
-
-        const synthetic = this.authenticator.syntheticUser()
-        this.user = synthetic ?? (await this.users.fetch('@me'))
+        this.user = await this.users.fetch('@me')
 
         if (this.autoConnect) {
             this.gateway.connect(this.authenticator)
@@ -188,8 +186,12 @@ export class Client<TCredentials> {
         this.authenticator.setToken(token)
         this.rest.token = token
 
-        const synthetic = this.authenticator.syntheticUser()
-        this.user = synthetic ?? (await this.users.fetch('@me'))
+        // Validate session to ensure the token is still valid.
+        if (!(await this.authenticator.hasSession())) {
+            throw new UnauthorizedError('Session expired or invalid')
+        }
+
+        this.user = await this.users.fetch('@me')
 
         if (this.autoConnect) {
             this.gateway.connect(this.authenticator)

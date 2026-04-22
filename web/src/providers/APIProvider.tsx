@@ -168,8 +168,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
         on(updater, () => {
             const onReady = (user: ClientEventMap['ready']) => {
                 log.info('Logged in as:', user)
-                // TODO: Fix this?
-                setTokenType(user.type === UserType.UNRECOGNIZED ? TokenType.Admin : TokenType.User)
+                setTokenType(user.type === UserType.ADMIN ? TokenType.Admin : TokenType.User)
                 setAuthState(AuthenticationState.LoggedIn)
             }
 

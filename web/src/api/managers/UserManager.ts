@@ -146,30 +146,6 @@ export class UserAdminActions {
     }
 
     /**
-     * Fetch a single user by ID via admin route
-     *
-     * @param id The user's ID
-     * @param options Fetch options
-     */
-    async fetch(id: number, options: FetchOptions = {}): Promise<User> {
-        const { force = false, cache = true } = options
-
-        if (!force) {
-            const cached = this.manager.cache.get(id)
-            if (cached) return cached
-        }
-
-        const data = await this.rest.get<RawUser>(`/admin/users/${id}`, {
-            decoder: RawUser,
-        })
-        const user = new User(data)
-
-        if (cache) this.manager.cache.set(user.id, user)
-
-        return user
-    }
-
-    /**
      * Create or replace a user
      *
      * @param id The user's ID
