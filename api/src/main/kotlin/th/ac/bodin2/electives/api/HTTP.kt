@@ -80,8 +80,8 @@ private fun Application.configureRateLimits() {
         val authenticated: suspend (ApplicationCall) -> Any = { it.user ?: Unit }
 
         register(RATE_LIMIT_ADMIN) {
-            rateLimiter(limit = 10, refillPeriod = 10.seconds)
-            requestKey { it.request.origin.remoteAddress }
+            rateLimiter(limit = 10, refillPeriod = 5.seconds)
+            requestKey(authenticated)
         }
 
         register(RATE_LIMIT_ADMIN_AUTH) {
