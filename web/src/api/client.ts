@@ -120,14 +120,14 @@ export class Client<TCredentials> {
         const cacheOpts = { ttl: cacheTTL }
         const infiniteCacheOpts = { ttl: Number.POSITIVE_INFINITY }
 
-        this.users = new UserManager(this.rest, new Cache(cacheOpts))
+        this.users = new UserManager(this.rest, new Cache(infiniteCacheOpts))
         this.subjects = new SubjectManager(this.rest, new Cache(infiniteCacheOpts), new Cache(cacheOpts))
         this.electives = new ElectiveManager(this.rest, new Cache(infiniteCacheOpts), this.subjects)
         this.selections = new SelectionManager(this.rest, new Cache(cacheOpts), () => {
             if (!this.user) throw new Error('Not logged in')
             return this.user.id
         })
-        this.teams = new TeamManager(this.rest, new Cache(cacheOpts))
+        this.teams = new TeamManager(this.rest, new Cache(infiniteCacheOpts))
 
         this.rest.onError = err => this.handleError(err)
         this.setupGatewayListeners()
