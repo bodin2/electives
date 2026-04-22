@@ -1,6 +1,6 @@
 import { AdminService_TeamMemberCounts } from '@bodin2/electives-common/proto/api'
-import { Team } from '../structures'
-import { AdminListTeamsResponse, AdminTeamPatch, RawTeam } from '../types'
+import { Team, User } from '../structures'
+import { AdminListTeamsResponse, AdminListUsersResponse, AdminTeamPatch, RawTeam } from '../types'
 import type { Cache } from '../cache'
 import type { RESTClient } from '../rest'
 import type { CacheableManager, FetchOptions } from '.'
@@ -137,5 +137,22 @@ export class TeamAdminActions {
             decoder: AdminService_TeamMemberCounts,
         })
         return data.memberCounts
+    }
+
+    /**
+     * Fetch members for a team (paginated)
+     *
+     * @param teamId The team's ID
+     * @param page The page number (1-based)
+     */
+    async fetchMembers(teamId: number, page = 1): Promise<{ users: User[]; total: number }> {
+        const data = await this.rest.get<AdminListUsersResponse>(`/admin/teams/${teamId}/members`, {
+            query: { page },
+            decoder: AdminListUsersResponse,
+        })
+        return {
+            users: data.users.map(u => new User(u)),
+            total: data.total,
+        }
     }
 }
