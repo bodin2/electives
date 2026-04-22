@@ -123,4 +123,21 @@ class TeamServiceImplTest : ApplicationTest() {
         assertTrue(counts.containsKey(TestConstants.Teams.TEAM_1_ID))
         assertTrue(counts.containsKey(TestConstants.Teams.TEAM_2_ID))
     }
+
+    @Test
+    fun `get team members`() = runTest {
+        val (members, count) = @OptIn(Transactional::class)
+        teamService.getMembers(TestConstants.Teams.TEAM_1_ID)
+
+        assertTrue(count > 0)
+        assertEquals(count.toInt(), members.size)
+    }
+
+    @Test
+    fun `get team members not found`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            @OptIn(Transactional::class)
+            teamService.getMembers(UNUSED_ID)
+        }
+    }
 }

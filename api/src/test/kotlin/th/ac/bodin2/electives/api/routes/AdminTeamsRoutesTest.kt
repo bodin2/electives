@@ -76,4 +76,28 @@ class AdminTeamsRoutesTest : ApplicationTest() {
             assertEquals(0, response.memberCountsMap[teamId])
         }
     }
+
+    @Test
+    fun `get team members without auth returns unauthorized`() = runRouteTest {
+        client.get("/admin/teams/$ELECTIVE_TEAM_ID/members").assertUnauthorized()
+    }
+
+    @Test
+    fun `get team members`() = runRouteTest {
+        startApplication()
+
+        val response = client.adminGet("/admin/teams/$ELECTIVE_TEAM_ID/members")
+            .assertOK()
+            .parse<AdminService.ListUsersResponse>()
+
+        assertEquals(0, response.total)
+        assertEquals(0, response.usersCount)
+    }
+
+    @Test
+    fun `get team members not found`() = runRouteTest {
+        startApplication()
+
+        client.adminGet("/admin/teams/$UNUSED_ID/members").assertNotFound()
+    }
 }

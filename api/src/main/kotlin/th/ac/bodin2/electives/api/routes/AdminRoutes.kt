@@ -660,6 +660,23 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
             patch<Admin.Teams.Id> { params -> handlePatchTeam(params.id) }
 
             get<Admin.Teams.MemberCounts> { handleGetTeamMemberCounts() }
+
+            get<Admin.Teams.Id.Members> { params -> handleGetTeamMembers(params.parent.id, params.page) }
+        }
+    }
+
+    private suspend fun RoutingContext.handleGetTeamMembers(teamId: Int, page: Int) {
+        try {
+            call.respond(transaction {
+                val (members, count) = @OptIn(Transactional::class) teamService.getMembers(teamId, page)
+
+                listUsersResponse {
+                    users += members.map { it.toProto() }
+                    total = count.toInt()
+                }
+            })
+        } catch (_: EntityNotFoundException) {
+            notFound("Team not found")
         }
     }
 
@@ -803,7 +820,11 @@ private class Admin {
     class Teams(val parent: Admin) {
         // PUT: Team, GET: Team, DELETE, PATCH: TeamPatch
         @Resource("{id}")
-        class Id(val parent: Teams, val id: Int)
+        class Id(val parent: Teams, val id: Int) {
+            // GET: ListUsersResponse
+            @Resource("members")
+            class Members(val parent: Id, val page: Int = 1)
+        }
 
         // GET: TeamMemberCounts
         @Resource("member-counts")

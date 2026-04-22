@@ -4,6 +4,7 @@ import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
+import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Team
 
 interface TeamService {
@@ -42,6 +43,15 @@ interface TeamService {
     fun getAll(): List<Team>
 
     fun getById(teamId: Int): Team?
+
+    /**
+     * Gets a paginated list of team members.
+     *
+     * @return Pair of member list and total count.
+     * @throws EntityNotFoundException if the team does not exist.
+     */
+    @Transactional
+    fun getMembers(teamId: Int, page: Int = 1): Pair<List<Student>, Long>
 
     fun getMemberCounts(): Map<Int, Int>
 }
