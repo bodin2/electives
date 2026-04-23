@@ -16,7 +16,7 @@ export default function ErrorPage(props: { error: string | Error; reset: () => v
     })
 
     return (
-        <Page>
+        <Page trailing={null} leading={null}>
             <VStack gap={24} alignHorizontal="center" alignVertical="center" style={{ height: '100%' }}>
                 <VStack alignHorizontal="center" gap={32}>
                     <ErrorIllustration style={{ width: '192px', height: '192px' }} />
