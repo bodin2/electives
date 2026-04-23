@@ -1,7 +1,7 @@
 {
   "LOADING": "Loading...",
   "LOGIN": "Login",
-  "LOGIN_HINT": "Enter your student ID and password to continue.",
+  "LOGIN_HINT": "Enter your user ID and password to continue.",
   "LOGOUT": "Log out",
   "STUDENT_ID": "Student ID",
   "PASSWORD": "Password",
@@ -97,7 +97,7 @@
   "ACTIONS": "Actions",
   "MEMBER_COUNT": "{{ count }} members",
   "CONFIRM_DELETE_TEAM": "Are you sure you want to delete team: {{ name }}?",
-  "ID": "ID",
+  "ID": "User ID",
   "ERROR_NUMERIC_VALUE": "{{ field }} must be numeric",
   "ERROR_REQUIRED_FIELD": "{{ field }} is required"
 }
