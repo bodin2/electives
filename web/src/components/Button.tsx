@@ -7,7 +7,7 @@ export function Button(
     props: Omit<Extract<ButtonProps, JSX.HTMLAttributes<HTMLButtonElement>>, 'variant' | 'onClick'> & {
         variant?: ButtonProps['variant'] | 'tonal-error'
         loading?: boolean
-        onClick: (e: Event) => unknown | Promise<unknown>
+        onClick?: (e: Event) => unknown | Promise<unknown>
     },
 ) {
     const { string } = useI18n()
@@ -25,7 +25,7 @@ export function Button(
         if (loading()) return
 
         const onClick = local.onClick
-        const ret = onClick(e)
+        const ret = onClick?.(e)
 
         if (ret instanceof Promise) {
             const controlled = isLoadingStateControlled()
@@ -50,21 +50,19 @@ export function Button(
             {...others}
             icon={loading() ? undefined : local.icon}
             onClick={wrappedOnClick}
-            class={mergeClasses(styles[wrappedVariant()], others.class)}
-            classList={{
-                [styles.tonalError]: local.variant === 'tonal-error',
-            }}
+            class={mergeClasses(
+                styles[wrappedVariant()],
+                others.class,
+                local.variant === 'tonal-error' && styles.tonalError,
+            )}
             variant={wrappedVariant()}
         >
-            {/* TODO: Fix ripple in the lib, div makes sure the children (incl. the ripple) don't get fully overwritten by Solid */}
             <Show when={props.children || loading()}>
-                <div style={{ display: 'contents', position: 'relative' }}>
-                    <Show when={loading()}>
-                        <LoadingIndicator aria-label={string.LOADING()} class={styles.loading} />
-                    </Show>
-                    <div style={{ display: 'flex', opacity: loading() ? 0 : 1 }} aria-hidden={loading()}>
-                        {props.children}
-                    </div>
+                <Show when={loading()}>
+                    <LoadingIndicator aria-label={string.LOADING()} class={styles.loading} />
+                </Show>
+                <div style={{ display: 'flex', opacity: loading() ? 0 : 1 }} aria-hidden={loading()}>
+                    {props.children}
                 </div>
             </Show>
         </M3Button>
