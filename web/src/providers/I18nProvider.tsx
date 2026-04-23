@@ -5,12 +5,14 @@ import {
     createEffect,
     createResource,
     createSignal,
+    type JSXElement,
     on,
     onMount,
     type ParentComponent,
     useContext,
 } from 'solid-js'
 import { createStore } from 'solid-js/store'
+import type { BaseRecordDict, Resolved } from '@solid-primitives/i18n'
 import type Lang from '../i18n/th.json'
 
 const log = new Logger('I18nProvider')
@@ -21,7 +23,7 @@ export interface I18nApi {
     ready: boolean
     locale: () => Locale
     setLocale: (l: Locale) => void
-    string: i18n.ChainedTranslator<Dict, string>
+    string: ChainedTranslatorWithJSX<Dict, string>
     t: i18n.Translator<Dict, string>
 }
 
@@ -94,14 +96,17 @@ const I18nProvider: ParentComponent = props => {
                     fetchAttempts = 0
 
                     log.info('Loaded i18n dictionary for locale:', locale())
-                    setValue({ ready: true, string: i18n.chainedTranslator(latest, tr) })
+                    setValue({
+                        ready: true,
+                        string: i18n.chainedTranslator(latest, tr) as ChainedTranslatorWithJSX<Dict, string>,
+                    })
                 }
             },
         ),
     )
 
     const [dict, mutateDict] = createResource(locale, fetchDictionary)
-    const tr = i18n.translator(dict, i18n.resolveTemplate) as i18n.Translator<Dict, string>
+    const tr = i18n.translator(dict, resolveTemplateWithJSX) as i18n.Translator<Dict, string>
 
     const [value, setValue] = createStore<I18nApi>({
         ready: false,
@@ -121,3 +126,50 @@ export function useI18n() {
     if (!ctx) throw new Error('useI18n must be used within <I18nProvider>')
     return ctx
 }
+
+// Slightly modified version of:
+// https://github.com/solidjs-community/solid-primitives/issues/715#issuecomment-3764040195
+export function resolveTemplateWithJSX(
+    template: string,
+    args?: Record<string, string | JSXElement>,
+): string | JSXElement | JSXElement[] {
+    if (!args) return template
+
+    const regex = /\{\{\s*(\w+)\s*\}\}/g
+    const parts: (string | JSXElement)[] = []
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    let hasJSXElement = false
+
+    // biome-ignore lint/suspicious/noAssignInExpressions: It's all good
+    while ((match = regex.exec(template)) !== null) {
+        if (match.index > lastIndex) {
+            parts.push(template.slice(lastIndex, match.index))
+        }
+
+        const key = match[1]
+        const value = args[key]
+
+        if (typeof value !== 'string' || typeof value !== 'number' || typeof value !== 'boolean') {
+            hasJSXElement = true
+        }
+
+        parts.push(value ?? match[0])
+        lastIndex = regex.lastIndex
+    }
+
+    if (lastIndex < template.length) {
+        parts.push(template.slice(lastIndex))
+    }
+
+    return hasJSXElement ? parts : parts.join('')
+}
+
+// export type TranslatorWithJSX<T extends BaseRecordDict, O = string> = <K extends keyof T>(path: K, ...args: [args?: Record<string, string | number | boolean | JSXElement>]) => Resolved<T[K], O>;
+export type ChainedTranslatorWithJSX<T extends BaseRecordDict, O = string> = {
+    readonly [K in keyof T]: T[K] extends BaseRecordDict ? ChainedTranslatorWithJSX<T[K], O> : ResolverWithJSX<T[K], O>
+}
+
+export type ResolverWithJSX<T, O = string> = (
+    args?: Record<string, string | number | boolean | JSXElement>,
+) => Resolved<T, O>
