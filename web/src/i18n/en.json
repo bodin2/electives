@@ -30,8 +30,6 @@
   "MEMBERS": "Members",
   "MEMBERS_LIST": "Members",
   "ERROR_INVALID_CREDENTIALS": "Invalid credentials",
-  "ERROR_STUDENT_ID_NUMERIC": "Student ID must be numeric",
-  "ERROR_PASSWORD_REQUIRED": "Password is required",
   "IMG_ALT_SCHOOL_BRANDING": "School branding",
   "IMG_ALT_NOT_FOUND": "Not found",
   "IMG_ALT_ERROR": "Error",
@@ -99,5 +97,7 @@
   "ACTIONS": "Actions",
   "MEMBER_COUNT": "{{ count }} members",
   "CONFIRM_DELETE_TEAM": "Are you sure you want to delete team: {{ name }}?",
-  "ID": "ID"
+  "ID": "ID",
+  "ERROR_NUMERIC_VALUE": "{{ field }} must be numeric",
+  "ERROR_REQUIRED_FIELD": "{{ field }} is required"
 }

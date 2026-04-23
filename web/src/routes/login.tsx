@@ -96,11 +96,15 @@ function Login() {
 
                             const [studentId, password] = form.elements as Iterable<HTMLInputElement>
                             studentId.setCustomValidity(
-                                studentId.value.match(/^\d+$/) ? '' : string.ERROR_STUDENT_ID_NUMERIC(),
+                                studentId.value.match(/^\d+$/)
+                                    ? ''
+                                    : string.ERROR_NUMERIC_VALUE({ field: string.ID() }),
                             )
                             studentId.reportValidity()
 
-                            password.setCustomValidity(password.value ? '' : string.ERROR_PASSWORD_REQUIRED())
+                            password.setCustomValidity(
+                                password.value ? '' : string.ERROR_REQUIRED_FIELD({ field: string.PASSWORD() }),
+                            )
                             password.reportValidity()
 
                             for (const input of [studentId, password]) if (!input.validity.valid) return
@@ -133,12 +137,7 @@ function Login() {
                         }}
                     >
                         <VStack gap={16}>
-                            <TextField
-                                errorIcon
-                                label={string.STUDENT_ID()}
-                                autocomplete="username"
-                                {...inputExtraProps()}
-                            />
+                            <TextField errorIcon label={string.ID()} autocomplete="username" {...inputExtraProps()} />
                             <TextField
                                 errorIcon
                                 label={string.PASSWORD()}

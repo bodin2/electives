@@ -30,8 +30,6 @@
   "MEMBERS": "สมาชิก",
   "MEMBERS_LIST": "รายชื่อสมาชิก",
   "ERROR_INVALID_CREDENTIALS": "ข้อมูลไม่ถูกต้อง",
-  "ERROR_STUDENT_ID_NUMERIC": "รหัสนักเรียนต้องเป็นตัวเลข",
-  "ERROR_PASSWORD_REQUIRED": "กรุณากรอกรหัสผ่าน",
   "IMG_ALT_SCHOOL_BRANDING": "ตราสัญลักษณ์โรงเรียน",
   "IMG_ALT_NOT_FOUND": "ไม่พบ",
   "IMG_ALT_ERROR": "ข้อผิดพลาด",
@@ -99,5 +97,7 @@
   "ACTIONS": "การกระทำ",
   "MEMBER_COUNT": "{{ count }} สมาชิก",
   "CONFIRM_DELETE_TEAM": "คุณแน่ใจหรือไม่ว่าต้องการลบทีม: {{ name }}?",
-  "ID": "ID"
+  "ID": "ID",
+  "ERROR_NUMERIC_VALUE": "{{ field }}ต้องเป็นตัวเลข",
+  "ERROR_REQUIRED_FIELD": "กรุณากรอก{{ field }}"
 }

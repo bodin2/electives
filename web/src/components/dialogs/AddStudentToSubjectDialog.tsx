@@ -34,7 +34,7 @@ export default function AddStudentToSubjectDialog(props: {
         const realId = Number(id)
         if (Number.isNaN(realId)) {
             setStudent(null)
-            setError(string.ERROR_STUDENT_ID_NUMERIC())
+            setError(string.ERROR_NUMERIC_VALUE({ field: string.STUDENT_ID() }))
             return
         }
 
@@ -43,6 +43,7 @@ export default function AddStudentToSubjectDialog(props: {
             if (!user.isStudent()) {
                 throw new Error('Not a student')
             }
+
             setStudent(user)
             setError(null)
         } catch {
@@ -53,6 +54,7 @@ export default function AddStudentToSubjectDialog(props: {
 
     createEffect(on(studentId, id => updateStudent(id), { defer: true }))
 
+    let form!: HTMLFormElement
     let btn!: HTMLButtonElement
 
     return (
@@ -64,8 +66,8 @@ export default function AddStudentToSubjectDialog(props: {
             icon={<Icon fill="var(--m3c-secondary)" icon={AddCircleIcon} />}
             centerHeadline
             actions={
-                <form method="dialog" style={{ display: 'contents' }}>
-                    <Button variant="text" onClick={() => props.onClose()}>
+                <form method="dialog" style={{ display: 'contents' }} ref={form}>
+                    <Button variant="text" type="submit">
                         {string.CANCEL()}
                     </Button>
                     <Button
@@ -80,7 +82,7 @@ export default function AddStudentToSubjectDialog(props: {
                             try {
                                 await api.client.selections.set(stud.id, props.electiveId, props.subjectId)
 
-                                props.onClose()
+                                form.submit()
                             } catch (e) {
                                 setError(String(e))
                             }
@@ -95,7 +97,13 @@ export default function AddStudentToSubjectDialog(props: {
                 </form>
             }
         >
-            <VStack as="form" onSubmit={() => btn.click()}>
+            <VStack
+                as="form"
+                onSubmit={e => {
+                    e.preventDefault()
+                    btn.click()
+                }}
+            >
                 <TextField
                     errorIcon
                     error={Boolean(error())}
