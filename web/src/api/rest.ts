@@ -290,34 +290,30 @@ export class RESTClient {
     private async handleErrorResponse(response: Response): Promise<never> {
         const message = (await response.text()) || response.statusText
 
-        try {
-            switch (response.status) {
-                case 400:
-                    throw new BadRequestError(message)
-                case 401:
-                    throw new UnauthorizedError(message)
-                case 403:
-                    throw new ForbiddenError(message)
-                case 404:
-                    throw new NotFoundError(message)
-                case 409:
-                    throw new ConflictError(message)
-                case 429: {
-                    const retryAfter = this.getRetryAfterSeconds(response)
-                    const now = Math.floor(Date.now() / 1000)
-                    const rateLimitInfo: RateLimitInfo = {
-                        limit: 0,
-                        remaining: 0,
-                        reset: now + retryAfter,
-                        retryAfter,
-                    }
-                    throw new RateLimitError(rateLimitInfo, message)
+        switch (response.status) {
+            case 400:
+                throw new BadRequestError(message)
+            case 401:
+                throw new UnauthorizedError(message)
+            case 403:
+                throw new ForbiddenError(message)
+            case 404:
+                throw new NotFoundError(message)
+            case 409:
+                throw new ConflictError(message)
+            case 429: {
+                const retryAfter = this.getRetryAfterSeconds(response)
+                const now = Math.floor(Date.now() / 1000)
+                const rateLimitInfo: RateLimitInfo = {
+                    limit: 0,
+                    remaining: 0,
+                    reset: now + retryAfter,
+                    retryAfter,
                 }
-                default:
-                    throw new APIError(message, response.status)
+                throw new RateLimitError(rateLimitInfo, message)
             }
-        } catch (error) {
-            return this.handleError(error)
+            default:
+                throw new APIError(message, response.status)
         }
     }
 
