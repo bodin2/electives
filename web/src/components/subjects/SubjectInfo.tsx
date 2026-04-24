@@ -56,14 +56,14 @@ export default function SubjectInfo(props: SubjectInfoProps) {
 
     useRetryableSubscription(
         () => {
-            if (!ctx.elective || !ctx.subject) return
+            if (!ctx.elective || !ctx.subject || ctx.editable) return
             api.client.gateway.subscribeToElective(
                 ctx.elective.id,
                 [ctx.subject.id, props.selectedSubject?.id].filter(Boolean) as number[],
             )
         },
         () => {
-            if (!ctx.elective) return
+            if (!ctx.elective || ctx.editable) return
             if (api.client.isGatewayConnected()) {
                 api.client.gateway.subscribeToElective(ctx.elective.id, [])
             } else log.warn('WebSocket not connected, skipping unsubscription')
