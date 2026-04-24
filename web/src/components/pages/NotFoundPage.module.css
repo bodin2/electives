@@ -1,0 +1,18 @@
+.ee {
+    cursor: pointer;
+    width: 96px;
+    height: 96px;
+    position: absolute;
+    bottom: -16px;
+    right: 0px;
+    transition: all var(--m3-easing-fast-spatial);
+
+    img {
+        filter: drop-shadow(0px 0px 16px color-mix(in oklch, var(--m3c-on-surface-variant), transparent 75%));
+    }
+
+    &:hover {
+        bottom: -4px;
+        right: 4px;
+    }
+}

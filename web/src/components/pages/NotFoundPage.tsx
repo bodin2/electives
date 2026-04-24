@@ -1,11 +1,14 @@
 import HomeIcon from '@iconify-icons/mdi/home'
-import { useRouter } from '@tanstack/solid-router'
-import { createEffect, createSignal, on, Show } from 'solid-js'
+import { mergeClasses } from 'm3-solid'
+import { createSignal, onMount, Show } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
-import NotFoundIllustration from '../images/NotFoundIllustration'
+import { Button } from '../Button'
+import { Dialog } from '../Dialog'
+import NotFoundIllustration, { NotFoundEEIllustration } from '../images/NotFoundIllustration'
 import LinkButton from '../LinkButton'
 import Page from '../Page'
-import { VStack } from '../Stack'
+import { HStack, VStack } from '../Stack'
+import styles from './NotFoundPage.module.css'
 
 export default function NotFoundPage() {
     return (
@@ -15,28 +18,20 @@ export default function NotFoundPage() {
     )
 }
 
+const COUNTER_KEY = 'not_found_count'
+const COUNTER_THRESHOLD = 10
+const COUNTER_RED_THRESHOLD = 50
+
 export function NotFoundPageContent(props: { illustration?: boolean }) {
     const { string } = useI18n()
-    const router = useRouter()
-    const [stringIndex, setStringIndex] = createSignal(0)
+    const [count, setCount] = createSignal(0)
+    const [dialogOpen, setDialogOpen] = createSignal(false)
 
-    const strings = [
-        string.NOT_FOUND(),
-        string.NOT_FOUND_LIKE_ACTUALLY(),
-        string.NOT_FOUND_LIKE_REALLY_ACTUALLY(),
-        string.NOT_FOUND_DOING_IT_FOR_YOU(),
-    ]
-
-    createEffect(
-        on(stringIndex, i => {
-            if (i >= strings.length - 1) {
-                console.warn('you dont know how to follow directions')
-                setTimeout(() => {
-                    router.navigate({ to: '/' })
-                }, 1500)
-            }
-        }),
-    )
+    onMount(() => {
+        const count = Number.parseInt(localStorage.getItem(COUNTER_KEY) || '0', 10) + 1
+        localStorage.setItem(COUNTER_KEY, count.toString())
+        setCount(count)
+    })
 
     return (
         <VStack gap={16} alignHorizontal="center" alignVertical="center" style={{ height: '100%' }}>
@@ -44,14 +39,53 @@ export function NotFoundPageContent(props: { illustration?: boolean }) {
                 <Show when={props.illustration}>
                     <NotFoundIllustration style={{ width: '192px', height: '192px' }} />
                 </Show>
-                {/** biome-ignore lint/a11y/useKeyWithClickEvents: No */}
-                <h1 class="m3-headline-small" tabIndex="-1" onClick={() => setStringIndex(i => i + 1)}>
-                    {strings[stringIndex()]}
-                </h1>
+                <h1 class="m3-headline-small">{string.NOT_FOUND()}</h1>
             </VStack>
             <LinkButton to="/" variant="filled" icon={HomeIcon}>
                 {string.BACK_HOME}
             </LinkButton>
+            <Show when={props.illustration}>
+                <Show when={count() >= COUNTER_THRESHOLD}>
+                    <NotFoundEEIllustration
+                        aria-hidden="true"
+                        tabindex="-1"
+                        class={styles.ee}
+                        onClick={() => setDialogOpen(true)}
+                    />
+                </Show>
+                <Dialog
+                    closedBy="any"
+                    actions={
+                        <HStack wrap>
+                            <Button
+                                variant="tonal-error"
+                                onClick={() => {
+                                    localStorage.setItem(COUNTER_KEY, '0')
+                                    setCount(0)
+                                    setDialogOpen(false)
+                                }}
+                            >
+                                {string.NOT_FOUND_EE_RESET()}
+                            </Button>
+                            <Button onClick={() => setDialogOpen(false)}>{string.CLOSE()}</Button>
+                        </HStack>
+                    }
+                    open={dialogOpen()}
+                    onClose={() => setDialogOpen(false)}
+                    centerHeadline
+                    headline={string.NOT_FOUND_EE_TITLE()}
+                >
+                    <p>
+                        {string.NOT_FOUND_EE_DESCRIPTION({
+                            count: (
+                                <span class={mergeClasses(count() >= COUNTER_RED_THRESHOLD && 'text-error')}>
+                                    {count()}
+                                </span>
+                            ),
+                        })}
+                    </p>
+                </Dialog>
+            </Show>
         </VStack>
     )
 }
