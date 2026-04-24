@@ -1,4 +1,4 @@
-import TrashIcon from '@iconify-icons/mdi/trash-can-outline'
+import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import { createSignal, For, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'
@@ -65,7 +65,7 @@ export default function SubjectAdminEnrollmentActions(props: {
                     setRemoveFromElectiveDialogOpen(true)
                 }}
                 size="m"
-                icon={TrashIcon}
+                icon={DeleteIcon}
                 iconType="only"
                 variant="tonal-error"
                 aria-label={string.REMOVE_SUBJECT_FROM_ENROLLMENT()}

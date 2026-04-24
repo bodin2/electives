@@ -1,4 +1,4 @@
-import TrashIcon from '@iconify-icons/mdi/trash-can-outline'
+import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import { useRouter } from '@tanstack/solid-router'
 import { Icon } from 'm3-solid'
 import { createSignal, Show } from 'solid-js'
@@ -31,7 +31,7 @@ export default function RemoveSubjectFromElectiveDialog(props: {
             onClose={() => props.onClose(removed)}
             open={props.open}
             headline={<h1 class="m3-headline-small">{string.REMOVE_SUBJECT_FROM_ENROLLMENT()}</h1>}
-            icon={<Icon fill="var(--m3c-secondary)" icon={TrashIcon} />}
+            icon={<Icon fill="var(--m3c-secondary)" icon={DeleteIcon} />}
             centerHeadline
             actions={
                 <form method="dialog" style={{ display: 'contents' }} ref={form}>

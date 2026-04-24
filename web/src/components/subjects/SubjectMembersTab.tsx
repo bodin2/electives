@@ -1,4 +1,4 @@
-import TrashIcon from '@iconify-icons/mdi/trash-can-outline'
+import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import { ListItem } from 'm3-solid'
 import { For, Show, Suspense } from 'solid-js'
 import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
@@ -137,7 +137,7 @@ export function SubjectMemberListItem(props: SubjectMemberListItemProps) {
                             aria-label={string.REMOVE_STUDENT_FROM_SUBJECT()}
                             variant="text"
                             onClick={onRemove()}
-                            icon={TrashIcon}
+                            icon={DeleteIcon}
                             iconType="only"
                         />
                     )}

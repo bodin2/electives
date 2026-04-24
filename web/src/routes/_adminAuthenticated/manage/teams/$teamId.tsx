@@ -1,5 +1,5 @@
+import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import PlusIcon from '@iconify-icons/mdi/plus'
-import TrashIcon from '@iconify-icons/mdi/trash-can-outline'
 import { createFileRoute, useRouter } from '@tanstack/solid-router'
 import { ListItem, LoadingIndicator, Tabs, TextField } from 'm3-solid'
 import { createEffect, createMemo, createResource, createSignal, Match, Show, Suspense, Switch } from 'solid-js'
@@ -212,7 +212,7 @@ function TeamMembers(props: { members: { users: User[]; total: number }; refetch
                             e.stopPropagation()
                             removeUserFromTeam(user)
                         }}
-                        icon={TrashIcon}
+                        icon={DeleteIcon}
                         iconType="only"
                     />
                 )}
