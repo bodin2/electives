@@ -21,6 +21,9 @@ type EnrollmentContextValue = {
     initializeCounts: (electiveId: number, counts: Record<number, number>) => void
     /** Get the current version for an elective's enrollment counts */
     getVersion: (electiveId: number) => number
+    // TODO: Find a better way to emit refresh than this
+    /** Increment the version for an elective's enrollment counts */
+    bumpVersion: (electiveId: number) => void
 }
 
 const EnrollmentContext = createContext<EnrollmentContextValue>()
@@ -70,6 +73,7 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
         getCount: (electiveId, subjectId) => store.counts[electiveId]?.[subjectId],
         getElectiveCounts: electiveId => store.counts[electiveId] ?? {},
         getVersion: electiveId => store.versions[electiveId] ?? 0,
+        bumpVersion: electiveId => setStore('versions', electiveId, v => (v ?? 0) + 1),
         initializeCounts: (electiveId, counts) => {
             const existing = store.counts[electiveId]
             if (existing) {

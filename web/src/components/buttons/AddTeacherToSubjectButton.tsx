@@ -1,16 +1,17 @@
-import AddCircleIcon from '@iconify-icons/mdi/add-circle'
+import PlusIcon from '@iconify-icons/mdi/plus-circle'
 import { Button, type ButtonVariant } from 'm3-solid'
 import { createSignal, type JSX } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'
-import AddStudentToSubjectDialog from '../dialogs/AddStudentToSubjectDialog'
+import AddTeacherToSubjectDialog from '../dialogs/AddTeacherToSubjectDialog'
 
-export default function AddStudentToSubjectButton(props: {
-    variant?: ButtonVariant
+export default function AddTeacherToSubjectButton(props: {
     class?: string
     style?: string | JSX.CSSProperties
-    electiveId: number
     subjectId: number
+    electiveId: number
+    currentTeacherIds: number[]
+    variant?: ButtonVariant
     disabled?: boolean
 }) {
     const { string } = useI18n()
@@ -19,22 +20,23 @@ export default function AddStudentToSubjectButton(props: {
     return (
         <>
             <Button
-                disabled={props.disabled}
-                icon={AddCircleIcon}
+                icon={PlusIcon}
                 class={props.class}
                 style={props.style}
                 size="m"
                 onClick={() => setOpen(true)}
                 variant={props.variant}
+                disabled={props.disabled}
             >
-                {string.ADD_STUDENT_TO_SUBJECT()}
+                {string.ADD_TEACHER_TO_SUBJECT()}
             </Button>
             <Portal>
-                <AddStudentToSubjectDialog
+                <AddTeacherToSubjectDialog
                     open={open()}
                     onClose={() => setOpen(false)}
-                    electiveId={props.electiveId}
                     subjectId={props.subjectId}
+                    electiveId={props.electiveId}
+                    currentTeacherIds={props.currentTeacherIds}
                 />
             </Portal>
         </>

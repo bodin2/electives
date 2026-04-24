@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import devtools from 'solid-devtools/vite'
 import { defineConfig } from 'vite'
@@ -5,7 +6,7 @@ import { ViteImageOptimizer as imageOptimizer } from 'vite-plugin-image-optimize
 import solid from 'vite-plugin-solid'
 import pkg from '../package.json'
 
-const commit = await Bun.$`git rev-parse --short HEAD`.text().then(it => it.trim())
+const commit = execSync('git rev-parse --short HEAD').toString().trim()
 
 // https://vitejs.dev/config/
 export default defineConfig({

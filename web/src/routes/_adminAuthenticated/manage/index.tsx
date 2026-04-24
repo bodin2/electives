@@ -2,6 +2,7 @@ import ClassIcon from '@iconify-icons/mdi/class'
 import PeopleIcon from '@iconify-icons/mdi/people'
 import TeamIcon from '@iconify-icons/mdi/people-group'
 import TeacherIcon from '@iconify-icons/mdi/teacher'
+import TicketIcon from '@iconify-icons/mdi/ticket'
 import { createFileRoute } from '@tanstack/solid-router'
 import { Icon } from 'm3-solid'
 import { LinkCard } from '../../../components/LinkCard'
@@ -34,7 +35,7 @@ function AdminDashboard() {
                 <VStack gap={8}>
                     <IconLabel icon={ClassIcon} text={string.CLASSES()} class={styles.label} />
                     <VStack gap={8} class={styles.cardGrid}>
-                        <GridCard icon={ClassIcon} title={string.ELECTIVES()} to="/manage/electives" />
+                        <GridCard icon={TicketIcon} title={string.ENROLLMENTS()} to="/manage/enrollments" />
                         <GridCard icon={ClassIcon} title={string.SUBJECTS()} to="/manage/subjects" />
                     </VStack>
                 </VStack>

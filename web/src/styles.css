@@ -8,6 +8,7 @@
   --layer-content: 1;
   --layer-overlay: 2;
   --layer-overlay-high: 5;
+  --layer-nav-backdrop: 9;
   --layer-nav: 10;
   --layer-dialog: 20;
 }
@@ -88,4 +89,8 @@ img {
   display: flex;
   flex-direction: column;
   --sticky-offset: 64px;
+}
+
+strong {
+  font-weight: 600;
 }

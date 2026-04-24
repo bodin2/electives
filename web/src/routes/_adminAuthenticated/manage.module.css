@@ -13,13 +13,20 @@
     background-color: var(--m3c-surface-container);
     width: 100%;
     min-height: 0;
+    z-index: var(--layer-content);
 }
 
 .inner {
     background-color: var(--m3c-surface);
     border-radius: var(--m3-shape-large-increased) 0 0 0;
+    scrollbar-gutter: stable;
     overflow-y: auto;
     min-height: 0;
+    transition: border-radius var(--m3-easing-slow);
+
+    &.modalNav {
+        border-radius: 0;
+    }
 }
 
 .toggleContainer {
@@ -30,6 +37,31 @@
     &.open {
         padding-inline-end: 144px;
     }
+
+    &.modalNav {
+        padding-inline-end: 12px;
+    }
+}
+
+.navRail.navRail {
+    z-index: var(--layer-nav);
+    padding-block: 16px;
+    /* So it looks connected to TopAppBar */
+    border-top-right-radius: 0;
+
+    /* Hide the top content div (TODO: Fix in M3Solid) */
+    > div:first-child {
+        display: none;
+    }
+}
+
+/* Backdrop, TODO: Fix in M3Solid */
+.navRail + div {
+    z-index: calc(var(--layer-nav-backdrop));
+}
+
+option[value=""][disabled] {
+    display: none;
 }
 
 :global(#app):has(:global(#admin-app)) {

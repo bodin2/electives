@@ -1,0 +1,6 @@
+.infoRow {
+    height: 32px;
+    column-gap: 16px;
+    row-gap: 0px;
+    flex-wrap: wrap;
+}

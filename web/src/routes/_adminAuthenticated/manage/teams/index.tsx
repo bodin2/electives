@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useRouter } from '@tanstack/solid-router'
+import { createFileRoute, useRouter } from '@tanstack/solid-router'
 import TeamList from '../../../../components/admin/TeamList'
 import Page from '../../../../components/Page'
 import { useAPI } from '../../../../providers/APIProvider'
@@ -15,18 +15,22 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/teams/')({
 })
 
 function RouteComponent() {
-    const navigate = useNavigate()
+    const navigate = Route.useNavigate()
     const { client } = useAPI()
     const { string } = useI18n()
     const data = Route.useLoaderData()
     const router = useRouter()
 
     const handleCreate = () => {
-        navigate({ to: '/manage/teams/$teamId', params: { teamId: 'new' } })
+        navigate({ to: '/manage/teams/$teamId', params: { teamId: 'new' }, search: { page: 0 } })
     }
 
     const handleEdit = (team: Team) => {
-        navigate({ to: '/manage/teams/$teamId', params: { teamId: team.id.toString() } })
+        navigate({
+            to: '/manage/teams/$teamId',
+            params: { teamId: team.id.toString() },
+            search: { page: 0 },
+        })
     }
 
     const handleDelete = async (team: Team) => {

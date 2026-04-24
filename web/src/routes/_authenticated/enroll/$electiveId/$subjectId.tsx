@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/solid-router'
+import { createEffect, onCleanup } from 'solid-js'
 import { NotFoundError } from '../../../../api'
 import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
+import { useSubjectDisplayContext } from '../../../../components/subjects/SubjectDisplayContext'
 import SubjectInfo from '../../../../components/subjects/SubjectInfo'
 import { nonNull } from '../../../../utils'
 import { AUTHENTICATED_ROUTE_DEFAULTS } from '../../../_authenticated'
@@ -10,7 +12,6 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
     ...AUTHENTICATED_ROUTE_DEFAULTS,
     params: {
         parse: raw => ({
-            electiveId: Number(raw.electiveId),
             subjectId: Number(raw.subjectId),
         }),
     },
@@ -30,14 +31,12 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
         ])
 
         const selectedSubject = selections?.get(electiveId)
-        const initialEnrolledCounts = context.client.electives.resolveAllEnrolledCounts(electiveId)
 
         return {
             user,
             subject,
             elective,
             selectedSubject,
-            initialEnrolledCounts,
         }
     },
     errorComponent: props => {
@@ -49,16 +48,22 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
 
 function RouteComponent() {
     const data = Route.useLoaderData()
+    const ctx = useSubjectDisplayContext()
+
+    createEffect(() => {
+        ctx.setSubject(data().subject)
+        ctx.setElective(data().elective)
+        ctx.setUser(data().user)
+    })
+
+    onCleanup(() => {
+        ctx.setSubject(undefined)
+        ctx.setUser(undefined)
+    })
 
     return (
         <Page name={data().subject.name}>
-            <SubjectInfo
-                user={data().user}
-                subject={data().subject}
-                elective={data().elective}
-                selectedSubject={data().selectedSubject}
-                initialEnrolledCounts={data().initialEnrolledCounts}
-            />
+            <SubjectInfo selectedSubject={data().selectedSubject} />
         </Page>
     )
 }

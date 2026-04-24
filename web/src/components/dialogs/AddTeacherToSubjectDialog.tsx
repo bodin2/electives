@@ -3,40 +3,43 @@ import { useRouter } from '@tanstack/solid-router'
 import { Icon, TextField } from 'm3-solid'
 import { createEffect, createSignal, on, Show } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
+import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { debounce } from '../../utils'
 import { Button } from '../Button'
 import { Dialog } from '../Dialog'
 import { VStack } from '../Stack'
 import { SubjectMemberListItem } from '../subjects/SubjectMembersTab'
-import type { User } from '../../api'
+import type { AdminSubjectPatch, User } from '../../api'
 
-export default function AddStudentToSubjectDialog(props: {
+export default function AddTeacherToSubjectDialog(props: {
     open: boolean
     onClose: () => unknown
-    electiveId: number
     subjectId: number
+    electiveId: number
+    currentTeacherIds: number[]
 }) {
     const api = useAPI()
     const router = useRouter()
     const { string } = useI18n()
+    const enrolledCounts = useEnrollmentCounts()
 
-    const [studentId, setStudentId] = createSignal('')
-    const [student, setStudent] = createSignal<User | null>(null)
+    const [teacherId, setTeacherId] = createSignal('')
+    const [teacher, setTeacher] = createSignal<User | null>(null)
     const [error, setError] = createSignal<string | null>(null)
 
-    const updateStudent = debounce(async (id: string) => {
+    const updateTeacher = debounce(async (id: string) => {
         if (!props.open) return
 
         if (id.trim() === '') {
-            setStudent(null)
+            setTeacher(null)
             return
         }
 
         const realId = Number(id)
         if (Number.isNaN(realId)) {
-            setStudent(null)
-            setError(string.ERROR_NUMERIC_VALUE({ field: string.STUDENT_ID() }))
+            setTeacher(null)
+            setError(string.ERROR_NUMERIC_VALUE({ field: string.TEACHER_ID() }))
             return
         }
 
@@ -44,20 +47,19 @@ export default function AddStudentToSubjectDialog(props: {
             const user = await api.client.users.fetch(realId)
             if (!props.open) return
 
-            if (!user.isStudent()) {
-                throw new Error('Not a student')
+            if (!user.isTeacher()) {
+                throw new Error('Not a teacher')
             }
-
-            setStudent(user)
+            setTeacher(user)
             setError(null)
         } catch {
             if (!props.open) return
-            setStudent(null)
+            setTeacher(null)
             setError(string.ERROR_INVALID_CREDENTIALS())
         }
     }, 1000)
 
-    createEffect(on(studentId, id => updateStudent(id), { defer: true }))
+    createEffect(on(teacherId, id => updateTeacher(id), { defer: true }))
 
     let form!: HTMLFormElement
     let btn!: HTMLButtonElement
@@ -68,29 +70,51 @@ export default function AddStudentToSubjectDialog(props: {
             onClose={props.onClose}
             open={props.open}
             onOpen={() => {
-                setStudentId('')
-                setStudent(null)
+                setTeacherId('')
+                setTeacher(null)
                 setError(null)
             }}
-            headline={<h1 class="m3-headline-small">{string.ADD_STUDENT_TO_SUBJECT()}</h1>}
+            headline={<h1 class="m3-headline-small">{string.ADD_TEACHER_TO_SUBJECT()}</h1>}
             icon={<Icon fill="var(--m3c-secondary)" icon={AddCircleIcon} />}
             centerHeadline
             actions={
                 <form method="dialog" style={{ display: 'contents' }} ref={form}>
-                    <Button variant="text" type="submit">
+                    <Button variant="text" onClick={() => form.submit()}>
                         {string.CANCEL()}
                     </Button>
                     <Button
                         ref={btn}
                         variant="text"
                         onClick={async () => {
-                            await updateStudent(studentId())
+                            await updateTeacher(teacherId())
 
-                            const stud = student()
-                            if (!stud) return
+                            const t = teacher()
+                            if (!t) return
+
+                            // Check if already teaching
+                            if (props.currentTeacherIds.includes(t.id)) {
+                                props.onClose()
+                                return
+                            }
 
                             try {
-                                await api.client.selections.set(stud.id, props.electiveId, props.subjectId)
+                                const newTeachers = [...props.currentTeacherIds, t.id]
+
+                                const patch: AdminSubjectPatch = {
+                                    teachers: newTeachers,
+                                    patchDescription: false,
+                                    patchCode: false,
+                                    patchLocation: false,
+                                    patchTeamId: false,
+                                    patchTeachers: true,
+                                    patchThumbnailUrl: false,
+                                    patchImageUrl: false,
+                                    electiveId: props.electiveId,
+                                }
+
+                                await api.client.subjects.admin.patch(props.subjectId, patch)
+
+                                enrolledCounts.bumpVersion(props.electiveId)
 
                                 form.submit()
                             } catch (e) {
@@ -102,7 +126,7 @@ export default function AddStudentToSubjectDialog(props: {
                             })
                         }}
                     >
-                        {string.ADD_STUDENT_TO_SUBJECT()}
+                        {string.ADD_TEACHER_TO_SUBJECT()}
                     </Button>
                 </form>
             }
@@ -118,11 +142,11 @@ export default function AddStudentToSubjectDialog(props: {
                     errorIcon
                     error={Boolean(error())}
                     supportingText={error()}
-                    label={string.STUDENT_ID()}
+                    label={string.TEACHER_ID()}
                     required
-                    onInput={e => setStudentId(e.currentTarget.value)}
+                    onInput={e => setTeacherId(e.currentTarget.value)}
                 />
-                <Show when={student()}>{stud => <SubjectMemberListItem user={stud()} />}</Show>
+                <Show when={teacher()}>{teach => <SubjectMemberListItem user={teach()} />}</Show>
             </VStack>
         </Dialog>
     )

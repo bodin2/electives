@@ -2,6 +2,7 @@ import { Title } from '@solidjs/meta'
 import { createRootRouteWithContext, Outlet, useRouteContext } from '@tanstack/solid-router'
 import { TanStackRouterDevtools } from '@tanstack/solid-router-devtools'
 import { Show } from 'solid-js'
+import { BaseSubjectDisplayContext, SubjectDisplayContextProvider } from '../components/subjects/SubjectDisplayContext'
 import APIProvider, { type AuthenticationState } from '../providers/APIProvider'
 import { EnrollmentCountsProvider } from '../providers/EnrollmentCountsProvider'
 import { useI18n } from '../providers/I18nProvider'
@@ -24,8 +25,10 @@ function RootComponent() {
         <PageDataProvider>
             <APIProvider client={context().client}>
                 <EnrollmentCountsProvider client={context().client}>
-                    <I18nReadyOutlet />
-                    <TanStackRouterDevtools position="bottom-left" />
+                    <SubjectDisplayContextProvider value={BaseSubjectDisplayContext}>
+                        <I18nReadyOutlet />
+                        <TanStackRouterDevtools position="bottom-left" />
+                    </SubjectDisplayContextProvider>
                 </EnrollmentCountsProvider>
             </APIProvider>
         </PageDataProvider>

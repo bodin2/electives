@@ -1,0 +1,96 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: var(--m3-font-family);
+    position: relative;
+    width: 100%;
+}
+
+.label {
+    font-size: 12px;
+    color: var(--m3c-on-surface-variant);
+    padding-left: 16px;
+}
+
+.select {
+    appearance: none;
+    appearance: base-select;
+    background-color: var(--m3c-surface-container-highest);
+    color: var(--m3c-on-surface);
+    border: none;
+    border-bottom: 1px solid var(--m3c-on-surface-variant);
+    border-radius: 4px 4px 0 0;
+    padding: 16px;
+    font-size: 16px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    width: 100%;
+
+    &:open::picker-icon {
+        rotate: 180deg;
+    }
+
+    &::picker-icon {
+        margin-top: 2px;
+        transform-origin: center 45%;
+        color: var(--m3c-on-surface-variant);
+        transition: 0.25s rotate var(--m3-easing-fast);
+        scale: 1 0.6;
+    }
+}
+
+.option {
+    padding: 12px 16px;
+    transition: all var(--m3-easing-fast);
+
+    &:hover, &:active {
+        background-color: transparent;
+    }
+
+    &:checked {
+        background-color: var(--m3c-primary-container);
+        color: var(--m3c-on-primary-container);
+    }
+
+    &::checkmark {
+        display: none;
+    }
+}
+
+.select::picker(select) {
+    appearance: base-select;
+    background-color: var(--m3c-surface-container);
+    border: none;
+    border-radius: var(--m3-shape-small);
+    box-shadow: var(--m3-elevation-1);
+}
+
+.select:hover {
+    background-color: var(--m3c-surface-variant);
+}
+
+.select:focus {
+    border-bottom: 2px solid var(--m3c-primary);
+    padding-bottom: 15px; /* Adjust padding to prevent jumping when border increases */
+}
+
+.select.error {
+    border-bottom-color: var(--m3c-error);
+}
+
+.select.error:focus {
+    border-bottom-color: var(--m3c-error);
+}
+
+.supportingText {
+    font-size: 12px;
+    color: var(--m3c-on-surface-variant);
+    padding-left: 16px;
+}
+
+.errorText {
+    color: var(--m3c-error);
+}

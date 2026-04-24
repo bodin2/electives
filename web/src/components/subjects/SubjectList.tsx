@@ -1,26 +1,30 @@
 import { SubjectTag } from '@bodin2/electives-common/proto/api'
 import MagnifyIcon from '@iconify-icons/mdi/magnify'
+import PlusIcon from '@iconify-icons/mdi/plus'
 import { TextField } from 'm3-solid'
 import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
-import { type Elective, type Subject, User } from '../../api'
+import { type Subject, User } from '../../api'
+import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import { debounce, groupItems } from '../../utils'
+import { debounce, groupItems, nonNull } from '../../utils'
+import LinkButton from '../LinkButton'
 import { NotFoundPageContent } from '../pages/NotFoundPage'
-import { VStack } from '../Stack'
+import { HStack, VStack } from '../Stack'
 import SubjectCategorySection from './SubjectCategorySection'
+import { useSubjectDisplayContext } from './SubjectDisplayContext'
 import styles from './SubjectList.module.css'
 
 export interface SubjectListProps {
-    elective: Elective
     subjects: Subject[]
-    user: User
-    initialEnrolledCounts: Record<number, number>
+    noRandom?: boolean
 }
 
 export default function SubjectList(props: SubjectListProps) {
     const enrollment = useEnrollmentCounts()
+    const api = useAPI()
     const { string } = useI18n()
+    const ctx = useSubjectDisplayContext()
     const [query, setQuery] = createSignal('')
 
     const updateQuery = debounce((value: string) => {
@@ -28,14 +32,17 @@ export default function SubjectList(props: SubjectListProps) {
     }, 250)
 
     createEffect(() => {
-        enrollment.initializeCounts(props.elective.id, props.initialEnrolledCounts)
+        if (ctx.elective) {
+            enrollment.initializeCounts(ctx.elective.id, api.client.electives.resolveAllEnrolledCounts(ctx.elective.id))
+        }
     })
 
     const subjects = () =>
         groupItems(
             props.subjects.filter(subject => {
-                if (props.user.isTeacher()) return true
-                if (subject.teamId !== undefined) return subject.canUserEnroll(props.user)
+                if (ctx.editable || !ctx.user) return true
+                if (ctx.user.isTeacher()) return true
+                if (subject.teamId !== undefined) return subject.canUserEnroll(ctx.user)
                 return true
             }),
             s => SubjectTag[s.tag],
@@ -47,7 +54,7 @@ export default function SubjectList(props: SubjectListProps) {
 
         const filtered: Record<string, Subject[]> = {}
         for (const [category, subjectList] of Object.entries(subjects())) {
-            const matchedSubjects = subjectList!.filter(
+            const matchedSubjects = nonNull(subjectList).filter(
                 subject =>
                     subject.name.toLowerCase().includes(q) ||
                     subject.teachers.some(teacher => new User(teacher).fullName.toLowerCase().includes(q)) ||
@@ -62,46 +69,37 @@ export default function SubjectList(props: SubjectListProps) {
         return filtered
     })
 
-    // Try to show at max 2 - 3 items per category
-    // But if one category has less than 3, show that amount instead if more than 2 items
-    // const maxItemsShownUnexpanded = createMemo(() => {
-    //     let least = 3
-    //     const subjectsData = filteredSubjects()
-    //     if (!subjectsData) return least
-
-    //     for (const subjectList of Object.values(subjectsData)) {
-    //         if (subjectList.length < least) {
-    //             least = subjectList.length
-    //         }
-    //     }
-
-    //     return Math.min(Math.max(least, 2), 3)
-    // })
-
     return (
-        <Show when={Object.keys(subjects()).length > 0} fallback={<NotFoundPageContent />}>
+        <Show when={Object.keys(subjects()).length > 0 || ctx.editable} fallback={<NotFoundPageContent />}>
             <VStack gap={0}>
-                <div class={styles.searchContainer}>
-                    <TextField
-                        variant="filled"
-                        leadingIcon={MagnifyIcon}
-                        class={styles.search}
-                        label={string.SEARCH_SUBJECTS()}
-                        onInput={e => updateQuery(e.currentTarget.value)}
-                    />
-                </div>
+                <HStack alignVertical="center" gap={16} wrap class={styles.searchContainer}>
+                    <div style={{ flex: 1 }}>
+                        <TextField
+                            variant="filled"
+                            leadingIcon={MagnifyIcon}
+                            class={styles.search}
+                            label={string.SEARCH_SUBJECTS()}
+                            onInput={e => updateQuery(e.currentTarget.value)}
+                        />
+                    </div>
+                    <Show when={ctx.editable}>
+                        <LinkButton {...ctx.createLinkProps()} variant="filled" icon={PlusIcon}>
+                            {string.CREATE_SUBJECT()}
+                        </LinkButton>
+                    </Show>
+                </HStack>
                 <div class={styles.grid}>
                     <For
-                        each={Object.entries(filteredSubjects())}
+                        each={Object.entries(filteredSubjects()).sort(([catA], [catB]) => catA.localeCompare(catB))}
                         fallback={<p class="padded text-surface-variant">{string.NO_RESULTS_FOUND()}</p>}
                     >
                         {([category, categorySubjects]) => (
                             <SubjectCategorySection
-                                defaultExpanded={query().length > 0}
-                                maxUnexpandedShown={3}
-                                electiveId={props.elective.id}
+                                noRandom={props.noRandom}
+                                defaultExpanded={query().length > 0 || ctx.editable}
+                                maxUnexpandedShown={ctx.editable ? 9999 : 3}
                                 category={category as keyof typeof SubjectTag}
-                                subjects={categorySubjects!}
+                                subjects={nonNull(categorySubjects)}
                                 headerClass={styles.header}
                                 listClass={styles.list}
                                 thumbnailClass={styles.subjectThumbnail}

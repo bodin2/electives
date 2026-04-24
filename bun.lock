@@ -38,7 +38,8 @@
         "@tanstack/router-plugin": "1.167.22",
         "@tanstack/solid-router": "1.168.19",
         "@tanstack/solid-router-devtools": "1.166.13",
-        "m3-solid": "https://github.com/PalmDevs/m3-solid.git#c509c69",
+        "m3-solid": "https://github.com/PalmDevs/m3-solid.git#cf0d846",
+        "marked": "^18.0.2",
         "mitt": "3.0.1",
         "postcss": "8.5.10",
         "solid-js": "1.9.12",
@@ -501,9 +502,11 @@
 
     "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
-    "m3-solid": ["m3-solid@github:PalmDevs/m3-solid#c509c69", { "dependencies": { "@iconify-icons/mdi": "^1.2.48", "@solid-primitives/refs": "^1.1.3", "solid-js": "^1.9.12" }, "peerDependencies": { "solid-js": "^1.9.12" } }, "PalmDevs-m3-solid-c509c69", "sha512-UwKQkestvKBivDQjUScGO1AKUn8Erk/CvVFeZ40fzt7Uk0DEHQsQrKOk06dsyD+D0yPq+J2OSxDL0wETRvmU+A=="],
+    "m3-solid": ["m3-solid@github:PalmDevs/m3-solid#cf0d846", { "dependencies": { "@iconify-icons/mdi": "^1.2.48", "@solid-primitives/refs": "^1.1.3", "solid-js": "^1.9.12" }, "peerDependencies": { "solid-js": "^1.9.12" } }, "PalmDevs-m3-solid-cf0d846", "sha512-LX//VTA4/K1H+i6/zN+bCYHX7B/1V0ZZDsqAFJiXMstDoRhQ7OQX0rYe7Nzz3LIyR8fTUX+rxjmdPpg0WvCpyA=="],
 
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
+
+    "marked": ["marked@18.0.2", "", { "bin": { "marked": "bin/marked.js" } }, "sha512-NsmlUYBS/Zg57rgDWMYdnre6OTj4e+qq/JS2ot3KrYLSoHLw+sDu0Nm1ZGpRgYAq6c+b1ekaY5NzVchMCQnzcg=="],
 
     "mdn-data": ["mdn-data@2.27.1", "", {}, "sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ=="],
 
@@ -594,6 +597,8 @@
     "webpack-virtual-modules": ["webpack-virtual-modules@0.6.2", "", {}, "sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ=="],
 
     "yallist": ["yallist@3.1.1", "", {}, "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="],
+
+    "yaml": ["yaml@2.8.3", "", { "bin": { "yaml": "bin.mjs" } }, "sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg=="],
 
     "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 

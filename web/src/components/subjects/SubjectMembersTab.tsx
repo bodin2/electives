@@ -13,12 +13,13 @@ import styles from './SubjectMembersTab.module.css'
 import type { User } from '../../api'
 
 interface SubjectMembersTabProps {
-    members: { teachers: User[]; students: User[]; maxStudents: number } | undefined
+    members: { teachers: User[]; students: User[]; capacity: number } | undefined
     gridClass?: string
     headerClass?: string
     listClass?: string
     noMembersClass?: string
     onStudentRemove?: (student: User) => unknown
+    onTeacherRemove?: (teacher: User) => unknown
 }
 
 export default function SubjectMembersTab(props: SubjectMembersTabProps) {
@@ -35,6 +36,8 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
                             headerClass={props.headerClass}
                             listClass={props.listClass}
                             noMembersClass={props.noMembersClass}
+                            onRemove={props.onTeacherRemove}
+                            showId={Boolean(props.onTeacherRemove)}
                         />
                         <SubjectMembersSection
                             users={data().students}
@@ -43,7 +46,8 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
                             listClass={props.listClass}
                             noMembersClass={props.noMembersClass}
                             onRemove={props.onStudentRemove}
-                            maxCapacity={data().maxStudents}
+                            maxCapacity={data().capacity}
+                            showId
                         />
                     </div>
                 )}
@@ -54,6 +58,7 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
 
 interface SubjectMembersSectionProps {
     users: User[]
+    showId?: boolean
     title: string
     headerClass?: string
     listClass?: string
@@ -84,6 +89,7 @@ function SubjectMembersSection(props: SubjectMembersSectionProps) {
                             user={user}
                             currentUser={currentUser()}
                             onRemove={props.onRemove && (() => props.onRemove?.(user))}
+                            showId={props.showId}
                         />
                     )}
                 </For>
@@ -94,7 +100,9 @@ function SubjectMembersSection(props: SubjectMembersSectionProps) {
 
 interface SubjectMemberListItemProps {
     user: User
+    showId?: boolean
     currentUser?: User
+    onClick?: () => unknown
     /**
      * Pass to show a remove button on the right side of the item
      */
@@ -106,6 +114,7 @@ export function SubjectMemberListItem(props: SubjectMemberListItemProps) {
 
     return (
         <ListItem
+            onClick={props.onClick}
             leading={
                 <img class={styles.avatar} src={props.user.avatarUrl || AvatarPlaceholder} alt={string.AVATAR()} />
             }
@@ -120,7 +129,7 @@ export function SubjectMemberListItem(props: SubjectMemberListItemProps) {
                     </HStack>
                 </HStack>
             }
-            supporting={props.user.isStudent() && props.user.id}
+            supporting={props.showId && props.user.id}
             trailing={
                 <Show when={props.onRemove}>
                     {onRemove => (

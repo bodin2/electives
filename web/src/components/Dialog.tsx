@@ -1,5 +1,5 @@
 import { Dialog as M3Dialog, type DialogProps as M3DialogProps } from 'm3-solid'
-import { createEffect, createSignal, Show, splitProps, type ParentComponent } from 'solid-js'
+import { createEffect, createSignal, type ParentComponent, Show, splitProps } from 'solid-js'
 import styles from './Dialog.module.css'
 
 export type DialogProps = Omit<M3DialogProps, 'open' | 'onOpenChange'> & {

@@ -25,8 +25,6 @@ export { sleep } from './api/utils'
 export { electiveSorter } from './utils/electives'
 export { createHashFromString, seededRandom, seededShuffle } from './utils/random'
 
-export const noop = () => {}
-
 export function debounce<F extends (...args: any[]) => any>(
     func: F,
     wait: number,

@@ -1,5 +1,5 @@
 import SettingsIcon from '@iconify-icons/mdi/cog'
-import { createFileRoute, useNavigate } from '@tanstack/solid-router'
+import { createFileRoute } from '@tanstack/solid-router'
 import { createSignal } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { Button } from '../../components/Button'
@@ -41,7 +41,7 @@ export const Route = createFileRoute('/_authenticated/')({
 
 function Home() {
     const data = Route.useLoaderData()
-    const navigate = useNavigate()
+    const navigate = Route.useNavigate()
     const { string } = useI18n()
 
     const [settingsOpen, setSettingsOpen] = createSignal(false)

@@ -187,7 +187,7 @@ export class Subject {
         return true
     }
 
-    isUserTeaching(user: User): boolean {
+    isTaughtBy(user: User): boolean {
         if (!user.isTeacher()) return false
         return this.teachers.some(t => t.id === user.id)
     }

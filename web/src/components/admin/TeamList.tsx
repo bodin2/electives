@@ -14,12 +14,15 @@ interface TeamListProps {
     memberCounts: Record<number, number>
     onEdit: (team: Team) => void
     onCreate: () => void
-    onDelete: (team: Team) => void
+    onDelete: (team: Team) => Promise<void>
 }
 
 export default function TeamList(props: TeamListProps) {
     const { string } = useI18n()
     const [search, setSearch] = createSignal('')
+    // So the dialog can exit without changing the content
+    const [deletingTeam, setDeletingTeam] = createSignal(false)
+    let teamToDelete: Team | undefined
 
     const filteredTeams = createMemo(() => {
         const query = search().toLowerCase()
@@ -28,7 +31,10 @@ export default function TeamList(props: TeamListProps) {
             .sort((a, b) => a.name.localeCompare(b.name))
     })
 
-    const [teamToDelete, setTeamToDelete] = createSignal<Team | null>(null)
+    const setTeamToDelete = (team: Team | undefined) => {
+        teamToDelete = team
+        setDeletingTeam(!!team)
+    }
 
     return (
         <VStack class={styles.container} gap={16}>
@@ -62,21 +68,20 @@ export default function TeamList(props: TeamListProps) {
             </VStack>
 
             <Dialog
-                open={!!teamToDelete()}
+                open={deletingTeam()}
                 closedBy="any"
-                onClose={() => setTeamToDelete(null)}
+                onClose={() => setTeamToDelete(undefined)}
                 headline={string.DELETE_TEAM()}
                 actions={
-                    <HStack slot="actions" gap={8} justify="flex-end">
-                        <Button variant="text" onClick={() => setTeamToDelete(null)}>
+                    <HStack slot="actions" gap={8}>
+                        <Button variant="text" onClick={() => setTeamToDelete(undefined)}>
                             {string.CANCEL()}
                         </Button>
                         <Button
                             variant="tonal-error"
-                            onClick={() => {
-                                const team = teamToDelete()
-                                if (team) props.onDelete(team)
-                                setTeamToDelete(null)
+                            onClick={async () => {
+                                if (teamToDelete) await props.onDelete(teamToDelete)
+                                setTeamToDelete(undefined)
                             }}
                         >
                             {string.DELETE_TEAM()}
@@ -84,7 +89,7 @@ export default function TeamList(props: TeamListProps) {
                     </HStack>
                 }
             >
-                <p>{string.CONFIRM_DELETE_TEAM({ name: teamToDelete()?.name ?? '' })}</p>
+                <p>{string.CONFIRM_DELETE_TEAM({ name: teamToDelete?.name ?? '' })}</p>
             </Dialog>
         </VStack>
     )

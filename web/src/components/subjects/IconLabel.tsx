@@ -14,7 +14,7 @@ export default function IconLabel(props: IconLabelProps) {
     return (
         <HStack alignVertical="center" gap={4} class={props.class}>
             <Icon icon={props.icon} width={size()} height={size()} />
-            <span>{props.text}</span>
+            <span style="color: inherit; font: inherit">{props.text}</span>
         </HStack>
     )
 }

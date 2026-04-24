@@ -13,13 +13,13 @@ const randomSeed = Math.floor(Math.random() * 2147483647)
 
 interface SubjectCategorySectionProps {
     category: keyof typeof SubjectTag
-    electiveId: number
     subjects: Subject[]
     defaultExpanded?: boolean
     maxUnexpandedShown: number
     headerClass?: string
     listClass?: string
     thumbnailClass?: string
+    noRandom?: boolean
 }
 
 export default function SubjectCategorySection(props: SubjectCategorySectionProps) {
@@ -41,7 +41,9 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
     const expandable = () => props.subjects.length > props.maxUnexpandedShown
 
     const categorySeed = createMemo(() => randomSeed ^ createHashFromString(props.category))
-    const subjectRandomized = createMemo(() => seededShuffle(props.subjects, categorySeed()))
+    const subjectRandomized = createMemo(() =>
+        props.noRandom ? props.subjects : seededShuffle(props.subjects, categorySeed()),
+    )
 
     const displayedSubjects = () => subjectRandomized().slice(0, expanded() ? undefined : props.maxUnexpandedShown)
 
@@ -70,7 +72,6 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
                 <For each={displayedSubjects()}>
                     {subject => (
                         <SubjectListItem
-                            electiveId={props.electiveId}
                             subject={subject}
                             thumbnailClass={props.thumbnailClass}
                         />

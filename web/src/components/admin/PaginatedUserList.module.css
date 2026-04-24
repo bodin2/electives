@@ -1,0 +1,15 @@
+.header {
+    padding: 16px;
+    top: var(--sticky-offset);
+    position: sticky;
+    z-index: var(--layer-overlay);
+    background-color: var(--m3c-surface);
+
+    &:empty {
+        display: none
+    }
+}
+
+.padded {
+    padding: 16px;
+}

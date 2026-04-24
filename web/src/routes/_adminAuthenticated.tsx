@@ -1,13 +1,11 @@
 import { createFileRoute, type ErrorRouteComponent, Outlet } from '@tanstack/solid-router'
 import { Match, Switch } from 'solid-js'
 import { UnauthorizedError } from '../api'
-import { PageTopAppBar } from '../components/PageTopAppBar'
 import ErrorPage from '../components/pages/ErrorPage'
 import LoadingPage from '../components/pages/LoadingPage'
 import { useLogoutRedirect } from '../hooks/useAuthRedirect'
 import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
 import { useI18n } from '../providers/I18nProvider'
-import { usePageData } from '../providers/PageProvider'
 import { catchErrors } from '../utils/error-component'
 
 export const ADMIN_AUTHENTICATED_ROUTE_DEFAULTS = {
@@ -27,14 +25,12 @@ export const Route = createFileRoute('/_adminAuthenticated')({
 function AdminAuthenticatedLayout() {
     const api = useAPI()
     const { string } = useI18n()
-    const pageData = usePageData()
 
     useAdminLogoutRedirect()
 
     return (
         <Switch>
             <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.Admin}>
-                <PageTopAppBar elevated={pageData.topAppBarElevated} />
                 <Outlet />
             </Match>
             <Match when={api.authState() === AuthenticationState.Loading}>

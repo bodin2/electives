@@ -1,47 +1,72 @@
+import DeleteOutlineIcon from '@iconify-icons/mdi/delete-outline'
+import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
+import { Show } from 'solid-js'
 import { User } from '../../api'
 import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placeholder.webp'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
+import { nonNull } from '../../utils'
+import { Button } from '../Button'
 import LinkListItem from '../LinkListItem'
+import { HStack, VStack } from '../Stack'
+import { useSubjectDisplayContext } from './SubjectDisplayContext'
 import type { Subject } from '../../api'
 
 interface SubjectListItemProps {
     subject: Subject
-    electiveId: number
     thumbnailClass?: string
 }
 
 export default function SubjectListItem(props: SubjectListItemProps) {
     const { string } = useI18n()
     const enrollment = useEnrollmentCounts()
+    const ctx = useSubjectDisplayContext()
 
-    const enrolledCount = () => enrollment.getCount(props.electiveId, props.subject.id) ?? 0
+    const electiveId = () => ctx.elective?.id
 
-    const isNearCapacity = () =>
-        enrolledCount() / props.subject.capacity > 0.8 || props.subject.capacity - enrolledCount() < 5
+    const enrolledCount = () => {
+        const id = electiveId()
+        return id !== undefined ? (enrollment.getCount(id, props.subject.id) ?? 0) : 0
+    }
+
+    const isNearCapacity = () => {
+        if (electiveId() === undefined) return false
+        return enrolledCount() / props.subject.capacity > 0.8 || props.subject.capacity - enrolledCount() < 5
+    }
 
     const teacherNames = () => props.subject.teachers.map(t => new User(t).fullName).join(', ') || '-'
 
-    return (
-        <LinkListItem
-            lines={4}
-            headline={props.subject.name}
-            to={'/enroll/$electiveId/$subjectId'}
-            preloadDelay={500}
-            params={{
-                electiveId: props.electiveId,
-                subjectId: props.subject.id,
-            }}
-            leading={
-                // @once
-                <img
-                    class={props.thumbnailClass}
-                    src={props.subject.thumbnailUrl || SubjectThumbnailPlaceholder}
-                    alt={string.IMG_ALT_SUBJECT_IMAGE()}
-                />
-            }
-            trailing={
-                // @once
+    const Leading = (
+        <img
+            class={props.thumbnailClass}
+            src={props.subject.thumbnailUrl || SubjectThumbnailPlaceholder}
+            alt={string.IMG_ALT_SUBJECT_IMAGE()}
+        />
+    )
+
+    const Trailing = (
+        <VStack alignHorizontal="end">
+            <Show when={ctx.editable}>
+                <HStack gap={8}>
+                    <Button
+                        variant="text"
+                        iconType="only"
+                        icon={PencilOutlineIcon}
+                        aria-label={string.EDIT_SUBJECT()}
+                    />
+                    <Button
+                        variant="tonal-error"
+                        iconType="only"
+                        icon={DeleteOutlineIcon}
+                        aria-label={string.DELETE_SUBJECT()}
+                        onClick={e => {
+                            e.stopPropagation()
+                            ctx.setDeletingSubject(props.subject)
+                        }}
+                    />
+                </HStack>
+            </Show>
+            <Show when={electiveId() !== undefined}>
                 <p
                     class="m3-body-medium"
                     classList={{
@@ -50,14 +75,33 @@ export default function SubjectListItem(props: SubjectListItemProps) {
                 >
                     {string.MEMBERS_COUNT({ count: enrolledCount(), total: props.subject.capacity })}
                 </p>
-            }
-            supporting={
-                // @once
-                <>
-                    <p>{`${string.CLASS()}: ${props.subject.location}`}</p>
-                    <p>{`${string.TEACHERS()}: ${teacherNames()}`}</p>
-                </>
-            }
+            </Show>
+        </VStack>
+    )
+
+    const supporting = (
+        <>
+            <p>{`${string.CLASS()}: ${props.subject.location}`}</p>
+            <p>{`${string.TEACHERS()}: ${teacherNames()}`}</p>
+        </>
+    )
+
+    const linkProps = () =>
+        ctx.editable
+            ? ctx.editLinkProps(props.subject.id)
+            : electiveId() !== undefined
+              ? ctx.viewLinkProps(nonNull(electiveId()), props.subject.id)
+              : {}
+
+    return (
+        <LinkListItem
+            {...linkProps()}
+            lines={4}
+            headline={props.subject.name}
+            preloadDelay={500}
+            leading={Leading}
+            trailing={Trailing}
+            supporting={supporting}
         />
     )
 }
