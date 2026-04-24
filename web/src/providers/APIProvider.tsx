@@ -1,4 +1,5 @@
 import Logger from '@bodin2/electives-common/Logger'
+import { useRouteContext } from '@tanstack/solid-router'
 import {
     type Accessor,
     createContext,
@@ -24,7 +25,6 @@ import {
 } from '../api'
 import { GatewayEndpoints } from '../api/gateway'
 import { NetworkError } from '../api/types'
-import { Route } from '../routes/__root'
 
 export enum AuthenticationState {
     Loading = 0,
@@ -127,7 +127,7 @@ export const initAuth = async (client: APIClient): Promise<AuthenticationState> 
 
 const APIProvider: ParentComponent<{ client: APIClient }> = props => {
     const client = props.client
-    const ctx = Route.useRouteContext()
+    const ctx = useRouteContext({ from: '__root__' })
 
     const [authState, setAuthState] = createSignal(AuthenticationState.Loading)
     const [tokenType, setTokenType] = createSignal<TokenType | null>(
@@ -300,6 +300,6 @@ export default APIProvider
 
 export const useAPI = () => {
     const context = useContext(APIContext)
-    if (!context) throw new Error('useAPI must be used within a ClientProvider')
+    if (!context) throw new Error('useAPI must be used within a APIProvider')
     return context
 }

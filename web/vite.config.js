@@ -26,6 +26,7 @@ export default defineConfig({
     define: {
         'process.env.APP_VERSION': JSON.stringify(pkg.version),
         'process.env.APP_COMMIT': JSON.stringify(commit),
+        'process.env.API_BASE_URL': JSON.stringify(process.env.API_BASE_URL || 'http://localhost:8080'),
     },
     resolve: {
         // My setup includes linking m3-solid from source
