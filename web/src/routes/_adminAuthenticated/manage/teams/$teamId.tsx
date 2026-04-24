@@ -1,9 +1,14 @@
+import PlusIcon from '@iconify-icons/mdi/plus'
+import TrashIcon from '@iconify-icons/mdi/trash-can-outline'
 import { createFileRoute, useRouter } from '@tanstack/solid-router'
-import { LoadingIndicator, Tabs, TextField } from 'm3-solid'
+import { ListItem, LoadingIndicator, Tabs, TextField } from 'm3-solid'
 import { createEffect, createMemo, createResource, createSignal, Match, Show, Suspense, Switch } from 'solid-js'
+import { Portal } from 'solid-js/web'
 import { NotFoundError, type User } from '../../../../api'
 import PaginatedUserList, { type PaginatedUserListHandle } from '../../../../components/admin/PaginatedUserList'
 import { Button } from '../../../../components/Button'
+import { ContainedIcon } from '../../../../components/ContainedIcon'
+import AddStudentToTeamDialog from '../../../../components/dialogs/AddStudentToTeamDialog'
 import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
 import { VStack } from '../../../../components/Stack'
@@ -152,20 +157,66 @@ function RouteComponent() {
 function TeamMembers(props: { members: { users: User[]; total: number }; refetchMembers: () => void }) {
     const search = Route.useSearch()
     const navigate = Route.useNavigate()
+    const params = Route.useParams()
+    const { client } = useAPI()
+    const { string } = useI18n()
 
+    const [addDialogOpen, setAddDialogOpen] = createSignal(false)
     let listHandle: PaginatedUserListHandle | undefined
 
+    const removeUserFromTeam = async (user: User) => {
+        const teamId = Number(params().teamId)
+        try {
+            await client.users.admin.patch(user.id, {
+                patchAvatarUrl: false,
+                patchMiddleName: false,
+                patchTeams: true,
+                teams: user.teams.filter(t => t.id !== teamId).map(t => t.id),
+            })
+            listHandle?.onUserRemove(user.id)
+        } catch (e) {
+            console.error(e)
+            alert(`Failed to remove user from team: ${e}`)
+        }
+    }
+
     return (
-        <PaginatedUserList
-            ref={h => (listHandle = h)}
-            page={search().page}
-            data={props.members}
-            onPageChange={page => navigate({ search: { ...search(), page } })}
-            onRefresh={() => props.refetchMembers()}
-            onClick={user => {
-                console.log('Clicked user:', user.fullName)
-                // @TODO: Open edit dialog
-            }}
-        />
+        <>
+            <Portal>
+                <AddStudentToTeamDialog
+                    open={addDialogOpen()}
+                    onClose={() => setAddDialogOpen(false)}
+                    onSuccess={u => listHandle?.onUserAdd(u)}
+                    teamId={Number(params().teamId)}
+                />
+            </Portal>
+            <PaginatedUserList
+                ref={h => (listHandle = h)}
+                page={search().page}
+                data={props.members}
+                onPageChange={page => navigate({ search: { ...search(), page } })}
+                onRefresh={() => props.refetchMembers()}
+                listHeader={() => (
+                    <ListItem
+                        lines={2}
+                        headline={string.ADD_STUDENT()}
+                        leading={<ContainedIcon icon={PlusIcon} />}
+                        onClick={() => setAddDialogOpen(true)}
+                    />
+                )}
+                trailing={user => (
+                    <Button
+                        aria-label={string.REMOVE()}
+                        variant="text"
+                        onClick={e => {
+                            e.stopPropagation()
+                            removeUserFromTeam(user)
+                        }}
+                        icon={TrashIcon}
+                        iconType="only"
+                    />
+                )}
+            />
+        </>
     )
 }

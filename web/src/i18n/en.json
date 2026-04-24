@@ -70,6 +70,8 @@
   "SUBJECT_MEMBERS_COUNT": "Students: {{ count }}/{{ total }}",
   "SUBJECT_CAPACITY_COUNT": "Capacity: {{ count }} students",
   "SETTINGS": "Settings",
+  "ADD_STUDENT": "Add student",
+  "ADD_STUDENT_TO_TEAM": "Add student to team",
   "ADD_STUDENT_TO_SUBJECT": "Add student to subject",
   "REMOVE_STUDENT_FROM_SUBJECT": "Remove student from subject",
   "ADD_TEACHER_TO_SUBJECT": "Add teacher to subject",
@@ -140,5 +142,6 @@
   "SEARCH_TEACHERS": "Search teachers",
   "REMOVE_SUBJECT_FROM_ENROLLMENT": "Remove subject from enrollment?",
   "REMOVE_SUBJECT_FROM_ENROLLMENT_DESCRIPTION": "Remove {{ subjectName }} from {{ electiveName }}?\nThis won't delete the subject, nor will it unenroll students, or remove teachers from the subject.",
-  "REMOVE": "Remove"
+  "REMOVE": "Remove",
+  "USERS_COUNT": "{{ count }} users"
 }

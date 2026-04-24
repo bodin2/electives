@@ -1,5 +1,6 @@
 import { ListItem, mergeClasses, TextField } from 'm3-solid'
-import { createEffect, For, Show } from 'solid-js'
+import { type Component, createEffect, For, type JSX, Show } from 'solid-js'
+import { createStore } from 'solid-js/store'
 import { useI18n } from '../../providers/I18nProvider'
 import { debounce, nonNull } from '../../utils'
 import { Button } from '../Button'
@@ -11,11 +12,11 @@ import type { User } from '../../api'
 export interface PaginatedUserListHandle {
     /** Trigger a refresh of the current page. */
     refresh: () => void
-    /** Notify the list that a user has been removed. Triggers refresh. */
+    /** Notify the list that a user has been removed. */
     onUserRemove: (userId: number) => void
-    /** Notify the list that a new user has been added. Triggers refresh. */
-    onUserAdd: () => void
-    /** Notify the list that a user has been edited. Triggers refresh. */
+    /** Notify the list that a new user has been added. */
+    onUserAdd: (user: User) => void
+    /** Notify the list that a user has been edited. */
     onUserEdit: (user: User) => void
 }
 
@@ -30,6 +31,10 @@ interface PaginatedUserListProps {
     class?: string
     ref?: (handle: PaginatedUserListHandle) => void
     onRefresh?: () => void
+    /** Custom trailing component for each user item. */
+    trailing?: (user: User) => JSX.Element
+    /** Custom component that renders at the top of the list. */
+    listHeader?: Component
 }
 
 const PAGE_SIZE = 50
@@ -37,9 +42,22 @@ const PAGE_SIZE = 50
 export default function PaginatedUserList(props: PaginatedUserListProps) {
     const { string } = useI18n()
 
+    const [store, setStore] = createStore({
+        users: [] as User[],
+        total: 0,
+    })
+
+    createEffect(() => {
+        if (props.data) {
+            setStore({
+                users: props.data.users,
+                total: props.data.total,
+            })
+        }
+    })
+
     const totalPages = () => {
-        if (!props.data) return 1
-        return Math.ceil(props.data.total / PAGE_SIZE)
+        return Math.ceil(store.total / PAGE_SIZE)
     }
 
     const next = () => {
@@ -53,9 +71,19 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
     createEffect(() => {
         props.ref?.({
             refresh: () => props.onRefresh?.(),
-            onUserRemove: () => props.onRefresh?.(),
-            onUserAdd: () => props.onRefresh?.(),
-            onUserEdit: () => props.onRefresh?.(),
+            onUserRemove: userId => {
+                setStore('users', u => u.filter(user => user.id !== userId))
+                setStore('total', t => Math.max(0, t - 1))
+            },
+            onUserAdd: user => {
+                setStore('users', [...store.users, user])
+            },
+            onUserEdit: user => {
+                const index = store.users.findIndex(u => u.id === user.id)
+                if (index !== -1) {
+                    setStore('users', index, user)
+                }
+            },
         })
     })
 
@@ -87,24 +115,33 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                         </Button>
                     </HStack>
                 </Show>
+                <p class="m3-label-large text-surface-variant">{string.USERS_COUNT({ count: store.total })}</p>
             </VStack>
             <VStack gap={0}>
-                <Show when={props.isLoading && !props.data}>
+                {props.listHeader?.({})}
+                <Show when={props.isLoading && !props.data && store.users.length === 0}>
                     <ListItem headline={string.LOADING()} />
                 </Show>
-                <Show when={props.data}>
-                    {data => (
-                        <For
-                            each={data().users}
-                            fallback={
+                <Show when={props.data || store.users.length > 0}>
+                    <For
+                        each={store.users}
+                        fallback={
+                            <Show when={!props.isLoading}>
                                 <p class={mergeClasses('text-surface-variant', styles.padded)}>
                                     {string.NO_USERS_FOUND()}
                                 </p>
-                            }
-                        >
-                            {user => <SubjectMemberListItem showId onClick={() => props.onClick?.(user)} user={user} />}
-                        </For>
-                    )}
+                            </Show>
+                        }
+                    >
+                        {user => (
+                            <SubjectMemberListItem
+                                showId
+                                onClick={props.onClick && (() => nonNull(props.onClick)(user))}
+                                user={user}
+                                trailing={props.trailing?.(user)}
+                            />
+                        )}
+                    </For>
                 </Show>
             </VStack>
         </>

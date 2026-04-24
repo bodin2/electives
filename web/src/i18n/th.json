@@ -69,7 +69,8 @@
   "SUBJECT_CODE": "รหัสวิชา",
   "SUBJECT_MEMBERS_COUNT": "นักเรียน: {{ count }}/{{ total }} คน",
   "SUBJECT_CAPACITY_COUNT": "ความจุ: {{ count }} คน",
-  "SETTINGS": "ตั้งค่า",
+  "ADD_STUDENT": "เพิ่มนักเรียน",
+  "ADD_STUDENT_TO_TEAM": "เพิ่มนักเรียนเข้าทีม",
   "ADD_STUDENT_TO_SUBJECT": "เพิ่มนักเรียนเข้าเรียนวิชา",
   "REMOVE_STUDENT_FROM_SUBJECT": "ลบนักเรียนออกจากวิชา",
   "ADD_TEACHER_TO_SUBJECT": "เพิ่มครูเข้าสอนวิชา",
@@ -140,5 +141,6 @@
   "SEARCH_TEACHERS": "ค้นหาครู",
   "REMOVE_SUBJECT_FROM_ENROLLMENT": "ลบวิชาออกจากการลงทะเบียน?",
   "REMOVE_SUBJECT_FROM_ENROLLMENT_DESCRIPTION": "ลบ {{ subjectName }} ออกจาก {{ electiveName }} หรือไม่?\nการดำเนินการนี้จะไม่ลบวิชา และจะไม่ยกเลิกการลงทะเบียนของนักเรียน หรือนำครูผู้สอนออกจากวิชานี้",
-  "REMOVE": "ลบ"
+  "REMOVE": "ลบ",
+  "USERS_COUNT": "{{ count }} ผู้ใช้งาน"
 }
