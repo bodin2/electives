@@ -28,11 +28,13 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/teams/$teamId'
         }
     },
     loader: async ({ params: { teamId }, context: { client } }) => {
-        if (teamId === 'new') return null
+        if (isNewRoute(teamId)) return null
         return await client.teams.fetch(Number(teamId))
     },
     component: RouteComponent,
 })
+
+const isNewRoute = (teamId: string) => teamId === 'new'
 
 const tryCoerceValidId = (id: string) => {
     const parsed = Number(id)
@@ -48,7 +50,7 @@ function RouteComponent() {
     const search = Route.useSearch()
     const team = Route.useLoaderData()
 
-    const isNew = () => params().teamId === 'new'
+    const isNew = () => isNewRoute(params().teamId)
 
     const [tab, setTab] = createSignal<'info' | 'members'>('info')
     const [name, setName] = createSignal('')

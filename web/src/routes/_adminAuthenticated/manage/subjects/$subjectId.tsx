@@ -12,7 +12,7 @@ import { simpleXXHash31 } from '../../../../utils/xxhash'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subjectId')({
     component: RouteComponent,
-    validateSearch: search => {
+    validateSearch: (search): { elective_id?: number } => {
         return {
             elective_id: search?.elective_id != null ? Number(search?.elective_id) : undefined,
         }
@@ -20,7 +20,7 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subj
     loader: async ({ params: { subjectId }, context: { client } }) => {
         const allElectives = await client.electives.fetchAll()
 
-        if (subjectId === 'new') {
+        if (isNewRoute(subjectId)) {
             return {
                 subject: null,
                 electives: allElectives,
@@ -48,15 +48,16 @@ const isNewRoute = (subjectId: string) => subjectId === 'new'
 
 function RouteComponent() {
     const params = Route.useParams()
-    const subjectId = params().subjectId
     const search = Route.useSearch()
+    const data = Route.useLoaderData()
+    const navigate = Route.useNavigate()
+
+    const isNew = () => isNewRoute(params().subjectId)
+
     const { client } = useAPI()
     const { string } = useI18n()
     const router = useRouter()
-    const data = Route.useLoaderData()
     const displayContext = useSubjectDisplayContext()
-
-    const isNew = isNewRoute(subjectId)
 
     // Lifted state for the subject
     const [subjectData, setSubjectData] = createSignal<RawSubject>(
@@ -75,7 +76,7 @@ function RouteComponent() {
     const subject = createMemo(() => new Subject(subjectData()))
 
     const handleEdit = async (key: string, val: unknown, patchKey?: PatchSetterKey) => {
-        if (isNew) {
+        if (isNew()) {
             // Update signal with a NEW object to trigger re-render
             setSubjectData({ ...subjectData(), [key]: val })
         } else {
@@ -126,7 +127,12 @@ function RouteComponent() {
                 await client.subjects.admin.put(s.id, s)
                 await client.subjects.admin.fetchAll({ force: true })
                 await router.invalidate()
-                history.back()
+
+                navigate({
+                    params: { subjectId: s.id.toString() },
+                    replace: true,
+                })
+
                 break
             } catch (e) {
                 if (e instanceof ConflictError) continue
@@ -139,7 +145,7 @@ function RouteComponent() {
     }
 
     onMount(() => {
-        if (isNew) return
+        if (isNew()) return
 
         onCleanup(() => {
             displayContext.setElective(undefined)
@@ -152,7 +158,7 @@ function RouteComponent() {
     createEffect(() => {
         displayContext.setSubject(subject())
         displayContext.setOnEdit(handleEdit)
-        displayContext.setOnSave(isNew ? handleCreate : undefined)
+        displayContext.setOnSave(isNew() ? handleCreate : undefined)
     })
 
     createEffect(() => {
@@ -162,10 +168,10 @@ function RouteComponent() {
     })
 
     return (
-        <Page name={isNew ? string.CREATE_SUBJECT() : subject().name} allowBacking leading={null} trailing={null}>
+        <Page name={isNew() ? string.CREATE_SUBJECT() : subject().name} allowBacking leading={null} trailing={null}>
             <SubjectInfo
                 extraActions={() => (
-                    <Show when={!isNew}>
+                    <Show when={!isNew()}>
                         <SubjectAdminEnrollmentActions
                             allElectives={data().allElectives}
                             enrolledElectives={data().electives}
