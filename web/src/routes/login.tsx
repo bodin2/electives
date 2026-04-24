@@ -137,7 +137,12 @@ function Login() {
                         }}
                     >
                         <VStack gap={16}>
-                            <TextField errorIcon label={string.ID()} autocomplete="username" {...inputExtraProps()} />
+                            <TextField
+                                errorIcon
+                                label={string.USER_ID()}
+                                autocomplete="username"
+                                {...inputExtraProps()}
+                            />
                             <TextField
                                 errorIcon
                                 label={string.PASSWORD()}

@@ -43,10 +43,10 @@ const FIELDS: Record<string, Field<unknown>> = {
         getValue: s => s.id,
         parse: (v, s) => {
             const n = Number(v)
-            if (Number.isNaN(n) || n < 0) return [undefined, s.ERROR_NUMERIC_VALUE({ field: s.ID() })]
+            if (Number.isNaN(n) || n < 0) return [undefined, s.ERROR_NUMERIC_VALUE({ field: s.USER_ID() })]
             return [n]
         },
-        name: s => s.ID(),
+        name: s => s.USER_ID(),
         required: true,
     },
     name: {
