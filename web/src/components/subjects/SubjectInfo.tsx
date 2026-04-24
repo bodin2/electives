@@ -100,7 +100,11 @@ export default function SubjectInfo(props: SubjectInfoProps) {
     )
 
     const handleStudentRemove = async (stud: { id: number }) => {
-        await api.client.selections.delete(stud.id, nonNull(ctx.elective).id)
+        const el = nonNull(ctx.elective)
+
+        await api.client.selections.delete(stud.id, el.id)
+        enrollment.bumpVersion(el.id)
+
         await router.invalidate({ sync: true })
     }
 
@@ -120,6 +124,7 @@ export default function SubjectInfo(props: SubjectInfoProps) {
         })
 
         enrollment.bumpVersion(el.id)
+
         await router.invalidate({ sync: true })
     }
 
