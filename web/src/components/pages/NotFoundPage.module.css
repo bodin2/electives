@@ -1,10 +1,21 @@
 .ee {
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+    top: 0;
+    position: fixed;
+    width: 100dvw;
+    height: 100dvh;
+}
+
+.popup {
     cursor: pointer;
-    width: 96px;
-    height: 96px;
+    width: 72px;
+    height: 72px;
+    pointer-events: all;
     position: absolute;
-    bottom: -16px;
-    right: 0px;
+    bottom: -12px;
+    right: -16px;
     transition: all var(--m3-easing-fast-spatial);
 
     img {
@@ -12,7 +23,7 @@
     }
 
     &:hover {
-        bottom: -4px;
-        right: 4px;
+        bottom: -6px;
+        right: -4px;
     }
 }
