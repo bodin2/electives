@@ -2,12 +2,12 @@
   "name": "@bodin2/electives",
   "version": "0.1.0",
   "devDependencies": {
-    "@biomejs/biome": "2.4.12",
-    "@types/bun": "1.3.12",
+    "@biomejs/biome": "2.4.13",
+    "@types/bun": "1.3.13",
     "turbo": "2.9.6"
   },
   "peerDependencies": {
-    "typescript": "6.0.2"
+    "typescript": "6.0.3"
   },
   "packageManager": "bun@1.2.17",
   "private": true,
