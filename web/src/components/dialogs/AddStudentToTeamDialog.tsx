@@ -30,6 +30,8 @@ export default function AddStudentToTeamDialog(props: {
                         patchTeams: true,
                         teams: [...currentTeams, props.teamId],
                     })
+
+                    await api.client.users.fetch(user.id, { force: true })
                 }
             }}
         />

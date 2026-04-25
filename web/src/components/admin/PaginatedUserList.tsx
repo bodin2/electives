@@ -1,5 +1,5 @@
 import { ListItem, mergeClasses, TextField } from 'm3-solid'
-import { type Component, createEffect, For, type JSX, Show } from 'solid-js'
+import { type Component, createEffect, For, Show } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useI18n } from '../../providers/I18nProvider'
 import { debounce, nonNull } from '../../utils'
@@ -32,7 +32,7 @@ interface PaginatedUserListProps {
     ref?: (handle: PaginatedUserListHandle) => void
     onRefresh?: () => void
     /** Custom trailing component for each user item. */
-    trailing?: (user: User) => JSX.Element
+    trailing?: Component<{ user: User }>
     /** Custom component that renders at the top of the list. */
     listHeader?: Component
 }
@@ -43,14 +43,14 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
     const { string } = useI18n()
 
     const [store, setStore] = createStore({
-        users: [] as User[],
+        users: new Map<number, User>(),
         total: 0,
     })
 
     createEffect(() => {
         if (props.data) {
             setStore({
-                users: props.data.users,
+                users: props.data.users.reduce((map, user) => map.set(user.id, user), new Map<number, User>()),
                 total: props.data.total,
             })
         }
@@ -72,17 +72,26 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
         props.ref?.({
             refresh: () => props.onRefresh?.(),
             onUserRemove: userId => {
-                setStore('users', u => u.filter(user => user.id !== userId))
+                setStore('users', u => {
+                    const newUserMap = new Map(u)
+                    newUserMap.delete(userId)
+                    return newUserMap
+                })
                 setStore('total', t => Math.max(0, t - 1))
             },
             onUserAdd: user => {
-                setStore('users', [...store.users, user])
+                setStore('users', u => {
+                    const newUserMap = new Map(u)
+                    newUserMap.set(user.id, user)
+                    return newUserMap
+                })
             },
             onUserEdit: user => {
-                const index = store.users.findIndex(u => u.id === user.id)
-                if (index !== -1) {
-                    setStore('users', index, user)
-                }
+                setStore('users', u => {
+                    const newUserMap = new Map(u)
+                    newUserMap.set(user.id, user)
+                    return newUserMap
+                })
             },
         })
     })
@@ -119,12 +128,12 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
             </VStack>
             <VStack gap={0}>
                 {props.listHeader?.({})}
-                <Show when={props.isLoading && !props.data && store.users.length === 0}>
+                <Show when={props.isLoading && !props.data && store.users.size === 0}>
                     <ListItem headline={string.LOADING()} />
                 </Show>
-                <Show when={props.data || store.users.length > 0}>
+                <Show when={props.data || store.users.size > 0}>
                     <For
-                        each={store.users}
+                        each={Array.from(store.users.values())}
                         fallback={
                             <Show when={!props.isLoading}>
                                 <p class={mergeClasses('text-surface-variant', styles.padded)}>
@@ -138,7 +147,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                                 showId
                                 onClick={props.onClick && (() => nonNull(props.onClick)(user))}
                                 user={user}
-                                trailing={props.trailing?.(user)}
+                                trailing={props.trailing}
                             />
                         )}
                     </For>

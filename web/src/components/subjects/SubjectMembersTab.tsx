@@ -1,6 +1,6 @@
 import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import { ListItem } from 'm3-solid'
-import { For, Show, Suspense } from 'solid-js'
+import { type Component, For, Show, Suspense } from 'solid-js'
 import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
@@ -107,6 +107,11 @@ interface SubjectMemberListItemProps {
      * Pass to show a remove button on the right side of the item
      */
     onRemove?: () => unknown
+    /**
+     * A custom component to show on the right side of the item.
+     * Overrides the remove button if `onRemove` is also provided.
+     */
+    trailing?: Component<{ user: User }>
 }
 
 export function SubjectMemberListItem(props: SubjectMemberListItemProps) {
@@ -131,16 +136,23 @@ export function SubjectMemberListItem(props: SubjectMemberListItemProps) {
             }
             supporting={props.showId && props.user.id}
             trailing={
-                <Show when={props.onRemove}>
-                    {onRemove => (
-                        <Button
-                            aria-label={string.REMOVE_STUDENT_FROM_SUBJECT()}
-                            variant="text"
-                            onClick={onRemove()}
-                            icon={DeleteIcon}
-                            iconType="only"
-                        />
-                    )}
+                <Show
+                    when={props.trailing}
+                    fallback={
+                        <Show when={props.onRemove}>
+                            {onRemove => (
+                                <Button
+                                    aria-label={string.REMOVE_STUDENT_FROM_SUBJECT()}
+                                    variant="text"
+                                    onClick={onRemove()}
+                                    icon={DeleteIcon}
+                                    iconType="only"
+                                />
+                            )}
+                        </Show>
+                    }
+                >
+                    {nonNull(props.trailing)({ user: props.user })}
                 </Show>
             }
         />

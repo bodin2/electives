@@ -103,7 +103,7 @@ export default function AddUserDialog(props: AddUserDialogProps) {
                             try {
                                 const shouldClose = await props.onConfirm(u)
                                 if (shouldClose !== false) {
-                                    props.onSuccess?.(u)
+                                    props.onSuccess?.(api.client.users.cache.get(u.id) ?? u)
                                     form.submit()
                                 }
                             } catch (e) {

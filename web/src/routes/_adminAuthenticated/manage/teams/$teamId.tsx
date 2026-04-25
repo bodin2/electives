@@ -206,13 +206,13 @@ function TeamMembers(props: { members: { users: User[]; total: number }; refetch
                         onClick={() => setAddDialogOpen(true)}
                     />
                 )}
-                trailing={user => (
+                trailing={props => (
                     <Button
                         aria-label={string.REMOVE()}
                         variant="text"
                         onClick={e => {
                             e.stopPropagation()
-                            removeUserFromTeam(user)
+                            return removeUserFromTeam(props.user)
                         }}
                         icon={DeleteIcon}
                         iconType="only"
