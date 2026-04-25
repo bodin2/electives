@@ -153,6 +153,9 @@ interface UsersService {
      * If [setMiddleName] is true, the middle name is updated to the given value (which may be null).
      * If false, the middle name is left unchanged.
      *
+     * If [setLastName] is true, the last name is updated to the given value (which may be null).
+     * If false, the last name is left unchanged.
+     *
      * If [setAvatarUrl] is true, the avatar URL is updated to the given value (which may be null).
      * If false, the avatar URL is left unchanged.
      */
@@ -162,6 +165,7 @@ interface UsersService {
         val lastName: String?,
         val avatarUrl: String?,
         val setMiddleName: Boolean = false,
+        val setLastName: Boolean = false,
         val setAvatarUrl: Boolean = false,
     )
 

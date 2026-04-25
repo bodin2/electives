@@ -42,10 +42,8 @@ export class User {
      * Get the user's full name
      */
     get fullName(): string {
-        if (this.middleName) {
-            return `${this.firstName} ${this.middleName} ${this.lastName}`
-        }
-        return `${this.firstName} ${this.lastName}`
+        const names = [this.firstName, this.middleName, this.lastName].filter(Boolean)
+        return names.join(' ')
     }
 
     /**

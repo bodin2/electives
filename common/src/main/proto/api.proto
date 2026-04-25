@@ -66,8 +66,10 @@ message AdminService {
     bool patch_teams = 7;
     // Whether the `middle_name` field should be considered during patching.
     bool patch_middle_name = 8;
+    // Whether the `last_name` field should be considered during patching.
+    bool patch_last_name = 9;
     // Whether the `avatar_url` field should be considered during patching.
-    bool patch_avatar_url = 9;
+    bool patch_avatar_url = 10;
   }
 
   message TeamPatch {
@@ -265,7 +267,7 @@ message User {
   uint32 id = 1;
   string first_name = 2;
   optional string middle_name = 3;
-  string last_name = 4;
+  optional string last_name = 4;
   UserType type = 5;
   // Only passed for Students
   repeated Team teams = 7;

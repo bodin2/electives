@@ -226,6 +226,7 @@ class AdminUsersController(
                     lastName = if (req.hasLastName()) req.lastName else null,
                     avatarUrl = if (req.hasAvatarUrl()) req.avatarUrl else null,
                     setMiddleName = req.patchMiddleName,
+                    setLastName = req.patchLastName,
                     setAvatarUrl = req.patchAvatarUrl,
                 )
 
@@ -285,7 +286,7 @@ class AdminUsersController(
             id = user.id,
             firstName = user.firstName,
             middleName = if (user.hasMiddleName()) user.middleName else null,
-            lastName = user.lastName,
+            lastName = if (user.hasLastName()) user.lastName else null,
             avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,
             password = password,
         )

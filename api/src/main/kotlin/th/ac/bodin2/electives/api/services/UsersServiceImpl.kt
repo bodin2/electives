@@ -313,7 +313,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             with(update) {
                 if (firstName != null) it[Users.firstName] = firstName
                 if (setMiddleName) it[Users.middleName] = middleName
-                if (lastName != null) it[Users.lastName] = lastName
+                if (setLastName) it[Users.lastName] = lastName
                 if (setAvatarUrl) it[Users.avatarUrl] = avatarUrl
             }
 
