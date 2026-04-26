@@ -12,20 +12,6 @@ export default function useElectiveOpen(elective: Elective, options?: UseElectiv
     const [electiveOpen, setElectiveOpen] = createSignal(false)
 
     onMount(() => {
-        const timeUntilClose = elective.getTimeUntilClose()
-        if (timeUntilClose === null || timeUntilClose > MAX_TIMEOUT) return
-        if (timeUntilClose === 0) return setElectiveOpen(false)
-
-        const closeInterval = setInterval(() => {
-            setElectiveOpen(false)
-        }, timeUntilClose)
-
-        onCleanup(() => {
-            clearInterval(closeInterval)
-        })
-    })
-
-    onMount(() => {
         const timeUntilOpen = elective.getTimeUntilOpen()
         if (timeUntilOpen === null || timeUntilOpen === 0) return setElectiveOpen(true)
         if (timeUntilOpen > MAX_TIMEOUT) return
@@ -51,6 +37,20 @@ export default function useElectiveOpen(elective: Elective, options?: UseElectiv
 
         onCleanup(() => {
             clearTimeout(openTimeout)
+        })
+    })
+
+    onMount(() => {
+        const timeUntilClose = elective.getTimeUntilClose()
+        if (timeUntilClose === null || timeUntilClose > MAX_TIMEOUT) return
+        if (timeUntilClose === 0) return setElectiveOpen(false)
+
+        const closeInterval = setInterval(() => {
+            setElectiveOpen(false)
+        }, timeUntilClose)
+
+        onCleanup(() => {
+            clearInterval(closeInterval)
         })
     })
 

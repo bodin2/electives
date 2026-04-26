@@ -11,9 +11,9 @@ import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placehol
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { formatCountdown } from '../../utils/date'
+import IconLabel from '../IconLabel'
 import LinkButton from '../LinkButton'
 import { HStack, VStack } from '../Stack'
-import IconLabel from '../subjects/IconLabel'
 import styles from './ElectiveCard.module.css'
 import type { Elective, Subject } from '../../api'
 
@@ -55,7 +55,11 @@ export default function ElectiveCard(props: ElectiveCardProps) {
         } else {
             const countdownText = formatCountdown(countdown())
             if (countdownText) return string.ENROLLMENT_CLOSED_OPENING_IN({ time: countdownText })
-            if (startDate) return string.ENROLLMENT_OPENS_AT({ duration: formatDuration(startDate) })
+            if (startDate) {
+                if (startDate.getTime() < Date.now()) return null
+
+                return string.ENROLLMENT_OPENS_AT({ duration: formatDuration(startDate) })
+            }
         }
         return null
     }
