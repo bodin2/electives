@@ -8,6 +8,7 @@ interface UseAutoRefreshResourceOptions {
 
 export function useAutoRefreshResource<T>(fetcher: () => Promise<T>, options: UseAutoRefreshResourceOptions) {
     let lastKey: string | undefined
+    let fetching = false
 
     const [resource, { refetch }] = createResource(async () => {
         if (!options.shouldFetch()) return
@@ -19,10 +20,17 @@ export function useAutoRefreshResource<T>(fetcher: () => Promise<T>, options: Us
 
     let intervalId: ReturnType<typeof setInterval> | undefined
 
-    const handler = () => {
-        const currentVersion = options.getKey()
-        if (currentVersion !== lastKey) {
-            refetch()
+    const handler = async () => {
+        if (fetching) return
+
+        try {
+            fetching = true
+            const currentVersion = options.getKey()
+            if (currentVersion !== lastKey) {
+                await refetch()
+            }
+        } finally {
+            fetching = false
         }
     }
 
