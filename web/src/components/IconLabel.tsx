@@ -1,5 +1,5 @@
 import { Icon } from 'm3-solid'
-import { HStack } from '../Stack'
+import { HStack } from './Stack'
 import type { IconifyIcon } from '@iconify/types'
 
 interface IconLabelProps {

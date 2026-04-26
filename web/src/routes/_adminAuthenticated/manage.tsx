@@ -24,6 +24,7 @@ import {
     SubjectDisplayContextProvider,
     useSubjectDisplayContext,
 } from '../../components/subjects/SubjectDisplayContext'
+import { UserDisplayContextProvider, useUserDisplayContext } from '../../components/users/UserDisplayContext'
 import { useI18n } from '../../providers/I18nProvider'
 import { usePageData } from '../../providers/PageProvider'
 import ScrollDataProvider from '../../providers/ScrollDataProvider'
@@ -41,6 +42,7 @@ function RouteComponent() {
     const pageData = usePageData()
     const [containerRef, setContainerRef] = createSignal<HTMLDivElement | undefined>()
     const subjectDisplayContext = useSubjectDisplayContext()
+    const userDisplayContext = useUserDisplayContext()
     const [modalNav, setModalNav] = createSignal(false)
 
     const NavMenuToggle = () => (
@@ -135,9 +137,20 @@ function RouteComponent() {
                         gap={0}
                     >
                         <SubjectDisplayContextProvider
-                            value={{ ...subjectDisplayContext, user: undefined, editable: true }}
+                            value={{
+                                ...subjectDisplayContext,
+                                user: undefined,
+                                editable: true,
+                                viewLinkProps: (electiveId, subjectId) => ({
+                                    to: '/manage/subjects/$subjectId',
+                                    params: { subjectId },
+                                    search: { elective_id: electiveId },
+                                }),
+                            }}
                         >
-                            <Outlet />
+                            <UserDisplayContextProvider value={{ ...userDisplayContext, editable: true }}>
+                                <Outlet />
+                            </UserDisplayContextProvider>
                         </SubjectDisplayContextProvider>
                     </VStack>
                 </VStack>

@@ -1,0 +1,7 @@
+.tabs {
+    position: sticky;
+    top: var(--sticky-offset);
+    outline: 1px solid transparent;
+    z-index: var(--layer-overlay-high);
+    transition: background-color var(--m3-easing-slow), outline-color var(--m3-easing);
+}

@@ -1,15 +1,14 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { useRouter } from '@tanstack/solid-router'
-import { Tabs } from 'm3-solid'
 import { type Component, createEffect, createSignal, Match, Show, Switch } from 'solid-js'
 import { useAutoRefreshResource } from '../../hooks/useAutoRefreshResource'
 import { useRetryableSubscription } from '../../hooks/useRetryableSubscription'
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import { useScrollData } from '../../providers/ScrollDataProvider'
 import { nonNull } from '../../utils'
 import { VStack } from '../Stack'
+import StickyTabs from '../StickyTabs'
 import SubjectBottomActions from './SubjectBottomActions'
 import SubjectDetailsTab from './SubjectDetailsTab'
 import { useSubjectDisplayContext } from './SubjectDisplayContext'
@@ -26,7 +25,6 @@ const log = new Logger('components/subjects/SubjectInfo')
 
 export default function SubjectInfo(props: SubjectInfoProps) {
     const { string } = useI18n()
-    const scrollData = useScrollData()
     const api = useAPI()
     const enrollment = useEnrollmentCounts()
     const router = useRouter()
@@ -131,16 +129,9 @@ export default function SubjectInfo(props: SubjectInfoProps) {
     return (
         <>
             <Show when={ctx.elective}>
-                <Tabs
+                <StickyTabs
                     value={tab()}
                     onChange={setTab}
-                    class={styles.tabs}
-                    style={{
-                        'outline-color': scrollData.scrolledVertical ? 'var(--m3c-outline-variant)' : undefined,
-                        '--m3-tabs-container-color': scrollData.scrolledVertical
-                            ? 'var(--m3c-surface-container)'
-                            : undefined,
-                    }}
                     tabs={[
                         { label: string.SUBJECT(), value: 'info' },
                         { label: string.MEMBERS_LIST(), value: 'members' },

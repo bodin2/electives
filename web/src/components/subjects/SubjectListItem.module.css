@@ -1,0 +1,12 @@
+.item {
+    width: 100%;
+}
+
+.thumbnail {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: var(--m3-shape-medium);
+    background-color: var(--m3c-surface-container-lowest);
+    z-index: var(--layer-content);
+}

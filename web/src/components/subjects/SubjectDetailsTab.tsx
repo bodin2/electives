@@ -15,8 +15,8 @@ import { nonNull } from '../../utils'
 import { Button } from '../Button'
 import SetSubjectTagDialog from '../dialogs/SetSubjectTagDialog'
 import TextFieldDialog from '../dialogs/TextFieldDialog'
+import IconLabel from '../IconLabel'
 import { HStack, VStack } from '../Stack'
-import IconLabel from './IconLabel'
 import { type PatchSetterKey, useSubjectDisplayContext } from './SubjectDisplayContext'
 import SubjectImage from './SubjectImage'
 import styles from './SubjectInfo.module.css'
@@ -51,7 +51,7 @@ const FIELDS: Record<string, Field<unknown>> = {
     },
     name: {
         getValue: s => s.name,
-        parse: (v, s) => (!v.trim() ? [undefined, s.REQUIRED()] : [v.trim(), undefined]),
+        parse: (v, s) => (!v.trim() ? [undefined, s.ERROR_REQUIRED_FIELD_GENERIC()] : [v.trim(), undefined]),
         name: s => s.NAME(),
         required: true,
     },
@@ -65,20 +65,20 @@ const FIELDS: Record<string, Field<unknown>> = {
     },
     code: {
         getValue: s => s.code,
-        parse: (v, s) => (!v.trim() ? [undefined, s.REQUIRED()] : [v.trim(), undefined]),
+        parse: (v, s) => (!v.trim() ? [undefined, s.ERROR_REQUIRED_FIELD_GENERIC()] : [v.trim(), undefined]),
         name: s => s.CODE(),
         required: true,
     },
     location: {
         getValue: s => s.location,
-        parse: (v, s) => (!v.trim() ? [undefined, s.REQUIRED()] : [v.trim(), undefined]),
+        parse: (v, s) => (!v.trim() ? [undefined, s.ERROR_REQUIRED_FIELD_GENERIC()] : [v.trim(), undefined]),
         name: s => s.LOCATION(),
         required: true,
     },
     capacity: {
         getValue: s => s.capacity,
         parse: (v, s) => {
-            if (v.trim() === '') return [undefined, s.REQUIRED()]
+            if (v.trim() === '') return [undefined, s.ERROR_REQUIRED_FIELD_GENERIC()]
             const n = Number(v)
             if (Number.isNaN(n)) return [undefined, s.ERROR_NUMERIC_VALUE({ field: s.CAPACITY() })]
             return [n]

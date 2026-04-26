@@ -1,46 +1,51 @@
-import { createFileRoute, useNavigate, useRouter } from '@tanstack/solid-router'
+import PlusIcon from '@iconify-icons/mdi/plus'
+import { createFileRoute, useRouter } from '@tanstack/solid-router'
 import PaginatedUserList, { type PaginatedUserListHandle } from '../../../components/admin/PaginatedUserList'
+import LinkButton from '../../../components/LinkButton'
 import Page from '../../../components/Page'
+import { BaseUserDisplayContext, useUserDisplayContext } from '../../../components/users/UserDisplayContext'
 import { useI18n } from '../../../providers/I18nProvider'
-
-type UserSearch = {
-    page: number
-}
+import { Route as UserIdRoute } from './users/$userId'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/teachers')({
-    validateSearch: (search: Record<string, unknown>): UserSearch => {
-        return {
-            page: Number(search?.page ?? 1) || 1,
-        }
-    },
-    loaderDeps: ({ search: { page } }) => ({ page }),
-    loader: async ({ context, deps: { page } }) => {
-        return await context.client.users.admin.fetchTeachers(page)
+    validateSearch: (search: Record<string, unknown>) => ({
+        page: Math.max(Number(search?.page ?? 1), 1),
+    }),
+    loaderDeps: ({ search }) => ({ page: search.page }),
+    loader: async ({ context: { client }, deps: { page } }) => {
+        return await client.users.admin.fetchTeachers(page)
     },
     component: RouteComponent,
 })
 
 function RouteComponent() {
     const { string } = useI18n()
-    const navigate = useNavigate({ from: Route.fullPath })
+    const router = useRouter()
+    const navigate = Route.useNavigate()
     const search = Route.useSearch()
     const data = Route.useLoaderData()
-    const router = useRouter()
+    const userDisplayContext = useUserDisplayContext()
 
     let listHandle: PaginatedUserListHandle | undefined
 
     return (
         <Page name={string.TEACHERS()} leading={null} trailing={null}>
             <PaginatedUserList
+                headerRight={() => (
+                    <LinkButton size="xs" {...userDisplayContext.createLinkProps('teacher')} icon={PlusIcon}>
+                        {string.ADD_TEACHER()}
+                    </LinkButton>
+                )}
                 ref={h => (listHandle = h)}
                 page={search().page}
                 data={data()}
+                isLoading={router.state.status === 'pending'}
                 onPageChange={page => navigate({ search: { page } })}
-                onRefresh={() => router.invalidate()}
-                onClick={user => {
-                    console.log('Clicked teacher:', user.fullName)
-                    // @TODO: Open edit dialog
-                }}
+                onPagePreload={page => router.preloadRoute({ to: Route.fullPath, search: { page } })}
+                onRefresh={() =>
+                    router.invalidate({ filter: r => r.id === Route.id || r.id === UserIdRoute.id, sync: true })
+                }
+                onClick={user => navigate(BaseUserDisplayContext.editLinkProps(user.id))}
             />
         </Page>
     )

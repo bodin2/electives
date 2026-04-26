@@ -1,0 +1,18 @@
+.infoRow {
+    column-gap: 16px;
+    row-gap: 8px;
+    flex-wrap: wrap;
+    color: var(--m3c-on-surface-variant);
+}
+
+.badge {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding-inline-end: 4px;
+
+    .deleteButton {
+        width: 20px;
+        height: 20px;
+    }
+}

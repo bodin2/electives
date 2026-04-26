@@ -1,12 +1,11 @@
 import { Card } from 'm3-solid'
 import { For } from 'solid-js'
-import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
 import { useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
 import { nonNull } from '../../utils'
 import Badge from '../Badge'
 import LogOutButton from '../buttons/LogOutButton'
 import { HStack, VStack } from '../Stack'
+import UserAvatar from '../users/UserAvatar'
 import styles from './UserInfoCard.module.css'
 
 interface UserInfoCardProps {
@@ -15,7 +14,6 @@ interface UserInfoCardProps {
 
 export default function UserInfoCard(props: UserInfoCardProps) {
     const api = useAPI()
-    const { string } = useI18n()
     const user = () => nonNull(api.client.user)
 
     return (
@@ -34,7 +32,7 @@ export default function UserInfoCard(props: UserInfoCardProps) {
                             </For>
                         </HStack>
                     </VStack>
-                    <img src={user().avatarUrl || AvatarPlaceholder} class={styles.avatar} alt={string.AVATAR()} />
+                    <UserAvatar imageUrl={user().avatarUrl} class={styles.avatar} />
                 </HStack>
                 <LogOutButton />
             </VStack>

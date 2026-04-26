@@ -69,14 +69,7 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
                 </Show>
             </HStack>
             <ul class={props.listClass}>
-                <For each={displayedSubjects()}>
-                    {subject => (
-                        <SubjectListItem
-                            subject={subject}
-                            thumbnailClass={props.thumbnailClass}
-                        />
-                    )}
-                </For>
+                <For each={displayedSubjects()}>{subject => <SubjectListItem subject={subject} />}</For>
             </ul>
         </VStack>
     )

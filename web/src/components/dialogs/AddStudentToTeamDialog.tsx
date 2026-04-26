@@ -20,11 +20,12 @@ export default function AddStudentToTeamDialog(props: {
             headline={string.ADD_STUDENT_TO_TEAM()}
             actionLabel={string.ADD_STUDENT()}
             idLabel={string.STUDENT_ID()}
-            validateUser={user => (!user.isStudent() ? 'Not a student' : null)}
+            validateUser={user => (!user.isStudent() ? string.ERROR_NOT_STUDENT() : null)}
             onConfirm={async user => {
                 const currentTeams = user.teams.map(t => t.id)
                 if (!currentTeams.includes(props.teamId)) {
                     await api.client.users.admin.patch(user.id, {
+                        patchLastName: false,
                         patchAvatarUrl: false,
                         patchMiddleName: false,
                         patchTeams: true,

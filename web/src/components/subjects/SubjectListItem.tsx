@@ -10,11 +10,11 @@ import { Button } from '../Button'
 import LinkListItem from '../LinkListItem'
 import { HStack, VStack } from '../Stack'
 import { useSubjectDisplayContext } from './SubjectDisplayContext'
+import styles from './SubjectListItem.module.css'
 import type { Subject } from '../../api'
 
 interface SubjectListItemProps {
     subject: Subject
-    thumbnailClass?: string
 }
 
 export default function SubjectListItem(props: SubjectListItemProps) {
@@ -38,7 +38,7 @@ export default function SubjectListItem(props: SubjectListItemProps) {
 
     const Leading = (
         <img
-            class={props.thumbnailClass}
+            class={styles.thumbnail}
             src={props.subject.thumbnailUrl || SubjectThumbnailPlaceholder}
             alt={string.IMG_ALT_SUBJECT_IMAGE()}
         />
@@ -96,6 +96,7 @@ export default function SubjectListItem(props: SubjectListItemProps) {
     return (
         <LinkListItem
             {...linkProps()}
+            class={styles.item}
             lines={4}
             headline={props.subject.name}
             preloadDelay={500}

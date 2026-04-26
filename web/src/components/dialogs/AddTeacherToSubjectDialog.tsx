@@ -22,7 +22,7 @@ export default function AddTeacherToSubjectDialog(props: {
             headline={string.ADD_TEACHER_TO_SUBJECT()}
             actionLabel={string.ADD_TEACHER_TO_SUBJECT()}
             idLabel={string.TEACHER_ID()}
-            validateUser={user => (!user.isTeacher() ? 'Not a teacher' : null)}
+            validateUser={user => (!user.isTeacher() ? string.ERROR_NOT_TEACHER() : null)}
             onConfirm={async user => {
                 // Check if already teaching
                 if (props.currentTeacherIds.includes(user.id)) {

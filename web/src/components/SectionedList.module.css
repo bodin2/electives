@@ -1,0 +1,25 @@
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(448px, 1fr));
+
+    @media (max-width: 448px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.searchContainer {
+    padding-inline: 16px;
+    padding-block: 8px;
+    background-color: var(--m3c-background);
+    position: sticky;
+    top: var(--sticky-offset);
+    z-index: var(--layer-overlay-high);
+
+    &:empty {
+        display: none
+    }
+}
+
+.search {
+    transition: background-color var(--m3-easing-slow), outline-color var(--m3-easing);
+}

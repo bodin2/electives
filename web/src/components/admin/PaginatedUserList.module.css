@@ -2,11 +2,20 @@
     padding: 16px;
     top: var(--sticky-offset);
     position: sticky;
-    z-index: var(--layer-overlay);
+    z-index: var(--layer-overlay-high);
     background-color: var(--m3c-surface);
+    border-bottom: 1px solid transparent;
+    transition: all var(--m3-easing);
+    color: var(--m3c-on-surface-variant);
 
     &:empty {
         display: none
+    }
+
+    &.scrolled {
+        color: var(--m3c-on-surface);
+        background-color: var(--m3c-surface-container);
+        border-color: var(--m3c-outline-variant);
     }
 }
 
