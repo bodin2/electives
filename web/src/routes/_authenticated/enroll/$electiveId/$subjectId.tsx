@@ -33,7 +33,6 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
         const selectedSubject = selections?.get(electiveId)
 
         return {
-            user,
             subject,
             elective,
             selectedSubject,
@@ -53,12 +52,10 @@ function RouteComponent() {
     createEffect(() => {
         ctx.setSubject(data().subject)
         ctx.setElective(data().elective)
-        ctx.setUser(data().user)
     })
 
     onCleanup(() => {
         ctx.setSubject(undefined)
-        ctx.setUser(undefined)
     })
 
     return (
