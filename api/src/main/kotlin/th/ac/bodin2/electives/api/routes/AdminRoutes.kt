@@ -170,13 +170,13 @@ class AdminUsersController(
         if (user.id != id) return badRequest("ID in URL does not match body")
 
         try {
-            val userOrNull = transaction {
-                when (user.type) {
+            val protoOrNull = transaction {
+                val created = when (user.type) {
                     UserType.STUDENT -> usersService.createStudent(
                         id = user.id,
                         firstName = user.firstName,
                         middleName = if (user.hasMiddleName()) user.middleName else null,
-                        lastName = user.lastName,
+                        lastName = if (user.hasLastName()) user.lastName else null,
                         password = req.password,
                         avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,
                         teams = req.teamIdsList.ifEmpty { null }
@@ -186,21 +186,23 @@ class AdminUsersController(
                         id = user.id,
                         firstName = user.firstName,
                         middleName = if (user.hasMiddleName()) user.middleName else null,
-                        lastName = user.lastName,
+                        lastName = if (user.hasLastName()) user.lastName else null,
                         password = req.password,
                         avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null
                     )
 
+                    else -> return@transaction null
+                }
+
+                when (created) {
+                    is Student -> created.toProto()
+                    is Teacher -> created.toProto()
                     else -> null
                 }
             }
 
-            when (userOrNull) {
-                is Student -> call.respond(userOrNull.toProto())
-                is Teacher -> call.respond(userOrNull.toProto())
-
-                else -> badRequest("Unsupported user type")
-            }
+            protoOrNull ?: return badRequest("Unsupported user type")
+            call.respond(protoOrNull)
         } catch (_: IllegalArgumentException) {
             badRequest("Password does not meet the requirements")
         } catch (_: EntityNotFoundException) {
