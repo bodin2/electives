@@ -25,11 +25,6 @@ dependencies {
     testImplementation(libs.kotlin.test.junit)
 }
 
-tasks.processResources {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    exclude("**/*.proto")
-}
-
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.asProvider().get()}"
@@ -40,18 +35,6 @@ protobuf {
             it.builtins {
                 id("kotlin") { option("lite") }
             }
-        }
-    }
-}
-
-sourceSets {
-    main {
-        proto {
-            srcDir("src/main/proto")
-        }
-
-        kotlin {
-            srcDir("build/generated/sources/proto/main/kotlin")
         }
     }
 }

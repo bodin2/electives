@@ -35,10 +35,10 @@
         "@bodin2/electives-common": "workspace:*",
         "@iconify-icons/mdi": "1.2.48",
         "@solidjs/meta": "0.29.4",
-        "@tanstack/router-plugin": "1.167.26",
-        "@tanstack/solid-router": "1.168.21",
+        "@tanstack/router-plugin": "1.167.27",
+        "@tanstack/solid-router": "1.168.24",
         "@tanstack/solid-router-devtools": "1.166.13",
-        "m3-solid": "https://github.com/PalmDevs/m3-solid.git#cf0d846",
+        "m3-solid": "https://github.com/PalmDevs/m3-solid.git#1b89b74",
         "marked": "^18.0.2",
         "mitt": "3.0.1",
         "postcss": "8.5.10",
@@ -330,13 +330,13 @@
 
     "@tanstack/router-devtools-core": ["@tanstack/router-devtools-core@1.167.3", "", { "dependencies": { "clsx": "^2.1.1", "goober": "^2.1.16" }, "peerDependencies": { "@tanstack/router-core": "^1.168.11", "csstype": "^3.0.10" }, "optionalPeers": ["csstype"] }, "sha512-fJ1VMhyQgnoashTrP763c2HRc9kofgF61L7Jb3F6eTHAmCKtGVx8BRtiFt37sr3U0P0jmaaiiSPGP6nT5JtVNg=="],
 
-    "@tanstack/router-generator": ["@tanstack/router-generator@1.166.34", "", { "dependencies": { "@babel/types": "^7.28.5", "@tanstack/router-core": "1.168.16", "@tanstack/router-utils": "1.161.7", "@tanstack/virtual-file-routes": "1.161.7", "magic-string": "^0.30.21", "prettier": "^3.5.0", "tsx": "^4.19.2", "zod": "^3.24.2" } }, "sha512-VamHGCFqOntz9Ds6oOHtpzXLQg2yhOsXsCXSznLjoDzme3Rk69HvOzXkx9IIpDxo4v64QdvNjeV2IyfXuz5RFw=="],
+    "@tanstack/router-generator": ["@tanstack/router-generator@1.166.35", "", { "dependencies": { "@babel/types": "^7.28.5", "@tanstack/router-core": "1.168.16", "@tanstack/router-utils": "1.161.7", "@tanstack/virtual-file-routes": "1.161.7", "jiti": "^2.6.1", "magic-string": "^0.30.21", "prettier": "^3.5.0", "zod": "^3.24.2" } }, "sha512-d3tdUTf6QRjMW4V2P91mE8OR0haHgGktkLOs3zQmirEokQhu2qgoVfcSxLF6DfmMR6smvDjwdeMdy2sudImuFQ=="],
 
-    "@tanstack/router-plugin": ["@tanstack/router-plugin@1.167.26", "", { "dependencies": { "@babel/core": "^7.28.5", "@babel/plugin-syntax-jsx": "^7.27.1", "@babel/plugin-syntax-typescript": "^7.27.1", "@babel/template": "^7.27.2", "@babel/traverse": "^7.28.5", "@babel/types": "^7.28.5", "@tanstack/router-core": "1.168.16", "@tanstack/router-generator": "1.166.34", "@tanstack/router-utils": "1.161.7", "@tanstack/virtual-file-routes": "1.161.7", "chokidar": "^3.6.0", "unplugin": "^3.0.0", "zod": "^3.24.2" }, "peerDependencies": { "@rsbuild/core": ">=1.0.2 || ^2.0.0", "@tanstack/react-router": "^1.168.24", "vite": ">=5.0.0 || >=6.0.0 || >=7.0.0 || >=8.0.0", "vite-plugin-solid": "^2.11.10 || ^3.0.0-0", "webpack": ">=5.92.0" }, "optionalPeers": ["@rsbuild/core", "@tanstack/react-router", "vite", "vite-plugin-solid", "webpack"], "bin": { "intent": "bin/intent.js" } }, "sha512-NUbZriBBZDAoTO9ymcnuABbJdl0jMQYpPIa0JVKQn32S1xGWkVhJ8V9xmTPJU3rVdHZYedcmTHFTTadClG389w=="],
+    "@tanstack/router-plugin": ["@tanstack/router-plugin@1.167.27", "", { "dependencies": { "@babel/core": "^7.28.5", "@babel/plugin-syntax-jsx": "^7.27.1", "@babel/plugin-syntax-typescript": "^7.27.1", "@babel/template": "^7.27.2", "@babel/traverse": "^7.28.5", "@babel/types": "^7.28.5", "@tanstack/router-core": "1.168.16", "@tanstack/router-generator": "1.166.35", "@tanstack/router-utils": "1.161.7", "@tanstack/virtual-file-routes": "1.161.7", "chokidar": "^3.6.0", "unplugin": "^3.0.0", "zod": "^3.24.2" }, "peerDependencies": { "@rsbuild/core": ">=1.0.2 || ^2.0.0", "@tanstack/react-router": "^1.168.24", "vite": ">=5.0.0 || >=6.0.0 || >=7.0.0 || >=8.0.0", "vite-plugin-solid": "^2.11.10 || ^3.0.0-0", "webpack": ">=5.92.0" }, "optionalPeers": ["@rsbuild/core", "@tanstack/react-router", "vite", "vite-plugin-solid", "webpack"], "bin": { "intent": "bin/intent.js" } }, "sha512-3jl+9I6bgSqAhwIDU2ps4pjhaEy2kugXvZ/dCAE6zF+pYEuRkNr8GA7bpoboZqdAtbceyZ2sLgX6aB7VQvHGUg=="],
 
     "@tanstack/router-utils": ["@tanstack/router-utils@1.161.7", "", { "dependencies": { "@babel/core": "^7.28.5", "@babel/generator": "^7.28.5", "@babel/parser": "^7.28.5", "@babel/types": "^7.28.5", "ansis": "^4.1.0", "babel-dead-code-elimination": "^1.0.12", "diff": "^8.0.2", "pathe": "^2.0.3", "tinyglobby": "^0.2.15" } }, "sha512-VkY0u7ax/GD0qU6ZLLnfPC+UMxVzxRbvZp4yV4iUSXjgJZ/siAT5/QlLm9FEDJ9QDoC0VD9W7f00tKKreUI7Ng=="],
 
-    "@tanstack/solid-router": ["@tanstack/solid-router@1.168.21", "", { "dependencies": { "@solid-devtools/logger": "^0.9.4", "@solid-primitives/refs": "^1.0.8", "@solidjs/meta": "^0.29.4", "@tanstack/history": "1.161.6", "@tanstack/router-core": "1.168.16", "isbot": "^5.1.22" }, "peerDependencies": { "solid-js": "^1.9.10" }, "bin": { "intent": "bin/intent.js" } }, "sha512-m+VhqOMMQSWV1+pqXUU2V1wkCNEwqXGkdUkri5/fOqbHlzV56UglSGECTByro5CKhgyAIPN+fFsmbEpBYAyZCA=="],
+    "@tanstack/solid-router": ["@tanstack/solid-router@1.168.24", "", { "dependencies": { "@solid-devtools/logger": "^0.9.4", "@solid-primitives/refs": "^1.0.8", "@solidjs/meta": "^0.29.4", "@tanstack/history": "1.161.6", "@tanstack/router-core": "1.168.16", "isbot": "^5.1.22" }, "peerDependencies": { "solid-js": "^1.9.10" }, "bin": { "intent": "bin/intent.js" } }, "sha512-9H9zX/68c/rEWERGdOxLjqSS99Ahs8rFSJJQuDIiZ/qxsvzSuapzZA3DEMvDLilxFEDuiuxT7OZEN5LY1iMdRQ=="],
 
     "@tanstack/solid-router-devtools": ["@tanstack/solid-router-devtools@1.166.13", "", { "dependencies": { "@tanstack/router-devtools-core": "1.167.3" }, "peerDependencies": { "@tanstack/router-core": "^1.168.11", "@tanstack/solid-router": "^1.168.14", "solid-js": "^1.9.10" }, "optionalPeers": ["@tanstack/router-core"] }, "sha512-0K/bhEWPuBjHjI9h9Ckc9iioHmHr/DW+rXbfETa6G+lNK9nArUgtvuVM58sITRaSmlpImm/OCMCuNkUhXrPP/w=="],
 
@@ -468,6 +468,8 @@
 
     "isbot": ["isbot@5.1.37", "", {}, "sha512-5bcicX81xf6NlTEV8rWdg7Pk01LFizDetuYGHx6d/f6y3lR2/oo8IfxjzJqn1UdDEyCcwT9e7NRloj8DwCYujQ=="],
 
+    "jiti": ["jiti@2.6.1", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ=="],
+
     "js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
 
     "jsesc": ["jsesc@3.1.0", "", { "bin": { "jsesc": "bin/jsesc" } }, "sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA=="],
@@ -500,7 +502,7 @@
 
     "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
-    "m3-solid": ["m3-solid@github:PalmDevs/m3-solid#cf0d846", { "dependencies": { "@iconify-icons/mdi": "^1.2.48", "@solid-primitives/refs": "^1.1.3", "solid-js": "^1.9.12" }, "peerDependencies": { "solid-js": "^1.9.12" } }, "PalmDevs-m3-solid-cf0d846", "sha512-LX//VTA4/K1H+i6/zN+bCYHX7B/1V0ZZDsqAFJiXMstDoRhQ7OQX0rYe7Nzz3LIyR8fTUX+rxjmdPpg0WvCpyA=="],
+    "m3-solid": ["m3-solid@github:PalmDevs/m3-solid#1b89b74", { "dependencies": { "@iconify-icons/mdi": "^1.2.48", "@solid-primitives/refs": "^1.1.3", "solid-js": "^1.9.12" }, "peerDependencies": { "solid-js": "^1.9.12" } }, "PalmDevs-m3-solid-1b89b74", "sha512-hD/SGHdj9C0LEeqHhElcH/mCDqty1NGosEO9rVclm2VhujeOxhiaMiBorXRFY8054vvM13A7vnSKr8n8qhTIcg=="],
 
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 
