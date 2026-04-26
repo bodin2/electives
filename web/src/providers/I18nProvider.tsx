@@ -150,7 +150,7 @@ export function resolveTemplateWithJSX(
         const key = match[1]
         const value = args[key]
 
-        if (typeof value !== 'string' || typeof value !== 'number' || typeof value !== 'boolean') {
+        if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
             hasJSXElement = true
         }
 
