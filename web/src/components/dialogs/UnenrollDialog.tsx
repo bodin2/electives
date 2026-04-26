@@ -55,9 +55,7 @@ export default function UnenrollDialog(props: {
 
                             props.onClose()
 
-                            await router.invalidate({
-                                sync: true,
-                            })
+                            await router.invalidate()
                         }}
                     >
                         {string.UNENROLL()}

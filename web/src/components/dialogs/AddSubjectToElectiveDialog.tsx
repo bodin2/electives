@@ -59,7 +59,7 @@ export default function AddSubjectToElectiveDialog(props: {
                                     props.subjectId,
                                 ])
                                 await api.client.subjects.admin.fetch(props.subjectId, { force: true })
-                                await router.invalidate({ sync: true })
+                                await router.invalidate()
 
                                 form.submit()
                             } catch (e) {

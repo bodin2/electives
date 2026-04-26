@@ -8,6 +8,7 @@ import { useSubjectDisplayContext } from '../../../../components/subjects/Subjec
 import SubjectList from '../../../../components/subjects/SubjectList'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
+import { Route as SubjectIdRoute } from './$subjectId'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/')({
     component: RouteComponent,
@@ -43,7 +44,7 @@ function SubjectDeletionDialog() {
 
         try {
             await client.subjects.admin.delete(subject.id)
-            await router.invalidate()
+            await router.invalidate({ filter: r => r.id === Route.id || r.id === SubjectIdRoute.id })
         } catch (e) {
             console.error(e)
             alert(string.ERROR_DELETE_SUBJECT_FAILED())

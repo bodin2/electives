@@ -47,8 +47,8 @@ export function useLoginRedirect(path: Accessor<RoutePath>, options: UseLoginRed
             log.info('Logged in, redirecting to', path)
 
             untrack(() => {
-                router.clearCache({ filter: () => true })
-                router.invalidate({ sync: true, filter: () => true })
+                router.clearCache()
+                router.invalidate({ sync: true })
             })
 
             const s = search ? search() : undefined

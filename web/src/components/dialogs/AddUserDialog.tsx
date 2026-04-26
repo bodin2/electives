@@ -20,7 +20,7 @@ export interface AddUserDialogProps {
     idLabel: string
     icon?: JSX.Element
     validateUser: (user: User) => string | null
-    onConfirm: (user: User) => Promise<void | boolean>
+    onConfirm: (user: User) => Promise<undefined | boolean>
 }
 
 export default function AddUserDialog(props: AddUserDialogProps) {
@@ -92,6 +92,7 @@ export default function AddUserDialog(props: AddUserDialogProps) {
                         {string.CANCEL()}
                     </Button>
                     <Button
+                        disabled={error() !== null || user() === null}
                         ref={btn}
                         variant="text"
                         onClick={async () => {
@@ -110,9 +111,7 @@ export default function AddUserDialog(props: AddUserDialogProps) {
                                 setError(String(e))
                             }
 
-                            await router.invalidate({
-                                sync: true,
-                            })
+                            await router.invalidate()
                         }}
                     >
                         {props.actionLabel}

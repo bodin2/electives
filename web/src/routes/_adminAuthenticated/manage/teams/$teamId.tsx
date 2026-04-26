@@ -102,7 +102,7 @@ function RouteComponent() {
                 navigate({ params: { teamId: idParsed.toString() }, search: { page: 1 } })
             } else {
                 await client.teams.admin.patch(Number(params().teamId), { name: trimmed })
-                await router.invalidate()
+                await router.invalidate({ filter: r => r.id === Route.id || r.id === Route.parentRoute.id })
             }
             await client.teams.fetchAll({ force: true })
         } catch (e) {

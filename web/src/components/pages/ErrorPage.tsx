@@ -48,7 +48,7 @@ export default function ErrorPage(props: { error: string | Error; reset: () => v
                     </Button>
                     <Button
                         onClick={() => {
-                            router.invalidate({ sync: true, filter: () => true })
+                            router.invalidate({ sync: true })
                             props.reset()
                         }}
                         variant="filled"

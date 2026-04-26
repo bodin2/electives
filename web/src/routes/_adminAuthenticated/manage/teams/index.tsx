@@ -36,7 +36,7 @@ function RouteComponent() {
     const handleDelete = async (team: Team) => {
         try {
             await client.teams.admin.delete(team.id)
-            await router.invalidate()
+            await router.invalidate({ filter: r => r.id === Route.id })
         } catch (e) {
             console.error(e)
             alert('Failed to delete team')

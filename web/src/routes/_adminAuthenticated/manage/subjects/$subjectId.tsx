@@ -75,6 +75,8 @@ function RouteComponent() {
 
     const subject = createMemo(() => new Subject(subjectData()))
 
+    const invalidate = () => router.invalidate({ filter: r => r.id === Route.id || r.id === Route.parentRoute.id })
+
     const handleEdit = async (key: string, val: unknown, patchKey?: PatchSetterKey) => {
         if (isNew()) {
             // Update signal with a NEW object to trigger re-render
@@ -99,7 +101,7 @@ function RouteComponent() {
                 await client.subjects.admin.patch(subject().id, patch)
                 // Update signal with a NEW object to trigger re-render
                 setSubjectData({ ...subjectData(), [key]: val })
-                await router.invalidate({ sync: true })
+                await invalidate()
             } catch (e) {
                 console.error(e)
                 alert(string.ERROR_SAVE_FAILED({ error: String(e) }))
@@ -126,7 +128,7 @@ function RouteComponent() {
             try {
                 await client.subjects.admin.put(s.id, s)
                 await client.subjects.admin.fetchAll({ force: true })
-                await router.invalidate()
+                await invalidate()
 
                 navigate({
                     params: { subjectId: s.id.toString() },

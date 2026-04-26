@@ -82,9 +82,7 @@ export default function DynamicEnrollButton(props: {
                         case EnrollState.NotEnrolled:
                             try {
                                 await api.client.selections.set('@me', props.elective.id, props.subject.id)
-                                await router.invalidate({
-                                    sync: true,
-                                })
+                                await router.invalidate()
                             } catch (e) {
                                 setError(String(e))
                             }
