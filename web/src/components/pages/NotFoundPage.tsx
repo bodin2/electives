@@ -12,7 +12,7 @@ import styles from './NotFoundPage.module.css'
 
 export default function NotFoundPage() {
     return (
-        <Page>
+        <Page leading={null} trailing={null} allowBacking>
             <NotFoundPageContent illustration />
         </Page>
     )
