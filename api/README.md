@@ -58,7 +58,7 @@ The server can be configured using the following environment variables:
 | `ADMIN_CHALLENGE_TIMEOUT`                           | Duration of admin authentication challenge in seconds                                           | `60` (1 minute)                                                                                                                     |
 | `ADMIN_SESSION_DURATION`                            | Duration of admin sessions in seconds                                                           | `3600` (1 hour)                                                                                                                     |
 | `ADMIN_SESSION_CREATION_MINIMUM_TIME`               | Minimum time in milliseconds for creating new admin sessions. Prevents spam and timing attacks. | `3000` (3 seconds)                                                                                                                  |
-| `ADMIN_RESET`                                       | Set to a non-empty value to reset the admin user. Use if private key was compromised.           | (None)                                                                                                                              |
+| `ADMIN_RESET`                                       | Set to a non-empty value to reset the initial admin user. Use if private key was compromised.   | (None)                                                                                                                              |
 
 ## Admin Authentication
 
