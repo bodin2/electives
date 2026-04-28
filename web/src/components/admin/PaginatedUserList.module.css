@@ -22,3 +22,12 @@
 .padded {
     padding: 16px;
 }
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(448px, 1fr));
+
+    @media (max-width: 448px) {
+        grid-template-columns: 1fr;
+    }
+}

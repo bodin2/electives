@@ -147,7 +147,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                     {props.headerRight?.({})}
                 </HStack>
             </VStack>
-            <VStack gap={0}>
+            <div class={styles.grid}>
                 {props.listHeader?.({})}
                 <Show when={props.isLoading && !props.data && store.users.size === 0}>
                     <ListItem headline={string.LOADING()} />
@@ -173,7 +173,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                         )}
                     </For>
                 </Show>
-            </VStack>
+            </div>
         </>
     )
 }
