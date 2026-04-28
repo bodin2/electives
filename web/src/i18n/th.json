@@ -166,5 +166,5 @@
   "SELECT_TEAM_HINT": "เลือกทีม",
   "PASSWORD_REQUIREMENTS": "ต้องมีความยาวอย่างน้อย 4 ตัวอักษร",
   "SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT": "เลือกการลงทะเบียน",
-  "SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT_DESCRIPTION": "วิชานี้ถูกเสนอในหลายการลงทะเบียนที่เปิดรับสมัครอยู่ โปรดเลือกการลงทะเบียนอันหนึ่งเพื่อดูสมาชิก"
+  "SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT_DESCRIPTION": "เลือกการลงทะเบียนอันหนึ่งเพื่อจัดการสมาชิกในรายวิชา"
 }
