@@ -73,25 +73,22 @@ function RouteComponent() {
         onCleanup(() => mql.removeEventListener('change', listener))
     })
 
-    onMount(() => {
-        if (!pageData) return
+    const prevLeading = pageData.leading
+    const prevTrailing = pageData.trailing
+    const prevElevated = pageData.topAppBarElevated
+    const prevAllowBacking = pageData.allowBacking
 
-        const prevLeading = pageData.leading
-        const prevTrailing = pageData.trailing
-        const prevElevated = pageData.topAppBarElevated
-        const prevAllowBacking = pageData.allowBacking
+    pageData.setAllowBacking(false)
+    pageData.setLeading(NavMenuToggle)
+    pageData.setTrailing(AdminTrailing)
 
-        pageData.setAllowBacking(false)
-        pageData.setLeading(NavMenuToggle)
-        pageData.setTrailing(AdminTrailing)
-
-        onCleanup(() => {
-            pageData.setTopAppBarElevated(prevElevated)
-            pageData.setAllowBacking(prevAllowBacking)
-            pageData.setLeading(prevLeading)
-            pageData.setTrailing(prevTrailing)
-        })
+    onCleanup(() => {
+        pageData.setTopAppBarElevated(prevElevated)
+        pageData.setAllowBacking(prevAllowBacking)
+        pageData.setLeading(prevLeading)
+        pageData.setTrailing(prevTrailing)
     })
+
     createEffect(() => {
         if (!navOpen() && !modalNav()) return
         pageData.setTopAppBarElevated(navOpen())
