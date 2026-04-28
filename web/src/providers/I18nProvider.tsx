@@ -3,11 +3,11 @@ import * as i18n from '@solid-primitives/i18n'
 import {
     createContext,
     createEffect,
+    createRenderEffect,
     createResource,
     createSignal,
     type JSXElement,
     on,
-    onMount,
     type ParentComponent,
     useContext,
 } from 'solid-js'
@@ -52,7 +52,7 @@ const I18nProvider: ParentComponent = props => {
 
     let fetchAttempts = 0
 
-    onMount(() => {
+    createRenderEffect(() => {
         const localStored = localStorage.getItem('locale') as Locale | null
         if (localStored) {
             log.info('Found stored locale preference:', localStored)

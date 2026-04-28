@@ -1,5 +1,5 @@
 import { useRouter } from '@tanstack/solid-router'
-import { onMount, Show } from 'solid-js'
+import { createRenderEffect, Show } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'
 import ErrorIllustration from '../images/ErrorIllustration'
@@ -11,7 +11,7 @@ export default function ErrorPage(props: { error: string | Error; reset: () => v
     const { string } = useI18n()
     const router = useRouter()
 
-    onMount(() => {
+    createRenderEffect(() => {
         console.error('ErrorPage caught an error:', props.error)
     })
 
