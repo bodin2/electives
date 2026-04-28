@@ -43,7 +43,7 @@
     }
 }
 
-.navRail.navRail {
+.navRail.navRail.navRail {
     z-index: var(--layer-nav);
     padding-block: 16px;
     /* So it looks connected to TopAppBar */
