@@ -25,6 +25,7 @@ import {
 } from '../api'
 import { GatewayEndpoints } from '../api/gateway'
 import { NetworkError } from '../api/types'
+import { nonNull } from '../utils'
 
 export enum AuthenticationState {
     Loading = 0,
@@ -298,8 +299,4 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
 
 export default APIProvider
 
-export const useAPI = () => {
-    const context = useContext(APIContext)
-    if (!context) throw new Error('useAPI must be used within a APIProvider')
-    return context
-}
+export const useAPI = () => nonNull(useContext(APIContext), 'useAPI must be used within a APIProvider')

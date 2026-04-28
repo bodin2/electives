@@ -1,6 +1,7 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { createContext, onCleanup, type ParentProps, useContext } from 'solid-js'
 import { createStore, reconcile } from 'solid-js/store'
+import { nonNull } from '../utils'
 import type { Client } from '../api'
 
 const log = new Logger('EnrollmentCountsProvider')
@@ -92,10 +93,5 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
     return <EnrollmentContext.Provider value={value}>{props.children}</EnrollmentContext.Provider>
 }
 
-export function useEnrollmentCounts() {
-    const context = useContext(EnrollmentContext)
-    if (!context) {
-        throw new Error('useEnrollmentCounts must be used within an EnrollmentCountsProvider')
-    }
-    return context
-}
+export const useEnrollmentCounts = () =>
+    nonNull(useContext(EnrollmentContext), 'useEnrollmentCounts must be used within an EnrollmentCountsProvider')

@@ -12,6 +12,7 @@ import {
     useContext,
 } from 'solid-js'
 import { createStore } from 'solid-js/store'
+import { nonNull } from '../utils'
 import type { BaseRecordDict, Resolved } from '@solid-primitives/i18n'
 import type Lang from '../i18n/th.json'
 
@@ -121,11 +122,7 @@ const I18nProvider: ParentComponent = props => {
 
 export default I18nProvider
 
-export function useI18n() {
-    const ctx = useContext(I18nContext)
-    if (!ctx) throw new Error('useI18n must be used within <I18nProvider>')
-    return ctx
-}
+export const useI18n = () => nonNull(useContext(I18nContext), 'useI18n must be used within <I18nProvider>')
 
 // Slightly modified version of:
 // https://github.com/solidjs-community/solid-primitives/issues/715#issuecomment-3764040195
