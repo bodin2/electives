@@ -84,7 +84,7 @@ function SubjectDeletionDialog(props: {
 
         try {
             await client.subjects.admin.delete(subject.id)
-            await router.invalidate({ filter: r => r.id === Route.id || r.id === SubjectIdRoute.id })
+            await router.invalidate({ filter: r => r.routeId === Route.id || r.routeId === SubjectIdRoute.id })
         } catch (e) {
             console.error(e)
             alert(string.ERROR_DELETE_SUBJECT_FAILED())

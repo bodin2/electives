@@ -1,5 +1,4 @@
 import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
-import { useRouter } from '@tanstack/solid-router'
 import { Icon } from 'm3-solid'
 import { createEffect } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
@@ -11,18 +10,17 @@ import type { Subject } from '../../api'
 
 export default function UnenrollDialog(props: {
     open: boolean
-    onClose: () => unknown
+    onClose: (removed?: boolean) => unknown
     electiveId: number
     selectedSubject?: Subject
 }) {
     const api = useAPI()
-    const router = useRouter()
     const { string, t } = useI18n()
 
     createEffect(() => {
         // Close the dialog once the state is invalidated
         if (!props.selectedSubject && props.open) {
-            props.onClose()
+            props.onClose(true)
         }
     })
 
@@ -45,17 +43,14 @@ export default function UnenrollDialog(props: {
             centerHeadline
             actions={
                 <form method="dialog" style={{ display: 'contents' }}>
-                    <Button variant="text" onClick={() => props.onClose()}>
+                    <Button variant="text" onClick={() => props.onClose(false)}>
                         {string.CANCEL()}
                     </Button>
                     <Button
                         variant="tonal-error"
                         onClick={async () => {
                             await api.client.selections.delete('@me', props.electiveId)
-
-                            props.onClose()
-
-                            await router.invalidate()
+                            props.onClose(true)
                         }}
                     >
                         {string.UNENROLL()}

@@ -1,11 +1,16 @@
-import { createFileRoute } from '@tanstack/solid-router'
-import { NotFoundError } from '../../../../api'
+import { createFileRoute, useRouter } from '@tanstack/solid-router'
+import { Match, Switch } from 'solid-js'
+import { NotFoundError, type User } from '../../../../api'
+import AddStudentToSubjectButton from '../../../../components/buttons/AddStudentToSubjectButton'
+import DynamicEnrollButton from '../../../../components/buttons/DynamicEnrollButton'
 import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
 import SubjectInfo from '../../../../components/subjects/SubjectInfo'
+import styles from '../../../../components/subjects/SubjectInfo.module.css'
 import { useAPI } from '../../../../providers/APIProvider'
 import { nonNull } from '../../../../utils'
 import { AUTHENTICATED_ROUTE_DEFAULTS } from '../../../_authenticated'
+import { Route as IndexRoute } from '../../index'
 
 export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjectId')({
     ...AUTHENTICATED_ROUTE_DEFAULTS,
@@ -33,6 +38,7 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
         const selectedSubject = selections?.get(electiveId)
 
         return {
+            user,
             subject,
             elective,
             selectedSubject,
@@ -47,7 +53,19 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
 
 function RouteComponent() {
     const data = Route.useLoaderData()
+    const router = useRouter()
     const { client } = useAPI()
+
+    const invalidate = () =>
+        router.invalidate({
+            filter: r => r.routeId === Route.id,
+        })
+
+    const handleStudentRemove = async (stud: User) => {
+        const el = nonNull(data().elective)
+        await client.selections.delete(stud.id, el.id)
+        await invalidate()
+    }
 
     return (
         <Page name={data().subject.name}>
@@ -56,6 +74,32 @@ function RouteComponent() {
                 elective={data().elective}
                 user={client.user ?? undefined}
                 selectedSubject={data().selectedSubject}
+                onStudentRemove={handleStudentRemove}
+                extraActions={props => (
+                    <Switch>
+                        <Match when={data().user.isStudent() && props.subject.canUserEnroll(data().user)}>
+                            <DynamicEnrollButton
+                                class={styles.actionButton}
+                                elective={data().elective}
+                                subject={props.subject}
+                                selectedSubject={data().selectedSubject}
+                                onInvalidate={() =>
+                                    router.invalidate({
+                                        filter: r => r.routeId === Route.id || r.routeId === IndexRoute.id,
+                                        sync: true,
+                                    })
+                                }
+                            />
+                        </Match>
+                        <Match when={data().user.isTeacher() && props.subject.isTaughtBy(data().user)}>
+                            <AddStudentToSubjectButton
+                                class={styles.actionButton}
+                                electiveId={data().elective.id}
+                                subjectId={props.subject.id}
+                            />
+                        </Match>
+                    </Switch>
+                )}
             />
         </Page>
     )

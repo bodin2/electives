@@ -123,11 +123,10 @@ function RouteComponent() {
         }
     }
 
-    const invalidate = async () => {
-        await router.invalidate({
-            filter: r => r.id === Route.id || r.id === TeachersRoute.id || r.id === StudentsRoute.id,
+    const invalidate = (type: UserType) =>
+        router.invalidate({
+            filter: r => r.routeId === (type === UserType.STUDENT ? StudentsRoute.id : TeachersRoute.id),
         })
-    }
 
     const handleSave = async () => {
         const u = userData()
@@ -172,7 +171,7 @@ function RouteComponent() {
                 await client.users.admin.patch(user().id, patch)
                 setModifiedFields(new Set<string>())
                 setUserData({ ...userData(), newPassword: '' })
-                await invalidate()
+                await invalidate(userData().type)
             } catch (e) {
                 console.error(e)
                 alert(string.ERROR_SAVE_FAILED({ error: String(e) }))
@@ -182,8 +181,8 @@ function RouteComponent() {
 
     const handleDelete = async () => {
         await client.users.admin.delete(user().id)
-        history.back()
-        await invalidate()
+        await invalidate(userData().type)
+        router.history.back()
     }
 
     onMount(() => {

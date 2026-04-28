@@ -21,8 +21,11 @@ function RouteComponent() {
     const data = Route.useLoaderData()
     const router = useRouter()
 
+    const invalidate = () => router.invalidate({ filter: r => r.routeId === Route.id, sync: true })
+
     const handleCreate = () => {
         navigate({ to: '/manage/teams/$teamId', params: { teamId: 'new' }, search: { page: 0 } })
+        invalidate()
     }
 
     const handleEdit = (team: Team) => {
@@ -36,7 +39,7 @@ function RouteComponent() {
     const handleDelete = async (team: Team) => {
         try {
             await client.teams.admin.delete(team.id)
-            await router.invalidate({ filter: r => r.id === Route.id })
+            await invalidate()
         } catch (e) {
             console.error(e)
             alert('Failed to delete team')

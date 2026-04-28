@@ -1,15 +1,16 @@
 import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import { Button, type ButtonVariant } from 'm3-solid'
-import { createSignal, type JSX } from 'solid-js'
+import { createSignal, type JSX, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'
+import { nonNull } from '../../utils'
 import AddStudentToSubjectDialog from '../dialogs/AddStudentToSubjectDialog'
 
 export default function AddStudentToSubjectButton(props: {
     variant?: ButtonVariant
     class?: string
     style?: string | JSX.CSSProperties
-    electiveId: number
+    electiveId?: number
     subjectId: number
     disabled?: boolean
 }) {
@@ -29,14 +30,16 @@ export default function AddStudentToSubjectButton(props: {
             >
                 {string.ADD_STUDENT_TO_SUBJECT()}
             </Button>
-            <Portal>
-                <AddStudentToSubjectDialog
-                    open={open()}
-                    onClose={() => setOpen(false)}
-                    electiveId={props.electiveId}
-                    subjectId={props.subjectId}
-                />
-            </Portal>
+            <Show when={props.electiveId}>
+                <Portal>
+                    <AddStudentToSubjectDialog
+                        open={open()}
+                        onClose={() => setOpen(false)}
+                        electiveId={nonNull(props.electiveId)}
+                        subjectId={props.subjectId}
+                    />
+                </Portal>
+            </Show>
         </>
     )
 }

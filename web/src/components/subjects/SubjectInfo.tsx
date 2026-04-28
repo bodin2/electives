@@ -1,5 +1,4 @@
 import Logger from '@bodin2/electives-common/Logger'
-import { useRouter } from '@tanstack/solid-router'
 import { type Component, createContext, createEffect, createSignal, Match, Show, Switch, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useAutoRefreshResource } from '../../hooks/useAutoRefreshResource'
@@ -24,6 +23,8 @@ export interface SubjectInfoProps {
     editable?: boolean
     onEdit?: (field: string, value: any, patchKey?: PatchSetterKey) => Promise<void> | void
     onSave?: () => Promise<void> | void
+    onStudentRemove?: (student: User) => Promise<void> | void
+    onTeacherRemove?: (teacher: User) => Promise<void> | void
     selectedSubject?: Subject
     creating?: boolean
     extraActions?: Component<{ subject: Subject; elective?: Elective }>
@@ -48,17 +49,14 @@ export default function SubjectInfo(props: SubjectInfoProps) {
     const { string } = useI18n()
     const api = useAPI()
     const enrollment = useEnrollmentCounts()
-    const router = useRouter()
 
     const [tab, setTab] = createSignal('info')
     const [outdatedMembers, setOutdatedMembers] = createSignal(false)
 
     const membersTabOpened = () => tab() === 'members'
 
-    const currentTeacherIds = () => props.subject.teachers.map(t => t.id) ?? []
-
     createEffect(prev => {
-        if (prev !== props.elective) setOutdatedMembers(true)
+        if (prev !== undefined && prev !== props.elective) setOutdatedMembers(true)
         return props.elective
     })
 
@@ -111,35 +109,6 @@ export default function SubjectInfo(props: SubjectInfoProps) {
         },
     )
 
-    const handleStudentRemove = async (stud: { id: number }) => {
-        const el = nonNull(props.elective)
-
-        await api.client.selections.delete(stud.id, el.id)
-        enrollment.bumpVersion(el.id)
-
-        await router.invalidate()
-    }
-
-    const handleTeacherRemove = async (teach: { id: number }) => {
-        const el = nonNull(props.elective)
-
-        await api.client.subjects.admin.patch(nonNull(props.subject).id, {
-            teachers: currentTeacherIds().filter(id => id !== teach.id),
-            electiveId: el.id,
-            patchTeachers: true,
-            patchCode: false,
-            patchDescription: false,
-            patchImageUrl: false,
-            patchLocation: false,
-            patchTeamId: false,
-            patchThumbnailUrl: false,
-        })
-
-        enrollment.bumpVersion(el.id)
-
-        await router.invalidate()
-    }
-
     // SolidJS moment
     const [info, setInfo] = createStore<SubjectInfoContext>(null as unknown as SubjectInfoContext)
     createEffect(() => {
@@ -179,12 +148,8 @@ export default function SubjectInfo(props: SubjectInfoProps) {
                     <Match when={membersTabOpened()}>
                         <SubjectMembersTab
                             members={members()}
-                            onStudentRemove={
-                                props.editable || (props.user?.isTeacher() && props.subject?.isTaughtBy(props.user))
-                                    ? handleStudentRemove
-                                    : undefined
-                            }
-                            onTeacherRemove={props.editable ? handleTeacherRemove : undefined}
+                            onStudentRemove={props.onStudentRemove}
+                            onTeacherRemove={props.onTeacherRemove}
                             gridClass={styles.membersGrid}
                             headerClass={styles.membersHeader}
                             listClass={styles.membersList}
@@ -203,7 +168,6 @@ export default function SubjectInfo(props: SubjectInfoProps) {
                           }
                         : undefined
                 }
-                selectedSubject={props.selectedSubject}
             />
         </SubjectInfoContext.Provider>
     )

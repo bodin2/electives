@@ -1,5 +1,4 @@
 import AddCircleIcon from '@iconify-icons/mdi/add-circle'
-import { useRouter } from '@tanstack/solid-router'
 import { Icon, TextField } from 'm3-solid'
 import { createEffect, createSignal, type JSX, on, Show } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
@@ -20,12 +19,12 @@ export interface AddUserDialogProps {
     idLabel: string
     icon?: JSX.Element
     validateUser: (user: User) => string | null
-    onConfirm: (user: User) => Promise<undefined | boolean>
+    // biome-ignore lint/suspicious/noConfusingVoidType: No returns are fine
+    onConfirm: (user: User) => Promise<void | undefined | boolean>
 }
 
 export default function AddUserDialog(props: AddUserDialogProps) {
     const api = useAPI()
-    const router = useRouter()
     const { string } = useI18n()
 
     const [idInput, setIdInput] = createSignal('')
@@ -110,8 +109,6 @@ export default function AddUserDialog(props: AddUserDialogProps) {
                             } catch (e) {
                                 setError(String(e))
                             }
-
-                            await router.invalidate()
                         }}
                     >
                         {props.actionLabel}

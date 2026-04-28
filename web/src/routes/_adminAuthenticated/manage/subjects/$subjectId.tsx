@@ -1,14 +1,21 @@
-import { SubjectTag } from '@bodin2/electives-common/proto/api'
+import { SubjectTag, type UserType } from '@bodin2/electives-common/proto/api'
 import { createFileRoute, useRouter } from '@tanstack/solid-router'
 import { createMemo, createSignal, Show } from 'solid-js'
-import { type AdminSubjectPatch, ConflictError, type RawSubject, Subject } from '../../../../api'
+import { type AdminSubjectPatch, ConflictError, type RawSubject, Subject, type User } from '../../../../api'
+import AddStudentToSubjectButton from '../../../../components/buttons/AddStudentToSubjectButton'
+import AddTeacherToSubjectButton from '../../../../components/buttons/AddTeacherToSubjectButton'
 import Page from '../../../../components/Page'
+import { HStack, VStack } from '../../../../components/Stack'
 import SubjectAdminEnrollmentActions from '../../../../components/subjects/SubjectAdminEnrollmentActions'
 import SubjectInfo from '../../../../components/subjects/SubjectInfo'
+import styles from '../../../../components/subjects/SubjectInfo.module.css'
 import { useAPI } from '../../../../providers/APIProvider'
+import { useEnrollmentCounts } from '../../../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
+import { nonNull } from '../../../../utils'
 import { simpleXXHash31 } from '../../../../utils/xxhash'
 import { Route as SubjectsRoute } from '../index'
+import { Route as UserIdRoute } from '../users/$userId'
 import type { PatchSetterKey } from '../../../../components/subjects/SubjectDisplayContext'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subjectId')({
@@ -61,6 +68,7 @@ function RouteComponent() {
     const { client } = useAPI()
     const { string } = useI18n()
     const router = useRouter()
+    const enrollment = useEnrollmentCounts()
 
     // Lifted state for the subject
     const [subjectData, setSubjectData] = createSignal<RawSubject>(
@@ -83,7 +91,10 @@ function RouteComponent() {
         return data().electives.find(e => e.id === electiveId)
     })
 
-    const invalidate = () => router.invalidate({ filter: r => r.id === Route.id || r.id === SubjectsRoute.id })
+    const currentTeacherIds = () => subjectData().teachers.map(t => t.id)
+
+    const invalidate = () =>
+        router.invalidate({ filter: r => r.routeId === Route.id || r.routeId === SubjectsRoute.id })
 
     const handleEdit = async (key: string, val: unknown, patchKey?: PatchSetterKey) => {
         if (isNew()) {
@@ -154,6 +165,41 @@ function RouteComponent() {
         }
     }
 
+    // TODO: Invalidate enrollment routes for students
+    const invalidateUser = (_type: UserType) =>
+        router.invalidate({
+            filter: r => r.routeId === Route.id || r.routeId === UserIdRoute.id,
+        })
+
+    const handleStudentRemove = async (stud: User) => {
+        const el = nonNull(elective())
+
+        await client.selections.delete(stud.id, el.id)
+        enrollment.bumpVersion(el.id)
+
+        await invalidateUser(stud.type)
+    }
+
+    const handleTeacherRemove = async (teach: User) => {
+        const el = nonNull(elective())
+
+        await client.subjects.admin.patch(subject().id, {
+            teachers: currentTeacherIds().filter(id => id !== teach.id),
+            electiveId: el.id,
+            patchTeachers: true,
+            patchCode: false,
+            patchDescription: false,
+            patchImageUrl: false,
+            patchLocation: false,
+            patchTeamId: false,
+            patchThumbnailUrl: false,
+        })
+
+        enrollment.bumpVersion(el.id)
+
+        await invalidateUser(teach.type)
+    }
+
     return (
         <Page name={isNew() ? string.CREATE_SUBJECT() : subject().name} allowBacking leading={null} trailing={null}>
             <SubjectInfo
@@ -164,21 +210,42 @@ function RouteComponent() {
                 creating={isNew()}
                 onEdit={handleEdit}
                 onSave={isNew() ? handleCreate : undefined}
+                onStudentRemove={handleStudentRemove}
+                onTeacherRemove={handleTeacherRemove}
                 extraActions={props => (
                     <Show when={!isNew()}>
-                        <SubjectAdminEnrollmentActions
-                            subject={props.subject}
-                            elective={props.elective}
-                            allElectives={data().allElectives}
-                            addedElectives={data().electives}
-                            setElectiveId={id =>
-                                navigate({
-                                    search: prev => ({ ...prev, elective_id: id }),
-                                    replace: true,
-                                })
-                            }
-                            onInvalidate={invalidate}
-                        />
+                        <VStack>
+                            <SubjectAdminEnrollmentActions
+                                subject={props.subject}
+                                elective={props.elective}
+                                allElectives={data().allElectives}
+                                addedElectives={data().electives}
+                                setElectiveId={id =>
+                                    navigate({
+                                        search: prev => ({ ...prev, elective_id: id }),
+                                        replace: true,
+                                    })
+                                }
+                                onInvalidate={invalidate}
+                            />
+                            <HStack grow wrap gap={8} class={styles.actionButton}>
+                                <AddStudentToSubjectButton
+                                    variant="tonal"
+                                    class={styles.subActionButton}
+                                    electiveId={elective()?.id}
+                                    subjectId={subject().id}
+                                    disabled={!elective()}
+                                />
+                                <AddTeacherToSubjectButton
+                                    variant="tonal"
+                                    class={styles.subActionButton}
+                                    subjectId={subject().id}
+                                    electiveId={elective()?.id}
+                                    disabled={!elective()}
+                                    currentTeacherIds={currentTeacherIds()}
+                                />
+                            </HStack>
+                        </VStack>
                     </Show>
                 )}
             />

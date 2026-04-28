@@ -16,6 +16,7 @@ import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { nonNull } from '../../../../utils'
 import { catchErrors } from '../../../../utils/error-component'
+import { Route as TeamsRoute } from './index'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/teams/$teamId')({
     errorComponent: catchErrors([NotFoundError, NotFoundPage]),
@@ -90,11 +91,17 @@ function RouteComponent() {
             if (isNew()) {
                 await client.teams.admin.put(idParsed, { id: idParsed, name: trimmed })
                 // After creating, we should probably navigate to the new ID
-                navigate({ params: { teamId: idParsed.toString() }, search: { page: 1 } })
+                navigate({ params: { teamId: idParsed.toString() }, search: { page: 1 }, replace: true })
             } else {
                 await client.teams.admin.patch(Number(params().teamId), { name: trimmed })
-                await router.invalidate({ filter: r => r.id === Route.id || r.id === Route.parentRoute.id })
+                await router.invalidate({
+                    filter: r => {
+                        console.log(r.routeId)
+                        return r.routeId === Route.id || r.routeId === TeamsRoute.id
+                    },
+                })
             }
+
             await client.teams.fetchAll({ force: true })
         } catch (e) {
             console.error(e)
@@ -195,7 +202,7 @@ function TeamMembers(props: { initialMembers: { users: User[]; total: number } }
                 onPagePreload={page =>
                     router.preloadRoute({ to: Route.fullPath, search: { ...search(), page }, params: params() })
                 }
-                onRefresh={() => router.invalidate({ filter: r => r.id === Route.id, sync: true })}
+                onRefresh={() => router.invalidate({ filter: r => r.routeId === Route.id, sync: true })}
                 headerRight={() => (
                     <Button onClick={() => setAddDialogOpen(true)} size="xs" icon={PlusIcon}>
                         {string.ADD_STUDENT()}

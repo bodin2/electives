@@ -5,6 +5,7 @@ import LocationIcon from '@iconify-icons/mdi/location-on-outline'
 import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
 import PeopleIcon from '@iconify-icons/mdi/people-outline'
 import TeachIcon from '@iconify-icons/mdi/teach'
+import { mergeClasses } from 'm3-solid'
 import { marked } from 'marked'
 import { createSignal, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
@@ -157,7 +158,7 @@ export default function SubjectDetailsTab(props: SubjectDetailsTabProps) {
     const categoryName = () => {
         const tag = subject().tag
         const key = SubjectTag[tag]
-        if (!key || tag === SubjectTag.UNRECOGNIZED) return string.SUBJECT_CATEGORY_OTHER()
+        if (!key || tag === SubjectTag.UNRECOGNIZED) return `${string.SUBJECT_CATEGORY_OTHER()}*`
         // @ts-expect-error: Dynamic key
         return string[`SUBJECT_CATEGORY_${key}`]()
     }
@@ -251,7 +252,14 @@ export default function SubjectDetailsTab(props: SubjectDetailsTabProps) {
                 <VStack gap={0} style={{ color: 'var(--m3c-on-surface-variant)' }}>
                     <HStack class={styles.infoRow}>
                         <HStack alignVertical="center" gap={4}>
-                            <IconLabel icon={LabelOutlineIcon} text={categoryName()} class={props.labelClass} />
+                            <IconLabel
+                                icon={LabelOutlineIcon}
+                                text={categoryName()}
+                                class={mergeClasses(
+                                    props.labelClass,
+                                    subject().tag === SubjectTag.UNRECOGNIZED && 'text-error',
+                                )}
+                            />
                             <Show when={ctx.editable && ctx.onEdit}>
                                 <Button
                                     size="xs"

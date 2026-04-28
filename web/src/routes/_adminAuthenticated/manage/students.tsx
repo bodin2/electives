@@ -3,7 +3,7 @@ import { createFileRoute, useRouter } from '@tanstack/solid-router'
 import PaginatedUserList, { type PaginatedUserListHandle } from '../../../components/admin/PaginatedUserList'
 import LinkButton from '../../../components/LinkButton'
 import Page from '../../../components/Page'
-import { BaseUserDisplayContext, useUserDisplayContext } from '../../../components/users/UserDisplayContext'
+import { useUserDisplayContext } from '../../../components/users/UserDisplayContext'
 import { useI18n } from '../../../providers/I18nProvider'
 import { Route as UserIdRoute } from './users/$userId'
 
@@ -40,13 +40,15 @@ function RouteComponent() {
                 ref={h => (listHandle = h)}
                 page={search().page}
                 data={data()}
-                isLoading={router.state.status === 'pending'}
                 onPageChange={page => navigate({ search: { page } })}
                 onPagePreload={page => router.preloadRoute({ to: Route.fullPath, search: { page } })}
                 onRefresh={() =>
-                    router.invalidate({ filter: r => r.id === Route.id || r.id === UserIdRoute.id, sync: true })
+                    router.invalidate({
+                        filter: r => r.routeId === Route.id || r.routeId === UserIdRoute.id,
+                        sync: true,
+                    })
                 }
-                onClick={user => navigate(BaseUserDisplayContext.editLinkProps(user.id))}
+                onClick={user => navigate(userDisplayContext.editLinkProps(user.id))}
             />
         </Page>
     )

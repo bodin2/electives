@@ -59,7 +59,7 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
                 style={{ top: '48px', position: 'sticky' }}
                 items={groupedSelections()}
                 fallback={
-                    <p class="padded text-surface-variant">
+                    <p class="text-surface-variant text-center">
                         {string.NO_X_YET({ object: string.SELECTIONS().toLowerCase() })}
                     </p>
                 }

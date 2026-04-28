@@ -49,6 +49,7 @@ export default function RemoveSubjectFromElectiveDialog(props: {
                                 ])
 
                                 await api.client.subjects.admin.fetch(props.subject.id, { force: true })
+                                // TODO: Make this more specific?
                                 await router.invalidate()
 
                                 removed = true

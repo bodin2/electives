@@ -1,6 +1,5 @@
 import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
-import { useRouter } from '@tanstack/solid-router'
 import { createMemo, createSignal, Match, Show, Switch } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import useElectiveOpen from '../../hooks/useElectiveOpen'
@@ -11,6 +10,7 @@ import { formatCountdown } from '../../utils/date'
 import { Button } from '../Button'
 import SubjectEnrollmentFailedDialog from '../dialogs/SubjectEnrollmentFailedDialog'
 import UnenrollDialog from '../dialogs/UnenrollDialog'
+import { VStack } from '../Stack'
 import type { Elective, Subject } from '../../api'
 
 export default function DynamicEnrollButton(props: {
@@ -18,9 +18,9 @@ export default function DynamicEnrollButton(props: {
     subject: Subject
     selectedSubject: Subject | undefined
     class?: string
+    onInvalidate: () => Promise<void> | void
 }) {
     const api = useAPI()
-    const router = useRouter()
     const { string } = useI18n()
     const enrollment = useEnrollmentCounts()
     const [error, setError] = createSignal<string | null>(null)
@@ -35,7 +35,7 @@ export default function DynamicEnrollButton(props: {
     const enrolledCount = () => enrollment.getElectiveCounts(props.elective.id)[props.subject.id] ?? 0
     const isFull = () => enrolledCount() >= props.subject.capacity
 
-    const enrollState = createMemo(() => {
+    const enrollState = () => {
         if (!props.selectedSubject) {
             return EnrollState.NotEnrolled
         }
@@ -45,7 +45,7 @@ export default function DynamicEnrollButton(props: {
         }
 
         return EnrollState.Enrolled
-    })
+    }
 
     const buttonProps = createMemo(() => {
         switch (enrollState()) {
@@ -71,7 +71,7 @@ export default function DynamicEnrollButton(props: {
     })
 
     return (
-        <>
+        <VStack alignHorizontal="center">
             <Button
                 class={props.class}
                 {...buttonProps()}
@@ -82,7 +82,7 @@ export default function DynamicEnrollButton(props: {
                         case EnrollState.NotEnrolled:
                             try {
                                 await api.client.selections.set('@me', props.elective.id, props.subject.id)
-                                await router.invalidate()
+                                await props.onInvalidate()
                             } catch (e) {
                                 setError(String(e))
                             }
@@ -120,18 +120,21 @@ export default function DynamicEnrollButton(props: {
             <Portal>
                 <UnenrollDialog
                     open={dialogOpen()}
-                    onClose={() => setDialogOpen(false)}
+                    onClose={async removed => {
+                        setDialogOpen(false)
+                        if (removed) await props.onInvalidate()
+                    }}
                     electiveId={props.elective.id}
                     selectedSubject={props.selectedSubject}
                 />
                 <SubjectEnrollmentFailedDialog reason={error()} onClose={() => setError(null)} />
             </Portal>
-        </>
+        </VStack>
     )
 }
 
-enum EnrollState {
-    Enrolled = 0,
-    EnrolledCurrent = 1,
-    NotEnrolled = 2,
-}
+const EnrollState = {
+    Enrolled: 0,
+    EnrolledCurrent: 1,
+    NotEnrolled: 2,
+} as const
