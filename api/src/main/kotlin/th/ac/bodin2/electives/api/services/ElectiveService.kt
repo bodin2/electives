@@ -73,6 +73,12 @@ interface ElectiveService {
         withStudents: Boolean,
     ): QueryResult<out Pair<List<Teacher>, List<Student>>>
 
+    fun getUnenrolledMembers(
+        electiveId: Int,
+        teamId: Int,
+        page: Int,
+    ): QueryResult<out Pair<List<Student>, Long>>
+
     sealed class QueryResult<T> {
         data class Success<T>(val value: T) : QueryResult<T>()
 

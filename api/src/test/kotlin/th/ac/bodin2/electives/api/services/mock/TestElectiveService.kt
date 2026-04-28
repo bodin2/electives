@@ -90,4 +90,17 @@ class TestElectiveService : ElectiveService {
                 )
         }
     }
+
+    override fun getUnenrolledMembers(
+        electiveId: Int,
+        teamId: Int,
+        page: Int
+    ): ElectiveService.QueryResult<out Pair<List<Student>, Long>> {
+        val elective = getById(electiveId)
+            ?: return ElectiveService.QueryResult.ElectiveNotFound
+
+        return ElectiveService.QueryResult.Success(
+            listOf(MockUtils.mockStudent(STUDENT_ID)) to 1L
+        )
+    }
 }

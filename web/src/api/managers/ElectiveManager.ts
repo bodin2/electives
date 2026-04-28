@@ -1,5 +1,5 @@
-import { Elective, type Subject } from '../structures'
-import { AdminElectivePatch, AdminSetElectiveSubjectsRequest, ListElectivesResponse, RawElective } from '../types'
+import { Elective, type Subject, User } from '../structures'
+import { AdminElectivePatch, AdminListUsersResponse, AdminSetElectiveSubjectsRequest, ListElectivesResponse, RawElective } from '../types'
 import type { Cache } from '../cache'
 import type { RESTClient } from '../rest'
 import type { CacheableManager, FetchOptions } from '.'
@@ -95,6 +95,22 @@ export class ElectiveManager implements CacheableManager {
         options: FetchOptions & { withEnrolledCounts?: boolean } = {},
     ): Promise<Subject[]> {
         return this.subjects.fetchAll({ electiveId, withEnrolledCounts: true, ...options })
+    }
+
+    /**
+     * Fetch unenrolled members of an elective for a specific team
+     *
+     * @param electiveId The elective's ID
+     * @param team The team ID to filter by
+     * @param page The page number (1-based)
+     */
+    async fetchUnenrolledMembers(electiveId: number, team: number, page = 1): Promise<{ users: User[]; total: number }> {
+        const data = await this.rest.get<AdminListUsersResponse>(`/electives/${electiveId}/unenrolled-members`, {
+            query: { team, page },
+            decoder: AdminListUsersResponse,
+        })
+        const users = data.users.map(u => new User(u))
+        return { users, total: data.total }
     }
 
     /**

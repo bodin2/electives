@@ -159,4 +159,28 @@ class ElectivesRoutesTest : ApplicationTest() {
 
         assertEquals(0, response.studentsCount)
     }
+
+    @Test
+    fun `get elective unenrolled members without auth`() = runRouteTest {
+        client.get("/electives/${ELECTIVE_ID}/unenrolled-members?team=1").assertUnauthorized()
+    }
+
+    @Test
+    fun `get elective unenrolled members with student auth`() = runRouteTest {
+        client.getWithAuth("/electives/${ELECTIVE_ID}/unenrolled-members?team=1", studentToken()).assertUnauthorized()
+    }
+
+    @Test
+    fun `get elective unenrolled members with teacher auth`() = runRouteTest {
+        startApplication()
+        @OptIn(Transactional::class)
+        val token = usersService.createSession(TEACHER_ID, PASSWORD, "")
+        
+        val response = client.getWithAuth("/electives/${ELECTIVE_ID}/unenrolled-members?team=1", token)
+            .assertOK()
+            .parse<th.ac.bodin2.electives.proto.api.AdminService.ListUsersResponse>()
+
+        assertEquals(1, response.total)
+        assertEquals(STUDENT_ID, response.usersList[0].id)
+    }
 }

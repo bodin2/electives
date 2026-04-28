@@ -1,11 +1,11 @@
 package th.ac.bodin2.electives.api.services
 
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.batchInsert
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.core.notInList
+import org.jetbrains.exposed.v1.dao.with
+import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
@@ -13,11 +13,14 @@ import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
 import th.ac.bodin2.electives.db.*
-import th.ac.bodin2.electives.db.models.ElectiveSubjects
-import th.ac.bodin2.electives.db.models.Electives
+import th.ac.bodin2.electives.db.models.*
 import java.time.LocalDateTime
 
 class ElectiveServiceImpl : ElectiveService {
+    companion object {
+        const val PAGE_SIZE = 50
+    }
+
     @Transactional
     override fun create(
         id: Int,
@@ -140,5 +143,37 @@ class ElectiveServiceImpl : ElectiveService {
                 else -> throw e
             }
         }
+    }
+
+    override fun getUnenrolledMembers(
+        electiveId: Int,
+        teamId: Int,
+        page: Int
+    ): QueryResult<out Pair<List<Student>, Long>> {
+        if (!Elective.exists(electiveId)) return QueryResult.ElectiveNotFound
+        if (!Team.exists(teamId)) throw EntityNotFoundException(ExceptionEntity.TEAM)
+        if (page < 1) throw IllegalArgumentException("Page must be at least 1")
+
+        val enrolledStudentIds = StudentElectives
+            .select(StudentElectives.student)
+            .where { StudentElectives.elective eq electiveId }
+            .map { it[StudentElectives.student] }
+
+        val query = (Students innerJoin StudentTeams)
+            .select(Students.columns)
+            .where {
+                if (enrolledStudentIds.isEmpty()) {
+                    (StudentTeams.team eq teamId)
+                } else {
+                    (StudentTeams.team eq teamId) and (Students.id notInList enrolledStudentIds)
+                }
+            }
+
+        val total = query.count()
+
+        val students = Student.wrapRows(query.limit(PAGE_SIZE).offset(((page - 1) * PAGE_SIZE).toLong()))
+            .with(Student::user, Student::teams).toList()
+
+        return QueryResult.Success(students to total)
     }
 }

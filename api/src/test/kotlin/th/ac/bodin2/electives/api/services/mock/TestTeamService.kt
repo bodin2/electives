@@ -1,5 +1,7 @@
 package th.ac.bodin2.electives.api.services.mock
 
+import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.TeamService

@@ -7,12 +7,14 @@ import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_ELECTIVES
 import th.ac.bodin2.electives.api.RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS
 import th.ac.bodin2.electives.api.services.ElectiveService
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listResponse
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectMembersResponse
 import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
@@ -37,6 +39,12 @@ val electivesController = controller {
                             subjectId = it.parent.subjectId,
                             withStudents = it.with_students == true,
                         )
+                    }
+                }
+
+                get<Electives.Id.UnenrolledMembers> {
+                    authenticated(ELEVATED_USER_ONLY) { _ ->
+                        handleGetUnenrolledMembers(it.parent.id, it.team, it.page)
                     }
                 }
             }
@@ -137,6 +145,39 @@ suspend fun RoutingContext.handleGetElectiveSubjectMembers(
     }
 }
 
+context(electiveService: ElectiveService)
+suspend fun RoutingContext.handleGetUnenrolledMembers(
+    electiveId: Int,
+    teamId: Int,
+    page: Int
+) {
+    val response = transaction<RouteResponse> {
+        try {
+            when (val result = electiveService.getUnenrolledMembers(electiveId, teamId, page)) {
+                is QueryResult.ElectiveNotFound -> Err(electiveNotFound)
+                is QueryResult.Success -> {
+                    val (students, count) = result.value
+                    Ok(listUsersResponse {
+                        users += students.map { it.toProto() }
+                        total = count.toInt()
+                    })
+                }
+
+                else -> throw IllegalStateException("Unreachable case: $result")
+            }
+        } catch (e: EntityNotFoundException) {
+            Err(ErrorResponse(HttpStatusCode.BadRequest, "Team not found"))
+        } catch (e: IllegalArgumentException) {
+            Err(ErrorResponse(HttpStatusCode.BadRequest, e.message ?: "Invalid request"))
+        }
+    }
+
+    when (response) {
+        is Err -> return error(response.response)
+        is Ok -> call.respond(response.response)
+    }
+}
+
 private val electiveNotFound: ErrorResponse
     get() = ErrorResponse(
         status = HttpStatusCode.NotFound,
@@ -169,5 +210,8 @@ private class Electives {
                 class Members(val parent: SubjectId, val with_students: Boolean? = null)
             }
         }
+
+        @Resource("unenrolled-members")
+        class UnenrolledMembers(val parent: Id, val team: Int, val page: Int = 1)
     }
 }
