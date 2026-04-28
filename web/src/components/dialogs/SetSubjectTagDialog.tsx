@@ -48,7 +48,7 @@ export default function SetSubjectTagDialog(props: {
         >
             <VStack as="form" onSubmit={() => btn.click()}>
                 <Select label={string.CATEGORY()} onChange={e => setTag(Number(e.currentTarget.value))}>
-                    <Option value="" disabled selected={currentTag() === SubjectTag.UNRECOGNIZED}>
+                    <Option value="" hidden selected={currentTag() === SubjectTag.UNRECOGNIZED}>
                         {string.SELECT_CATEGORY_HINT()}
                     </Option>
                     <For

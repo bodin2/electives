@@ -7,7 +7,6 @@ interface UserAvatarProps {
     imageUrl?: string
     class?: string
     placeholderClass?: string
-    onClick?: () => void
 }
 
 export default function UserAvatar(props: UserAvatarProps) {

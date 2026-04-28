@@ -1,13 +1,14 @@
 import KBArrowDownIcon from '@iconify-icons/mdi/keyboard-arrow-down'
 import KBArrowUpIcon from '@iconify-icons/mdi/keyboard-arrow-up'
+import type { LinkProps } from '@tanstack/solid-router'
 import { Button } from 'm3-solid'
-import { createMemo, createSignal, For, Show } from 'solid-js'
+import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
 import { createHashFromString, seededShuffle } from '../../utils/random'
 import { HStack, VStack } from '../Stack'
 import SubjectListItem from './SubjectListItem'
 import type { SubjectTag } from '@bodin2/electives-common/proto/api'
-import type { Subject } from '../../api'
+import type { Elective, Subject } from '../../api'
 
 const randomSeed = Math.floor(Math.random() * 2147483647)
 
@@ -20,6 +21,10 @@ interface SubjectCategorySectionProps {
     listClass?: string
     thumbnailClass?: string
     noRandom?: boolean
+    editable?: boolean
+    elective?: Elective
+    itemActions?: (subject: Subject) => JSX.Element
+    viewLinkProps?: (subjectId: number) => LinkProps
 }
 
 export default function SubjectCategorySection(props: SubjectCategorySectionProps) {
@@ -69,7 +74,17 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
                 </Show>
             </HStack>
             <ul class={props.listClass}>
-                <For each={displayedSubjects()}>{subject => <SubjectListItem subject={subject} />}</For>
+                <For each={displayedSubjects()}>
+                    {subject => (
+                        <SubjectListItem
+                            subject={subject}
+                            editable={props.editable}
+                            electiveId={props.elective?.id}
+                            actions={props.itemActions?.(subject)}
+                            linkProps={props.viewLinkProps?.(subject.id)}
+                        />
+                    )}
+                </For>
             </ul>
         </VStack>
     )

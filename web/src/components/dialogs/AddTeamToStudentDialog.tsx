@@ -66,9 +66,9 @@ export default function AddTeamToStudentDialog(props: {
                 <Select
                     label={string.TEAMS()}
                     value={team()?.id ?? ''}
-                    onChange={e => setTeam(props.teams.find(t => t.id === Number(e.currentTarget.value)) || null)}
+                    onInput={e => setTeam(props.teams.find(t => t.id === Number(e.currentTarget.value)) || null)}
                 >
-                    <Option value="" disabled selected>
+                    <Option value="" hidden selected>
                         {string.SELECT_TEAM_HINT()}
                     </Option>
                     <For each={props.teams.filter(t => !props.currentTeamIds.includes(t.id))}>

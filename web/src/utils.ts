@@ -16,8 +16,8 @@ export function groupItems<const T, const K extends PropertyKey>(
     )
 }
 
-export function nonNull<T>(value: T | null | undefined, name = 'Value'): T {
-    if (value == null) throw new Error(`${name} must not be nullish`)
+export function nonNull<T>(value: T | null | undefined, msg = 'Value must not be nullish'): T {
+    if (value == null) throw new Error(msg)
     return value
 }
 

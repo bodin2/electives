@@ -1,42 +1,45 @@
 import { SubjectTag } from '@bodin2/electives-common/proto/api'
-import PlusIcon from '@iconify-icons/mdi/plus'
-import { createEffect, createMemo, createSignal, Show } from 'solid-js'
-import { type Subject, User } from '../../api'
+import type { LinkProps } from '@tanstack/solid-router'
+import { createEffect, createMemo, createSignal, type JSX, Show } from 'solid-js'
+import { type Elective, type Subject, User } from '../../api'
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { groupItems, nonNull } from '../../utils'
-import LinkButton from '../LinkButton'
 import { NotFoundPageContent } from '../pages/NotFoundPage'
 import SectionedList from '../SectionedList'
 import SubjectCategorySection from './SubjectCategorySection'
-import { useSubjectDisplayContext } from './SubjectDisplayContext'
 import styles from './SubjectList.module.css'
 
 export interface SubjectListProps {
     subjects: Subject[]
+    user?: User
+    elective?: Elective
+    editable?: boolean
     noRandom?: boolean
+    headerActions?: JSX.Element
+    itemActions?: (subject: Subject) => JSX.Element
+    viewLinkProps?: (subjectId: number) => LinkProps
 }
 
 export default function SubjectList(props: SubjectListProps) {
     const enrollment = useEnrollmentCounts()
     const api = useAPI()
     const { string } = useI18n()
-    const ctx = useSubjectDisplayContext()
     const [query, setQuery] = createSignal('')
 
     createEffect(() => {
-        if (ctx.elective) {
-            enrollment.initializeCounts(ctx.elective.id, api.client.electives.resolveAllEnrolledCounts(ctx.elective.id))
+        if (props.elective) {
+            enrollment.initializeCounts(props.elective.id, api.client.electives.resolveAllEnrolledCounts(props.elective.id))
         }
     })
 
     const subjects = () =>
         groupItems(
             props.subjects.filter(subject => {
-                if (ctx.editable || !ctx.user) return true
-                if (ctx.user.isTeacher()) return true
-                if (subject.teamId !== undefined) return subject.canUserEnroll(ctx.user)
+                if (props.editable || !props.user) return true
+                if (props.user.isTeacher()) return true
+                if (subject.teamId !== undefined) return subject.canUserEnroll(props.user)
                 return true
             }),
             s => SubjectTag[s.tag],
@@ -64,29 +67,27 @@ export default function SubjectList(props: SubjectListProps) {
     })
 
     return (
-        <Show when={Object.keys(subjects()).length > 0 || ctx.editable} fallback={<NotFoundPageContent />}>
+        <Show when={Object.keys(subjects()).length > 0 || props.editable} fallback={<NotFoundPageContent />}>
             <SectionedList
                 items={filteredSubjects() as Record<string, Subject[]>}
                 onSearch={setQuery}
                 searchLabel={string.SEARCH_SUBJECTS()}
-                headerActions={
-                    <Show when={ctx.editable}>
-                        <LinkButton {...ctx.createLinkProps()} variant="filled" icon={PlusIcon}>
-                            {string.CREATE_SUBJECT()}
-                        </LinkButton>
-                    </Show>
-                }
+                headerActions={props.headerActions}
                 noResultsFallback={<p class="padded text-surface-variant">{string.NO_RESULTS_FOUND()}</p>}
                 renderSection={(category, categorySubjects, q) => (
                     <SubjectCategorySection
                         noRandom={props.noRandom}
-                        defaultExpanded={q.length > 0 || ctx.editable}
-                        maxUnexpandedShown={ctx.editable ? 9999 : 3}
+                        defaultExpanded={q.length > 0 || props.editable}
+                        maxUnexpandedShown={props.editable ? 9999 : 3}
                         category={category as keyof typeof SubjectTag}
                         subjects={nonNull(categorySubjects)}
                         headerClass={styles.header}
                         listClass={styles.list}
                         thumbnailClass={styles.subjectThumbnail}
+                        editable={props.editable}
+                        elective={props.elective}
+                        itemActions={props.itemActions}
+                        viewLinkProps={props.viewLinkProps}
                     />
                 )}
             />

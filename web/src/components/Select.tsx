@@ -9,7 +9,7 @@ export interface SelectProps extends JSX.SelectHTMLAttributes<HTMLSelectElement>
 }
 
 export function Select(props: SelectProps) {
-    const [local, others] = splitProps(props, ['label', 'error', 'supportingText', 'class'])
+    const [local, others] = splitProps(props, ['label', 'error', 'supportingText', 'class', 'value', 'children'])
     const generatedId = `select-${Math.random().toString(36).slice(2)}`
 
     return (
@@ -19,8 +19,13 @@ export function Select(props: SelectProps) {
                     {local.label}
                 </label>
             )}
-            <select id={generatedId} class={`${styles.select} ${local.error ? styles.error : ''}`} {...others}>
-                {props.children}
+            <select
+                id={generatedId}
+                class={`${styles.select} ${local.error ? styles.error : ''}`}
+                {...others}
+                value={local.value ?? ''}
+            >
+                {local.children}
             </select>
             {local.supportingText && (
                 <span class={`${styles.supportingText} ${local.error ? styles.errorText : ''}`}>

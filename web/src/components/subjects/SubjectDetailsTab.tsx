@@ -17,9 +17,10 @@ import SetSubjectTagDialog from '../dialogs/SetSubjectTagDialog'
 import TextFieldDialog from '../dialogs/TextFieldDialog'
 import IconLabel from '../IconLabel'
 import { HStack, VStack } from '../Stack'
-import { type PatchSetterKey, useSubjectDisplayContext } from './SubjectDisplayContext'
+import styles from './SubjectDetailsTab.module.css'
 import SubjectImage from './SubjectImage'
-import styles from './SubjectInfo.module.css'
+import { useSubjectInfoContext } from './SubjectInfo'
+import type { PatchSetterKey } from './SubjectDisplayContext'
 
 interface SubjectDetailsTabProps {
     imageClass?: string
@@ -68,12 +69,14 @@ const FIELDS: Record<string, Field<unknown>> = {
         parse: (v, s) => (!v.trim() ? [undefined, s.ERROR_REQUIRED_FIELD_GENERIC()] : [v.trim(), undefined]),
         name: s => s.CODE(),
         required: true,
+        patchKey: 'patchCode',
     },
     location: {
         getValue: s => s.location,
         parse: (v, s) => (!v.trim() ? [undefined, s.ERROR_REQUIRED_FIELD_GENERIC()] : [v.trim(), undefined]),
         name: s => s.LOCATION(),
         required: true,
+        patchKey: 'patchLocation',
     },
     capacity: {
         getValue: s => s.capacity,
@@ -131,7 +134,7 @@ interface ActiveField {
 export default function SubjectDetailsTab(props: SubjectDetailsTabProps) {
     const { string } = useI18n()
     const enrollmentCounts = useEnrollmentCounts()
-    const ctx = useSubjectDisplayContext()
+    const ctx = useSubjectInfoContext()
 
     const subject = () => nonNull(ctx.subject)
 

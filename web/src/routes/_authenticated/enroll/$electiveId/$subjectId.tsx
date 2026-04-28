@@ -1,10 +1,9 @@
 import { createFileRoute } from '@tanstack/solid-router'
-import { createEffect, onCleanup } from 'solid-js'
 import { NotFoundError } from '../../../../api'
 import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
-import { useSubjectDisplayContext } from '../../../../components/subjects/SubjectDisplayContext'
 import SubjectInfo from '../../../../components/subjects/SubjectInfo'
+import { useAPI } from '../../../../providers/APIProvider'
 import { nonNull } from '../../../../utils'
 import { AUTHENTICATED_ROUTE_DEFAULTS } from '../../../_authenticated'
 
@@ -12,6 +11,7 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
     ...AUTHENTICATED_ROUTE_DEFAULTS,
     params: {
         parse: raw => ({
+            electiveId: Number(raw.electiveId),
             subjectId: Number(raw.subjectId),
         }),
     },
@@ -47,20 +47,16 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
 
 function RouteComponent() {
     const data = Route.useLoaderData()
-    const ctx = useSubjectDisplayContext()
-
-    createEffect(() => {
-        ctx.setSubject(data().subject)
-        ctx.setElective(data().elective)
-    })
-
-    onCleanup(() => {
-        ctx.setSubject(undefined)
-    })
+    const { client } = useAPI()
 
     return (
         <Page name={data().subject.name}>
-            <SubjectInfo selectedSubject={data().selectedSubject} />
+            <SubjectInfo
+                subject={data().subject}
+                elective={data().elective}
+                user={client.user ?? undefined}
+                selectedSubject={data().selectedSubject}
+            />
         </Page>
     )
 }

@@ -70,11 +70,11 @@ export const BaseUserDisplayContext = {
     }),
     editLinkProps: userId => ({
         to: '/manage/users/$userId',
-        params: { userId: String(userId) },
+        params: { userId },
     }),
     viewLinkProps: userId => ({
         to: '/manage/users/$userId',
-        params: { userId: String(userId) },
+        params: { userId },
     }),
     creating: false,
     editable: false,

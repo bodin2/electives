@@ -3,7 +3,7 @@ import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import SectionedList from '../SectionedList'
-import { SubjectDisplayContextProvider, useSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
+import { BaseSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
 import SubjectListItem from '../subjects/SubjectListItem'
 import type { Elective, Subject } from '../../api'
 
@@ -53,8 +53,6 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
         return result
     })
 
-    const subjectDisplayContext = useSubjectDisplayContext()
-
     return (
         <Show when={data()}>
             <SectionedList
@@ -71,15 +69,11 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
                         <ul>
                             <For each={items}>
                                 {({ elective, subject }) => (
-                                    <SubjectDisplayContextProvider
-                                        value={{
-                                            ...subjectDisplayContext,
-                                            editable: false,
-                                            elective,
-                                        }}
-                                    >
-                                        <SubjectListItem subject={subject} />
-                                    </SubjectDisplayContextProvider>
+                                    <SubjectListItem
+                                        subject={subject}
+                                        electiveId={elective.id}
+                                        linkProps={BaseSubjectDisplayContext.viewLinkProps(elective.id, subject.id)}
+                                    />
                                 )}
                             </For>
                         </ul>

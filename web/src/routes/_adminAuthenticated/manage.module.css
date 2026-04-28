@@ -60,10 +60,6 @@
     z-index: calc(var(--layer-nav-backdrop));
 }
 
-option[value=""][disabled] {
-    display: none;
-}
-
 :global(#app):has(:global(#admin-app)) {
     height: 100vh;
     height: 100dvh;

@@ -1,6 +1,7 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { useRouter } from '@tanstack/solid-router'
-import { type Component, createEffect, createSignal, Match, Show, Switch } from 'solid-js'
+import { type Component, createContext, createEffect, createSignal, Match, Switch, useContext } from 'solid-js'
+import { createStore } from 'solid-js/store'
 import { useAutoRefreshResource } from '../../hooks/useAutoRefreshResource'
 import { useRetryableSubscription } from '../../hooks/useRetryableSubscription'
 import { useAPI } from '../../providers/APIProvider'
@@ -11,15 +12,34 @@ import { VStack } from '../Stack'
 import StickyTabs from '../StickyTabs'
 import SubjectBottomActions from './SubjectBottomActions'
 import SubjectDetailsTab from './SubjectDetailsTab'
-import { useSubjectDisplayContext } from './SubjectDisplayContext'
 import styles from './SubjectInfo.module.css'
 import SubjectMembersTab from './SubjectMembersTab'
-import type { Subject } from '../../api'
+import type { Elective, Subject, User } from '../../api'
+import type { PatchSetterKey } from './SubjectDisplayContext'
 
 export interface SubjectInfoProps {
+    subject: Subject
+    elective?: Elective
+    user?: User
+    editable?: boolean
+    onEdit?: (field: string, value: any, patchKey?: PatchSetterKey) => Promise<void> | void
+    onSave?: () => Promise<void> | void
     selectedSubject?: Subject
-    extraActions?: Component
+    extraActions?: Component<{ subject: Subject; elective?: Elective }>
 }
+
+interface SubjectInfoContext {
+    subject: Subject
+    elective?: Elective
+    user?: User
+    editable?: boolean
+    onEdit?: (field: string, value: any, patchKey?: PatchSetterKey) => Promise<void> | void
+    onSave?: () => Promise<void> | void
+}
+
+const SubjectInfoContext = createContext<SubjectInfoContext>(null as unknown as SubjectInfoContext)
+export const useSubjectInfoContext = () =>
+    nonNull(useContext(SubjectInfoContext), 'useSubjectInfoContext must be used within a SubjectInfo provider')
 
 const log = new Logger('components/subjects/SubjectInfo')
 
@@ -28,58 +48,51 @@ export default function SubjectInfo(props: SubjectInfoProps) {
     const api = useAPI()
     const enrollment = useEnrollmentCounts()
     const router = useRouter()
-    const ctx = useSubjectDisplayContext()
 
     const [tab, setTab] = createSignal('info')
     const [outdatedMembers, setOutdatedMembers] = createSignal(false)
 
-    const [membersTabOpened, setMembersTabOpened] = createSignal(false)
+    const membersTabOpened = () => tab() === 'members'
 
-    const currentTeacherIds = () => ctx.subject?.teachers.map(t => t.id) ?? []
+    const currentTeacherIds = () => props.subject.teachers.map(t => t.id) ?? []
 
     createEffect(prev => {
-        if (prev !== ctx.elective) setOutdatedMembers(true)
-        return ctx.elective
+        if (prev !== props.elective) setOutdatedMembers(true)
+        return props.elective
     })
 
     createEffect(() => {
-        setMembersTabOpened(tab() === 'members' && Boolean(ctx.elective))
-    })
-
-    createEffect(() => {
-        if (ctx.elective) {
-            enrollment.initializeCounts(ctx.elective.id, api.client.electives.resolveAllEnrolledCounts(ctx.elective.id))
+        if (props.elective) {
+            enrollment.initializeCounts(
+                props.elective.id,
+                api.client.electives.resolveAllEnrolledCounts(props.elective.id),
+            )
         }
     })
 
     useRetryableSubscription(
         () => {
-            if (!ctx.elective || !ctx.subject || ctx.editable) return
+            if (!props.elective || !props.subject || props.editable) return
             api.client.gateway.subscribeToElective(
-                ctx.elective.id,
-                [ctx.subject.id, props.selectedSubject?.id].filter(Boolean) as number[],
+                props.elective.id,
+                [props.subject.id, props.selectedSubject?.id].filter(Boolean) as number[],
             )
         },
         () => {
-            if (!ctx.elective || ctx.editable) return
+            if (!props.elective || props.editable) return
             if (api.client.isGatewayConnected()) {
-                api.client.gateway.subscribeToElective(ctx.elective.id, [])
+                api.client.gateway.subscribeToElective(props.elective.id, [])
             } else log.warn('WebSocket not connected, skipping unsubscription')
         },
     )
 
     const [members] = useAutoRefreshResource(
         async () => {
-            if (!ctx.elective || !ctx.subject)
-                return {
-                    students: [],
-                    teachers: [],
-                    capacity: ctx.subject?.capacity ?? 0,
-                }
+            if (!props.elective || !props.subject) return undefined
 
             let { students, teachers } = await api.client.subjects.fetchMembers({
-                electiveId: ctx.elective.id,
-                subjectId: ctx.subject.id,
+                electiveId: props.elective.id,
+                subjectId: props.subject.id,
                 withStudents: true,
             })
 
@@ -88,17 +101,17 @@ export default function SubjectInfo(props: SubjectInfoProps) {
 
             setOutdatedMembers(false)
 
-            return { students, teachers, capacity: ctx.subject.capacity }
+            return { students, teachers, capacity: props.subject.capacity }
         },
         {
             shouldFetch: () => membersTabOpened() || outdatedMembers(),
-            getKey: () => (ctx.elective ? `${ctx.elective.id}:${enrollment.getVersion(ctx.elective.id)}` : ''),
-            interval: ctx.editable ? 500 : undefined,
+            getKey: () => (props.elective ? `${props.elective.id}:${enrollment.getVersion(props.elective.id)}` : ''),
+            interval: props.editable ? 500 : undefined,
         },
     )
 
     const handleStudentRemove = async (stud: { id: number }) => {
-        const el = nonNull(ctx.elective)
+        const el = nonNull(props.elective)
 
         await api.client.selections.delete(stud.id, el.id)
         enrollment.bumpVersion(el.id)
@@ -107,9 +120,9 @@ export default function SubjectInfo(props: SubjectInfoProps) {
     }
 
     const handleTeacherRemove = async (teach: { id: number }) => {
-        const el = nonNull(ctx.elective)
+        const el = nonNull(props.elective)
 
-        await api.client.subjects.admin.patch(nonNull(ctx.subject).id, {
+        await api.client.subjects.admin.patch(nonNull(props.subject).id, {
             teachers: currentTeacherIds().filter(id => id !== teach.id),
             electiveId: el.id,
             patchTeachers: true,
@@ -126,21 +139,32 @@ export default function SubjectInfo(props: SubjectInfoProps) {
         await router.invalidate()
     }
 
+    // SolidJS moment
+    const [info, setInfo] = createStore<SubjectInfoContext>(null as unknown as SubjectInfoContext)
+    createEffect(() => {
+        setInfo({
+            subject: props.subject,
+            elective: props.elective,
+            user: props.user,
+            editable: props.editable,
+            onEdit: props.onEdit,
+            onSave: props.onSave,
+        })
+    })
+
     return (
-        <>
-            <Show when={ctx.elective}>
-                <StickyTabs
-                    value={tab()}
-                    onChange={setTab}
-                    tabs={[
-                        { label: string.SUBJECT(), value: 'info' },
-                        { label: string.MEMBERS_LIST(), value: 'members' },
-                    ]}
-                />
-            </Show>
+        <SubjectInfoContext.Provider value={info}>
+            <StickyTabs
+                value={tab()}
+                onChange={setTab}
+                tabs={[
+                    { label: string.SUBJECT(), value: 'info' },
+                    { label: string.MEMBERS_LIST(), value: 'members' },
+                ]}
+            />
             <VStack gap={16} grow class={`padded ${styles.tabContent}`}>
                 <Switch>
-                    <Match when={tab() === 'info' || !ctx.elective}>
+                    <Match when={tab() === 'info'}>
                         <SubjectDetailsTab
                             imageClass={styles.image}
                             imagePlaceholderClass={`${styles.image} ${styles.placeholder}`}
@@ -153,11 +177,11 @@ export default function SubjectInfo(props: SubjectInfoProps) {
                         <SubjectMembersTab
                             members={members()}
                             onStudentRemove={
-                                ctx.editable || (ctx.user?.isTeacher() && ctx.subject?.isTaughtBy(ctx.user))
+                                props.editable || (props.user?.isTeacher() && props.subject?.isTaughtBy(props.user))
                                     ? handleStudentRemove
                                     : undefined
                             }
-                            onTeacherRemove={ctx.editable ? handleTeacherRemove : undefined}
+                            onTeacherRemove={props.editable ? handleTeacherRemove : undefined}
                             gridClass={styles.membersGrid}
                             headerClass={styles.membersHeader}
                             listClass={styles.membersList}
@@ -167,7 +191,17 @@ export default function SubjectInfo(props: SubjectInfoProps) {
                 </Switch>
             </VStack>
 
-            <SubjectBottomActions extraContent={props.extraActions} selectedSubject={props.selectedSubject} />
-        </>
+            <SubjectBottomActions
+                extraContent={
+                    props.extraActions
+                        ? () => {
+                              const ExtraActions = props.extraActions!
+                              return <ExtraActions subject={props.subject} elective={props.elective} />
+                          }
+                        : undefined
+                }
+                selectedSubject={props.selectedSubject}
+            />
+        </SubjectInfoContext.Provider>
     )
 }

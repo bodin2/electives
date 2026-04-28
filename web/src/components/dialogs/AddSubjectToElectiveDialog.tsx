@@ -77,11 +77,11 @@ export default function AddSubjectToElectiveDialog(props: {
                 <Select
                     label={string.ENROLLMENTS()}
                     value={elective()?.id ?? ''}
-                    onChange={e =>
+                    onInput={e =>
                         setElective(props.electives.find(el => el.id === Number(e.currentTarget.value)) || null)
                     }
                 >
-                    <Option value="" disabled selected>
+                    <Option value="" hidden selected>
                         {string.SELECT_ENROLLMENT()}
                     </Option>
                     <For each={props.electives.filter(e => !e.subjects?.some(s => s.id === props.subjectId))}>

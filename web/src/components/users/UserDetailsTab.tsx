@@ -72,7 +72,7 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                             width: 'fit-content',
                             cursor: ctx.editable ? 'pointer' : 'default',
                         }}
-                        onClick={() => editAvatar()}
+                        onClick={editAvatar}
                         tabindex="-1"
                     >
                         <UserAvatar
@@ -151,7 +151,7 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                         <Select
                             label={string.TYPE()}
                             value={user().type}
-                            onChange={e => ctx.onEdit?.('type', Number(e.currentTarget.value))}
+                            onInput={e => ctx.onEdit?.('type', Number(e.currentTarget.value))}
                         >
                             <Option value={UserType.STUDENT} selected={user().type === UserType.STUDENT}>
                                 {string.USER_TYPE_STUDENT()}
@@ -170,8 +170,6 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                         value={user().firstName}
                         onInput={e => {
                             ctx.onEdit?.('firstName', e.currentTarget.value)
-
-                            console.log(e.currentTarget.value, e.target.validity)
 
                             e.target.setCustomValidity(
                                 e.currentTarget.value.trim() ? '' : string.ERROR_REQUIRED_FIELD_GENERIC(),

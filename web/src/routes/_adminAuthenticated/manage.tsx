@@ -21,8 +21,8 @@ import SettingsDialog from '../../components/dialogs/SettingsDialog'
 import { PageTopAppBar } from '../../components/PageTopAppBar'
 import { HStack, VStack } from '../../components/Stack'
 import {
+    BaseSubjectDisplayContext,
     SubjectDisplayContextProvider,
-    useSubjectDisplayContext,
 } from '../../components/subjects/SubjectDisplayContext'
 import { UserDisplayContextProvider, useUserDisplayContext } from '../../components/users/UserDisplayContext'
 import { useI18n } from '../../providers/I18nProvider'
@@ -41,7 +41,6 @@ function RouteComponent() {
     const [settingsOpen, setSettingsOpen] = createSignal(false)
     const pageData = usePageData()
     const [containerRef, setContainerRef] = createSignal<HTMLDivElement | undefined>()
-    const subjectDisplayContext = useSubjectDisplayContext()
     const userDisplayContext = useUserDisplayContext()
     const [modalNav, setModalNav] = createSignal(false)
 
@@ -77,16 +76,18 @@ function RouteComponent() {
     onMount(() => {
         if (!pageData) return
 
-        pageData.setAllowBacking(false)
-
         const prevLeading = pageData.leading
         const prevTrailing = pageData.trailing
+        const prevElevated = pageData.topAppBarElevated
+        const prevAllowBacking = pageData.allowBacking
+
+        pageData.setAllowBacking(false)
         pageData.setLeading(NavMenuToggle)
         pageData.setTrailing(AdminTrailing)
 
         onCleanup(() => {
-            pageData.setTopAppBarElevated(false)
-            pageData.setAllowBacking(true)
+            pageData.setTopAppBarElevated(prevElevated)
+            pageData.setAllowBacking(prevAllowBacking)
             pageData.setLeading(prevLeading)
             pageData.setTrailing(prevTrailing)
         })
@@ -138,9 +139,9 @@ function RouteComponent() {
                     >
                         <SubjectDisplayContextProvider
                             value={{
-                                ...subjectDisplayContext,
-                                user: undefined,
                                 editable: true,
+                                createLinkProps: BaseSubjectDisplayContext.createLinkProps,
+                                editLinkProps: BaseSubjectDisplayContext.editLinkProps,
                                 viewLinkProps: (electiveId, subjectId) => ({
                                     to: '/manage/subjects/$subjectId',
                                     params: { subjectId },

@@ -8,7 +8,7 @@ import { nonNull } from '../../utils'
 import Badge from '../Badge'
 import { Button } from '../Button'
 import LoadingPage from '../pages/LoadingPage'
-import { HStack } from '../Stack'
+import { HStack, VStack } from '../Stack'
 import styles from './SubjectMembersTab.module.css'
 import type { User } from '../../api'
 
@@ -27,7 +27,18 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
 
     return (
         <Suspense fallback={<LoadingPage />}>
-            <Show when={props.members} fallback={<LoadingPage />}>
+            <Show
+                when={props.members}
+                fallback={
+                    <VStack grow alignHorizontal="center" alignVertical="center">
+                        <h1 class="m3-headline-medium text-balance">{string.SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT()}</h1>
+                        <p class="m3-body-large text-surface-variant text-center text-balance">
+                            {string.SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT_DESCRIPTION()}
+                        </p>
+                        {/* TODO: Add picker here? */}
+                    </VStack>
+                }
+            >
                 {data => (
                     <div class={props.gridClass}>
                         <SubjectMembersSection

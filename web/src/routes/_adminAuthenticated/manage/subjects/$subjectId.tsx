@@ -1,22 +1,26 @@
 import { SubjectTag } from '@bodin2/electives-common/proto/api'
 import { createFileRoute, useRouter } from '@tanstack/solid-router'
-import { createEffect, createMemo, createSignal, onCleanup, onMount, Show } from 'solid-js'
+import { createMemo, createSignal, Show } from 'solid-js'
 import { type AdminSubjectPatch, ConflictError, type RawSubject, Subject } from '../../../../api'
 import Page from '../../../../components/Page'
 import SubjectAdminEnrollmentActions from '../../../../components/subjects/SubjectAdminEnrollmentActions'
-import { type PatchSetterKey, useSubjectDisplayContext } from '../../../../components/subjects/SubjectDisplayContext'
 import SubjectInfo from '../../../../components/subjects/SubjectInfo'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { simpleXXHash31 } from '../../../../utils/xxhash'
+import { Route as SubjectsRoute } from '../index'
+import type { PatchSetterKey } from '../../../../components/subjects/SubjectDisplayContext'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subjectId')({
     component: RouteComponent,
-    validateSearch: (search): { elective_id?: number } => {
-        return {
-            elective_id: search?.elective_id != null ? Number(search?.elective_id) : undefined,
-        }
+    params: {
+        parse: (raw): { subjectId: string | number } => ({
+            subjectId: raw.subjectId,
+        }),
     },
+    validateSearch: (search): { elective_id?: number } => ({
+        elective_id: search?.elective_id != null ? Number(search?.elective_id) : undefined,
+    }),
     loader: async ({ params: { subjectId }, context: { client } }) => {
         const allElectives = await client.electives.fetchAll()
 
@@ -44,7 +48,7 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subj
     },
 })
 
-const isNewRoute = (subjectId: string) => subjectId === 'new'
+const isNewRoute = (subjectId: string | number) => subjectId === 'new'
 
 function RouteComponent() {
     const params = Route.useParams()
@@ -57,7 +61,6 @@ function RouteComponent() {
     const { client } = useAPI()
     const { string } = useI18n()
     const router = useRouter()
-    const displayContext = useSubjectDisplayContext()
 
     // Lifted state for the subject
     const [subjectData, setSubjectData] = createSignal<RawSubject>(
@@ -74,8 +77,13 @@ function RouteComponent() {
     )
 
     const subject = createMemo(() => new Subject(subjectData()))
+    const elective = createMemo(() => {
+        const electiveId = search().elective_id
+        if (electiveId === undefined) return undefined
+        return data().electives.find(e => e.id === electiveId)
+    })
 
-    const invalidate = () => router.invalidate({ filter: r => r.id === Route.id || r.id === Route.parentRoute.id })
+    const invalidate = () => router.invalidate({ filter: r => r.id === Route.id || r.id === SubjectsRoute.id })
 
     const handleEdit = async (key: string, val: unknown, patchKey?: PatchSetterKey) => {
         if (isNew()) {
@@ -131,7 +139,7 @@ function RouteComponent() {
                 await invalidate()
 
                 navigate({
-                    params: { subjectId: s.id.toString() },
+                    params: { subjectId: s.id },
                     replace: true,
                 })
 
@@ -146,37 +154,29 @@ function RouteComponent() {
         }
     }
 
-    onMount(() => {
-        if (isNew()) return
-
-        onCleanup(() => {
-            displayContext.setElective(undefined)
-            displayContext.setSubject(undefined)
-            displayContext.setOnEdit(undefined)
-            displayContext.setOnSave(undefined)
-        })
-    })
-
-    createEffect(() => {
-        displayContext.setSubject(subject())
-        displayContext.setOnEdit(handleEdit)
-        displayContext.setOnSave(isNew() ? handleCreate : undefined)
-    })
-
-    createEffect(() => {
-        const electiveId = search().elective_id ? Number(search().elective_id) : undefined
-        const elective = data().electives.find(e => e.id === electiveId)
-        displayContext.setElective(elective)
-    })
-
     return (
         <Page name={isNew() ? string.CREATE_SUBJECT() : subject().name} allowBacking leading={null} trailing={null}>
             <SubjectInfo
-                extraActions={() => (
+                subject={subject()}
+                elective={elective()}
+                user={client.user ?? undefined}
+                editable
+                onEdit={handleEdit}
+                onSave={isNew() ? handleCreate : undefined}
+                extraActions={props => (
                     <Show when={!isNew()}>
                         <SubjectAdminEnrollmentActions
+                            subject={props.subject}
+                            elective={props.elective}
                             allElectives={data().allElectives}
-                            enrolledElectives={data().electives}
+                            addedElectives={data().electives}
+                            setElectiveId={id =>
+                                navigate({
+                                    search: prev => ({ ...prev, elective_id: id }),
+                                    replace: true,
+                                })
+                            }
+                            onInvalidate={invalidate}
                         />
                     </Show>
                 )}

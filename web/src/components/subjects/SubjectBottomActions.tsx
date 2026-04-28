@@ -8,12 +8,12 @@ import AddStudentToSubjectButton from '../buttons/AddStudentToSubjectButton'
 import AddTeacherToSubjectButton from '../buttons/AddTeacherToSubjectButton'
 import DynamicEnrollButton from '../buttons/DynamicEnrollButton'
 import { HStack, VStack } from '../Stack'
-import { useSubjectDisplayContext } from './SubjectDisplayContext'
+import { useSubjectInfoContext } from './SubjectInfo'
 import styles from './SubjectInfo.module.css'
 import type { Subject } from '../../api'
 
 export default function SubjectBottomActions(props: { selectedSubject?: Subject; extraContent?: Component }) {
-    const ctx = useSubjectDisplayContext()
+    const ctx = useSubjectInfoContext()
     const { string } = useI18n()
     const scrollData = useScrollData()
 

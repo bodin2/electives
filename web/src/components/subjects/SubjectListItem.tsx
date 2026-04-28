@@ -1,36 +1,32 @@
-import DeleteOutlineIcon from '@iconify-icons/mdi/delete-outline'
-import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
-import { Show } from 'solid-js'
+import type { LinkProps } from '@tanstack/solid-router'
+import { type JSX, Show } from 'solid-js'
 import { User } from '../../api'
 import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placeholder.webp'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import { nonNull } from '../../utils'
-import { Button } from '../Button'
 import LinkListItem from '../LinkListItem'
-import { HStack, VStack } from '../Stack'
-import { useSubjectDisplayContext } from './SubjectDisplayContext'
+import { VStack } from '../Stack'
 import styles from './SubjectListItem.module.css'
 import type { Subject } from '../../api'
 
 interface SubjectListItemProps {
     subject: Subject
+    editable?: boolean
+    electiveId?: number
+    actions?: JSX.Element
+    linkProps?: LinkProps
 }
 
 export default function SubjectListItem(props: SubjectListItemProps) {
     const { string } = useI18n()
     const enrollment = useEnrollmentCounts()
-    const ctx = useSubjectDisplayContext()
-
-    const electiveId = () => ctx.elective?.id
 
     const enrolledCount = () => {
-        const id = electiveId()
-        return id !== undefined ? (enrollment.getCount(id, props.subject.id) ?? 0) : 0
+        return props.electiveId !== undefined ? (enrollment.getCount(props.electiveId, props.subject.id) ?? 0) : 0
     }
 
     const isNearCapacity = () => {
-        if (electiveId() === undefined) return false
+        if (props.electiveId === undefined) return false
         return enrolledCount() / props.subject.capacity > 0.8 || props.subject.capacity - enrolledCount() < 5
     }
 
@@ -46,27 +42,8 @@ export default function SubjectListItem(props: SubjectListItemProps) {
 
     const Trailing = (
         <VStack alignHorizontal="end">
-            <Show when={ctx.editable}>
-                <HStack gap={8}>
-                    <Button
-                        variant="text"
-                        iconType="only"
-                        icon={PencilOutlineIcon}
-                        aria-label={string.EDIT_SUBJECT()}
-                    />
-                    <Button
-                        variant="tonal-error"
-                        iconType="only"
-                        icon={DeleteOutlineIcon}
-                        aria-label={string.DELETE_SUBJECT()}
-                        onClick={e => {
-                            e.stopPropagation()
-                            ctx.setDeletingSubject(props.subject)
-                        }}
-                    />
-                </HStack>
-            </Show>
-            <Show when={electiveId() !== undefined}>
+            <Show when={props.actions}>{props.actions}</Show>
+            <Show when={props.electiveId !== undefined}>
                 <p
                     class="m3-body-medium"
                     classList={{
@@ -86,16 +63,9 @@ export default function SubjectListItem(props: SubjectListItemProps) {
         </>
     )
 
-    const linkProps = () =>
-        ctx.editable
-            ? ctx.editLinkProps(props.subject.id)
-            : electiveId() !== undefined
-              ? ctx.viewLinkProps(nonNull(electiveId()), props.subject.id)
-              : {}
-
     return (
         <LinkListItem
-            {...linkProps()}
+            {...(props.linkProps ?? {})}
             class={styles.item}
             lines={4}
             headline={props.subject.name}

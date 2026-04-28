@@ -164,5 +164,7 @@
   "ERROR_NOT_STUDENT": "Not a student",
   "ERROR_NOT_TEACHER": "Not a teacher",
   "SELECT_TEAM_HINT": "Select a team",
-  "PASSWORD_REQUIREMENTS": "Must be at least 4 characters long"
+  "PASSWORD_REQUIREMENTS": "Must be at least 4 characters long",
+  "SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT": "Pick an enrollment",
+  "SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT_DESCRIPTION": "This subject is offered in multiple active enrollments. Please pick an enrollment to view its members."
 }

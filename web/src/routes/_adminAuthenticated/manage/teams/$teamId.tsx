@@ -103,7 +103,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={isNew() ? string.CREATE_TEAM() : string.EDIT_TEAM()} leading={null} trailing={null} allowBacking>
+        <Page name={isNew() ? string.CREATE_TEAM() : string.EDIT_TEAM()} allowBacking leading={null} trailing={null}>
             <Show when={!isNew()}>
                 <StickyTabs
                     value={tab()}
