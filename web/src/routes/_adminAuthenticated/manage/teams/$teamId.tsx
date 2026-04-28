@@ -2,7 +2,7 @@ import CloseIcon from '@iconify-icons/mdi/close'
 import PlusIcon from '@iconify-icons/mdi/plus'
 import { createFileRoute, defer, useRouter } from '@tanstack/solid-router'
 import { LoadingIndicator, TextField } from 'm3-solid'
-import { createEffect, createResource, createSignal, Match, on, onMount, Show, Suspense, Switch } from 'solid-js'
+import { createEffect, createResource, createSignal, Match, Show, Suspense, Switch } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { NotFoundError, type User } from '../../../../api'
 import PaginatedUserList, { type PaginatedUserListHandle } from '../../../../components/admin/PaginatedUserList'
@@ -12,6 +12,7 @@ import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
 import { VStack } from '../../../../components/Stack'
 import StickyTabs from '../../../../components/StickyTabs'
+import { useTabPersistence } from '../../../../hooks/useTabPersistence'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { nonNull } from '../../../../utils'
@@ -43,7 +44,6 @@ const tryCoerceValidId = (id: string) => {
 
 function RouteComponent() {
     const params = Route.useParams()
-    const search = Route.useSearch()
     const { client } = useAPI()
     const router = useRouter()
     const { string } = useI18n()
@@ -54,6 +54,8 @@ function RouteComponent() {
     const isNew = () => isNewRoute(params().teamId)
 
     const [tab, setTab] = createSignal<'info' | 'members'>('info')
+    useTabPersistence(tab, setTab)
+
     const [name, setName] = createSignal('')
     const [id, setId] = createSignal('')
 
@@ -68,19 +70,6 @@ function RouteComponent() {
             setId('')
         }
     })
-
-    onMount(() => {
-        const tab = search().tab
-        if (tab) {
-            setTab(tab)
-        }
-    })
-
-    createEffect(
-        on(tab, tab => {
-            navigate({ search: { ...search(), tab }, replace: true })
-        }),
-    )
 
     const handleSave = async () => {
         const idParsed = tryCoerceValidId(id())

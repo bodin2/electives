@@ -15,12 +15,14 @@ import { Route as TeachersRoute } from '../teachers'
 
 type UserSearch = {
     type?: 'student' | 'teacher'
+    tab?: string
 }
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/users/$userId')({
     validateSearch: (search: Record<string, unknown>): UserSearch => {
         return {
             type: (search.type as 'student' | 'teacher') || undefined,
+            tab: (search.tab as string) || undefined,
         }
     },
     component: RouteComponent,

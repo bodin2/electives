@@ -25,8 +25,9 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subj
             subjectId: raw.subjectId,
         }),
     },
-    validateSearch: (search): { elective_id?: number } => ({
+    validateSearch: (search: Record<string, unknown>): { elective_id?: number; tab?: string } => ({
         elective_id: search?.elective_id != null ? Number(search?.elective_id) : undefined,
+        tab: (search.tab as string) || undefined,
     }),
     loader: async ({ params: { subjectId }, context: { client } }) => {
         const allElectives = await client.electives.fetchAll()

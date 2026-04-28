@@ -3,6 +3,7 @@ import { type Component, createContext, createEffect, createSignal, Match, Show,
 import { createStore } from 'solid-js/store'
 import { useAutoRefreshResource } from '../../hooks/useAutoRefreshResource'
 import { useRetryableSubscription } from '../../hooks/useRetryableSubscription'
+import { useTabPersistence } from '../../hooks/useTabPersistence'
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
@@ -28,6 +29,7 @@ export interface SubjectInfoProps {
     selectedSubject?: Subject
     creating?: boolean
     extraActions?: Component<{ subject: Subject; elective?: Elective }>
+    persistTab?: boolean
 }
 
 interface SubjectInfoContext {
@@ -51,6 +53,7 @@ export default function SubjectInfo(props: SubjectInfoProps) {
     const enrollment = useEnrollmentCounts()
 
     const [tab, setTab] = createSignal('info')
+    useTabPersistence(tab, setTab, { disabled: props.persistTab === false })
     const [outdatedMembers, setOutdatedMembers] = createSignal(false)
 
     const membersTabOpened = () => tab() === 'members'

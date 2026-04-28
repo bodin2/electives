@@ -1,4 +1,5 @@
 import { type Component, createSignal, Match, Show, Suspense, Switch } from 'solid-js'
+import { useTabPersistence } from '../../hooks/useTabPersistence'
 import { useI18n } from '../../providers/I18nProvider'
 import { nonNull } from '../../utils'
 import LoadingPage from '../pages/LoadingPage'
@@ -15,6 +16,7 @@ export interface UserInfoProps {
     extraActions?: Component
     initialType?: UserType
     teams?: Team[]
+    persistTab?: boolean
 }
 
 export default function UserInfo(props: UserInfoProps) {
@@ -22,6 +24,7 @@ export default function UserInfo(props: UserInfoProps) {
     const ctx = useUserDisplayContext()
 
     const [tab, setTab] = createSignal('info')
+    useTabPersistence(tab, setTab, { disabled: props.persistTab === false })
 
     const tabs = () => {
         const list = [{ label: string.USER_INFO(), value: 'info' }]
