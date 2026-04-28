@@ -13,7 +13,7 @@ import {
     type NavigationRailItemProps,
     NavigationRailToggle,
 } from 'm3-solid'
-import { createEffect, createSignal, onCleanup, onMount, splitProps } from 'solid-js'
+import { createEffect, createRenderEffect, createSignal, on, onCleanup, onMount, splitProps } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { Button } from '../../components/Button'
 import LogOutButton from '../../components/buttons/LogOutButton'
@@ -50,20 +50,23 @@ function RouteComponent() {
         </div>
     )
 
-    const AdminTrailing = () => (
-        <HStack>
-            <LogOutButton iconType="only" noText />
-            <Button
-                variant="text"
-                aria-label={string.SETTINGS()}
-                icon={SettingsIcon}
-                iconType="only"
-                onClick={() => {
-                    setSettingsOpen(true)
-                }}
-            />
-        </HStack>
-    )
+    const AdminTrailing = () => {
+        const { string } = useI18n()
+        return (
+            <HStack>
+                <LogOutButton iconType="only" noText />
+                <Button
+                    variant="text"
+                    aria-label={string.SETTINGS()}
+                    icon={SettingsIcon}
+                    iconType="only"
+                    onClick={() => {
+                        setSettingsOpen(true)
+                    }}
+                />
+            </HStack>
+        )
+    }
 
     onMount(() => {
         const mql = window.matchMedia('(max-width: 880px)')
@@ -73,21 +76,28 @@ function RouteComponent() {
         onCleanup(() => mql.removeEventListener('change', listener))
     })
 
-    const prevLeading = pageData.leading
-    const prevTrailing = pageData.trailing
-    const prevElevated = pageData.topAppBarElevated
-    const prevAllowBacking = pageData.allowBacking
+    createRenderEffect(
+        on(
+            () => pageData,
+            pageData => {
+                const prevLeading = pageData.leading
+                const prevTrailing = pageData.trailing
+                const prevElevated = pageData.topAppBarElevated
+                const prevAllowBacking = pageData.allowBacking
 
-    pageData.setAllowBacking(false)
-    pageData.setLeading(NavMenuToggle)
-    pageData.setTrailing(AdminTrailing)
+                pageData.setAllowBacking(false)
+                pageData.setLeading(NavMenuToggle)
+                pageData.setTrailing(AdminTrailing)
 
-    onCleanup(() => {
-        pageData.setTopAppBarElevated(prevElevated)
-        pageData.setAllowBacking(prevAllowBacking)
-        pageData.setLeading(prevLeading)
-        pageData.setTrailing(prevTrailing)
-    })
+                onCleanup(() => {
+                    pageData.setTopAppBarElevated(prevElevated)
+                    pageData.setAllowBacking(prevAllowBacking)
+                    pageData.setLeading(prevLeading)
+                    pageData.setTrailing(prevTrailing)
+                })
+            },
+        ),
+    )
 
     createEffect(() => {
         if (!navOpen() && !modalNav()) return

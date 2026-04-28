@@ -43,10 +43,10 @@ export default function Page(props: PageProps) {
         const prevAllowBacking = pageData.allowBacking
 
         onCleanup(() => {
-            if (local.name !== null) pageData.setTitle(prevTitle)
-            if (local.leading !== null) pageData.setLeading(prevLeading)
-            if (local.trailing !== null) pageData.setTrailing(prevTrailing)
-            if (local.allowBacking !== undefined) pageData.setAllowBacking(prevAllowBacking)
+            pageData.setTitle(prevTitle)
+            pageData.setLeading(prevLeading)
+            pageData.setTrailing(prevTrailing)
+            pageData.setAllowBacking(prevAllowBacking)
         })
     })
 
