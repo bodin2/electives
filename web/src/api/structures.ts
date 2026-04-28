@@ -21,7 +21,7 @@ export class User {
     readonly id: number
     readonly firstName: string
     readonly middleName?: string
-    readonly lastName: string
+    readonly lastName?: string
     readonly type: UserType
     /** The user's avatar as bytes (optional) */
     readonly avatarUrl?: string
