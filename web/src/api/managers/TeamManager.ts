@@ -9,7 +9,7 @@ export class TeamManager implements CacheableManager {
     readonly cache: Cache<number, Team>
     readonly admin: TeamAdminActions
 
-    private cachedAll = false
+    cachedAll = false
 
     constructor(
         private readonly rest: RESTClient,
@@ -102,6 +102,7 @@ export class TeamAdminActions {
             encoder: RawTeam,
         })
         this.manager.cache.delete(id)
+        this.manager.cachedAll = false
     }
 
     /**
@@ -115,6 +116,7 @@ export class TeamAdminActions {
             encoder: AdminTeamPatch,
         })
         this.manager.cache.delete(id)
+        this.manager.cachedAll = false
     }
 
     /**
@@ -130,7 +132,7 @@ export class TeamAdminActions {
     /**
      * Fetch member counts for all teams
      *
-     * @returns A record mapping team IDs to member counts
+     * @ream IDs to member counts
      */
     async fetchMemberCounts(): Promise<Record<number, number>> {
         const data = await this.rest.get<AdminService_TeamMemberCounts>('/admin/teams/member-counts', {
