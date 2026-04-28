@@ -1,6 +1,6 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { useRouter } from '@tanstack/solid-router'
-import { type Component, createContext, createEffect, createSignal, Match, Switch, useContext } from 'solid-js'
+import { type Component, createContext, createEffect, createSignal, Match, Show, Switch, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useAutoRefreshResource } from '../../hooks/useAutoRefreshResource'
 import { useRetryableSubscription } from '../../hooks/useRetryableSubscription'
@@ -25,6 +25,7 @@ export interface SubjectInfoProps {
     onEdit?: (field: string, value: any, patchKey?: PatchSetterKey) => Promise<void> | void
     onSave?: () => Promise<void> | void
     selectedSubject?: Subject
+    creating?: boolean
     extraActions?: Component<{ subject: Subject; elective?: Elective }>
 }
 
@@ -154,14 +155,16 @@ export default function SubjectInfo(props: SubjectInfoProps) {
 
     return (
         <SubjectInfoContext.Provider value={info}>
-            <StickyTabs
-                value={tab()}
-                onChange={setTab}
-                tabs={[
-                    { label: string.SUBJECT(), value: 'info' },
-                    { label: string.MEMBERS_LIST(), value: 'members' },
-                ]}
-            />
+            <Show when={!props.creating}>
+                <StickyTabs
+                    value={tab()}
+                    onChange={setTab}
+                    tabs={[
+                        { label: string.SUBJECT(), value: 'info' },
+                        { label: string.MEMBERS_LIST(), value: 'members' },
+                    ]}
+                />
+            </Show>
             <VStack gap={16} grow class={`padded ${styles.tabContent}`}>
                 <Switch>
                     <Match when={tab() === 'info'}>
@@ -195,7 +198,7 @@ export default function SubjectInfo(props: SubjectInfoProps) {
                 extraContent={
                     props.extraActions
                         ? () => {
-                              const ExtraActions = props.extraActions!
+                              const ExtraActions = nonNull(props.extraActions)
                               return <ExtraActions subject={props.subject} elective={props.elective} />
                           }
                         : undefined

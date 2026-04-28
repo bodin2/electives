@@ -161,6 +161,7 @@ function RouteComponent() {
                 elective={elective()}
                 user={client.user ?? undefined}
                 editable
+                creating={isNew()}
                 onEdit={handleEdit}
                 onSave={isNew() ? handleCreate : undefined}
                 extraActions={props => (
