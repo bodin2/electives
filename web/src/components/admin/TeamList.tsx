@@ -46,7 +46,7 @@ export default function TeamList(props: TeamListProps) {
                         class={styles.search}
                         placeholder={string.SEARCH_TEAMS()}
                         value={search()}
-                        onChange={e => setSearch(e.target.value)}
+                        onInput={e => setSearch(e.target.value)}
                     />
                 </div>
                 <Button variant="filled" icon={PlusIcon} onClick={props.onCreate}>
