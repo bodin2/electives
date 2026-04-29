@@ -93,7 +93,7 @@ function Login() {
                             studentId.setCustomValidity(
                                 studentId.value.match(/^\d+$/)
                                     ? ''
-                                    : string.ERROR_NUMERIC_VALUE({ field: string.ID() }),
+                                    : string.ERROR_NUMERIC_VALUE({ field: string.USER_ID() }),
                             )
                             studentId.reportValidity()
 
