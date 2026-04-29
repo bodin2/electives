@@ -35,7 +35,7 @@ export class User {
         this.lastName = data.lastName
         this.type = data.type
         this.avatarUrl = data.avatarUrl
-        this.teams = (data.teams ?? []).map(t => new Team(t))
+        this.teams = (data.teams ?? []).map(t => new Team(t)).sort((a, b) => a.id - b.id)
     }
 
     /**
