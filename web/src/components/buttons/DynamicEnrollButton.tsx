@@ -1,16 +1,14 @@
 import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
-import { createMemo, createSignal, Match, Show, Switch } from 'solid-js'
+import { createMemo, createSignal, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import useElectiveOpen from '../../hooks/useElectiveOpen'
 import useSubjectFull from '../../hooks/useSubjectFull'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import { formatCountdown } from '../../utils/date'
 import { Button } from '../Button'
 import SubjectEnrollmentFailedDialog from '../dialogs/SubjectEnrollmentFailedDialog'
 import UnenrollDialog from '../dialogs/UnenrollDialog'
-import { VStack } from '../Stack'
 import type { Elective, Subject } from '../../api'
 
 export default function DynamicEnrollButton(props: {
@@ -23,14 +21,9 @@ export default function DynamicEnrollButton(props: {
     const api = useAPI()
     const { string } = useI18n()
     const [error, setError] = createSignal<string | null>(null)
-
     const [dialogOpen, setDialogOpen] = createSignal(false)
-    const [countdown, setCountdown] = createSignal<number | null>(null)
 
-    const electiveOpen = useElectiveOpen(props.elective, {
-        onCountdown: timeRemaining => setCountdown(timeRemaining),
-    })
-
+    const electiveOpen = useElectiveOpen(props.elective)
     const isFull = useSubjectFull(
         () => props.subject,
         () => props.elective,
@@ -72,7 +65,7 @@ export default function DynamicEnrollButton(props: {
     })
 
     return (
-        <VStack alignHorizontal="center">
+        <>
             <Button
                 class={props.class}
                 {...buttonProps()}
@@ -96,25 +89,13 @@ export default function DynamicEnrollButton(props: {
                     }
                 }}
             />
-            <Switch>
-                <Match when={!electiveOpen()}>
-                    <Show
-                        when={formatCountdown(countdown())}
-                        fallback={<p class="m3-body-small text-error">{string.ENROLLMENT_CLOSED()}</p>}
-                    >
-                        {time => (
-                            <p class="m3-body-small text-error">
-                                {string.ENROLLMENT_CLOSED_OPENING_IN({ time: time() })}
-                            </p>
-                        )}
-                    </Show>
-                </Match>
-                <Match when={enrollState() === EnrollState.Enrolled}>
-                    <p class="m3-body-small text-center text-balance text-ws-pre-line">
-                        {string.UNENROLL_OTHER_SUBJECT_HINT({ subjectName: props.selectedSubject?.name ?? '???' })}
-                    </p>
-                </Match>
-            </Switch>
+            <Show when={enrollState() === EnrollState.Enrolled}>
+                <p class="m3-body-small text-center text-balance text-ws-pre-line">
+                    {string.UNENROLL_OTHER_SUBJECT_HINT({
+                        subjectName: props.selectedSubject?.name ?? '???',
+                    })}
+                </p>
+            </Show>
             <Portal>
                 <UnenrollDialog
                     open={dialogOpen()}
@@ -127,7 +108,7 @@ export default function DynamicEnrollButton(props: {
                 />
                 <SubjectEnrollmentFailedDialog reason={error()} onClose={() => setError(null)} />
             </Portal>
-        </VStack>
+        </>
     )
 }
 

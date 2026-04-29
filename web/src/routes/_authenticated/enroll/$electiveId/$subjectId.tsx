@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from '@tanstack/solid-router'
-import { Match, Show, Switch } from 'solid-js'
+import { createSignal, Match, Show, Switch } from 'solid-js'
 import { NotFoundError, type User } from '../../../../api'
 import AddStudentToSubjectButton from '../../../../components/buttons/AddStudentToSubjectButton'
 import DynamicEnrollButton from '../../../../components/buttons/DynamicEnrollButton'
@@ -8,10 +8,12 @@ import NotFoundPage from '../../../../components/pages/NotFoundPage'
 import { VStack } from '../../../../components/Stack'
 import SubjectInfo from '../../../../components/subjects/SubjectInfo'
 import styles from '../../../../components/subjects/SubjectInfo.module.css'
+import useElectiveOpen from '../../../../hooks/useElectiveOpen'
 import useSubjectFull from '../../../../hooks/useSubjectFull'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { nonNull } from '../../../../utils'
+import { formatCountdown } from '../../../../utils/date'
 import { AUTHENTICATED_ROUTE_DEFAULTS } from '../../../_authenticated'
 import { Route as IndexRoute } from '../../index'
 
@@ -59,6 +61,13 @@ function RouteComponent() {
     const router = useRouter()
     const { client } = useAPI()
     const { string } = useI18n()
+
+    const [countdown, setCountdown] = createSignal<number | null>(null)
+
+    const electiveOpen = useElectiveOpen(data().elective, {
+        onCountdown: timeRemaining => setCountdown(timeRemaining),
+    })
+
     const isFull = useSubjectFull(
         () => data().subject,
         () => data().elective,
@@ -85,7 +94,7 @@ function RouteComponent() {
                 onStudentRemove={data().subject.isTaughtBy(data().user) ? handleStudentRemove : undefined}
                 studentRemoveDisabled={data().user.isTeacher() ? !data().elective.isSelectionOpen() : true}
                 extraActions={props => (
-                    <VStack alignHorizontal="center">
+                    <VStack alignHorizontal="center" grow>
                         <Switch>
                             <Match when={data().user.isStudent() && props.subject.canUserEnroll(data().user)}>
                                 <DynamicEnrollButton
@@ -110,9 +119,23 @@ function RouteComponent() {
                                 />
                             </Match>
                         </Switch>
-                        <Show when={isFull()}>
-                            <p class="m3-body-small text-error">{string.SUBJECT_FULL_HINT()}</p>
-                        </Show>
+                        <Switch>
+                            <Match when={!electiveOpen()}>
+                                <Show
+                                    when={formatCountdown(countdown())}
+                                    fallback={<p class="m3-body-small text-error">{string.ENROLLMENT_CLOSED()}</p>}
+                                >
+                                    {time => (
+                                        <p class="m3-body-small text-error">
+                                            {string.ENROLLMENT_CLOSED_OPENING_IN({ time: time() })}
+                                        </p>
+                                    )}
+                                </Show>
+                            </Match>
+                            <Match when={isFull()}>
+                                <p class="m3-body-small text-error">{string.SUBJECT_FULL_HINT()}</p>
+                            </Match>
+                        </Switch>
                     </VStack>
                 )}
             />
