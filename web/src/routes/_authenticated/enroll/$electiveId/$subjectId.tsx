@@ -1,13 +1,16 @@
 import { createFileRoute, useRouter } from '@tanstack/solid-router'
-import { Match, Switch } from 'solid-js'
+import { Match, Show, Switch } from 'solid-js'
 import { NotFoundError, type User } from '../../../../api'
 import AddStudentToSubjectButton from '../../../../components/buttons/AddStudentToSubjectButton'
 import DynamicEnrollButton from '../../../../components/buttons/DynamicEnrollButton'
 import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
+import { VStack } from '../../../../components/Stack'
 import SubjectInfo from '../../../../components/subjects/SubjectInfo'
 import styles from '../../../../components/subjects/SubjectInfo.module.css'
+import useSubjectFull from '../../../../hooks/useSubjectFull'
 import { useAPI } from '../../../../providers/APIProvider'
+import { useI18n } from '../../../../providers/I18nProvider'
 import { nonNull } from '../../../../utils'
 import { AUTHENTICATED_ROUTE_DEFAULTS } from '../../../_authenticated'
 import { Route as IndexRoute } from '../../index'
@@ -55,6 +58,11 @@ function RouteComponent() {
     const data = Route.useLoaderData()
     const router = useRouter()
     const { client } = useAPI()
+    const { string } = useI18n()
+    const isFull = useSubjectFull(
+        () => data().subject,
+        () => data().elective,
+    )
 
     const invalidate = () =>
         router.invalidate({
@@ -77,30 +85,35 @@ function RouteComponent() {
                 onStudentRemove={data().subject.isTaughtBy(data().user) ? handleStudentRemove : undefined}
                 studentRemoveDisabled={data().user.isTeacher() ? !data().elective.isSelectionOpen() : true}
                 extraActions={props => (
-                    <Switch>
-                        <Match when={data().user.isStudent() && props.subject.canUserEnroll(data().user)}>
-                            <DynamicEnrollButton
-                                class={styles.actionButton}
-                                elective={data().elective}
-                                subject={props.subject}
-                                selectedSubject={data().selectedSubject}
-                                onInvalidate={() =>
-                                    router.invalidate({
-                                        filter: r => r.routeId === Route.id || r.routeId === IndexRoute.id,
-                                        sync: true,
-                                    })
-                                }
-                            />
-                        </Match>
-                        <Match when={data().user.isTeacher() && props.subject.isTaughtBy(data().user)}>
-                            <AddStudentToSubjectButton
-                                class={styles.actionButton}
-                                electiveId={data().elective.id}
-                                subjectId={props.subject.id}
-                                disabled={!data().elective.isSelectionOpen()}
-                            />
-                        </Match>
-                    </Switch>
+                    <VStack alignHorizontal="center">
+                        <Switch>
+                            <Match when={data().user.isStudent() && props.subject.canUserEnroll(data().user)}>
+                                <DynamicEnrollButton
+                                    class={styles.actionButton}
+                                    elective={data().elective}
+                                    subject={props.subject}
+                                    selectedSubject={data().selectedSubject}
+                                    onInvalidate={() =>
+                                        router.invalidate({
+                                            filter: r => r.routeId === Route.id || r.routeId === IndexRoute.id,
+                                            sync: true,
+                                        })
+                                    }
+                                />
+                            </Match>
+                            <Match when={data().user.isTeacher() && props.subject.isTaughtBy(data().user)}>
+                                <AddStudentToSubjectButton
+                                    class={styles.actionButton}
+                                    electiveId={data().elective.id}
+                                    subjectId={props.subject.id}
+                                    disabled={isFull() || !data().elective.isSelectionOpen()}
+                                />
+                            </Match>
+                        </Switch>
+                        <Show when={isFull()}>
+                            <p class="m3-body-small text-error">{string.SUBJECT_FULL_HINT()}</p>
+                        </Show>
+                    </VStack>
                 )}
             />
         </Page>

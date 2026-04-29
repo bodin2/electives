@@ -3,8 +3,8 @@ import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
 import { createMemo, createSignal, Match, Show, Switch } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import useElectiveOpen from '../../hooks/useElectiveOpen'
+import useSubjectFull from '../../hooks/useSubjectFull'
 import { useAPI } from '../../providers/APIProvider'
-import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { formatCountdown } from '../../utils/date'
 import { Button } from '../Button'
@@ -22,7 +22,6 @@ export default function DynamicEnrollButton(props: {
 }) {
     const api = useAPI()
     const { string } = useI18n()
-    const enrollment = useEnrollmentCounts()
     const [error, setError] = createSignal<string | null>(null)
 
     const [dialogOpen, setDialogOpen] = createSignal(false)
@@ -32,8 +31,10 @@ export default function DynamicEnrollButton(props: {
         onCountdown: timeRemaining => setCountdown(timeRemaining),
     })
 
-    const enrolledCount = () => enrollment.getElectiveCounts(props.elective.id)[props.subject.id] ?? 0
-    const isFull = () => enrolledCount() >= props.subject.capacity
+    const isFull = useSubjectFull(
+        () => props.subject,
+        () => props.elective,
+    )
 
     const enrollState = () => {
         if (!props.selectedSubject) {
@@ -107,9 +108,6 @@ export default function DynamicEnrollButton(props: {
                             </p>
                         )}
                     </Show>
-                </Match>
-                <Match when={isFull()}>
-                    <p class="m3-body-small text-error">{string.SUBJECT_FULL_HINT()}</p>
                 </Match>
                 <Match when={enrollState() === EnrollState.Enrolled}>
                     <p class="m3-body-small text-center text-balance text-ws-pre-line">

@@ -9,6 +9,7 @@ import { HStack, VStack } from '../../../../components/Stack'
 import SubjectAdminEnrollmentActions from '../../../../components/subjects/SubjectAdminEnrollmentActions'
 import SubjectInfo from '../../../../components/subjects/SubjectInfo'
 import styles from '../../../../components/subjects/SubjectInfo.module.css'
+import useSubjectFull from '../../../../hooks/useSubjectFull'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
@@ -91,6 +92,8 @@ function RouteComponent() {
         if (electiveId === undefined) return undefined
         return data().electives.find(e => e.id === electiveId)
     })
+
+    const isFull = useSubjectFull(subject, () => nonNull(elective()))
 
     const currentTeacherIds = () => subjectData().teachers.map(t => t.id)
 
@@ -235,7 +238,7 @@ function RouteComponent() {
                                     class={styles.subActionButton}
                                     electiveId={elective()?.id}
                                     subjectId={subject().id}
-                                    disabled={!elective()}
+                                    disabled={!elective() || isFull()}
                                 />
                                 <AddTeacherToSubjectButton
                                     variant="tonal"
