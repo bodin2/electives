@@ -43,6 +43,7 @@ fun Application.configureHTTP() {
         allowMethod(HttpMethod.Put)
         allowMethod(HttpMethod.Delete)
         allowMethod(HttpMethod.Patch)
+        allowMethod(HttpMethod.Post)
 
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
@@ -54,9 +55,13 @@ fun Application.configureHTTP() {
             anyHost()
         } else {
             val hosts = requireEnvNonBlank("CORS_HOSTS")
-
-            hosts.split(",").forEach { host ->
-                allowHost(host.trim(), schemes = listOf("https"))
+            if (hosts == "*") {
+                logger.warn("Forcing CORS to allow all hosts!")
+                anyHost()
+            } else {
+                hosts.split(",").forEach { host ->
+                    allowHost(host.trim(), schemes = listOf("https"))
+                }
             }
         }
     }
