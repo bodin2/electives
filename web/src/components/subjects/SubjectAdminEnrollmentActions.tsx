@@ -114,11 +114,17 @@ export function SubjectElectiveSelector(props: {
                 props.setElectiveId(value ? Number(value) : undefined)
             }}
         >
-            <Option value="" hidden>
+            <Option value="" hidden selected={!props.elective}>
                 {string.SELECT_ENROLLMENT()}
             </Option>
             <Option value="add">{string.ADD_ELLIPSIS()}</Option>
-            <For each={props.addedElectives}>{elective => <Option value={elective.id}>{elective.name}</Option>}</For>
+            <For each={props.addedElectives}>
+                {elective => (
+                    <Option value={elective.id} selected={elective.id === props.elective?.id}>
+                        {elective.name}
+                    </Option>
+                )}
+            </For>
         </Select>
     )
 }
