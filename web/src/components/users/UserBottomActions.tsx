@@ -25,7 +25,12 @@ export default function UserBottomActions() {
                 <Button
                     disabled={!ctx.creating && !ctx.edited}
                     onClick={async e => {
-                        if ((e.target as HTMLButtonElement).form?.reportValidity()) {
+                        const form = (e.target as HTMLButtonElement).form
+                        if (!form) return
+
+                        form.dispatchEvent(new Event('trysubmit'))
+
+                        if (form.reportValidity()) {
                             await ctx.onSave?.()
                         }
                     }}

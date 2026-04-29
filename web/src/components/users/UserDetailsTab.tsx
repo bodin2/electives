@@ -38,11 +38,44 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
     const [avatarDialogOpen, setAvatarDialogOpen] = createSignal(false)
     const [addTeamOpen, setAddTeamOpen] = createSignal(false)
 
-    const [fieldErrors, setFieldErrors] = createStore<Record<'firstName' | 'newPassword' | 'id', boolean | undefined>>({
-        id: undefined,
-        firstName: undefined,
-        newPassword: undefined,
-    })
+    const [fieldErrors, setFieldErrors] = createStore<Record<string, string | undefined>>({})
+
+    const validate = (field: string, input: HTMLInputElement) => {
+        input.setCustomValidity('')
+
+        switch (field) {
+            case 'id': {
+                if (!/^\d+$/.test(input.value)) {
+                    input.setCustomValidity(
+                        string.ERROR_NUMERIC_VALUE({
+                            field: ctx.user?.isTeacher() ? string.TEACHER_ID() : string.STUDENT_ID(),
+                        }),
+                    )
+                }
+
+                break
+            }
+            case 'firstName': {
+                if (!input.value.trim()) {
+                    input.setCustomValidity(string.ERROR_REQUIRED_FIELD_GENERIC())
+                }
+
+                break
+            }
+            case 'newPassword': {
+                const length = input.value.length
+                const isValid = ctx.creating ? length >= 4 : length === 0 || length >= 4
+                if (!isValid) {
+                    input.setCustomValidity(string.PASSWORD_REQUIREMENTS())
+                }
+
+                break
+            }
+        }
+
+        // Update the store with the current validation message
+        setFieldErrors(field, input.validationMessage || undefined)
+    }
 
     const user = () => nonNull(ctx.user)
 
@@ -118,34 +151,38 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                     </VStack>
                 </HStack>
 
-                <VStack as="form" id="user-details" gap={16} onSubmit={e => e.preventDefault()}>
+                <VStack
+                    as="form"
+                    id="user-details"
+                    gap={16}
+                    onSubmit={e => e.preventDefault()}
+                    ref={form => {
+                        form.addEventListener('trysubmit', e => {
+                            e.preventDefault()
+
+                            for (const input of form.elements) {
+                                const htmlInput = input as HTMLInputElement
+                                if (htmlInput.name) {
+                                    validate(htmlInput.name, htmlInput)
+                                }
+                            }
+
+                            form.requestSubmit()
+                        })
+                    }}
+                >
                     <Show when={ctx.creating}>
                         <TextField
                             required
+                            name="id"
                             variant="outlined"
                             label={ctx.user?.isTeacher() ? string.TEACHER_ID() : string.STUDENT_ID()}
+                            error={fieldErrors.id !== undefined}
+                            supportingText={fieldErrors.id}
                             onInput={e => {
                                 ctx.onEdit?.('id', Number(e.currentTarget.value))
-
-                                e.target.setCustomValidity(
-                                    /^\d+$/.test(e.currentTarget.value)
-                                        ? ''
-                                        : string.ERROR_NUMERIC_VALUE({
-                                              field: ctx.user?.isTeacher() ? string.TEACHER_ID() : string.STUDENT_ID(),
-                                          }),
-                                )
-
-                                setFieldErrors({
-                                    id: !e.target.reportValidity(),
-                                })
-
-                                setTimeout(() => {
-                                    setFieldErrors({
-                                        id: undefined,
-                                    })
-                                })
+                                validate('id', e.target)
                             }}
-                            error={fieldErrors.id}
                         />
 
                         <Select
@@ -164,54 +201,50 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
 
                     <TextField
                         required
+                        name="firstName"
                         variant="outlined"
                         autocomplete="given-name"
                         label={string.FIRST_NAME()}
                         value={user().firstName}
                         onInput={e => {
                             ctx.onEdit?.('firstName', e.currentTarget.value)
-
-                            e.target.setCustomValidity(
-                                e.currentTarget.value.trim() ? '' : string.ERROR_REQUIRED_FIELD_GENERIC(),
-                            )
-
-                            setFieldErrors({
-                                firstName: !e.target.reportValidity(),
-                            })
-
-                            setTimeout(() => {
-                                setFieldErrors({
-                                    firstName: undefined,
-                                })
-                            })
+                            validate('firstName', e.target)
                         }}
-                        error={fieldErrors.firstName}
-                        // error={!user().firstName.trim()}
-                        // supportingText={!user().firstName.trim() ? string.ERROR_REQUIRED_FIELD_GENERIC() : undefined}
+                        supportingText={fieldErrors.firstName}
+                        error={fieldErrors.firstName !== undefined}
                         readOnly={!ctx.editable}
                     />
 
                     <TextField
+                        name="middleName"
                         variant="outlined"
                         autocomplete="additional-name"
                         label={string.MIDDLE_NAME()}
                         value={user().middleName ?? ''}
-                        onInput={e => ctx.onEdit?.('middleName', e.currentTarget.value, 'patchMiddleName')}
+                        onInput={e => {
+                            ctx.onEdit?.('middleName', e.currentTarget.value, 'patchMiddleName')
+                            validate('middleName', e.target)
+                        }}
                         readOnly={!ctx.editable}
                     />
 
                     <TextField
+                        name="lastName"
                         variant="outlined"
                         autocomplete="family-name"
                         label={string.LAST_NAME()}
                         value={user().lastName}
-                        onInput={e => ctx.onEdit?.('lastName', e.currentTarget.value)}
+                        onInput={e => {
+                            ctx.onEdit?.('lastName', e.currentTarget.value)
+                            validate('lastName', e.target)
+                        }}
                         readOnly={!ctx.editable}
                     />
 
                     <Show when={ctx.editable}>
                         <TextField
                             required={ctx.creating}
+                            name="newPassword"
                             variant="outlined"
                             autocomplete={ctx.creating ? 'new-password' : 'current-password'}
                             type="password"
@@ -219,32 +252,10 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                             value={ctx.userData?.newPassword ?? ''}
                             onInput={e => {
                                 ctx.onEdit?.('newPassword', e.currentTarget.value)
-
-                                const length = e.currentTarget.value.length
-
-                                e.target.setCustomValidity(
-                                    (
-                                        ctx.creating
-                                            ? length < 4
-                                            : // 0 length = no password change
-                                              length !== 0 && length < 4
-                                    )
-                                        ? string.PASSWORD_REQUIREMENTS()
-                                        : '',
-                                )
-
-                                setFieldErrors({
-                                    newPassword: !e.target.reportValidity(),
-                                })
-
-                                setTimeout(() => {
-                                    setFieldErrors({
-                                        newPassword: undefined,
-                                    })
-                                })
+                                validate('newPassword', e.target)
                             }}
-                            supportingText={string.PASSWORD_REQUIREMENTS()}
-                            error={fieldErrors.newPassword}
+                            supportingText={fieldErrors.newPassword || string.PASSWORD_REQUIREMENTS()}
+                            error={fieldErrors.newPassword !== undefined}
                         />
                     </Show>
                 </VStack>
@@ -263,7 +274,11 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                     onClose={team => {
                         setAddTeamOpen(false)
                         if (team && ctx.onEdit) {
-                            ctx.onEdit('teams', [...user().teams.map(t => t.toJSON()), team.toJSON()], 'patchTeams')
+                            ctx.onEdit(
+                                'teams',
+                                [...user().teams.map(t => t.toJSON()), team.toJSON()].sort((a, b) => a.id - b.id),
+                                'patchTeams',
+                            )
                         }
                     }}
                     teams={props.teams || []}
