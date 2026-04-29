@@ -1,10 +1,11 @@
 import { Title } from '@solidjs/meta'
 import { createRootRouteWithContext, Outlet, useRouteContext } from '@tanstack/solid-router'
 import { TanStackRouterDevtools } from '@tanstack/solid-router-devtools'
-import { Show } from 'solid-js'
+import { Match, Show, Switch } from 'solid-js'
+import { NetworkErrorPage } from '../components/pages/ErrorPage'
 import { BaseSubjectDisplayContext, SubjectDisplayContextProvider } from '../components/subjects/SubjectDisplayContext'
 import { BaseUserDisplayContext, UserDisplayContextProvider } from '../components/users/UserDisplayContext'
-import APIProvider, { type AuthenticationState } from '../providers/APIProvider'
+import APIProvider, { AuthenticationState, useAPI } from '../providers/APIProvider'
 import { EnrollmentCountsProvider } from '../providers/EnrollmentCountsProvider'
 import { useI18n } from '../providers/I18nProvider'
 import PageDataProvider from '../providers/PageProvider'
@@ -28,7 +29,7 @@ function RootComponent() {
                 <EnrollmentCountsProvider client={context().client}>
                     <SubjectDisplayContextProvider value={BaseSubjectDisplayContext}>
                         <UserDisplayContextProvider value={BaseUserDisplayContext}>
-                            <I18nReadyOutlet />
+                            <ReadyOutlet />
                             <TanStackRouterDevtools position="bottom-left" />
                         </UserDisplayContextProvider>
                     </SubjectDisplayContextProvider>
@@ -38,13 +39,21 @@ function RootComponent() {
     )
 }
 
-function I18nReadyOutlet() {
+function ReadyOutlet() {
     const i18n = useI18n()
+    const api = useAPI()
 
     return (
         <Show when={i18n.ready}>
-            <Title>{i18n.string.ELECTIVES_SYSTEM()}</Title>
-            <Outlet />
+            <Switch>
+                <Match when={api.authState() === AuthenticationState.NetworkError}>
+                    <NetworkErrorPage />
+                </Match>
+                <Match when={true}>
+                    <Title>{i18n.string.ELECTIVES_SYSTEM()}</Title>
+                    <Outlet />
+                </Match>
+            </Switch>
         </Show>
     )
 }

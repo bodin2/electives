@@ -2,11 +2,9 @@ import { createFileRoute, type ErrorRouteComponent, Outlet } from '@tanstack/sol
 import { Match, Switch } from 'solid-js'
 import { UnauthorizedError } from '../api'
 import { PageTopAppBar } from '../components/PageTopAppBar'
-import ErrorPage from '../components/pages/ErrorPage'
 import LoadingPage from '../components/pages/LoadingPage'
 import { useLogoutRedirect } from '../hooks/useAuthRedirect'
 import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
-import { useI18n } from '../providers/I18nProvider'
 import { usePageData } from '../providers/PageProvider'
 import ScrollDataProvider from '../providers/ScrollDataProvider'
 import { catchErrors } from '../utils/error-component'
@@ -41,23 +39,8 @@ function AuthenticatedLayout() {
                 <Match when={api.authState() === AuthenticationState.Loading}>
                     <LoadingPage />
                 </Match>
-                <Match when={api.authState() === AuthenticationState.NetworkError}>
-                    <NetworkErrorPage />
-                </Match>
             </Switch>
         </ScrollDataProvider>
-    )
-}
-
-function NetworkErrorPage() {
-    const api = useAPI()
-    const { string } = useI18n()
-
-    return (
-        <ErrorPage
-            error={navigator.onLine ? string.ERROR_API_UNREACHABLE() : string.ERROR_OFFLINE()}
-            reset={() => api.resumeSession()}
-        />
     )
 }
 

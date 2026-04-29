@@ -1,5 +1,6 @@
 import { useRouter } from '@tanstack/solid-router'
 import { createRenderEffect, Show } from 'solid-js'
+import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'
 import ErrorIllustration from '../images/ErrorIllustration'
@@ -59,5 +60,17 @@ export default function ErrorPage(props: { error: string | Error; reset: () => v
             </VStack>
             <Version />
         </Page>
+    )
+}
+
+export function NetworkErrorPage() {
+    const api = useAPI()
+    const { string } = useI18n()
+
+    return (
+        <ErrorPage
+            error={navigator.onLine ? string.ERROR_API_UNREACHABLE() : string.ERROR_OFFLINE()}
+            reset={() => api.resumeSession()}
+        />
     )
 }
