@@ -82,8 +82,9 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
                     }
                 }
 
-                // By the time we reach here, bypassDateCheck will only be true if the executor is a teacher
-                when (val result = canEnrollInSubject(studentId, electiveId, subjectId, executorIsSomeoneElse)) {
+                // By the time we reach here, bypassDateCheck will only be true if the executor is an admin
+                val bypassDateCheck = executor.type == UserType.ADMIN
+                when (val result = canEnrollInSubject(studentId, electiveId, subjectId, bypassDateCheck)) {
                     CanEnrollStatus.CAN_ENROLL -> {}
 
                     else -> return@transaction ModifySelectionResult.CannotEnroll(result)
@@ -164,6 +165,11 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
                     }
                 }
 
+                val bypassDateCheck = executor.type == UserType.ADMIN
+                checkDateRange(electiveId, bypassDateCheck)?.let {
+                    return@transaction ModifySelectionResult.CannotEnroll(it)
+                }
+
                 Student.removeElectiveSelection(studentId, electiveId)
 
                 logger.debug("Student elective removed, user: $studentId, elective: $electiveId, executor: ${executor.id}")
@@ -202,6 +208,16 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
         return buildMap { Student.getAllElectiveSelections(studentId).forEach { put(it.first, it.second) } }
     }
 
+    private fun checkDateRange(electiveId: Int, bypass: Boolean): CanEnrollStatus? {
+        val (startDate, endDate) = Elective.getEnrollmentDateRange(electiveId)
+        val now = LocalDateTime.now()
+        if (!bypass) {
+            if (startDate != null && now.isBefore(startDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
+            if (endDate != null && now.isAfter(endDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
+        }
+        return null
+    }
+
     /**
      * Checks if the student can enroll in the specified subject of the elective by:
      *
@@ -220,12 +236,7 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
         bypassDateCheck: Boolean,
     ): CanEnrollStatus {
         // Check elective date range
-        val (startDate, endDate) = Elective.getEnrollmentDateRange(electiveId)
-        val now = LocalDateTime.now()
-        if (!bypassDateCheck) {
-            if (startDate != null && now.isBefore(startDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
-            if (endDate != null && now.isAfter(endDate)) return CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE
-        }
+        checkDateRange(electiveId, bypassDateCheck)?.let { return it }
 
         if (!Subject.isPartOfElective(subjectId, electiveId)) return CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE
 

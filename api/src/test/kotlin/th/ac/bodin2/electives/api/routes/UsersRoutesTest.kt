@@ -203,4 +203,10 @@ class UsersRoutesTest : ApplicationTest() {
         modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE))
             .assertBadRequest("Not in elective enrollment date range")
     }
+
+    @Test
+    fun `delete selection not in elective date range`() = runRouteTest {
+        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE), true)
+            .assertBadRequest("Not in elective enrollment date range")
+    }
 }

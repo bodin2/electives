@@ -191,7 +191,14 @@ private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
             }
         }
 
-        else -> throw IllegalStateException("Reached unreachable case: $result")
+        is ModifySelectionResult.CannotEnroll -> {
+            return when (result.status) {
+                ElectiveSelectionService.CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE ->
+                    badRequest("Not in elective enrollment date range")
+
+                else -> throw IllegalStateException("Unreachable case: ${result.status}")
+            }
+        }
     }
 }
 

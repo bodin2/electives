@@ -11,6 +11,7 @@ import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.SessionUserMocks.aliceSessionUser
 import th.ac.bodin2.electives.api.SessionUserMocks.bobSessionUser
+import th.ac.bodin2.electives.api.SessionUserMocks.charlieAdminSessionUser
 import th.ac.bodin2.electives.api.SessionUserMocks.janeSessionUser
 import th.ac.bodin2.electives.api.SessionUserMocks.johnSessionUser
 import th.ac.bodin2.electives.api.TestConstants
@@ -402,7 +403,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `teachers bypass date range checks`() = runTest {
+    fun `teachers cannot bypass date range checks`() = runTest {
         transaction {
             Electives.insert {
                 it[id] = TestConstants.Electives.OUT_OF_DATE_ID
@@ -428,6 +429,96 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
             TestConstants.Students.JOHN_ID,
             TestConstants.Electives.OUT_OF_DATE_ID,
             TestConstants.Subjects.PHYSICS_ID,
+        )
+
+        assertIs<ElectiveSelectionService.ModifySelectionResult.CannotEnroll>(result)
+        assertEquals(ElectiveSelectionService.CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE, result.status)
+    }
+
+    @Test
+    fun `admins can bypass date range checks`() = runTest {
+        transaction {
+            Electives.insert {
+                it[id] = TestConstants.Electives.OUT_OF_DATE_ID
+                it[name] = TestConstants.Electives.OUT_OF_DATE_NAME
+                it[startDate] = LocalDateTime.now().minusDays(2)
+                it[endDate] = LocalDateTime.now().minusDays(1)
+            }
+
+            ElectiveSubjects.insert {
+                it[elective] = TestConstants.Electives.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+        }
+
+        val result = electiveSelectionService.setStudentSelection(
+            charlieAdminSessionUser,
+            TestConstants.Students.JOHN_ID,
+            TestConstants.Electives.OUT_OF_DATE_ID,
+            TestConstants.Subjects.PHYSICS_ID,
+        )
+
+        assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(result)
+    }
+
+    @Test
+    fun `students cannot delete selection out of date range`() = runTest {
+        transaction {
+            Electives.insert {
+                it[id] = TestConstants.Electives.OUT_OF_DATE_ID
+                it[name] = TestConstants.Electives.OUT_OF_DATE_NAME
+                it[startDate] = LocalDateTime.now().minusDays(2)
+                it[endDate] = LocalDateTime.now().minusDays(1)
+            }
+
+            ElectiveSubjects.insert {
+                it[elective] = TestConstants.Electives.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+        }
+
+        // Force set selection since it's out of date
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            mapOf(TestConstants.Electives.OUT_OF_DATE_ID to TestConstants.Subjects.PHYSICS_ID)
+        )
+
+        val result = electiveSelectionService.deleteStudentSelection(
+            johnSessionUser,
+            TestConstants.Students.JOHN_ID,
+            TestConstants.Electives.OUT_OF_DATE_ID
+        )
+
+        assertIs<ElectiveSelectionService.ModifySelectionResult.CannotEnroll>(result)
+        assertEquals(ElectiveSelectionService.CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE, result.status)
+    }
+
+    @Test
+    fun `admins can delete selection out of date range`() = runTest {
+        transaction {
+            Electives.insert {
+                it[id] = TestConstants.Electives.OUT_OF_DATE_ID
+                it[name] = TestConstants.Electives.OUT_OF_DATE_NAME
+                it[startDate] = LocalDateTime.now().minusDays(2)
+                it[endDate] = LocalDateTime.now().minusDays(1)
+            }
+
+            ElectiveSubjects.insert {
+                it[elective] = TestConstants.Electives.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+        }
+
+        // Force set selection since it's out of date
+        electiveSelectionService.forceSetAllStudentSelections(
+            TestConstants.Students.JOHN_ID,
+            mapOf(TestConstants.Electives.OUT_OF_DATE_ID to TestConstants.Subjects.PHYSICS_ID)
+        )
+
+        val result = electiveSelectionService.deleteStudentSelection(
+            charlieAdminSessionUser,
+            TestConstants.Students.JOHN_ID,
+            TestConstants.Electives.OUT_OF_DATE_ID
         )
 
         assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(result)

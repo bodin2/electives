@@ -32,6 +32,11 @@ object TestConstants {
         const val ALICE_PASSWORD = "teachpass456"
     }
 
+    object Admins {
+        const val CHARLIE_ID = 3001
+        const val CHARLIE_PASSWORD = "adminpass123"
+    }
+
     object Teams {
         const val TEAM_1_ID = 1
         const val TEAM_1_NAME = "Team 1"
@@ -81,6 +86,7 @@ object SessionUserMocks {
     val janeSessionUser: UsersService.SessionUser = mockk()
     val bobSessionUser: UsersService.SessionUser = mockk()
     val aliceSessionUser: UsersService.SessionUser = mockk()
+    val charlieAdminSessionUser: UsersService.SessionUser = mockk()
 
     init {
         every { johnSessionUser.id } returns TestConstants.Students.JOHN_ID
@@ -94,5 +100,8 @@ object SessionUserMocks {
 
         every { aliceSessionUser.id } returns TestConstants.Teachers.ALICE_ID
         every { aliceSessionUser.type } returns UserType.TEACHER
+
+        every { charlieAdminSessionUser.id } returns TestConstants.Admins.CHARLIE_ID
+        every { charlieAdminSessionUser.type } returns UserType.ADMIN
     }
 }
