@@ -74,7 +74,8 @@ function RouteComponent() {
                 elective={data().elective}
                 user={client.user ?? undefined}
                 selectedSubject={data().selectedSubject}
-                onStudentRemove={handleStudentRemove}
+                onStudentRemove={data().subject.isTaughtBy(data().user) ? handleStudentRemove : undefined}
+                studentRemoveDisabled={data().user.isTeacher() ? !data().elective.isSelectionOpen() : true}
                 extraActions={props => (
                     <Switch>
                         <Match when={data().user.isStudent() && props.subject.canUserEnroll(data().user)}>
@@ -96,6 +97,7 @@ function RouteComponent() {
                                 class={styles.actionButton}
                                 electiveId={data().elective.id}
                                 subjectId={props.subject.id}
+                                disabled={!data().elective.isSelectionOpen()}
                             />
                         </Match>
                     </Switch>

@@ -1,4 +1,5 @@
 import CloseIcon from '@iconify-icons/mdi/close'
+import { useNavigate } from '@tanstack/solid-router'
 import { ListItem } from 'm3-solid'
 import { type Component, For, Show, Suspense } from 'solid-js'
 import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
@@ -9,6 +10,7 @@ import Badge from '../Badge'
 import { Button } from '../Button'
 import LoadingPage from '../pages/LoadingPage'
 import { HStack, VStack } from '../Stack'
+import { useUserDisplayContext } from '../users/UserDisplayContext'
 import styles from './SubjectMembersTab.module.css'
 import type { User } from '../../api'
 
@@ -18,6 +20,7 @@ interface SubjectMembersTabProps {
     headerClass?: string
     listClass?: string
     noMembersClass?: string
+    studentRemoveDisabled?: boolean
     onStudentRemove?: (student: User) => unknown
     onTeacherRemove?: (teacher: User) => unknown
 }
@@ -57,6 +60,7 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
                             listClass={props.listClass}
                             noMembersClass={props.noMembersClass}
                             onRemove={props.onStudentRemove}
+                            removeDisabled={props.studentRemoveDisabled}
                             maxCapacity={data().capacity}
                             showId
                         />
@@ -75,12 +79,15 @@ interface SubjectMembersSectionProps {
     listClass?: string
     noMembersClass?: string
     onRemove?: (user: User) => unknown
+    removeDisabled?: boolean
     maxCapacity?: number
 }
 
 function SubjectMembersSection(props: SubjectMembersSectionProps) {
     const { string } = useI18n()
     const currentUser = () => nonNull(useAPI().client.user)
+    const userCtx = useUserDisplayContext()
+    const navigate = useNavigate()
 
     return (
         <section>
@@ -97,9 +104,11 @@ function SubjectMembersSection(props: SubjectMembersSectionProps) {
                 <For each={props.users}>
                     {user => (
                         <SubjectMemberListItem
+                            onClick={() => navigate(userCtx.viewLinkProps(user.id))}
                             user={user}
                             currentUser={currentUser()}
                             onRemove={props.onRemove && (() => props.onRemove?.(user))}
+                            removeDisabled={props.removeDisabled}
                             showId={props.showId}
                         />
                     )}
@@ -118,6 +127,7 @@ interface SubjectMemberListItemProps {
      * Pass to show a remove button on the right side of the item
      */
     onRemove?: () => unknown
+    removeDisabled?: boolean
     /**
      * A custom component to show on the right side of the item.
      * Overrides the remove button if `onRemove` is also provided.
@@ -151,16 +161,18 @@ export function SubjectMemberListItem(props: SubjectMemberListItemProps) {
                     when={props.trailing}
                     fallback={
                         <Show when={props.onRemove}>
-                            {onRemove => (
-                                <Button
-                                    size="xs"
-                                    aria-label={string.REMOVE_STUDENT_FROM_SUBJECT()}
-                                    variant="tonal-error"
-                                    onClick={onRemove()}
-                                    icon={CloseIcon}
-                                    iconType="only"
-                                />
-                            )}
+                            <Button
+                                disabled={props.removeDisabled}
+                                size="xs"
+                                aria-label={string.REMOVE_STUDENT_FROM_SUBJECT()}
+                                variant="tonal-error"
+                                onClick={async e => {
+                                    e.stopPropagation()
+                                    await nonNull(props.onRemove)()
+                                }}
+                                icon={CloseIcon}
+                                iconType="only"
+                            />
                         </Show>
                     }
                 >

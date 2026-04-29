@@ -69,7 +69,6 @@ export default function AddUserDialog(props: AddUserDialogProps) {
 
     createEffect(on(idInput, id => updateFoundUser(id), { defer: true }))
 
-    let form!: HTMLFormElement
     let btn!: HTMLButtonElement
 
     return (
@@ -86,8 +85,8 @@ export default function AddUserDialog(props: AddUserDialogProps) {
             icon={props.icon || <Icon fill="var(--m3c-secondary)" icon={AddCircleIcon} />}
             centerHeadline
             actions={
-                <form method="dialog" style={{ display: 'contents' }} ref={form}>
-                    <Button variant="text" type="submit">
+                <>
+                    <Button variant="text" type="submit" onClick={props.onClose}>
                         {string.CANCEL()}
                     </Button>
                     <Button
@@ -104,8 +103,9 @@ export default function AddUserDialog(props: AddUserDialogProps) {
                                 const shouldClose = await props.onConfirm(u)
                                 if (shouldClose !== false) {
                                     props.onSuccess?.(api.client.users.cache.get(u.id) ?? u)
-                                    form.submit()
                                 }
+
+                                await props.onClose()
                             } catch (e) {
                                 setError(String(e))
                             }
@@ -113,7 +113,7 @@ export default function AddUserDialog(props: AddUserDialogProps) {
                     >
                         {props.actionLabel}
                     </Button>
-                </form>
+                </>
             }
         >
             <VStack

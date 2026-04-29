@@ -107,7 +107,6 @@ export default function TextFieldDialog(props: TextFieldDialogProps) {
         >
             <VStack
                 as="form"
-                style={{ '--m3-outlined-text-field-label-background-color': 'var(--m3c-surface-container-high)' }}
                 onSubmit={e => {
                     e.preventDefault()
                     if (!isInvalid()) {

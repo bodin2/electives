@@ -94,3 +94,7 @@ img {
 strong {
   font-weight: 600;
 }
+
+dialog {
+  --m3-outlined-text-field-label-background-color: var(--m3c-surface-container-high);
+}

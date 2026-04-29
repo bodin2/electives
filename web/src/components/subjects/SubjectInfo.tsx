@@ -25,6 +25,7 @@ export interface SubjectInfoProps {
     onEdit?: (field: string, value: any, patchKey?: PatchSetterKey) => Promise<void> | void
     onSave?: () => Promise<void> | void
     onStudentRemove?: (student: User) => Promise<void> | void
+    studentRemoveDisabled?: boolean
     onTeacherRemove?: (teacher: User) => Promise<void> | void
     selectedSubject?: Subject
     creating?: boolean
@@ -108,7 +109,7 @@ export default function SubjectInfo(props: SubjectInfoProps) {
         {
             shouldFetch: () => membersTabOpened() || outdatedMembers(),
             getKey: () => (props.elective ? `${props.elective.id}:${enrollment.getVersion(props.elective.id)}` : ''),
-            interval: props.editable ? 500 : undefined,
+            interval: props.editable ? 500 : 1500,
         },
     )
 
@@ -152,6 +153,7 @@ export default function SubjectInfo(props: SubjectInfoProps) {
                         <SubjectMembersTab
                             members={members()}
                             onStudentRemove={props.onStudentRemove}
+                            studentRemoveDisabled={props.studentRemoveDisabled}
                             onTeacherRemove={props.onTeacherRemove}
                             gridClass={styles.membersGrid}
                             headerClass={styles.membersHeader}

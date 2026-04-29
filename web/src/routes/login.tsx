@@ -78,12 +78,7 @@ function Login() {
                 }
                 open={api.authState() === AuthenticationState.LoggedOut}
             >
-                <VStack
-                    gap={24}
-                    style={{
-                        '--m3-outlined-text-field-label-background-color': 'var(--m3c-surface-container-high)',
-                    }}
-                >
+                <VStack gap={24}>
                     <form
                         onKeyDown={e => {
                             if (e.key === 'Enter') {
