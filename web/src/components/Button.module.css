@@ -10,7 +10,7 @@
 
 .tonalError {
     --m3-button-container-color: var(--m3c-error-container);
-    color: var(--m3c-on-error-container);
+    --m3-button-label-color: var(--m3c-on-error-container);
 }
 
 @keyframes growIn {
