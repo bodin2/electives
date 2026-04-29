@@ -3,7 +3,7 @@ import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import SectionedList from '../SectionedList'
-import { BaseSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
+import { useSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
 import SubjectListItem from '../subjects/SubjectListItem'
 import type { Elective, Subject } from '../../api'
 
@@ -15,6 +15,7 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
     const api = useAPI()
     const enrollment = useEnrollmentCounts()
     const { string } = useI18n()
+    const subjectDisplayContext = useSubjectDisplayContext()
 
     const [data] = createResource(async () => {
         const [selections, electives] = await Promise.all([
@@ -72,7 +73,7 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
                                     <SubjectListItem
                                         subject={subject}
                                         electiveId={elective.id}
-                                        linkProps={BaseSubjectDisplayContext.viewLinkProps(elective.id, subject.id)}
+                                        linkProps={subjectDisplayContext.viewLinkProps(elective.id, subject.id)}
                                     />
                                 )}
                             </For>

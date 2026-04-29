@@ -1,4 +1,3 @@
-import type { LinkProps } from '@tanstack/solid-router'
 import { type JSX, Show } from 'solid-js'
 import { User } from '../../api'
 import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placeholder.webp'
@@ -7,6 +6,7 @@ import { useI18n } from '../../providers/I18nProvider'
 import LinkListItem from '../LinkListItem'
 import { VStack } from '../Stack'
 import styles from './SubjectListItem.module.css'
+import type { LinkProps } from '@tanstack/solid-router'
 import type { Subject } from '../../api'
 
 interface SubjectListItemProps {
@@ -65,7 +65,7 @@ export default function SubjectListItem(props: SubjectListItemProps) {
 
     return (
         <LinkListItem
-            {...(props.linkProps ?? {})}
+            {...props.linkProps}
             class={styles.item}
             lines={4}
             headline={props.subject.name}

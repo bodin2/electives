@@ -9,7 +9,7 @@ import { Dialog } from '../../../../components/Dialog'
 import LinkButton from '../../../../components/LinkButton'
 import Page from '../../../../components/Page'
 import { HStack } from '../../../../components/Stack'
-import { BaseSubjectDisplayContext } from '../../../../components/subjects/SubjectDisplayContext'
+import { useSubjectDisplayContext } from '../../../../components/subjects/SubjectDisplayContext'
 import SubjectList from '../../../../components/subjects/SubjectList'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
@@ -28,6 +28,7 @@ function RouteComponent() {
     const { string } = useI18n()
     const data = Route.useLoaderData()
     const [deletingSubject, setDeletingSubject] = createSignal<Subject | undefined>(undefined)
+    const subjectDisplayContext = useSubjectDisplayContext()
 
     return (
         <Page name={string.SUBJECTS()} leading={null} trailing={null}>
@@ -35,16 +36,16 @@ function RouteComponent() {
                 noRandom
                 subjects={data().subjects}
                 editable
-                viewLinkProps={subjectId => BaseSubjectDisplayContext.editLinkProps(subjectId)}
+                viewLinkProps={subjectId => subjectDisplayContext.editLinkProps(subjectId)}
                 headerActions={
-                    <LinkButton {...BaseSubjectDisplayContext.createLinkProps()} variant="filled" icon={PlusIcon}>
+                    <LinkButton {...subjectDisplayContext.createLinkProps()} variant="filled" icon={PlusIcon}>
                         {string.CREATE_SUBJECT()}
                     </LinkButton>
                 }
                 itemActions={subject => (
                     <HStack gap={8}>
                         <LinkButton
-                            {...BaseSubjectDisplayContext.editLinkProps(subject.id)}
+                            {...subjectDisplayContext.editLinkProps(subject.id)}
                             variant="text"
                             iconType="only"
                             icon={PencilOutlineIcon}
