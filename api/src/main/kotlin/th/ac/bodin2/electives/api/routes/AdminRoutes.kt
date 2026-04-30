@@ -303,8 +303,8 @@ class AdminUsersController(
 
         val inserts = req.valuesList.groupBy { it.user.type }
 
-        if (!inserts.keys.minus(supportedBulkAddTypes).any { key ->
-                (inserts[key]?.let { !it.isEmpty() }) ?: false
+        if (inserts.keys.minus(supportedBulkAddTypes).any { key ->
+                (inserts[key]?.let { it.isNotEmpty() }) ?: false
             }) {
             return badRequest("Unsupported user types")
         }
