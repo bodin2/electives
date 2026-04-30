@@ -1,4 +1,5 @@
 import { useRouter } from '@tanstack/solid-router'
+import { mergeClasses } from 'm3-solid'
 import { createRenderEffect, Show } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
@@ -7,6 +8,7 @@ import ErrorIllustration from '../images/ErrorIllustration'
 import Page from '../Page'
 import { HStack, VStack } from '../Stack'
 import Version from '../Version'
+import styles from './ErrorPage.module.css'
 
 export default function ErrorPage(props: { error: string | Error; reset: () => void | Promise<void> }) {
     const { string } = useI18n()
@@ -18,29 +20,27 @@ export default function ErrorPage(props: { error: string | Error; reset: () => v
 
     return (
         <Page trailing={null} leading={null}>
-            <VStack gap={24} alignHorizontal="center" alignVertical="center" style={{ height: '100%' }}>
-                <VStack alignHorizontal="center" gap={32}>
+            <VStack gap={24} alignHorizontal="center" alignVertical="center" grow>
+                <VStack alignHorizontal="center" gap={32} style={{ width: '100%', 'padding-inline': '16px' }}>
                     <ErrorIllustration style={{ width: '192px', height: '192px' }} />
-                    <VStack alignHorizontal="center" gap={8}>
-                        <h1 class="m3-headline-small">{string.ERROR()}</h1>
+                    <VStack alignHorizontal="center" gap={8} style={{ width: '100%' }}>
+                        <h1 class="m3-headline-small text-balance text-center">{string.ERROR()}</h1>
                         <Show
                             when={props.error instanceof Error}
                             fallback={
-                                <p class="m3-body-medium" style={{ color: 'var(--m3c-error)' }}>
-                                    {props.error as string}
-                                </p>
+                                <p class={mergeClasses('m3-body-medium', styles.text)}>{props.error as string}</p>
                             }
                         >
                             <pre
-                                class="m3-body-medium"
-                                style={{ 'font-family': 'monospace', color: 'var(--m3c-error)' }}
+                                class={mergeClasses('m3-body-medium', styles.text)}
+                                style={{ 'font-family': 'monospace' }}
                             >
                                 {String(props.error)}
                             </pre>
                         </Show>
                     </VStack>
                 </VStack>
-                <HStack>
+                <HStack alignHorizontal="center" wrap>
                     {/* <LinkButton to="https://github.com/bodin2/electives/issues/new" variant="tonal">
                             Report this issue
                         </LinkButton> */}

@@ -1,0 +1,6 @@
+.text {
+    color: var(--m3c-error);
+    width: 100%;
+    text-wrap: balance;
+    text-align: center;
+}
