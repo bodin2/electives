@@ -40,4 +40,6 @@ class TestTeamService : TeamService {
     }
 
     override fun getMemberCounts() = TEAM_IDS.associateWith { 0 }
+
+    override fun getMemberCount(teamId: Int): Int = 0
 }

@@ -218,6 +218,31 @@ class SubjectServiceImplTest : ApplicationTest() {
     }
 
     @Test
+    fun `get teacher subjects`() = runTest {
+        val subjects = transaction { subjectService.getTeacherSubjects(TestConstants.Teachers.BOB_ID) }
+        assertEquals(1, subjects.size)
+        val (electiveId, subject) = subjects.entries.first()
+        assertEquals(TestConstants.Electives.SCIENCE_ID, electiveId)
+        assertEquals(TestConstants.Subjects.PHYSICS_ID, subject.id.value)
+    }
+
+    @Test
+    fun `get teacher subjects for another teacher`() = runTest {
+        val subjects = transaction { subjectService.getTeacherSubjects(TestConstants.Teachers.ALICE_ID) }
+        assertEquals(1, subjects.size)
+        val (electiveId, subject) = subjects.entries.first()
+        assertEquals(TestConstants.Electives.SCIENCE_ID, electiveId)
+        assertEquals(TestConstants.Subjects.CHEMISTRY_ID, subject.id.value)
+    }
+
+    @Test
+    fun `get teacher subjects for non-existent teacher`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            transaction { subjectService.getTeacherSubjects(UNUSED_ID) }
+        }
+    }
+
+    @Test
     fun `get elective IDs for subject`() = runTest {
         val ids = transaction { subjectService.getElectiveIds(TestConstants.Subjects.PHYSICS_ID) }
         assertNotNull(ids)

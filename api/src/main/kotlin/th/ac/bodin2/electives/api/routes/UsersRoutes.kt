@@ -15,16 +15,19 @@ import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.ModifySelectionResult
 import th.ac.bodin2.electives.api.services.ElectiveSelectionService.ModifySelectionStatus
+import th.ac.bodin2.electives.api.services.SubjectService
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
 import th.ac.bodin2.electives.proto.api.UsersServiceKt.studentSelections
+import th.ac.bodin2.electives.proto.api.UsersServiceKt.teacherSubjects
 
 val usersController = controller {
     val usersService: UsersService by dependencies
     val electiveSelectionService: ElectiveSelectionService by dependencies
+    val subjectService: SubjectService by dependencies
 
     routing {
         authenticatedRoutes {
@@ -39,6 +42,14 @@ val usersController = controller {
                     get<Users.Id.Selections> {
                         resolveUserIdEnforced(it.parent.id) { userId, _ ->
                             handleGetStudentSelections(userId)
+                        }
+                    }
+                }
+
+                context(subjectService) {
+                    get<Users.Id.Subjects> {
+                        resolveUserIdEnforced(it.parent.id) { userId, _ ->
+                            handleGetTeacherSubjects(userId)
                         }
                     }
                 }
@@ -107,6 +118,27 @@ suspend fun RoutingContext.handleGetUser(userId: Int) {
     } ?: return userNotFoundError()
 
     call.respond(userProto)
+}
+
+context(subjectService: SubjectService)
+suspend fun RoutingContext.handleGetTeacherSubjects(userId: Int) {
+    try {
+        val response = transaction {
+            teacherSubjects {
+                subjects.putAll(subjectService.getTeacherSubjects(userId).mapValues {
+                    it.value.toProto(
+                        electiveId = it.key,
+                        withDescription = false,
+                        withTeachers = false,
+                    )
+                })
+            }
+        }
+
+        call.respond(response)
+    } catch (_: EntityNotFoundException) {
+        return badRequest("Viewing subjects for non-teacher users")
+    }
 }
 
 context(electiveSelectionService: ElectiveSelectionService)
@@ -248,5 +280,8 @@ private class Users {
             @Resource("{electiveId}")
             class ElectiveId(val parent: Selections, val electiveId: Int)
         }
+
+        @Resource("subjects")
+        class Subjects(val parent: Id)
     }
 }

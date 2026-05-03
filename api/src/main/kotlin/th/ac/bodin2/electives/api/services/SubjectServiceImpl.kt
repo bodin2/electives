@@ -116,6 +116,14 @@ class SubjectServiceImpl : SubjectService {
 
     override fun getById(subjectId: Int) = Subject.findById(subjectId)
 
+    override fun getTeacherSubjects(teacherId: Int): Map<Int, Subject> {
+        Teacher.assertExists(teacherId)
+        return (TeacherSubjects innerJoin Subjects)
+            .select(Subjects.columns + TeacherSubjects.elective)
+            .where { TeacherSubjects.teacher eq teacherId }
+            .associate { it[TeacherSubjects.elective].value to Subject.wrapRow(it) }
+    }
+
     override fun getElectiveIds(subjectId: Int): List<Int>? {
         if (!Subject.exists(subjectId)) return null
 

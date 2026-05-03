@@ -144,6 +144,11 @@ class ElectiveServiceImpl : ElectiveService {
         }
     }
 
+    override fun getEnrolledCount(electiveId: Int): Int =
+        StudentElectives.selectAll()
+            .where { StudentElectives.elective eq electiveId }
+            .count().toInt()
+
     override fun getUnenrolledMembers(
         electiveId: Int,
         teamId: Int,

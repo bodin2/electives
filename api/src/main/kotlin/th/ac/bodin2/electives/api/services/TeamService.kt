@@ -54,4 +54,6 @@ interface TeamService {
     fun getMembers(teamId: Int, page: Int = 1): Pair<List<Student>, Long>
 
     fun getMemberCounts(): Map<Int, Int>
+
+    fun getMemberCount(teamId: Int): Int
 }

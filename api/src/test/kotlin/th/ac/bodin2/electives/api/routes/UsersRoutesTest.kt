@@ -20,6 +20,7 @@ import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersServiceKt.setStudentElectiveSelectionRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @OptIn(Transactional::class)
 class UsersRoutesTest : ApplicationTest() {
@@ -208,5 +209,27 @@ class UsersRoutesTest : ApplicationTest() {
     fun `delete selection not in elective date range`() = runRouteTest {
         modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE), true)
             .assertBadRequest("Not in elective enrollment date range")
+    }
+
+    @Test
+    fun `get teacher subjects`() = runRouteTest {
+        val response = client.getWithAuth("/users/@me/subjects", teacherToken())
+            .assertOK()
+            .parse<th.ac.bodin2.electives.proto.api.UsersService.TeacherSubjects>()
+
+        assertTrue(response.subjectsMap.isNotEmpty())
+        assertEquals(SUBJECT_ID, response.subjectsMap.values.first().id)
+    }
+
+    @Test
+    fun `get subjects for non-teacher`() = runRouteTest {
+        client.getWithAuth("/users/@me/subjects", studentToken())
+            .assertBadRequest("Viewing subjects for non-teacher users")
+    }
+
+    @Test
+    fun `get other user subjects as teacher`() = runRouteTest {
+        client.getWithAuth("/users/$STUDENT_ID/subjects", teacherToken())
+            .assertBadRequest("Viewing subjects for non-teacher users")
     }
 }

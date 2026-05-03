@@ -7,9 +7,11 @@ import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ApplicationTest
+import org.jetbrains.exposed.v1.jdbc.insert
 import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.db.models.StudentElectives
 import kotlin.test.*
 
 class ElectiveServiceImplTest : ApplicationTest() {
@@ -219,6 +221,31 @@ class ElectiveServiceImplTest : ApplicationTest() {
             @OptIn(Transactional::class)
             electiveService.setSubjects(UNUSED_ID, listOf(TestConstants.Subjects.PHYSICS_ID))
         }
+    }
+
+    @Test
+    fun `get enrolled count with no enrollments`() = runTest {
+        val count = transaction { electiveService.getEnrolledCount(TestConstants.Electives.SCIENCE_ID) }
+        assertEquals(0, count)
+    }
+
+    @Test
+    fun `get enrolled count with enrollments`() = runTest {
+        transaction {
+            StudentElectives.insert {
+                it[student] = TestConstants.Students.JOHN_ID
+                it[elective] = TestConstants.Electives.SCIENCE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+        }
+        val count = transaction { electiveService.getEnrolledCount(TestConstants.Electives.SCIENCE_ID) }
+        assertEquals(1, count)
+    }
+
+    @Test
+    fun `get enrolled count for non-existent elective returns zero`() = runTest {
+        val count = transaction { electiveService.getEnrolledCount(UNUSED_ID) }
+        assertEquals(0, count)
     }
 
     @Test

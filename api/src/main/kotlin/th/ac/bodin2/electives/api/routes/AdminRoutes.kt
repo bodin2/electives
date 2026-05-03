@@ -14,6 +14,7 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
@@ -30,9 +31,11 @@ import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.api.utils.unauthorized
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.models.Students
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.*
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.challengeResponse
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.listElectivesEnrolledCounts
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listTeamsResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.subjectElectiveIds
@@ -42,6 +45,7 @@ import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.ListElectivesEnrolledCountsKt.counts as electiveCounts
 
 val adminController = controller {
     val usersService: UsersService by dependencies
@@ -54,7 +58,7 @@ val adminController = controller {
         adminAuthController,
         AdminUsersController(usersService),
         AdminUsersSelectionsController(electiveSelectionService),
-        AdminElectivesController(electiveService),
+        AdminElectivesController(electiveService, teamService),
         AdminElectivesSubjectsController(electiveService),
         AdminSubjectsController(subjectService),
         AdminTeamsController(teamService),
@@ -408,9 +412,12 @@ class AdminUsersSelectionsController(
 
 class AdminElectivesController(
     private val electiveService: ElectiveService,
+    private val teamService: TeamService,
 ) : Controller {
     override fun Application.register() {
         adminRoutes {
+            get<Admin.Electives.Progress> { params -> handleGetElectivesProgress(params.ids) }
+
             context(electiveService) {
                 put<Admin.Electives.Id> { params -> handlePutElective(params.id) }
 
@@ -457,6 +464,33 @@ class AdminElectivesController(
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
+    }
+
+    private suspend fun RoutingContext.handleGetElectivesProgress(idsParam: String) {
+        val ids = idsParam.split(",").mapNotNull { it.trim().toIntOrNull() }
+        if (ids.isEmpty()) return badRequest()
+
+        call.respond(listElectivesEnrolledCounts {
+            transaction {
+                val totalStudents by lazy { Students.selectAll().count().toInt() }
+
+                for (electiveId in ids) {
+                    val elective = electiveService.getById(electiveId) ?: continue
+                    val enrolledCount = electiveService.getEnrolledCount(electiveId)
+                    val teamId = elective.teamId
+                    val total = if (teamId != null) {
+                        teamService.getMemberCount(teamId.value)
+                    } else {
+                        totalStudents
+                    }
+
+                    counts[electiveId] = electiveCounts {
+                        this.selected = enrolledCount
+                        this.total = total
+                    }
+                }
+            }
+        })
     }
 
     private suspend fun RoutingContext.handlePatchElective(id: Int) {
@@ -806,6 +840,10 @@ private class Admin {
 
     @Resource("electives")
     class Electives(val parent: Admin) {
+        // GET: ListElectivesEnrolledCounts
+        @Resource("progress")
+        class Progress(val parent: Electives, val ids: String)
+
         // PUT: Elective, DELETE, PATCH: ElectivePatch
         @Resource("{id}")
         class Id(val parent: Electives, val id: Int) {

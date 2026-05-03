@@ -96,6 +96,8 @@ class TestElectiveService : ElectiveService {
         }
     }
 
+    override fun getEnrolledCount(electiveId: Int): Int = 0
+
     override fun getUnenrolledMembers(
         electiveId: Int,
         teamId: Int,

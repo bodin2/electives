@@ -82,4 +82,9 @@ class TeamServiceImpl : TeamService {
     override fun getMemberCounts() = StudentTeams.select(StudentTeams.team, StudentTeams.student.count())
         .groupBy(StudentTeams.team)
         .associate { it[StudentTeams.team].value to it[StudentTeams.student.count()].toInt() }
+
+    override fun getMemberCount(teamId: Int): Int =
+        StudentTeams.selectAll()
+            .where { StudentTeams.team eq teamId }
+            .count().toInt()
 }

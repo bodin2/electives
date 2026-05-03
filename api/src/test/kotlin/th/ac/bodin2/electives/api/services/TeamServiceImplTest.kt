@@ -118,6 +118,22 @@ class TeamServiceImplTest : ApplicationTest() {
     }
 
     @Test
+    fun `get member count`() = runTest {
+        val count = transaction { teamService.getMemberCount(TestConstants.Teams.TEAM_1_ID) }
+        assertEquals(1, count) // John is in Team 1
+    }
+
+    @Test
+    fun `get member count empty team`() = runTest {
+        val tempId = 500
+        @OptIn(Transactional::class)
+        teamService.create(tempId, "Empty Team")
+
+        val count = transaction { teamService.getMemberCount(tempId) }
+        assertEquals(0, count)
+    }
+
+    @Test
     fun `get team member counts`() = runTest {
         val counts = transaction { teamService.getMemberCounts() }
         assertTrue(counts.containsKey(TestConstants.Teams.TEAM_1_ID))

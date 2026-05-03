@@ -73,6 +73,8 @@ interface ElectiveService {
         withStudents: Boolean,
     ): QueryResult<out Pair<List<Teacher>, List<Student>>>
 
+    fun getEnrolledCount(electiveId: Int): Int
+
     fun getUnenrolledMembers(
         electiveId: Int,
         teamId: Int,

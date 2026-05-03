@@ -70,4 +70,11 @@ interface SubjectService {
     fun getById(subjectId: Int): Subject?
 
     fun getElectiveIds(subjectId: Int): List<Int>?
+
+    /**
+     * Gets all subjects that a teacher teaches, grouped by elective ID.
+     *
+     * @throws EntityNotFoundException if the teacher does not exist.
+     */
+    fun getTeacherSubjects(teacherId: Int): Map<Int, Subject>
 }

@@ -10,10 +10,13 @@ import th.ac.bodin2.electives.api.patchProtoWithAuth
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.proto.api.AdminService
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.electivePatch
 import th.ac.bodin2.electives.proto.api.Elective
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class AdminElectivesRoutesTest : ApplicationTest() {
     private suspend fun HttpClient.adminGet(url: String): HttpResponse =
@@ -58,5 +61,41 @@ class AdminElectivesRoutesTest : ApplicationTest() {
             electivePatch { name = "New Name" },
             ADMIN_TOKEN
         ).assertNotFound("Elective not found")
+    }
+
+    @Test
+    fun `get electives progress`() = runRouteTest {
+        startApplication()
+
+        val response = client.adminGet("/admin/electives/progress?ids=$ELECTIVE_ID")
+            .assertOK()
+            .parse<AdminService.ListElectivesEnrolledCounts>()
+
+        assertTrue(response.countsMap.containsKey(ELECTIVE_ID))
+        assertEquals(0, response.countsMap[ELECTIVE_ID]!!.selected)
+    }
+
+    @Test
+    fun `get electives progress skips non-existent electives`() = runRouteTest {
+        startApplication()
+
+        val response = client.adminGet("/admin/electives/progress?ids=$ELECTIVE_ID,$UNUSED_ID")
+            .assertOK()
+            .parse<AdminService.ListElectivesEnrolledCounts>()
+
+        assertTrue(response.countsMap.containsKey(ELECTIVE_ID))
+        assertFalse(response.countsMap.containsKey(UNUSED_ID))
+    }
+
+    @Test
+    fun `get electives progress with invalid ids returns bad request`() = runRouteTest {
+        startApplication()
+
+        client.adminGet("/admin/electives/progress?ids=abc").assertBadRequest()
+    }
+
+    @Test
+    fun `get electives progress without auth returns unauthorized`() = runRouteTest {
+        client.get("/admin/electives/progress?ids=$ELECTIVE_ID").assertUnauthorized()
     }
 }
