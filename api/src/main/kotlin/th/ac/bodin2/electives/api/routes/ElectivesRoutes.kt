@@ -6,6 +6,7 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.SerialName
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_ELECTIVES
@@ -37,7 +38,7 @@ val electivesController = controller {
                         handleGetElectiveSubjectMembers(
                             electiveId = it.parent.parent.parent.id,
                             subjectId = it.parent.subjectId,
-                            withStudents = it.with_students == true,
+                            withStudents = it.withStudents == true,
                         )
                     }
                 }
@@ -207,7 +208,7 @@ private class Electives {
             @Resource("{subjectId}")
             class SubjectId(val parent: Subjects, val subjectId: Int) {
                 @Resource("members")
-                class Members(val parent: SubjectId, val with_students: Boolean? = null)
+                class Members(val parent: SubjectId, @SerialName("with_students") val withStudents: Boolean? = null)
             }
         }
 
