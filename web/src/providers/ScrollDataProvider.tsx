@@ -43,8 +43,8 @@ export default function ScrollDataProvider(props: { children: JSXElement; contai
 
     // Updates scroll position when routing has finished, sometimes onscroll doesn't trigger after routing
     createEffect(() => {
-        if (routerState().isTransitioning) return
-        scrollListener()
+        if (routerState().isTransitioning || routerState().isLoading) return
+        requestAnimationFrame(() => scrollListener())
     })
 
     return <ScrollContext.Provider value={store}>{props.children}</ScrollContext.Provider>
