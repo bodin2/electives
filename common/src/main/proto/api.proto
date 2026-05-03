@@ -19,10 +19,8 @@ message AdminService {
     repeated Team teams = 1;
   }
 
-  message ListElectivesResponse {
-    repeated Elective electives = 1;
-    // Elective -> Counts
-    map<uint32, Counts> selected_counts = 2;
+  message ListElectivesEnrolledCounts {
+    map<uint32, Counts> counts = 1;
 
     message Counts {
       uint32 selected = 1;
@@ -173,6 +171,11 @@ message UsersService {
 
   message SetStudentElectiveSelectionRequest {
     uint32 subject_id = 1;
+  }
+
+  message TeacherSubjects {
+    // Elective ID -> Subject
+    map<uint32, Subject> subjects = 1;
   }
 }
 
