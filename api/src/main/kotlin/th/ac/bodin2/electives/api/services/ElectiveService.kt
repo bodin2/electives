@@ -41,7 +41,7 @@ interface ElectiveService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun update(id: Int, update: ElectiveUpdate)
+    fun update(id: Int, update: ElectiveUpdate): Elective
 
     /**
      * Sets the subjects that are part of the elective.

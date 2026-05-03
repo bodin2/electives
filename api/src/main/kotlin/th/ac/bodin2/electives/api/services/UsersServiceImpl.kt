@@ -278,34 +278,33 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override fun updateStudent(id: Int, update: UsersService.StudentUpdate) {
-        transaction {
-            Student.assertExists(id)
+    override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = transaction {
+        Student.assertExists(id)
 
-            try {
-                updateUser(id, update.user)
-            } catch (e: NothingToUpdateException) {
-                update.teams ?: throw e
-            }
+        try {
+            updateUser(id, update.user)
+        } catch (e: NothingToUpdateException) {
+            update.teams ?: throw e
+        }
 
-            update.teams?.let { teams ->
-                StudentTeams.deleteWhere { StudentTeams.student eq id }
-                StudentTeams.batchInsert(teams) {
-                    Team.assertExists(it)
+        update.teams?.let { teams ->
+            StudentTeams.deleteWhere { StudentTeams.student eq id }
+            StudentTeams.batchInsert(teams) {
+                Team.assertExists(it)
 
-                    this[StudentTeams.student] = id
-                    this[StudentTeams.team] = it
-                }
+                this[StudentTeams.student] = id
+                this[StudentTeams.team] = it
             }
         }
+
+        Student.findById(id)!!.load(Student::user, Student::teams)
     }
 
     @Transactional
-    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) {
-        transaction {
-            Teacher.assertExists(id)
-            updateUser(id, update.user)
-        }
+    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = transaction {
+        Teacher.assertExists(id)
+        updateUser(id, update.user)
+        Teacher.findById(id)!!.load(Teacher::user)
     }
 
     private fun updateUser(id: Int, update: UsersService.UserUpdate) {

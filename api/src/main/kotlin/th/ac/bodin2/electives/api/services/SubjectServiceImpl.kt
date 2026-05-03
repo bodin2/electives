@@ -64,50 +64,52 @@ class SubjectServiceImpl : SubjectService {
     }
 
     @Transactional
-    override fun update(id: Int, update: SubjectService.SubjectUpdate) {
-        transaction {
-            Subject.assertExists(id)
+    override fun update(id: Int, update: SubjectService.SubjectUpdate) = transaction {
+        Subject.assertExists(id)
 
-            try {
-                Subjects.update({ Subjects.id eq id }) {
-                    if (update.setTeam) {
-                        if (update.team != null && !Team.exists(update.team)) throw EntityNotFoundException(
-                            ExceptionEntity.TEAM
-                        )
-                        it[team] = update.team
-                    }
-
-                    update.name?.let { name -> it[this.name] = name }
-                    update.tag?.let { tag -> it[this.tag] = tag.number }
-                    update.capacity?.let { capacity -> it[this.capacity] = capacity }
-
-                    if (update.setDescription) it[description] = update.description
-                    if (update.setCode) it[code] = update.code
-                    if (update.setLocation) it[location] = update.location
-                    if (update.setThumbnailUrl) it[thumbnailUrl] = update.thumbnailUrl
-                    if (update.setImageUrl) it[imageUrl] = update.imageUrl
-
-                    if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
+        val subject = try {
+            val rows = Subjects.updateReturning(where = { Subjects.id eq id }) {
+                if (update.setTeam) {
+                    if (update.team != null && !Team.exists(update.team)) throw EntityNotFoundException(
+                        ExceptionEntity.TEAM
+                    )
+                    it[team] = update.team
                 }
-            } catch (e: NothingToUpdateException) {
-                update.teacherIds ?: throw e
+
+                update.name?.let { name -> it[this.name] = name }
+                update.tag?.let { tag -> it[this.tag] = tag.number }
+                update.capacity?.let { capacity -> it[this.capacity] = capacity }
+
+                if (update.setDescription) it[description] = update.description
+                if (update.setCode) it[code] = update.code
+                if (update.setLocation) it[location] = update.location
+                if (update.setThumbnailUrl) it[thumbnailUrl] = update.thumbnailUrl
+                if (update.setImageUrl) it[imageUrl] = update.imageUrl
+
+                if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
+            }
+            Subject.wrapRow(rows.first())
+        } catch (e: NothingToUpdateException) {
+            update.teacherIds ?: throw e
+            Subject.findById(id)!!
+        }
+
+        if (update.teacherIds != null && update.electiveId != null) {
+            val teacherIds = update.teacherIds.distinct()
+            teacherIds.forEach { Teacher.assertExists(it) }
+
+            TeacherSubjects.deleteWhere {
+                (TeacherSubjects.subject eq id) and (TeacherSubjects.elective eq update.electiveId)
             }
 
-            if (update.teacherIds != null && update.electiveId != null) {
-                val teacherIds = update.teacherIds.distinct()
-                teacherIds.forEach { Teacher.assertExists(it) }
-
-                TeacherSubjects.deleteWhere {
-                    (TeacherSubjects.subject eq id) and (TeacherSubjects.elective eq update.electiveId)
-                }
-
-                TeacherSubjects.batchInsert(teacherIds) { teacherId ->
-                    this[TeacherSubjects.teacher] = teacherId
-                    this[TeacherSubjects.subject] = id
-                    this[TeacherSubjects.elective] = update.electiveId
-                }
+            TeacherSubjects.batchInsert(teacherIds) { teacherId ->
+                this[TeacherSubjects.teacher] = teacherId
+                this[TeacherSubjects.subject] = id
+                this[TeacherSubjects.elective] = update.electiveId
             }
         }
+
+        subject
     }
 
     override fun getAll() = Subject.all().toList()

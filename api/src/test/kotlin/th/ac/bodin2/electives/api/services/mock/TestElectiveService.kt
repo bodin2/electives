@@ -1,5 +1,7 @@
 package th.ac.bodin2.electives.api.services.mock
 
+import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.ElectiveService
@@ -29,7 +31,10 @@ class TestElectiveService : ElectiveService {
     override fun delete(id: Int) = error("Not testable")
 
     @Transactional
-    override fun update(id: Int, update: ElectiveService.ElectiveUpdate) = error("Not testable")
+    override fun update(id: Int, update: ElectiveService.ElectiveUpdate): Elective {
+        if (id !in ELECTIVE_IDS) throw EntityNotFoundException(ExceptionEntity.ELECTIVE)
+        return MockUtils.mockElective(id)
+    }
 
     @Transactional
     override fun setSubjects(electiveId: Int, subjectIds: List<Int>) = error("Not testable")

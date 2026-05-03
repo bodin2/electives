@@ -219,7 +219,7 @@ class AdminUsersController(
             ?: return badRequest()
 
         try {
-            transaction {
+            val proto = transaction {
                 val type = usersService.getUserType(id)
 
                 val update = UsersService.UserUpdate(
@@ -233,16 +233,16 @@ class AdminUsersController(
                 )
 
                 @OptIn(Transactional::class)
-                when (type) {
+                val proto = when (type) {
                     UserType.STUDENT -> usersService.updateStudent(
                         id,
                         UsersService.StudentUpdate(
                             update,
                             teams = if (req.patchTeams) req.teamsList else null
                         )
-                    )
+                    ).toProto()
 
-                    UserType.TEACHER -> usersService.updateTeacher(id, UsersService.TeacherUpdate(update))
+                    UserType.TEACHER -> usersService.updateTeacher(id, UsersService.TeacherUpdate(update)).toProto()
 
                     else -> throw IllegalStateException("Unreachable case: $type")
                 }
@@ -251,9 +251,11 @@ class AdminUsersController(
                     @OptIn(Transactional::class)
                     usersService.setPassword(id, req.newPassword)
                 }
+
+                proto
             }
 
-            ok()
+            call.respond(proto)
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.USER,
@@ -472,9 +474,11 @@ class AdminElectivesController(
         )
 
         try {
-            @OptIn(Transactional::class)
-            electiveService.update(id, update)
-            ok()
+            val proto = transaction {
+                @OptIn(Transactional::class)
+                electiveService.update(id, update).toProto()
+            }
+            call.respond(proto)
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.ELECTIVE -> notFound("Elective not found")
@@ -623,9 +627,11 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
         )
 
         try {
-            @OptIn(Transactional::class)
-            subjectService.update(id, update)
-            ok()
+            val proto = transaction {
+                @OptIn(Transactional::class)
+                subjectService.update(id, update).toProto(withDescription = true, withTeachers = true)
+            }
+            call.respond(proto)
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.SUBJECT -> notFound("Subject not found")
@@ -736,9 +742,11 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
         )
 
         try {
-            @OptIn(Transactional::class)
-            teamService.update(id, update)
-            ok()
+            val proto = transaction {
+                @OptIn(Transactional::class)
+                teamService.update(id, update).toProto()
+            }
+            call.respond(proto)
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.TEAM -> notFound("Team not found")

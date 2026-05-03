@@ -46,15 +46,14 @@ class TeamServiceImpl : TeamService {
     }
 
     @Transactional
-    override fun update(id: Int, update: TeamService.TeamUpdate) {
-        transaction {
-            Team.findById(id) ?: throw EntityNotFoundException(ExceptionEntity.TEAM)
-            Teams.update({ Teams.id eq id }) {
-                update.name?.let { name -> it[this.name] = name }
+    override fun update(id: Int, update: TeamService.TeamUpdate) = transaction {
+        Team.findById(id) ?: throw EntityNotFoundException(ExceptionEntity.TEAM)
+        val rows = Teams.updateReturning(where = { Teams.id eq id }) {
+            update.name?.let { name -> it[this.name] = name }
 
-                if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
-            }
+            if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
         }
+        Team.wrapRow(rows.first())
     }
 
     override fun getAll() = Team.all().toList()

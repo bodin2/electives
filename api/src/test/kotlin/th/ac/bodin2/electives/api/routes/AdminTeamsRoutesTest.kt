@@ -6,11 +6,13 @@ import io.ktor.client.statement.*
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.getWithAuth
 import th.ac.bodin2.electives.api.parse
+import th.ac.bodin2.electives.api.patchProtoWithAuth
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_TEAM_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.mock.TestTeamService
 import th.ac.bodin2.electives.proto.api.AdminService
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.teamPatch
 import th.ac.bodin2.electives.proto.api.Team
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -99,5 +101,34 @@ class AdminTeamsRoutesTest : ApplicationTest() {
         startApplication()
 
         client.adminGet("/admin/teams/$UNUSED_ID/members").assertNotFound()
+    }
+
+    @Test
+    fun `patch team without auth returns unauthorized`() = runRouteTest {
+        client.patch("/admin/teams/$ELECTIVE_TEAM_ID").assertUnauthorized()
+    }
+
+    @Test
+    fun `patch team returns updated team`() = runRouteTest {
+        startApplication()
+
+        val team = client.patchProtoWithAuth(
+            "/admin/teams/$ELECTIVE_TEAM_ID",
+            teamPatch { name = "New Name" },
+            ADMIN_TOKEN
+        ).assertOK().parse<Team>()
+
+        assertEquals(ELECTIVE_TEAM_ID, team.id)
+    }
+
+    @Test
+    fun `patch team not found`() = runRouteTest {
+        startApplication()
+
+        client.patchProtoWithAuth(
+            "/admin/teams/$UNUSED_ID",
+            teamPatch { name = "New Name" },
+            ADMIN_TOKEN
+        ).assertNotFound("Team not found")
     }
 }

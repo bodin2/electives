@@ -22,7 +22,10 @@ class TestTeamService : TeamService {
     override fun delete(id: Int) = error("Not testable")
 
     @Transactional
-    override fun update(id: Int, update: TeamService.TeamUpdate) = error("Not testable")
+    override fun update(id: Int, update: TeamService.TeamUpdate): Team {
+        if (id !in TEAM_IDS) throw EntityNotFoundException(ExceptionEntity.TEAM)
+        return MockUtils.mockTeam(id)
+    }
 
     override fun getAll() = TEAM_IDS.map { id -> MockUtils.mockTeam(id) }
 

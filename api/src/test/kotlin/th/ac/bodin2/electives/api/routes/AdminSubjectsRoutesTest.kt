@@ -6,12 +6,14 @@ import io.ktor.client.statement.*
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.getWithAuth
 import th.ac.bodin2.electives.api.parse
+import th.ac.bodin2.electives.api.patchProtoWithAuth
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.mock.TestSubjectService
 import th.ac.bodin2.electives.proto.api.AdminService
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.subjectPatch
 import th.ac.bodin2.electives.proto.api.ElectivesService
 import th.ac.bodin2.electives.proto.api.Subject
 import kotlin.test.Test
@@ -79,5 +81,34 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
         startApplication()
 
         client.adminGet("/admin/subjects/$UNUSED_ID").assertNotFound()
+    }
+
+    @Test
+    fun `patch subject without auth returns unauthorized`() = runRouteTest {
+        client.patch("/admin/subjects/$SUBJECT_ID").assertUnauthorized()
+    }
+
+    @Test
+    fun `patch subject returns updated subject`() = runRouteTest {
+        startApplication()
+
+        val subject = client.patchProtoWithAuth(
+            "/admin/subjects/$SUBJECT_ID",
+            subjectPatch { name = "New Name" },
+            ADMIN_TOKEN
+        ).assertOK().parse<Subject>()
+
+        assertEquals(SUBJECT_ID, subject.id)
+    }
+
+    @Test
+    fun `patch subject not found`() = runRouteTest {
+        startApplication()
+
+        client.patchProtoWithAuth(
+            "/admin/subjects/$UNUSED_ID",
+            subjectPatch { name = "New Name" },
+            ADMIN_TOKEN
+        ).assertNotFound("Subject not found")
     }
 }

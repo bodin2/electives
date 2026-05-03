@@ -43,7 +43,7 @@ interface SubjectService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun update(id: Int, update: SubjectUpdate)
+    fun update(id: Int, update: SubjectUpdate): Subject
 
     data class SubjectUpdate(
         val name: String? = null,

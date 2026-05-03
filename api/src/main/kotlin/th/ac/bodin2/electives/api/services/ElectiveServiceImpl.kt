@@ -57,22 +57,21 @@ class ElectiveServiceImpl : ElectiveService {
     }
 
     @Transactional
-    override fun update(id: Int, update: ElectiveService.ElectiveUpdate) {
-        transaction {
-            Elective.assertExists(id)
+    override fun update(id: Int, update: ElectiveService.ElectiveUpdate) = transaction {
+        Elective.assertExists(id)
 
-            Electives.update({ Electives.id eq id }) {
-                update.name?.let { name -> it[this.name] = name }
-                if (update.setStartDate) it[this.startDate] = update.startDate
-                if (update.setEndDate) it[this.endDate] = update.endDate
-                if (update.setTeam) {
-                    if (update.team != null && !Team.exists(update.team)) throw EntityNotFoundException(ExceptionEntity.TEAM)
-                    it[this.team] = update.team
-                }
-
-                if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
+        val rows = Electives.updateReturning(where = { Electives.id eq id }) {
+            update.name?.let { name -> it[this.name] = name }
+            if (update.setStartDate) it[this.startDate] = update.startDate
+            if (update.setEndDate) it[this.endDate] = update.endDate
+            if (update.setTeam) {
+                if (update.team != null && !Team.exists(update.team)) throw EntityNotFoundException(ExceptionEntity.TEAM)
+                it[this.team] = update.team
             }
+
+            if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
         }
+        Elective.wrapRow(rows.first())
     }
 
     @Transactional

@@ -1,5 +1,7 @@
 package th.ac.bodin2.electives.api.services.mock
 
+import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.SubjectService
@@ -31,7 +33,10 @@ class TestSubjectService : SubjectService {
     override fun delete(id: Int) = error("Not testable")
 
     @Transactional
-    override fun update(id: Int, update: SubjectService.SubjectUpdate) = error("Not testable")
+    override fun update(id: Int, update: SubjectService.SubjectUpdate): Subject {
+        if (id !in SUBJECT_IDS) throw EntityNotFoundException(ExceptionEntity.SUBJECT)
+        return MockUtils.mockSubject(id)
+    }
 
     override fun getAll() = SUBJECT_IDS.map { id -> MockUtils.mockSubject(id) }
 

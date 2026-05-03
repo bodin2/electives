@@ -34,7 +34,7 @@ interface TeamService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun update(id: Int, update: TeamUpdate)
+    fun update(id: Int, update: TeamUpdate): Team
 
     data class TeamUpdate(
         val name: String? = null,

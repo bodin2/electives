@@ -110,7 +110,7 @@ interface UsersService {
     fun updateStudent(
         id: Int,
         update: StudentUpdate,
-    )
+    ): Student
 
     /**
      * Updates the teacher's profile information.
@@ -122,7 +122,7 @@ interface UsersService {
     fun updateTeacher(
         id: Int,
         update: TeacherUpdate,
-    )
+    ): Teacher
 
     sealed class BatchOperationException(msg: String, cause: Throwable?) : Exception(msg, cause) {
         constructor(msg: String) : this(msg, null)

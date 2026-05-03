@@ -59,13 +59,21 @@ class TestUsersService : UsersService {
     override suspend fun deleteUsers(id: List<Int>) = error("Not testable")
 
     @Transactional
-    override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = error("Not testable")
+    override fun updateStudent(id: Int, update: UsersService.StudentUpdate): Student {
+        if (id != STUDENT_ID) throw EntityNotFoundException(ExceptionEntity.STUDENT)
+        return mockStudent(id)
+    }
 
     @Transactional
-    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = error("Not testable")
+    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate): Teacher {
+        if (id != TEACHER_ID) throw EntityNotFoundException(ExceptionEntity.TEACHER)
+        return mockTeacher(id)
+    }
 
     @Transactional
-    override fun setPassword(id: Int, newPassword: String) = error("Not testable")
+    override fun setPassword(id: Int, newPassword: String) {
+        getUserType(id) // throws if user not found
+    }
 
     override fun getUserType(id: Int) = when (id) {
         ADMIN_ID -> UserType.ADMIN
