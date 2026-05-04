@@ -7,9 +7,12 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.SessionUserMocks.janeSessionUser
 import th.ac.bodin2.electives.api.SessionUserMocks.johnSessionUser
@@ -29,6 +32,7 @@ import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.identify
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdateSubscription
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdateSubscriptionRequest
+import java.time.LocalDateTime
 import kotlin.test.*
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -45,6 +49,12 @@ class NotificationsServiceImplTest : ApplicationTest() {
         get() {
             val service: ElectiveSelectionService by application.dependencies
             return service
+        }
+
+    private val ApplicationTestBuilder.notificationsService: NotificationsServiceImpl
+        get() {
+            val service: NotificationsService by application.dependencies
+            return service as NotificationsServiceImpl
         }
 
     val serviceConfig = NotificationsServiceImpl.Config(
@@ -492,7 +502,56 @@ class NotificationsServiceImplTest : ApplicationTest() {
         }
     }
 
-    // TODO: More bulk update tests
+    @Test
+    fun `bulk update flow is removed when elective becomes inactive`() = runTest {
+        webSocket {
+            serviceConfig.bulkUpdatesEnabled = true
+
+            val electives = transaction { Elective.getAllActiveIds() }
+            assertTrue(electives.contains(Electives.SCIENCE_ID), "Science elective should be active")
+
+            // Wait for at least one bulk update to arrive so the flow is created
+            withTimeout(15.seconds) {
+                while (true) {
+                    val frame = incoming.receive() as Frame.Binary
+                    val envelope = Envelope.parseFrom(frame.readBytes())
+                    if (envelope.hasBulkSubjectEnrollmentUpdate() &&
+                        envelope.bulkSubjectEnrollmentUpdate.electiveId == Electives.SCIENCE_ID
+                    ) break
+                }
+            }
+
+            assertTrue(
+                notificationsService.bulkUpdateFlows.value.containsKey(Electives.SCIENCE_ID),
+                "Expected bulk update flow to exist for science elective"
+            )
+
+            // Make the elective inactive by setting its end date to the past
+            transaction {
+                th.ac.bodin2.electives.db.models.Electives.update(
+                    { th.ac.bodin2.electives.db.models.Electives.id eq Electives.SCIENCE_ID }
+                ) {
+                    it[endDate] = LocalDateTime.now().minusDays(1)
+                }
+            }
+
+            // Wait for the bulk update loop to clear the inactive elective's flow
+            withTimeout(15.seconds) {
+                while (notificationsService.bulkUpdateFlows.value.containsKey(Electives.SCIENCE_ID)) {
+                    delay(100.milliseconds)
+                }
+            }
+
+            assertFalse(
+                notificationsService.bulkUpdateFlows.value.containsKey(Electives.SCIENCE_ID),
+                "Expected bulk update flow to be removed for inactive elective"
+            )
+
+            serviceConfig.bulkUpdatesEnabled = false
+
+            close()
+        }
+    }
 
     @Test
     fun `websocket disconnects if a new instance connects`() = runTest {

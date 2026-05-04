@@ -148,10 +148,19 @@ class NotificationsServiceImpl(
                 }
             }
 
+            val activeIds = updates.map { it.first }.toSet()
+
             for ((electiveId, update) in updates) {
                 val flow = bulkUpdateFlowForElective(electiveId) as MutableStateFlow
                 // Update the flow only if the updated value changes
                 if (flow.value != update) flow.value = update
+            }
+
+            // Remove flows for electives that are no longer active
+            bulkUpdateFlows.update { current ->
+                val inactive = current.keys - activeIds
+                if (inactive.isEmpty()) current
+                else current - inactive
             }
 
             logger.debug("Finished sending bulk updates in ${System.currentTimeMillis() - startMs}ms")
