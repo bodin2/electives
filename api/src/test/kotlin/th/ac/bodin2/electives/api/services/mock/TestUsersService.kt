@@ -147,7 +147,7 @@ class TestUsersService : UsersService {
     }
 
     @Transactional
-    override fun getStudents(page: Int): Pair<List<Student>, Long> {
+    override fun getStudents(page: Int, query: String?): Pair<List<Student>, Long> {
         return if (page == 1) {
             listOf(mockStudent(STUDENT_ID)) to 1
         } else {
@@ -156,7 +156,7 @@ class TestUsersService : UsersService {
     }
 
     @Transactional
-    override fun getTeachers(page: Int): Pair<List<Teacher>, Long> {
+    override fun getTeachers(page: Int, query: String?): Pair<List<Teacher>, Long> {
         return if (page == 1) {
             listOf(mockTeacher(TEACHER_ID)) to 1
         } else {

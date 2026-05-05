@@ -45,13 +45,15 @@ interface TeamService {
     fun getById(teamId: Int): Team?
 
     /**
-     * Gets a paginated list of team members.
+     * Gets a paginated list of team members, optionally filtered by a search query.
+     *
+     * When [query] is provided, results are filtered by substring match on ID, firstName, middleName, or lastName.
      *
      * @return Pair of member list and total count.
      * @throws EntityNotFoundException if the team does not exist.
      */
     @Transactional
-    fun getMembers(teamId: Int, page: Int = 1): Pair<List<Student>, Long>
+    fun getMembers(teamId: Int, page: Int = 1, query: String? = null): Pair<List<Student>, Long>
 
     fun getMemberCounts(): Map<Int, Int>
 

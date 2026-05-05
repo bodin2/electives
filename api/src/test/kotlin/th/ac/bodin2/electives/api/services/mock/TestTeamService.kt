@@ -34,7 +34,7 @@ class TestTeamService : TeamService {
         else null
 
     @Transactional
-    override fun getMembers(teamId: Int, page: Int): Pair<List<Student>, Long> {
+    override fun getMembers(teamId: Int, page: Int, query: String?): Pair<List<Student>, Long> {
         if (teamId !in TEAM_IDS) throw EntityNotFoundException(ExceptionEntity.TEAM)
         return emptyList<Student>() to 0L
     }

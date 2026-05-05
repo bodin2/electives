@@ -156,4 +156,32 @@ class TeamServiceImplTest : ApplicationTest() {
             teamService.getMembers(UNUSED_ID)
         }
     }
+
+    @Test
+    fun `search team members by first name`() = runTest {
+        val (members, count) = @OptIn(Transactional::class)
+        teamService.getMembers(TestConstants.Teams.TEAM_1_ID, query = TestConstants.Students.JOHN_FIRST_NAME)
+
+        assertTrue(count > 0)
+        assertTrue(members.any { it.id.value == TestConstants.Students.JOHN_ID })
+    }
+
+    @Test
+    fun `search team members with no results`() = runTest {
+        val (members, count) = @OptIn(Transactional::class)
+        teamService.getMembers(TestConstants.Teams.TEAM_1_ID, query = "nonexistentnameXYZ")
+
+        assertEquals(0L, count)
+        assertTrue(members.isEmpty())
+    }
+
+    @Test
+    fun `search team members by id substring`() = runTest {
+        val idSubstring = TestConstants.Students.JOHN_ID.toString().substring(0, 3)
+        val (members, count) = @OptIn(Transactional::class)
+        teamService.getMembers(TestConstants.Teams.TEAM_1_ID, query = idSubstring)
+
+        assertTrue(count > 0)
+        assertTrue(members.any { it.id.value == TestConstants.Students.JOHN_ID })
+    }
 }

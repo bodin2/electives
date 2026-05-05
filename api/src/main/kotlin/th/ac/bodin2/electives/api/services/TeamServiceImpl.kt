@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.dao.with
@@ -15,6 +16,7 @@ import th.ac.bodin2.electives.db.Team
 import th.ac.bodin2.electives.db.models.StudentTeams
 import th.ac.bodin2.electives.db.models.Students
 import th.ac.bodin2.electives.db.models.Teams
+import th.ac.bodin2.electives.db.models.Users
 
 class TeamServiceImpl : TeamService {
     companion object {
@@ -61,18 +63,29 @@ class TeamServiceImpl : TeamService {
     override fun getById(teamId: Int) = Team.findById(teamId)
 
     @Transactional
-    override fun getMembers(teamId: Int, page: Int): Pair<List<Student>, Long> = transaction {
+    override fun getMembers(teamId: Int, page: Int, query: String?): Pair<List<Student>, Long> = transaction {
         Team.findById(teamId) ?: throw EntityNotFoundException(ExceptionEntity.TEAM)
 
-        val query = StudentTeams.selectAll().where { StudentTeams.team eq teamId }
-        val count = query.count()
+        val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
+        val teamCondition = StudentTeams.team eq teamId
+
+        val countQuery = if (searchCondition != null) {
+            (StudentTeams innerJoin Students innerJoin Users)
+                .selectAll().where { teamCondition and searchCondition }
+        } else {
+            StudentTeams.selectAll().where { teamCondition }
+        }
+        val count = countQuery.count()
 
         val offset = ((page - 1) * PAGE_SIZE).toLong()
-        val members = (StudentTeams innerJoin Students)
-            .selectAll().where { StudentTeams.team eq teamId }
+        val dataQuery = (StudentTeams innerJoin Students innerJoin Users)
+            .selectAll().where {
+                if (searchCondition != null) teamCondition and searchCondition else teamCondition
+            }
             .limit(PAGE_SIZE)
             .offset(offset)
-            .let { Student.wrapRows(it) }
+
+        val members = Student.wrapRows(dataQuery)
             .with(Student::user, Student::teams)
             .toList()
 

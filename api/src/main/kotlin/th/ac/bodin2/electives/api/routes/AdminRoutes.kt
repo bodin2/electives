@@ -134,7 +134,7 @@ class AdminUsersController(
                     transaction {
                         val (students, count) =
                             @OptIn(Transactional::class)
-                            usersService.getStudents(params.page)
+                            usersService.getStudents(params.page, params.query.ifBlank { null })
 
                         users += students.map { it.toProto() }
                         total = count.toInt()
@@ -147,7 +147,7 @@ class AdminUsersController(
                     transaction {
                         val (teachers, count) =
                             @OptIn(Transactional::class)
-                            usersService.getTeachers(params.page)
+                            usersService.getTeachers(params.page, params.query.ifBlank { null })
 
                         users += teachers.map { it.toProto() }
                         total = count.toInt()
@@ -704,14 +704,14 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
 
             get<Admin.Teams.MemberCounts> { handleGetTeamMemberCounts() }
 
-            get<Admin.Teams.Id.Members> { params -> handleGetTeamMembers(params.parent.id, params.page) }
+            get<Admin.Teams.Id.Members> { params -> handleGetTeamMembers(params.parent.id, params.page, params.query.ifBlank { null }) }
         }
     }
 
-    private suspend fun RoutingContext.handleGetTeamMembers(teamId: Int, page: Int) {
+    private suspend fun RoutingContext.handleGetTeamMembers(teamId: Int, page: Int, query: String?) {
         try {
             call.respond(transaction {
-                val (members, count) = @OptIn(Transactional::class) teamService.getMembers(teamId, page)
+                val (members, count) = @OptIn(Transactional::class) teamService.getMembers(teamId, page, query)
 
                 listUsersResponse {
                     users += members.map { it.toProto() }
@@ -823,11 +823,11 @@ private class Admin {
 
         // GET: ListUsersResponse
         @Resource("students")
-        class Students(val parent: Users, val page: Int = 1)
+        class Students(val parent: Users, val page: Int = 1, val query: String = "")
 
         // GET: ListUsersResponse
         @Resource("teachers")
-        class Teachers(val parent: Users, val page: Int = 1)
+        class Teachers(val parent: Users, val page: Int = 1, val query: String = "")
 
         // DELETE, PATCH: UserPatch, PUT: AddUserRequest
         @Resource("{id}")
@@ -872,7 +872,7 @@ private class Admin {
         class Id(val parent: Teams, val id: Int) {
             // GET: ListUsersResponse
             @Resource("members")
-            class Members(val parent: Id, val page: Int = 1)
+            class Members(val parent: Id, val page: Int = 1, val query: String = "")
         }
 
         // GET: TeamMemberCounts

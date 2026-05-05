@@ -514,6 +514,83 @@ class UsersServiceImplTest : ApplicationTest() {
     }
 
     @Test
+    fun `search students by first name`() = runTest {
+        val (students, total) = usersService.getStudents(query = Students.JOHN_FIRST_NAME)
+
+        assertTrue(students.isNotEmpty())
+        assertTrue(transaction {
+            students.all {
+                it.user.firstName.contains(
+                    Students.JOHN_FIRST_NAME,
+                    ignoreCase = true
+                )
+            }
+        })
+        assertEquals(total, students.size.toLong())
+    }
+
+    @Test
+    fun `search students by last name`() = runTest {
+        val (students, total) = usersService.getStudents(query = Students.JOHN_LAST_NAME)
+
+        assertTrue(students.isNotEmpty())
+        assertTrue(students.any { it.id.value == Students.JOHN_ID })
+        assertEquals(total, students.size.toLong())
+    }
+
+    @Test
+    fun `search students by id substring`() = runTest {
+        val idSubstring = Students.JOHN_ID.toString().substring(0, 3)
+        val (students, total) = usersService.getStudents(query = idSubstring)
+
+        assertTrue(students.isNotEmpty())
+        assertTrue(students.any { it.id.value == Students.JOHN_ID })
+        assertEquals(total, students.size.toLong())
+    }
+
+    @Test
+    fun `search students with no results`() = runTest {
+        val (students, total) = usersService.getStudents(query = "nonexistentnameXYZ")
+
+        assertTrue(students.isEmpty())
+        assertEquals(0L, total)
+    }
+
+    @Test
+    fun `search students with blank query returns all`() = runTest {
+        val (allStudents, allTotal) = usersService.getStudents()
+        val (blankStudents, blankTotal) = usersService.getStudents(query = "  ")
+
+        assertEquals(allTotal, blankTotal)
+        assertEquals(allStudents.size, blankStudents.size)
+    }
+
+    @Test
+    fun `search teachers by first name`() = runTest {
+        val (teachers, total) = usersService.getTeachers(query = Teachers.BOB_FIRST_NAME)
+
+        assertTrue(teachers.isNotEmpty())
+        assertTrue(teachers.any { it.id.value == Teachers.BOB_ID })
+        assertEquals(total, teachers.size.toLong())
+    }
+
+    @Test
+    fun `search teachers with no results`() = runTest {
+        val (teachers, total) = usersService.getTeachers(query = "nonexistentnameXYZ")
+
+        assertTrue(teachers.isEmpty())
+        assertEquals(0L, total)
+    }
+
+    @Test
+    fun `search students by middle name`() = runTest {
+        val (students, _) = usersService.getStudents(query = Students.JOHN_MIDDLE_NAME)
+
+        assertTrue(students.isNotEmpty())
+        assertTrue(students.any { it.id.value == Students.JOHN_ID })
+    }
+
+    @Test
     fun `create student with short password fails`() = runTest {
         assertFailsWith<IllegalArgumentException> {
             transaction {

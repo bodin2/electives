@@ -194,24 +194,28 @@ interface UsersService {
     fun getAdminById(id: Int): Admin?
 
     /**
-     * Gets a paginated list of students.
+     * Gets a paginated list of students, optionally filtered by a search query.
+     *
+     * When [query] is provided, results are filtered by substring match on ID, firstName, middleName, or lastName.
      *
      * @throws IllegalArgumentException if the page number is less than 1.
      *
-     * @return A pair of the list of students and the total number of students (for pagination purposes).
+     * @return A pair of the list of students and the total number of matching students (for pagination purposes).
      */
     @Transactional
-    fun getStudents(page: Int = 1): Pair<List<Student>, Long>
+    fun getStudents(page: Int = 1, query: String? = null): Pair<List<Student>, Long>
 
     /**
-     * Gets a paginated list of teachers.
+     * Gets a paginated list of teachers, optionally filtered by a search query.
+     *
+     * When [query] is provided, results are filtered by substring match on ID, firstName, middleName, or lastName.
      *
      * @throws IllegalArgumentException if the page number is less than 1.
      *
-     * @return A pair of the list of teachers and the total number of teachers (for pagination purposes).
+     * @return A pair of the list of teachers and the total number of matching teachers (for pagination purposes).
      */
     @Transactional
-    fun getTeachers(page: Int = 1): Pair<List<Teacher>, Long>
+    fun getTeachers(page: Int = 1, query: String? = null): Pair<List<Teacher>, Long>
 
     /**
      * Validates password and creates a new session for the given user ID.

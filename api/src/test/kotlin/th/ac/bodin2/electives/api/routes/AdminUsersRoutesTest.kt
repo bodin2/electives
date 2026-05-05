@@ -57,6 +57,28 @@ class AdminUsersRoutesTest : ApplicationTest() {
     }
 
     @Test
+    fun `get students list with query`() = runRouteTest {
+        startApplication()
+
+        val response = client.adminGet("/admin/users/students?query=test")
+            .assertOK()
+            .parse<AdminService.ListUsersResponse>()
+
+        assertTrue(response.usersCount >= 0)
+    }
+
+    @Test
+    fun `get teachers list with query`() = runRouteTest {
+        startApplication()
+
+        val response = client.adminGet("/admin/users/teachers?query=test")
+            .assertOK()
+            .parse<AdminService.ListUsersResponse>()
+
+        assertTrue(response.usersCount >= 0)
+    }
+
+    @Test
     fun `delete user without auth returns unauthorized`() = runRouteTest {
         client.delete("/admin/users/$STUDENT_ID").assertUnauthorized()
     }

@@ -4,9 +4,7 @@ import io.ktor.server.plugins.di.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.core.not
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.dao.load
 import org.jetbrains.exposed.v1.dao.with
 import org.jetbrains.exposed.v1.jdbc.*
@@ -43,6 +41,14 @@ fun DependencyRegistry.provideUsersService() = provide<UsersService> {
         ),
         argon2 = resolve<Argon2>()
     )
+}
+
+fun userSearchCondition(query: String): Op<Boolean> {
+    val pattern = "%$query%"
+    return (Users.firstName like pattern) or
+            (Users.middleName like pattern) or
+            (Users.lastName like pattern) or
+            (Users.id.castTo(VarCharColumnType(255)) like pattern)
 }
 
 class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
@@ -340,39 +346,50 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     override fun getAdminById(id: Int): Admin? = Admin.findById(id)
 
     @Transactional
-    override fun getStudents(page: Int): Pair<List<Student>, Long> {
+    override fun getStudents(page: Int, query: String?): Pair<List<Student>, Long> {
         require(page >= 1) { "Page must be at least 1" }
         val offset = ((page - 1) * PAGE_SIZE).toLong()
+        val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
         return transaction {
-            val query = Students.selectAll()
-                .orderBy(Students.id)
-                .limit(PAGE_SIZE)
-                .offset(offset)
+            val count = if (searchCondition != null) {
+                Students.innerJoin(Users).selectAll().where(searchCondition).count()
+            } else {
+                Students.selectAll().count()
+            }
 
-            val students = Student.wrapRows(query)
+            val dataQuery = Students.innerJoin(Users).selectAll().apply {
+                if (searchCondition != null) where(searchCondition)
+            }.orderBy(Students.id).limit(PAGE_SIZE).offset(offset)
+
+            val students = Student.wrapRows(dataQuery)
                 .with(Student::user, Student::teams)
                 .toList()
 
-            students to Students.selectAll().count()
+            students to count
         }
     }
 
     @Transactional
-    override fun getTeachers(page: Int): Pair<List<Teacher>, Long> {
+    override fun getTeachers(page: Int, query: String?): Pair<List<Teacher>, Long> {
         require(page >= 1) { "Page must be at least 1" }
-
         val offset = ((page - 1) * PAGE_SIZE).toLong()
+        val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
         return transaction {
-            val query = Teachers.selectAll()
-                .orderBy(Teachers.id)
-                .limit(PAGE_SIZE)
-                .offset(offset)
+            val count = if (searchCondition != null) {
+                Teachers.innerJoin(Users).selectAll().where(searchCondition).count()
+            } else {
+                Teachers.selectAll().count()
+            }
 
-            val teachers = Teacher.wrapRows(query)
+            val dataQuery = Teachers.innerJoin(Users).selectAll().apply {
+                if (searchCondition != null) where(searchCondition)
+            }.orderBy(Teachers.id).limit(PAGE_SIZE).offset(offset)
+
+            val teachers = Teacher.wrapRows(dataQuery)
                 .with(Teacher::user)
                 .toList()
 
-            teachers to Teachers.selectAll().count()
+            teachers to count
         }
     }
 
