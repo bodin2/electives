@@ -35,21 +35,3 @@
     font: inherit;
 }
 
-.actionButtonsContainer {
-    position: sticky;
-    bottom: 0px;
-    width: 100%;
-    padding: 16px;
-    background-color: var(--m3c-surface);
-    transition: background-color var(--m3-easing-slow), border-top-color var(--m3-easing);
-    border-top: 1px solid transparent;
-
-    &:empty {
-        display: none;
-    }
-}
-
-.actionButton {
-    width: 100%;
-    max-width: calc(640px - 32px);
-}

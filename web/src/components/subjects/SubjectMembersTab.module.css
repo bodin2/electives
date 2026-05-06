@@ -5,3 +5,35 @@
     border-radius: var(--m3-shape-full);
     background-color: var(--m3c-surface-container-lowest);
 }
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(384px, 1fr));
+
+    @media (max-width: 384px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.header {
+    padding-block: 8px;
+    padding-inline: 16px;
+    position: sticky;
+    /* Top app bar height + tabs height (+ outline) */
+    top: calc(var(--sticky-offset) + 48px + 1px);
+    background-color: var(--m3c-surface);
+    z-index: var(--layer-overlay);
+}
+
+.list {
+    z-index: var(--layer-content);
+
+    a, button {
+        width: 100%;
+    }
+}
+
+.noMembers {
+    padding-inline: 16px;
+    padding-block: 8px;
+}

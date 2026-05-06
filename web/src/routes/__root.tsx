@@ -9,11 +9,13 @@ import APIProvider, { AuthenticationState, useAPI } from '../providers/APIProvid
 import { EnrollmentCountsProvider } from '../providers/EnrollmentCountsProvider'
 import { useI18n } from '../providers/I18nProvider'
 import PageDataProvider from '../providers/PageProvider'
+import type { QueryClient } from '@tanstack/solid-query'
 import type { Client } from '../api'
 
 export interface RouterContext {
     client: Client<unknown>
     authState: Promise<AuthenticationState>
+    queryClient: QueryClient
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({

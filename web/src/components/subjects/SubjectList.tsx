@@ -1,15 +1,13 @@
-import { SubjectTag } from '@bodin2/electives-common/proto/api'
-import type { LinkProps } from '@tanstack/solid-router'
 import { createEffect, createMemo, createSignal, type JSX, Show } from 'solid-js'
-import { type Elective, type Subject, User } from '../../api'
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import { groupItems, nonNull } from '../../utils'
-import { NotFoundPageContent } from '../pages/NotFoundPage'
+import { groupMapItems, nonNull } from '../../utils'
 import SectionedList from '../SectionedList'
 import SubjectCategorySection from './SubjectCategorySection'
-import styles from './SubjectList.module.css'
+import type { SubjectTag } from '@bodin2/electives-common/proto/api'
+import type { LinkProps } from '@tanstack/solid-router'
+import type { Elective, Subject, User } from '../../api'
 
 export interface SubjectListProps {
     subjects: Subject[]
@@ -18,60 +16,77 @@ export interface SubjectListProps {
     editable?: boolean
     noRandom?: boolean
     headerActions?: JSX.Element
+    searchContainerClass?: string
     itemActions?: (subject: Subject) => JSX.Element
     viewLinkProps?: (subjectId: number) => LinkProps
 }
 
 export default function SubjectList(props: SubjectListProps) {
     const enrollment = useEnrollmentCounts()
-    const api = useAPI()
+    const { client } = useAPI()
     const { string } = useI18n()
     const [query, setQuery] = createSignal('')
 
     createEffect(() => {
         if (props.elective) {
-            enrollment.initializeCounts(props.elective.id, api.client.electives.resolveAllEnrolledCounts(props.elective.id))
+            enrollment.initializeCounts(props.elective.id, client.electives.resolveAllEnrolledCounts(props.elective.id))
         }
     })
 
-    const subjects = () =>
-        groupItems(
-            props.subjects.filter(subject => {
-                if (props.editable || !props.user) return true
-                if (props.user.isTeacher()) return true
-                if (subject.teamId !== undefined) return subject.canUserEnroll(props.user)
-                return true
-            }),
-            s => SubjectTag[s.tag],
-        )
+    const teachersOf = (elective: Elective | undefined, subject: Subject) => {
+        if (!elective) return []
+        return client.subjects.resolveTeachers(elective.id, subject.id)
+    }
+
+    const subjects = () => {
+        const grouped = [
+            ...groupMapItems<Subject, SubjectTag | string>(
+                props.subjects.filter(subject => {
+                    if (props.editable || !props.user) return true
+                    if (props.user.isTeacher()) return true
+                    if (subject.teamId !== undefined) return subject.canUserEnroll(props.user)
+                    return true
+                }),
+                s => s.tag,
+            ),
+        ]
+
+        const u = props.user
+        if (u?.isTeacher() && props.elective) {
+            const teacherSubjects = props.subjects.filter(s => teachersOf(props.elective, s)?.some(t => t.id === u.id))
+            grouped.unshift([string.MY_SUBJECTS(), teacherSubjects])
+        }
+
+        return grouped
+    }
 
     const filteredSubjects = createMemo(() => {
         const q = query()
         if (!q) return subjects()
 
-        const filtered: Record<string, Subject[]> = {}
-        for (const [category, subjectList] of Object.entries(subjects())) {
-            const matchedSubjects = nonNull(subjectList).filter(
-                subject =>
-                    subject.name.toLowerCase().includes(q) ||
-                    subject.teachers.some(teacher => new User(teacher).fullName.toLowerCase().includes(q)) ||
-                    subject.location.toLowerCase().includes(q),
+        const filterSubjects = (subject: Subject) =>
+            subject.name.toLowerCase().includes(q) ||
+            teachersOf(props.elective, subject)?.some(teacher => teacher.fullName.toLowerCase().includes(q)) ||
+            subject.location.toLowerCase().includes(q)
+
+        return subjects()
+            .map(
+                ([category, categorySubjects]) =>
+                    [category, nonNull(categorySubjects).filter(filterSubjects)] as const satisfies [
+                        string | SubjectTag,
+                        Subject[],
+                    ],
             )
-
-            if (matchedSubjects.length > 0) {
-                filtered[category] = matchedSubjects
-            }
-        }
-
-        return filtered
+            .filter(([_, categorySubjects]) => categorySubjects.length > 0)
     })
 
     return (
-        <Show when={Object.keys(subjects()).length > 0 || props.editable} fallback={<NotFoundPageContent />}>
+        <Show when={subjects().length > 0 || props.editable}>
             <SectionedList
-                items={filteredSubjects() as Record<string, Subject[]>}
+                items={filteredSubjects()}
                 onSearch={setQuery}
                 searchLabel={string.SEARCH_SUBJECTS()}
+                searchContainerClass={props.searchContainerClass}
                 headerActions={props.headerActions}
                 noResultsFallback={<p class="padded text-surface-variant">{string.NO_RESULTS_FOUND()}</p>}
                 renderSection={(category, categorySubjects, q) => (
@@ -81,9 +96,6 @@ export default function SubjectList(props: SubjectListProps) {
                         maxUnexpandedShown={props.editable ? 9999 : 3}
                         category={category as keyof typeof SubjectTag}
                         subjects={nonNull(categorySubjects)}
-                        headerClass={styles.header}
-                        listClass={styles.list}
-                        thumbnailClass={styles.subjectThumbnail}
                         editable={props.editable}
                         elective={props.elective}
                         itemActions={props.itemActions}

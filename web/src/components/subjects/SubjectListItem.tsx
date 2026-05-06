@@ -1,10 +1,13 @@
+import { createQuery, skipToken } from '@tanstack/solid-query'
 import { type JSX, Show } from 'solid-js'
-import { User } from '../../api'
 import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placeholder.webp'
+import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
+import { teamQueryOptions } from '../../queries/teams'
+import Badge from '../Badge'
 import LinkListItem from '../LinkListItem'
-import { VStack } from '../Stack'
+import { HStack, VStack } from '../Stack'
 import styles from './SubjectListItem.module.css'
 import type { LinkProps } from '@tanstack/solid-router'
 import type { Subject } from '../../api'
@@ -19,7 +22,13 @@ interface SubjectListItemProps {
 
 export default function SubjectListItem(props: SubjectListItemProps) {
     const { string } = useI18n()
+    const api = useAPI()
     const enrollment = useEnrollmentCounts()
+
+    const teamQuery = createQuery(() => ({
+        ...teamQueryOptions(api.client, props.subject.teamId ?? skipToken),
+        enabled: api.client.user?.isAdmin() ?? props.subject.teamId !== undefined,
+    }))
 
     const enrolledCount = () => {
         return props.electiveId !== undefined ? (enrollment.getCount(props.electiveId, props.subject.id) ?? 0) : 0
@@ -30,7 +39,11 @@ export default function SubjectListItem(props: SubjectListItemProps) {
         return enrolledCount() / props.subject.capacity > 0.8 || props.subject.capacity - enrolledCount() < 5
     }
 
-    const teacherNames = () => props.subject.teachers.map(t => new User(t).fullName).join(', ') || '-'
+    const teacherNames = () => {
+        if (props.electiveId === undefined) return null
+        const teachers = api.client.subjects.resolveTeachers(props.electiveId, props.subject.id)
+        return (teachers?.map(t => t.fullName) ?? []).join(', ') || null
+    }
 
     const Leading = (
         <img
@@ -58,8 +71,9 @@ export default function SubjectListItem(props: SubjectListItemProps) {
 
     const supporting = (
         <>
-            <p>{`${string.CLASS()}: ${props.subject.location}`}</p>
-            <p>{`${string.TEACHERS()}: ${teacherNames()}`}</p>
+            <p>{`${props.subject.code} • ${string.CLASS()}: ${props.subject.location}`}</p>
+            <p>{''}</p>
+            <Show when={teacherNames()}>{names => <p>{`${string.TEACHERS()}: ${names()}`}</p>}</Show>
         </>
     )
 
@@ -68,7 +82,13 @@ export default function SubjectListItem(props: SubjectListItemProps) {
             {...props.linkProps}
             class={styles.item}
             lines={4}
-            headline={props.subject.name}
+            headline={
+                /* @once */
+                <HStack alignVertical="center">
+                    {props.subject.name}
+                    <Show when={teamQuery.data}>{team => <Badge variant="tonal">{team().name}</Badge>}</Show>
+                </HStack>
+            }
             preloadDelay={500}
             leading={Leading}
             trailing={Trailing}

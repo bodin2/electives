@@ -63,19 +63,9 @@ export function UserDisplayContextProvider(
 export const useUserDisplayContext = () => useContext(UserDisplayContext)
 
 export const BaseUserDisplayContext = {
-    createLinkProps: type => ({
-        to: '/manage/users/$userId',
-        params: { userId: 'new' },
-        search: { type },
-    }),
-    editLinkProps: userId => ({
-        to: '/manage/users/$userId',
-        params: { userId },
-    }),
-    viewLinkProps: userId => ({
-        to: '/manage/users/$userId',
-        params: { userId },
-    }),
+    createLinkProps: () => ({}),
+    editLinkProps: () => ({}),
+    viewLinkProps: () => ({}),
     creating: false,
     editable: false,
     edited: false,

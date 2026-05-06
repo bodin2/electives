@@ -1,5 +1,6 @@
 import { createEffect, type JSX, type JSXElement, onCleanup, onMount, splitProps } from 'solid-js'
 import { usePageData } from '../providers/PageProvider'
+import { SuspenseLoadingPage } from './pages/LoadingPage'
 import { VStack } from './Stack'
 
 interface PageProps extends JSX.HTMLAttributes<HTMLElement> {
@@ -43,7 +44,8 @@ export default function Page(props: PageProps) {
         const prevAllowBacking = pageData.allowBacking
 
         onCleanup(() => {
-            pageData.setTitle(prevTitle)
+            // Only restore title if it's not blank, so the text doesn't look blank for a moment when it's loading something
+            if (prevTitle) pageData.setTitle(prevTitle)
             pageData.setLeading(prevLeading)
             pageData.setTrailing(prevTrailing)
             pageData.setAllowBacking(prevAllowBacking)
@@ -73,8 +75,8 @@ export default function Page(props: PageProps) {
     })
 
     return (
-        <VStack gap={0} as="main" grow {...others}>
-            {local.children}
+        <VStack gap={0} as="main" grow inert={!pageData.focusable} {...others}>
+            <SuspenseLoadingPage>{local.children}</SuspenseLoadingPage>
         </VStack>
     )
 }

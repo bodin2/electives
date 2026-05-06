@@ -1,5 +1,5 @@
 import AddCircleIcon from '@iconify-icons/mdi/add-circle'
-import { useRouter } from '@tanstack/solid-router'
+import { useQueryClient } from '@tanstack/solid-query'
 import { Icon } from 'm3-solid'
 import { createSignal, For, Show } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
@@ -18,7 +18,7 @@ export default function AddSubjectToElectiveDialog(props: {
     electives: Elective[]
 }) {
     const api = useAPI()
-    const router = useRouter()
+    const qc = useQueryClient()
     const { string } = useI18n()
 
     const [elective, setElective] = createSignal<Elective | null>(null)
@@ -59,8 +59,10 @@ export default function AddSubjectToElectiveDialog(props: {
                                     props.subjectId,
                                 ])
                                 await api.client.subjects.admin.fetch(props.subjectId, { force: true })
-                                // TODO: Make this more specific?
-                                await router.invalidate()
+                                await Promise.all([
+                                    qc.invalidateQueries({ queryKey: ['electives', el.id, 'subjects'] }),
+                                    qc.invalidateQueries({ queryKey: ['admin', 'subjects', props.subjectId, 'electiveIds'] }),
+                                ])
 
                                 form.submit()
                             } catch (e) {

@@ -1,7 +1,8 @@
-import { Subject } from '../structures'
 import { AdminSetStudentSelectionsRequest, SetStudentElectiveSelectionRequest, StudentSelections } from '../types'
 import type { Cache } from '../cache'
+import type { Client } from '../client'
 import type { RESTClient } from '../rest'
+import type { Subject } from '../structures'
 import type { CacheableManager, FetchOptions } from '.'
 
 export class SelectionManager implements CacheableManager {
@@ -10,6 +11,7 @@ export class SelectionManager implements CacheableManager {
     readonly admin: SelectionAdminActions
 
     constructor(
+        private readonly client: Client<unknown>,
         private readonly rest: RESTClient,
         cache: Cache<number, Map<number, Subject>>,
         private readonly resolveCurrentUserId: () => number,
@@ -43,7 +45,7 @@ export class SelectionManager implements CacheableManager {
         const selections = new Map<number, Subject>()
         for (const [electiveIdStr, rawSubject] of Object.entries(data.subjects)) {
             const electiveId = Number.parseInt(electiveIdStr, 10)
-            selections.set(electiveId, new Subject(rawSubject))
+            selections.set(electiveId, this.client.subjects._getOrCreate(rawSubject))
         }
 
         if (cache) {

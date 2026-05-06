@@ -15,7 +15,7 @@ export default function SubjectAdminEnrollmentActions(props: {
     allElectives: Elective[]
     addedElectives: Elective[]
     setElectiveId: (id?: number) => void
-    onInvalidate: () => Promise<void> | void
+    onInvalidate: () => Promise<unknown> | unknown
 }) {
     const { string } = useI18n()
     const [addToElectiveDialogOpen, setAddToElectiveDialogOpen] = createSignal(false)
@@ -31,7 +31,7 @@ export default function SubjectAdminEnrollmentActions(props: {
         <HStack alignVertical="end">
             <SubjectElectiveSelector
                 elective={props.elective}
-                setElectiveId={id => setSearchElectiveId(id)}
+                setElectiveId={props.setElectiveId}
                 addedElectives={props.addedElectives}
                 onAdd={() => setAddToElectiveDialogOpen(true)}
             />
@@ -106,7 +106,7 @@ export function SubjectElectiveSelector(props: {
             onInput={e => {
                 const value = e.currentTarget.value
                 if (value === 'add') {
-                    props.setElectiveId(undefined)
+                    e.currentTarget.value = props.elective?.id.toString() ?? ''
                     props.onAdd()
                     return
                 }

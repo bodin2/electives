@@ -12,6 +12,8 @@ export interface PageData {
     setTopAppBarElevated: (elevated: boolean) => void
     allowBacking: boolean
     setAllowBacking: (canBack: boolean) => void
+    focusable: boolean
+    setFocusable: (focusable: boolean) => void
 }
 
 const PageData = createContext<PageData>(undefined as unknown as PageData)
@@ -28,6 +30,8 @@ export default function PageDataProvider(props: { children: JSXElement }) {
         setTopAppBarElevated: elevated => setStore('topAppBarElevated', elevated),
         allowBacking: true,
         setAllowBacking: canBack => setStore('allowBacking', canBack),
+        focusable: true,
+        setFocusable: focusable => setStore('focusable', focusable),
     })
 
     return <PageData.Provider value={store}>{props.children}</PageData.Provider>

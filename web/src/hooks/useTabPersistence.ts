@@ -7,7 +7,7 @@ export function useTabPersistence<T extends string>(
     options: {
         key?: string
         disabled?: boolean
-    } = {}
+    } = {},
 ) {
     const search = useSearch({ strict: false })
     const navigate = useNavigate()
@@ -22,13 +22,17 @@ export function useTabPersistence<T extends string>(
     })
 
     createEffect(
-        on(tab, (t) => {
-            if (options.disabled) return
-            navigate({
-                // @ts-expect-error: Generic navigation is hard to type with TanStack Router
-                search: (prev: Record<string, unknown>) => ({ ...prev, [key]: t }),
-                replace: true,
-            })
-        }, { defer: true })
+        on(
+            tab,
+            t => {
+                if (options.disabled) return
+                navigate({
+                    // @ts-expect-error: Generic navigation is hard to type with TanStack Router
+                    search: (prev: Record<string, unknown>) => ({ ...prev, [key]: t }),
+                    replace: true,
+                })
+            },
+            { defer: true },
+        ),
     )
 }

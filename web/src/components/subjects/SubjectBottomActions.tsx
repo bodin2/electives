@@ -1,37 +1,28 @@
 import SaveIcon from '@iconify-icons/mdi/content-save'
-import { type Component, Show } from 'solid-js'
+import { type ParentProps, Show } from 'solid-js'
 import { SubjectTag } from '../../api'
 import { useI18n } from '../../providers/I18nProvider'
-import { useScrollData } from '../../providers/ScrollDataProvider'
+import BottomBar, { bottomBarStyles } from '../BottomBar'
 import { Button } from '../Button'
-import { VStack } from '../Stack'
 import { useSubjectInfoContext } from './SubjectInfo'
-import styles from './SubjectInfo.module.css'
 
-export default function SubjectBottomActions(props: { extraContent?: Component }) {
+export default function SubjectBottomActions(props: ParentProps) {
     const ctx = useSubjectInfoContext()
     const { string } = useI18n()
-    const scrollData = useScrollData()
 
     const isValid = () => {
         return ctx.subject.tag !== SubjectTag.UNRECOGNIZED
     }
 
     return (
-        <VStack
-            alignHorizontal="center"
-            class={styles.actionButtonsContainer}
-            style={{
-                'border-top-color':
-                    scrollData.maxScrollY - scrollData.scrollY > 16 ? 'var(--m3c-outline-variant)' : undefined,
-            }}
-        >
-            {/* @ts-expect-error: Wrong types */}
-            <Show when={props.extraContent}>{Content => <div class={styles.actionButton}>{<Content />}</div>}</Show>
+        <BottomBar>
+            <Show when={props.children}>
+                <div class={bottomBarStyles.item}>{props.children}</div>
+            </Show>
             <Show when={ctx.onSave && ctx.editable}>
                 <Button
                     icon={SaveIcon}
-                    class={styles.actionButton}
+                    class={bottomBarStyles.item}
                     size="m"
                     onClick={() => ctx.onSave?.()}
                     disabled={!isValid()}
@@ -39,6 +30,6 @@ export default function SubjectBottomActions(props: { extraContent?: Component }
                     {string.SAVE()}
                 </Button>
             </Show>
-        </VStack>
+        </BottomBar>
     )
 }

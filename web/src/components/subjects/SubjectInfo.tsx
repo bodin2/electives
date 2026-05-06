@@ -1,13 +1,9 @@
-import Logger from '@bodin2/electives-common/Logger'
 import { type Component, createContext, createEffect, createSignal, Match, Show, Switch, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
-import { useAutoRefreshResource } from '../../hooks/useAutoRefreshResource'
-import { useRetryableSubscription } from '../../hooks/useRetryableSubscription'
 import { useTabPersistence } from '../../hooks/useTabPersistence'
-import { useAPI } from '../../providers/APIProvider'
-import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { nonNull } from '../../utils'
+import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { VStack } from '../Stack'
 import StickyTabs from '../StickyTabs'
 import SubjectBottomActions from './SubjectBottomActions'
@@ -27,10 +23,10 @@ export interface SubjectInfoProps {
     onStudentRemove?: (student: User) => Promise<void> | void
     studentRemoveDisabled?: boolean
     onTeacherRemove?: (teacher: User) => Promise<void> | void
-    selectedSubject?: Subject
     creating?: boolean
     extraActions?: Component<{ subject: Subject; elective?: Elective }>
     persistTab?: boolean
+    teachers?: User[]
 }
 
 interface SubjectInfoContext {
@@ -40,78 +36,18 @@ interface SubjectInfoContext {
     editable?: boolean
     onEdit?: (field: string, value: any, patchKey?: PatchSetterKey) => Promise<void> | void
     onSave?: () => Promise<void> | void
+    teachers?: User[]
 }
 
 const SubjectInfoContext = createContext<SubjectInfoContext>(null as unknown as SubjectInfoContext)
 export const useSubjectInfoContext = () =>
     nonNull(useContext(SubjectInfoContext), 'useSubjectInfoContext must be used within a SubjectInfo provider')
 
-const log = new Logger('components/subjects/SubjectInfo')
-
 export default function SubjectInfo(props: SubjectInfoProps) {
     const { string } = useI18n()
-    const api = useAPI()
-    const enrollment = useEnrollmentCounts()
 
     const [tab, setTab] = createSignal('info')
     useTabPersistence(tab, setTab, { disabled: props.persistTab === false })
-    const [outdatedMembers, setOutdatedMembers] = createSignal(false)
-
-    const membersTabOpened = () => tab() === 'members'
-
-    createEffect(prev => {
-        if (prev !== undefined && prev !== props.elective) setOutdatedMembers(true)
-        return props.elective
-    })
-
-    createEffect(() => {
-        if (props.elective) {
-            enrollment.initializeCounts(
-                props.elective.id,
-                api.client.electives.resolveAllEnrolledCounts(props.elective.id),
-            )
-        }
-    })
-
-    useRetryableSubscription(
-        () => {
-            if (!props.elective || !props.subject || props.editable) return
-            api.client.gateway.subscribeToElective(
-                props.elective.id,
-                [props.subject.id, props.selectedSubject?.id].filter(Boolean) as number[],
-            )
-        },
-        () => {
-            if (!props.elective || props.editable) return
-            if (api.client.isGatewayConnected()) {
-                api.client.gateway.subscribeToElective(props.elective.id, [])
-            } else log.warn('WebSocket not connected, skipping unsubscription')
-        },
-    )
-
-    const [members] = useAutoRefreshResource(
-        async () => {
-            if (!props.elective || !props.subject) return undefined
-
-            let { students, teachers } = await api.client.subjects.fetchMembers({
-                electiveId: props.elective.id,
-                subjectId: props.subject.id,
-                withStudents: true,
-            })
-
-            students = [...students].sort((a, b) => a.fullName.localeCompare(b.fullName))
-            teachers = [...teachers].sort((a, b) => a.fullName.localeCompare(b.fullName))
-
-            setOutdatedMembers(false)
-
-            return { students, teachers, capacity: props.subject.capacity }
-        },
-        {
-            shouldFetch: () => membersTabOpened() || outdatedMembers(),
-            getKey: () => (props.elective ? `${props.elective.id}:${enrollment.getVersion(props.elective.id)}` : ''),
-            interval: props.editable ? 500 : 1500,
-        },
-    )
 
     // SolidJS moment
     const [info, setInfo] = createStore<SubjectInfoContext>(null as unknown as SubjectInfoContext)
@@ -123,6 +59,7 @@ export default function SubjectInfo(props: SubjectInfoProps) {
             editable: props.editable,
             onEdit: props.onEdit,
             onSave: props.onSave,
+            teachers: props.teachers,
         })
     })
 
@@ -141,39 +78,25 @@ export default function SubjectInfo(props: SubjectInfoProps) {
             <VStack gap={16} grow class={`padded ${styles.tabContent}`}>
                 <Switch>
                     <Match when={tab() === 'info'}>
-                        <SubjectDetailsTab
-                            imageClass={styles.image}
-                            imagePlaceholderClass={`${styles.image} ${styles.placeholder}`}
-                            descriptionClass={`${styles.description} m3-body-large`}
-                            labelClass={styles.labelSubText}
-                            thumbnailClass={styles.thumbnail}
-                        />
+                        <SubjectDetailsTab />
                     </Match>
-                    <Match when={membersTabOpened()}>
-                        <SubjectMembersTab
-                            members={members()}
-                            onStudentRemove={props.onStudentRemove}
-                            studentRemoveDisabled={props.studentRemoveDisabled}
-                            onTeacherRemove={props.onTeacherRemove}
-                            gridClass={styles.membersGrid}
-                            headerClass={styles.membersHeader}
-                            listClass={styles.membersList}
-                            noMembersClass={styles.noMembers}
-                        />
+                    <Match when={tab() === 'members'}>
+                        <SuspenseLoadingPage>
+                            <SubjectMembersTab
+                                onStudentRemove={props.onStudentRemove}
+                                studentRemoveDisabled={props.studentRemoveDisabled}
+                                onTeacherRemove={props.onTeacherRemove}
+                            />
+                        </SuspenseLoadingPage>
                     </Match>
                 </Switch>
             </VStack>
 
-            <SubjectBottomActions
-                extraContent={
-                    props.extraActions
-                        ? () => {
-                              const ExtraActions = nonNull(props.extraActions)
-                              return <ExtraActions subject={props.subject} elective={props.elective} />
-                          }
-                        : undefined
-                }
-            />
+            <SubjectBottomActions>
+                {props.extraActions
+                    ? nonNull(props.extraActions)({ subject: props.subject, elective: props.elective })
+                    : undefined}
+            </SubjectBottomActions>
         </SubjectInfoContext.Provider>
     )
 }

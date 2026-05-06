@@ -10,7 +10,7 @@ export default function useSubjectFull(subject: Accessor<Subject>, elective: Acc
         const e = elective()
 
         const count = counts.getCount(e.id, s.id)
-        return (count ?? 0) >= s.capacity
+        return count >= s.capacity
     }
 
     return isFull

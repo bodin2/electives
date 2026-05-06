@@ -1,16 +1,19 @@
-import { createFileRoute, useRouter } from '@tanstack/solid-router'
+import { createQuery, useQueryClient } from '@tanstack/solid-query'
+import { createFileRoute } from '@tanstack/solid-router'
 import TeamList from '../../../../components/admin/TeamList'
 import Page from '../../../../components/Page'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
+import { teamMemberCountsQueryOptions, teamsQueryOptions } from '../../../../queries/teams'
 import type { Team } from '../../../../api/structures'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/teams/')({
     component: RouteComponent,
-    loader: async ({ context: { client } }) => {
-        const teams = await client.teams.fetchAll()
-        const memberCounts = await client.teams.admin.fetchMemberCounts()
-        return { teams, memberCounts }
+    loader: async ({ context: { client, queryClient } }) => {
+        await Promise.all([
+            queryClient.ensureQueryData(teamsQueryOptions(client)),
+            queryClient.ensureQueryData(teamMemberCountsQueryOptions(client)),
+        ])
     },
 })
 
@@ -18,14 +21,15 @@ function RouteComponent() {
     const navigate = Route.useNavigate()
     const { client } = useAPI()
     const { string } = useI18n()
-    const data = Route.useLoaderData()
-    const router = useRouter()
+    const qc = useQueryClient()
 
-    const invalidate = () => router.invalidate({ filter: r => r.routeId === Route.id, sync: true })
+    const teamsQuery = createQuery(() => teamsQueryOptions(client))
+    const memberCountsQuery = createQuery(() => teamMemberCountsQueryOptions(client))
+
+    const invalidate = () => qc.invalidateQueries({ queryKey: ['teams'] })
 
     const handleCreate = () => {
         navigate({ to: '/manage/teams/$teamId', params: { teamId: 'new' }, search: { page: 0 } })
-        invalidate()
     }
 
     const handleEdit = (team: Team) => {
@@ -42,15 +46,15 @@ function RouteComponent() {
             await invalidate()
         } catch (e) {
             console.error(e)
-            alert('Failed to delete team')
+            alert(string.ERROR_DELETE_FAILED({ error: String(e) }))
         }
     }
 
     return (
         <Page name={string.TEAMS()} leading={null} trailing={null}>
             <TeamList
-                teams={data().teams}
-                memberCounts={data().memberCounts}
+                teams={teamsQuery.data ?? []}
+                memberCounts={memberCountsQuery.data ?? {}}
                 onCreate={handleCreate}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

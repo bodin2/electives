@@ -1,7 +1,8 @@
 import { AdminService_TeamMemberCounts } from '@bodin2/electives-common/proto/api'
-import { Team, User } from '../structures'
+import { Team, type User } from '../structures'
 import { AdminListTeamsResponse, AdminListUsersResponse, AdminTeamPatch, RawTeam } from '../types'
 import type { Cache } from '../cache'
+import type { Client } from '../client'
 import type { RESTClient } from '../rest'
 import type { CacheableManager, FetchOptions } from '.'
 
@@ -12,16 +13,32 @@ export class TeamManager implements CacheableManager {
     cachedAll = false
 
     constructor(
+        private readonly client: Client<unknown>,
         private readonly rest: RESTClient,
         cache: Cache<number, Team>,
     ) {
         this.cache = cache
-        this.admin = new TeamAdminActions(rest, this)
+        this.admin = new TeamAdminActions(client, rest, this)
     }
 
     clearCache(): void {
         this.cache.clear()
         this.cachedAll = false
+    }
+
+    /**
+     * Get or create a Team instance, updating it if it already exists in cache.
+     */
+    _getOrCreate(data: RawTeam, cache = true): Team {
+        const existing = this.cache.get(data.id)
+        if (existing) {
+            existing.update(data)
+            return existing
+        }
+
+        const team = new Team(this.client, data)
+        if (cache) this.cache.set(team.id, team)
+        return team
     }
 
     /**
@@ -40,12 +57,9 @@ export class TeamManager implements CacheableManager {
         const data = await this.rest.get<AdminListTeamsResponse>('/admin/teams', {
             decoder: AdminListTeamsResponse,
         })
-        const teams = data.teams.map(t => new Team(t))
+        const teams = data.teams.map(t => this._getOrCreate(t, cache))
 
         if (cache) {
-            for (const team of teams) {
-                this.cache.set(team.id, team)
-            }
             this.cachedAll = true
         }
 
@@ -69,11 +83,7 @@ export class TeamManager implements CacheableManager {
         const data = await this.rest.get<RawTeam>(`/admin/teams/${id}`, {
             decoder: RawTeam,
         })
-        const team = new Team(data)
-
-        if (cache) this.cache.set(team.id, team)
-
-        return team
+        return this._getOrCreate(data, cache)
     }
 
     /**
@@ -87,6 +97,7 @@ export class TeamManager implements CacheableManager {
 
 export class TeamAdminActions {
     constructor(
+        private readonly client: Client<unknown>,
         private readonly rest: RESTClient,
         private readonly manager: TeamManager,
     ) {}
@@ -97,12 +108,11 @@ export class TeamAdminActions {
      * @param id The team's ID
      * @param team The team data
      */
-    async put(id: number, team: RawTeam): Promise<void> {
+    async put(id: number, team: RawTeam): Promise<Team> {
         await this.rest.put(`/admin/teams/${id}`, team, {
             encoder: RawTeam,
         })
-        this.manager.cache.delete(id)
-        this.manager.cachedAll = false
+        return await this.manager.fetch(id, { force: true })
     }
 
     /**
@@ -111,12 +121,12 @@ export class TeamAdminActions {
      * @param id The team's ID
      * @param patch The fields to update
      */
-    async patch(id: number, patch: AdminTeamPatch): Promise<void> {
-        await this.rest.patch(`/admin/teams/${id}`, patch, {
+    async patch(id: number, patch: AdminTeamPatch): Promise<Team> {
+        const data = await this.rest.patch<RawTeam>(`/admin/teams/${id}`, patch, {
             encoder: AdminTeamPatch,
+            decoder: RawTeam,
         })
-        this.manager.cache.delete(id)
-        this.manager.cachedAll = false
+        return this.manager._getOrCreate(data)
     }
 
     /**
@@ -147,13 +157,13 @@ export class TeamAdminActions {
      * @param teamId The team's ID
      * @param page The page number (1-based)
      */
-    async fetchMembers(teamId: number, page = 1): Promise<{ users: User[]; total: number }> {
+    async fetchMembers(teamId: number, page = 1, query?: string): Promise<{ users: User[]; total: number }> {
         const data = await this.rest.get<AdminListUsersResponse>(`/admin/teams/${teamId}/members`, {
-            query: { page },
+            query: { page, query },
             decoder: AdminListUsersResponse,
         })
         return {
-            users: data.users.map(u => new User(u)),
+            users: data.users.map(u => this.client.users._getOrCreate(u)),
             total: data.total,
         }
     }

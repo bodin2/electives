@@ -40,7 +40,6 @@ export { Elective, Subject, Team, User } from './structures'
 export {
     type AdminAddUserRequest,
     type AdminElectivePatch,
-    type AdminListElectivesResponse,
     type AdminListTeamsResponse,
     type AdminListUsersResponse,
     type AdminSetElectiveSubjectsRequest,

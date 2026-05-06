@@ -1,4 +1,4 @@
-export function groupItems<const T, const K extends PropertyKey>(
+export function groupItems<T, K extends PropertyKey>(
     list: T[],
     by: (item: T) => K,
 ): {
@@ -14,6 +14,22 @@ export function groupItems<const T, const K extends PropertyKey>(
         },
         {} as Record<K, T[]>,
     )
+}
+
+export function groupMapItems<T, K>(list: T[], by: (item: T) => K): Map<K, T[]> {
+    return list.reduce((acc, item) => {
+        const key = by(item)
+
+        let group = acc.get(key)
+
+        if (!group) {
+            group = []
+            acc.set(key, group)
+        }
+
+        group.push(item)
+        return acc
+    }, new Map<K, T[]>())
 }
 
 export function nonNull<T>(value: T | null | undefined, msg = 'Value must not be nullish'): T {

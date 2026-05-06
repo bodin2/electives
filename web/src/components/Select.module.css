@@ -68,6 +68,10 @@
     box-shadow: var(--m3-elevation-1);
 }
 
+.select:disabled {
+    opacity: 0.5;
+}
+
 .select:hover {
     background-color: var(--m3c-surface-variant);
 }

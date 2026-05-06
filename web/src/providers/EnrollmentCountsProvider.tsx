@@ -15,7 +15,7 @@ type EnrollmentStore = {
 
 type EnrollmentContextValue = {
     /** Get the enrolled count for a specific subject */
-    getCount: (electiveId: number, subjectId: number) => number | undefined
+    getCount: (electiveId: number, subjectId: number) => number
     /** Get all counts for an elective */
     getElectiveCounts: (electiveId: number) => Record<number, number>
     /** Initialize counts for an elective (e.g., from loader data) */
@@ -25,6 +25,8 @@ type EnrollmentContextValue = {
     // TODO: Find a better way to emit refresh than this
     /** Increment the version for an elective's enrollment counts */
     bumpVersion: (electiveId: number) => void
+    /** Manually set count to provide local updates immediately */
+    setCount: (electiveId: number, subjectId: number, setter: (current: number) => number) => void
 }
 
 const EnrollmentContext = createContext<EnrollmentContextValue>()
@@ -37,25 +39,28 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
 
     const handleUpdate = (event: { electiveId: number; subjectId: number; enrolledCount: number }) => {
         log.info('Received subject enrollment update:', event)
-        setStore('counts', event.electiveId, { [event.subjectId]: event.enrolledCount })
+        setStore('counts', event.electiveId, event.subjectId, event.enrolledCount)
         setStore('versions', event.electiveId, v => (v ?? 0) + 1)
     }
 
     const handleBulkUpdate = (event: { electiveId: number; subjectEnrolledCounts: Record<string, number> }) => {
         log.info('Received bulk subject enrollment update:', event)
 
-        const orig = store.counts[event.electiveId]
-        const deepEqual = Object.entries(event.subjectEnrolledCounts).every(
-            ([subjectId, count]) => orig?.[Number(subjectId)] === count,
-        )
+        let changed = false
+        for (const [subjectId, count] of Object.entries(event.subjectEnrolledCounts)) {
+            const sid = Number(subjectId)
 
-        if (deepEqual) {
-            log.info('Bulk update is identical to existing counts; skipping')
-            return
+            if (store.counts[event.electiveId]?.[sid] !== count) {
+                setStore('counts', event.electiveId, sid, count)
+                changed = true
+            }
         }
 
-        setStore('counts', event.electiveId, reconcile(event.subjectEnrolledCounts))
-        setStore('versions', event.electiveId, v => (v ?? 0) + 1)
+        if (changed) {
+            setStore('versions', event.electiveId, v => (v ?? 0) + 1)
+        } else {
+            log.info('Bulk update is identical to existing counts; skipping')
+        }
     }
 
     props.client.on('subjectEnrollmentUpdate', handleUpdate)
@@ -71,17 +76,27 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
     }
 
     const value: EnrollmentContextValue = {
-        getCount: (electiveId, subjectId) => store.counts[electiveId]?.[subjectId],
+        getCount: (electiveId, subjectId) => store.counts[electiveId]?.[subjectId] ?? 0,
         getElectiveCounts: electiveId => store.counts[electiveId] ?? {},
         getVersion: electiveId => store.versions[electiveId] ?? 0,
-        bumpVersion: electiveId => setStore('versions', electiveId, v => (v ?? 0) + 1),
+        bumpVersion: electiveId => {
+            const counts = props.client.electives.resolveAllEnrolledCounts(electiveId)
+            if (Object.keys(counts).length > 0) {
+                setStore('counts', electiveId, reconcile(counts))
+            }
+            setStore('versions', electiveId, v => (v ?? 0) + 1)
+        },
         initializeCounts: (electiveId, counts) => {
             const existing = store.counts[electiveId]
             if (existing) {
-                setStore('counts', electiveId, { ...counts, ...existing })
+                setStore('counts', electiveId, reconcile({ ...existing, ...counts }))
             } else {
-                setStore('counts', electiveId, counts)
+                setStore('counts', electiveId, reconcile(counts))
             }
+        },
+        setCount: (electiveId, subjectId, setter) => {
+            setStore('counts', electiveId, subjectId, setter)
+            setStore('versions', electiveId, it => it + 1)
         },
     }
 

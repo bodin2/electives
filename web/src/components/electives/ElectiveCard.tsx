@@ -5,12 +5,11 @@ import PencilIcon from '@iconify-icons/mdi/pencil'
 import TeachIcon from '@iconify-icons/mdi/teach'
 import { Card, Icon, mergeClasses } from 'm3-solid'
 import { createSignal, Show } from 'solid-js'
-import { User } from '../../api'
 import useElectiveOpen from '../../hooks/useElectiveOpen'
 import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placeholder.webp'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import { formatCountdown } from '../../utils/date'
+import { formatCountdown, formatDuration } from '../../utils/date'
 import IconLabel from '../IconLabel'
 import LinkButton from '../LinkButton'
 import { HStack, VStack } from '../Stack'
@@ -41,24 +40,17 @@ export default function ElectiveCard(props: ElectiveCardProps) {
 
     const hasSelection = () => selectedSubject() !== undefined
 
-    const formatDuration = (date: Date) => {
-        return new Intl.DateTimeFormat(locale(), {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-        }).format(date)
-    }
-
     const formatDateRange = () => {
         const { startDate, endDate } = props.elective
         if (isOpen()) {
-            if (endDate) return string.ENROLLMENT_CLOSES_AT({ duration: formatDuration(endDate) })
+            if (endDate) return string.ENROLLMENT_CLOSES_AT({ duration: formatDuration(locale, endDate) })
         } else {
             const countdownText = formatCountdown(countdown())
             if (countdownText) return string.ENROLLMENT_CLOSED_OPENING_IN({ time: countdownText })
             if (startDate) {
                 if (startDate.getTime() < Date.now()) return null
 
-                return string.ENROLLMENT_OPENS_AT({ duration: formatDuration(startDate) })
+                return string.ENROLLMENT_OPENS_AT({ duration: formatDuration(locale, startDate) })
             }
         }
         return null
@@ -67,7 +59,8 @@ export default function ElectiveCard(props: ElectiveCardProps) {
     const teacherNames = () => {
         const subject = selectedSubject()
         if (!subject) return ''
-        return subject.teachers.map(t => new User(t).fullName).join(', ')
+        const teachers = api.client.subjects.resolveTeachers(props.elective.id, subject.id)
+        return (teachers?.map(t => t.fullName) ?? []).join(', ')
     }
 
     return (

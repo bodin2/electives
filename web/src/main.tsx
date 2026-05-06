@@ -1,6 +1,7 @@
 import { render } from 'solid-js/web'
 import 'solid-devtools'
 
+import { QueryClientProvider } from '@tanstack/solid-query'
 import { createRouter, type Register, type RoutePaths, RouterProvider, type ToPathOption } from '@tanstack/solid-router'
 import { routeTree } from './routeTree.gen'
 
@@ -14,6 +15,7 @@ import LoadingPage from './components/pages/LoadingPage'
 import NotFoundPage from './components/pages/NotFoundPage'
 import { createClient, initAuth } from './providers/APIProvider'
 import I18nProvider from './providers/I18nProvider'
+import { queryClient } from './queries/queryClient'
 import type { RouterContext } from './routes/__root'
 
 const client = createClient()
@@ -29,7 +31,7 @@ const router = createRouter({
     defaultErrorComponent: ErrorPage,
     defaultNotFoundComponent: NotFoundPage,
     scrollRestoration: true,
-    context: { client, authState } satisfies RouterContext,
+    context: { client, authState, queryClient } satisfies RouterContext,
 })
 
 type Router = Register['router']
@@ -49,7 +51,9 @@ if (!rootElement.innerHTML) {
         () => (
             <MetaProvider>
                 <I18nProvider>
-                    <RouterProvider router={router} />
+                    <QueryClientProvider client={queryClient}>
+                        <RouterProvider router={router} />
+                    </QueryClientProvider>
                 </I18nProvider>
             </MetaProvider>
         ),

@@ -16,7 +16,7 @@ export default function DynamicEnrollButton(props: {
     subject: Subject
     selectedSubject: Subject | undefined
     class?: string
-    onInvalidate: () => Promise<void> | void
+    onInvalidate: () => Promise<unknown> | unknown
 }) {
     const api = useAPI()
     const { string } = useI18n()

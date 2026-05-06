@@ -1,6 +1,13 @@
-import { Elective, type Subject, User } from '../structures'
-import { AdminElectivePatch, AdminListUsersResponse, AdminSetElectiveSubjectsRequest, ListElectivesResponse, RawElective } from '../types'
+import { Elective, type Subject, type User } from '../structures'
+import {
+    AdminElectivePatch,
+    AdminListUsersResponse,
+    AdminSetElectiveSubjectsRequest,
+    ListElectivesResponse,
+    RawElective,
+} from '../types'
 import type { Cache } from '../cache'
+import type { Client } from '../client'
 import type { RESTClient } from '../rest'
 import type { CacheableManager, FetchOptions } from '.'
 import type { SubjectManager } from './SubjectManager'
@@ -22,6 +29,7 @@ export class ElectiveManager implements CacheableManager {
     cachedAll = false
 
     constructor(
+        private readonly client: Client<unknown>,
         private readonly rest: RESTClient,
         cache: Cache<number, Elective>,
         private readonly subjects: SubjectManager,
@@ -33,6 +41,20 @@ export class ElectiveManager implements CacheableManager {
     clearCache(): void {
         this.cache.clear()
         this.cachedAll = false
+    }
+
+    /**
+     * Get or create an elective instance and update it with new data.
+     */
+    _getOrCreate(data: RawElective, cache = true): Elective {
+        let elective = this.cache.get(data.id)
+        if (elective) {
+            elective.update(data)
+        } else {
+            elective = new Elective(this.client, data)
+            if (cache) this.cache.set(elective.id, elective)
+        }
+        return elective
     }
 
     /**
@@ -53,13 +75,9 @@ export class ElectiveManager implements CacheableManager {
         const data = await this.rest.get<ListElectivesResponse>('/electives', {
             decoder: ListElectivesResponse,
         })
-        const electives = data.electives.map(e => new Elective(e))
+        const electives = data.electives.map(e => this._getOrCreate(e, cache))
 
         if (cache) {
-            for (const elective of electives) {
-                this.cache.set(elective.id, elective)
-            }
-
             this.cachedAll = true
         }
 
@@ -83,11 +101,7 @@ export class ElectiveManager implements CacheableManager {
         const data = await this.rest.get<RawElective>(`/electives/${id}`, {
             decoder: RawElective,
         })
-        const elective = new Elective(data)
-
-        if (cache) this.cache.set(elective.id, elective)
-
-        return elective
+        return this._getOrCreate(data, cache)
     }
 
     async fetchSubjects(
@@ -104,12 +118,16 @@ export class ElectiveManager implements CacheableManager {
      * @param team The team ID to filter by
      * @param page The page number (1-based)
      */
-    async fetchUnenrolledMembers(electiveId: number, team: number, page = 1): Promise<{ users: User[]; total: number }> {
+    async fetchUnenrolledMembers(
+        electiveId: number,
+        team: number,
+        page = 1,
+    ): Promise<{ users: User[]; total: number }> {
         const data = await this.rest.get<AdminListUsersResponse>(`/electives/${electiveId}/unenrolled-members`, {
             query: { team, page },
             decoder: AdminListUsersResponse,
         })
-        const users = data.users.map(u => new User(u))
+        const users = data.users.map(u => this.client.users._getOrCreate(u))
         return { users, total: data.total }
     }
 
@@ -164,11 +182,11 @@ export class ElectiveAdminActions {
      * @param id The elective's ID
      * @param elective The elective data
      */
-    async put(id: number, elective: RawElective): Promise<void> {
+    async put(id: number, elective: RawElective): Promise<Elective> {
         await this.rest.put(`/admin/electives/${id}`, elective, {
             encoder: RawElective,
         })
-        this.manager.cache.delete(id)
+        return await this.manager.fetch(id, { force: true })
     }
 
     /**
@@ -177,11 +195,12 @@ export class ElectiveAdminActions {
      * @param id The elective's ID
      * @param patch The fields to update
      */
-    async patch(id: number, patch: AdminElectivePatch): Promise<void> {
-        await this.rest.patch(`/admin/electives/${id}`, patch, {
+    async patch(id: number, patch: AdminElectivePatch): Promise<Elective> {
+        const data = await this.rest.patch<RawElective>(`/admin/electives/${id}`, patch, {
             encoder: AdminElectivePatch,
+            decoder: RawElective,
         })
-        this.manager.cache.delete(id)
+        return this.manager._getOrCreate(data)
     }
 
     /**

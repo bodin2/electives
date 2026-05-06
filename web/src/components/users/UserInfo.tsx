@@ -1,11 +1,12 @@
-import { type Component, createSignal, Match, Show, Suspense, Switch } from 'solid-js'
+import { type Component, createSignal, Match, Show, Switch } from 'solid-js'
 import { useTabPersistence } from '../../hooks/useTabPersistence'
 import { useI18n } from '../../providers/I18nProvider'
 import { nonNull } from '../../utils'
-import LoadingPage from '../pages/LoadingPage'
+import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { VStack } from '../Stack'
 import StickyTabs from '../StickyTabs'
 import StudentSelectionsTab from './StudentSelectionsTab'
+import TeacherSubjectsTab from './TeacherSubjectsTab'
 import UserBottomActions from './UserBottomActions'
 import UserDetailsTab from './UserDetailsTab'
 import { useUserDisplayContext } from './UserDisplayContext'
@@ -33,10 +34,9 @@ export default function UserInfo(props: UserInfoProps) {
                 list.push({ label: string.SELECTIONS(), value: 'selections' })
             }
 
-            // TODO: Subjects tab for teachers
-            // if (ctx.user?.isTeacher()) {
-            //     list.push({ label: string.SUBJECTS(), value: 'subjects' })
-            // }
+            if (ctx.user?.isTeacher()) {
+                list.push({ label: string.SUBJECTS(), value: 'subjects' })
+            }
         }
         return list
     }
@@ -49,7 +49,7 @@ export default function UserInfo(props: UserInfoProps) {
                 </Show>
             </Show>
             <VStack gap={16} grow class={`padded ${styles.tabContent}`}>
-                <Suspense fallback={<LoadingPage />}>
+                <SuspenseLoadingPage>
                     <Switch>
                         <Match when={tab() === 'info'}>
                             <UserDetailsTab
@@ -64,14 +64,11 @@ export default function UserInfo(props: UserInfoProps) {
                         <Match when={tab() === 'selections'}>
                             <StudentSelectionsTab userId={nonNull(ctx.user).id} />
                         </Match>
-                        {/* TODO */}
-                        {/* <Match when={tab() === 'subjects'}>
-                            <VStack gap={8} alignHorizontal="center">
-
-                            </VStack>
-                        </Match> */}
+                        <Match when={tab() === 'subjects'}>
+                            <TeacherSubjectsTab userId={nonNull(ctx.user).id} />
+                        </Match>
                     </Switch>
-                </Suspense>
+                </SuspenseLoadingPage>
             </VStack>
 
             <UserBottomActions />

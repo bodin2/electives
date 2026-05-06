@@ -1,14 +1,14 @@
 import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import { Icon, TextField } from 'm3-solid'
 import { createEffect, createSignal, type JSX, on, Show } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
-import { debounce } from '../../utils'
-import { Button } from '../Button'
-import { Dialog } from '../Dialog'
-import { VStack } from '../Stack'
-import { SubjectMemberListItem } from '../subjects/SubjectMembersTab'
-import type { User } from '../../api'
+import { useAPI } from '../../../providers/APIProvider'
+import { useI18n } from '../../../providers/I18nProvider'
+import { debounce } from '../../../utils'
+import { Button } from '../../Button'
+import { Dialog } from '../../Dialog'
+import { VStack } from '../../Stack'
+import { UserListItem } from '../../users/UserListItem'
+import type { User } from '../../../api'
 
 export interface AddUserDialogProps {
     open: boolean
@@ -86,7 +86,7 @@ export default function AddUserDialog(props: AddUserDialogProps) {
             centerHeadline
             actions={
                 <>
-                    <Button variant="text" type="submit" onClick={props.onClose}>
+                    <Button variant="text" onClick={props.onClose}>
                         {string.CANCEL()}
                     </Button>
                     <Button
@@ -131,7 +131,7 @@ export default function AddUserDialog(props: AddUserDialogProps) {
                     required
                     onInput={e => setIdInput(e.currentTarget.value)}
                 />
-                <Show when={user()}>{u => <SubjectMemberListItem user={u()} />}</Show>
+                <Show when={user()}>{u => <UserListItem user={u()} />}</Show>
             </VStack>
         </Dialog>
     )

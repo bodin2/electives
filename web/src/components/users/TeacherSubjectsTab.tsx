@@ -1,0 +1,92 @@
+import { createQuery } from '@tanstack/solid-query'
+import { createEffect, createMemo, For, Show } from 'solid-js'
+import { useAPI } from '../../providers/APIProvider'
+import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
+import { useI18n } from '../../providers/I18nProvider'
+import { electivesQueryOptions } from '../../queries/electives'
+import { teacherSubjectsQueryOptions } from '../../queries/users'
+import { electiveSorter } from '../../utils'
+import SectionedList from '../SectionedList'
+import { useSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
+import SubjectListItem from '../subjects/SubjectListItem'
+import type { Elective, Subject } from '../../api'
+
+export interface TeacherSubjectsTabProps {
+    userId: number
+}
+
+export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
+    const api = useAPI()
+    const enrollment = useEnrollmentCounts()
+    const { string } = useI18n()
+    const subjectDisplayContext = useSubjectDisplayContext()
+
+    const subjectsQuery = createQuery(() => teacherSubjectsQueryOptions(api.client, props.userId))
+    const electivesQuery = createQuery(() => electivesQueryOptions(api.client))
+
+    const data = () => {
+        if (!subjectsQuery.data || !electivesQuery.data) return undefined
+        return { subjects: subjectsQuery.data, electives: electivesQuery.data }
+    }
+
+    createEffect(() => {
+        const d = data()
+        if (!d) return
+
+        for (const [electiveId] of d.subjects) {
+            enrollment.initializeCounts(electiveId, api.client.electives.resolveAllEnrolledCounts(electiveId))
+        }
+    })
+
+    const groupedSubjects = createMemo(() => {
+        const d = data()
+        if (!d) return []
+
+        const result: Record<string, { elective: Elective; subject: Subject }[]> = {}
+
+        for (const [electiveId, subject] of d.subjects) {
+            const elective = d.electives.find(e => e.id === electiveId)
+            if (!elective) continue
+
+            if (!result[elective.name]) {
+                result[elective.name] = []
+            }
+
+            result[elective.name].push({ elective, subject })
+        }
+
+        return Object.entries(result).sort(([_, [{ elective: elA }]], [__, [{ elective: elB }]]) =>
+            electiveSorter(elA, elB),
+        )
+    })
+
+    return (
+        <Show when={data()}>
+            <SectionedList
+                style={{ top: '48px', position: 'sticky' }}
+                items={groupedSubjects()}
+                fallback={
+                    <p class="text-surface-variant text-center">
+                        {string.NO_X_YET({ object: string.SUBJECTS().toLowerCase() })}
+                    </p>
+                }
+                renderSection={(electiveName, items) => (
+                    <section>
+                        <h1 class="m3-title-large padded">{electiveName}</h1>
+                        <ul>
+                            <For each={items}>
+                                {({ elective, subject }) => (
+                                    <SubjectListItem
+                                        subject={subject}
+                                        electiveId={elective.id}
+                                        linkProps={subjectDisplayContext.viewLinkProps(elective.id, subject.id)}
+                                    />
+                                )}
+                            </For>
+                        </ul>
+                    </section>
+                )}
+            />
+        </Show>
+    )
+}

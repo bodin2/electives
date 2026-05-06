@@ -1,12 +1,15 @@
-import { createEffect, createMemo, createResource, For, Show } from 'solid-js'
+import { createQuery } from '@tanstack/solid-query'
+import { createEffect, createMemo, For, Show } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
+import { electivesQueryOptions } from '../../queries/electives'
+import { selectionsQueryOptions } from '../../queries/selections'
+import { electiveSorter } from '../../utils'
 import SectionedList from '../SectionedList'
 import { useSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
 import SubjectListItem from '../subjects/SubjectListItem'
 import type { Elective, Subject } from '../../api'
-
 export interface StudentSelectionsTabProps {
     userId: number
 }
@@ -17,14 +20,13 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
     const { string } = useI18n()
     const subjectDisplayContext = useSubjectDisplayContext()
 
-    const [data] = createResource(async () => {
-        const [selections, electives] = await Promise.all([
-            api.client.selections.fetch(props.userId),
-            api.client.electives.fetchAll(),
-        ])
+    const selectionsQuery = createQuery(() => selectionsQueryOptions(api.client, props.userId))
+    const electivesQuery = createQuery(() => electivesQueryOptions(api.client))
 
-        return { selections, electives }
-    })
+    const data = () => {
+        if (!selectionsQuery.data || !electivesQuery.data) return undefined
+        return { selections: selectionsQuery.data, electives: electivesQuery.data }
+    }
 
     createEffect(() => {
         const d = data()
@@ -37,7 +39,7 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
 
     const groupedSelections = createMemo(() => {
         const d = data()
-        if (!d) return {}
+        if (!d) return []
 
         const result: Record<string, { elective: Elective; subject: Subject }[]> = {}
 
@@ -48,10 +50,13 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
             if (!result[elective.name]) {
                 result[elective.name] = []
             }
+
             result[elective.name].push({ elective, subject })
         }
 
-        return result
+        return Object.entries(result).sort(([_, [{ elective: elA }]], [__, [{ elective: elB }]]) =>
+            electiveSorter(elA, elB),
+        )
     })
 
     return (

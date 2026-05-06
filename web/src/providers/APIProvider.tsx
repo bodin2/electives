@@ -49,10 +49,11 @@ const TOKEN_TYPE_KEY = 'auth_token_type'
 const APIContext = createContext<APIApi>()
 const log = new Logger('APIProvider')
 
-export enum TokenType {
-    User = 'user',
-    Admin = 'admin',
-}
+export type TokenType = (typeof TokenType)[keyof typeof TokenType]
+export const TokenType = {
+    User: 'user',
+    Admin: 'admin',
+} as const
 
 type APIClient = Client<unknown>
 const gatewayURLFromBaseURL = (baseURL: string, tokenType: TokenType): string => {
@@ -85,7 +86,7 @@ const configureClientAuth = (client: APIClient, tokenType: TokenType): Authentic
 }
 
 export const createClient = () => {
-    const baseURL = process.env.API_BASE_URL || 'http://localhost:8080'
+    const baseURL = process.env.API_BASE_URL || `http://${window.location.hostname}:8080`
     const tokenType = getTokenType()
     const rest = new RESTClient({ baseURL })
     const gateway = new Gateway({
@@ -267,7 +268,8 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
         },
         adminLogin: async (key: CryptoKey) => {
             configureClientAuth(client, TokenType.Admin)
-            const credentials: AdminAuthenticateOptions = { key }
+            // TODO: Support multiple admin accounts
+            const credentials: AdminAuthenticateOptions = { key, id: 0 }
             await client.login(credentials)
 
             const token = client.rest.token

@@ -33,7 +33,7 @@ export default function AddStudentToSubjectButton(props: {
             <Show when={props.electiveId}>
                 <Portal>
                     <AddStudentToSubjectDialog
-                        open={open()}
+                        open={/* @once */ open() && !props.disabled}
                         onClose={() => setOpen(false)}
                         electiveId={nonNull(props.electiveId)}
                         subjectId={props.subjectId}

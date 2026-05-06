@@ -1,0 +1,12 @@
+.image {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--m3-shape-medium);
+    background-color: var(--m3c-surface-container-lowest);
+    width: 100%;
+}
+
+.placeholder {
+    composes: image;
+    object-fit: scale-down;
+}

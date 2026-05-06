@@ -1,7 +1,7 @@
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import AddUserDialog from './AddUserDialog'
+import AddUserDialog from './base/AddUserDialog'
 import type { AdminSubjectPatch } from '../../api'
 
 export default function AddTeacherToSubjectDialog(props: {
@@ -10,6 +10,7 @@ export default function AddTeacherToSubjectDialog(props: {
     subjectId: number
     electiveId: number
     currentTeacherIds: number[]
+    onInvalidate?: () => Promise<unknown> | unknown
 }) {
     const api = useAPI()
     const { string } = useI18n()
@@ -46,6 +47,7 @@ export default function AddTeacherToSubjectDialog(props: {
 
                 await api.client.subjects.admin.patch(props.subjectId, patch)
                 enrolledCounts.bumpVersion(props.electiveId)
+                await props.onInvalidate?.()
             }}
         />
     )

@@ -1,8 +1,9 @@
 import {
     AdminService_AddUserRequest as AdminAddUserRequest,
+    AdminService_BulkAddUsersRequest as AdminBulkAddUsersRequest,
+    AdminService_BulkDeleteUsersRequest as AdminBulkDeleteUsersRequest,
     AdminService_ChallengeResponse as AdminChallengeResponse,
     AdminService_ElectivePatch as AdminElectivePatch,
-    AdminService_ListElectivesResponse as AdminListElectivesResponse,
     AdminService_ListTeamsResponse as AdminListTeamsResponse,
     AdminService_ListUsersResponse as AdminListUsersResponse,
     AdminService_SetElectiveSubjectsRequest as AdminSetElectiveSubjectsRequest,
@@ -35,9 +36,10 @@ import type { GatewayOptions } from './gateway'
 
 export {
     AdminAddUserRequest,
+    AdminBulkAddUsersRequest,
+    AdminBulkDeleteUsersRequest,
     AdminChallengeResponse,
     AdminElectivePatch,
-    AdminListElectivesResponse,
     AdminListTeamsResponse,
     AdminListUsersResponse,
     AdminSetElectiveSubjectsRequest,

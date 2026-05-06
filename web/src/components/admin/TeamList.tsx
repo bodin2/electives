@@ -1,10 +1,11 @@
+import MagnifyIcon from '@iconify-icons/mdi/magnify'
 import PlusIcon from '@iconify-icons/mdi/plus'
 import { TextField } from 'm3-solid'
 import { createMemo, createSignal, For } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'
-import { Dialog } from '../Dialog'
+import { ConfirmDialog } from '../dialogs/base/ConfirmDialog'
 import { HStack, VStack } from '../Stack'
 import TeamItem from './TeamItem'
 import styles from './TeamList.module.css'
@@ -42,6 +43,7 @@ export default function TeamList(props: TeamListProps) {
             <HStack alignVertical="center" gap={16} wrap>
                 <div class={styles.searchContainer}>
                     <TextField
+                        leadingIcon={MagnifyIcon}
                         label={string.SEARCH_TEAMS()}
                         variant="filled"
                         class={styles.search}
@@ -68,30 +70,20 @@ export default function TeamList(props: TeamListProps) {
                 </For>
             </VStack>
             <Portal>
-                <Dialog
+                <ConfirmDialog
                     open={deletingTeam()}
+                    variant="danger"
                     closedBy="any"
-                    onClose={() => setTeamToDelete(undefined)}
+                    onCancel={() => setTeamToDelete(undefined)}
+                    onConfirm={async () => {
+                        if (teamToDelete) await props.onDelete(teamToDelete)
+                        setTeamToDelete(undefined)
+                    }}
+                    confirmText={string.DELETE_TEAM()}
                     headline={string.DELETE_TEAM()}
-                    actions={
-                        <HStack slot="actions" gap={8}>
-                            <Button variant="text" onClick={() => setTeamToDelete(undefined)}>
-                                {string.CANCEL()}
-                            </Button>
-                            <Button
-                                variant="tonal-error"
-                                onClick={async () => {
-                                    if (teamToDelete) await props.onDelete(teamToDelete)
-                                    setTeamToDelete(undefined)
-                                }}
-                            >
-                                {string.DELETE_TEAM()}
-                            </Button>
-                        </HStack>
-                    }
                 >
-                    <p>{string.CONFIRM_DELETE_TEAM({ name: teamToDelete?.name ?? '' })}</p>
-                </Dialog>
+                    <p>{string.CONFIRM_DELETE_TEAM({ name: <strong>{teamToDelete?.name ?? ''}</strong> })}</p>
+                </ConfirmDialog>
             </Portal>
         </VStack>
     )

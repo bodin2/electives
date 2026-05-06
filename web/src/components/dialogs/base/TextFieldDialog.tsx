@@ -1,10 +1,10 @@
 import { TextField, TextFieldMultiline, type TextFieldProps } from 'm3-solid'
 import { createEffect, createMemo, createSignal, Show } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
-import { useI18n } from '../../providers/I18nProvider'
-import { Button } from '../Button'
-import { Dialog, type DialogProps } from '../Dialog'
-import { VStack } from '../Stack'
+import { useI18n } from '../../../providers/I18nProvider'
+import { Button } from '../../Button'
+import { Dialog, type DialogProps } from '../../Dialog'
+import { VStack } from '../../Stack'
 
 export type TextFieldDialogProps = {
     open: boolean

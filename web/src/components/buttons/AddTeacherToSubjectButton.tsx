@@ -5,18 +5,26 @@ import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'
 import { nonNull } from '../../utils'
 import AddTeacherToSubjectDialog from '../dialogs/AddTeacherToSubjectDialog'
+import { useSubjectInfoContext } from '../subjects/SubjectInfo'
 
 export default function AddTeacherToSubjectButton(props: {
     class?: string
     style?: string | JSX.CSSProperties
     subjectId: number
     electiveId?: number
-    currentTeacherIds: number[]
     variant?: ButtonVariant
     disabled?: boolean
+    onInvalidate?: () => Promise<unknown> | unknown
+    currentTeacherIds?: number[]
 }) {
     const { string } = useI18n()
+    const ctx = useSubjectInfoContext()
     const [open, setOpen] = createSignal(false)
+
+    const currentTeacherIds = () => {
+        if (props.currentTeacherIds) return props.currentTeacherIds
+        return ctx.teachers?.map(t => t.id) ?? []
+    }
 
     return (
         <>
@@ -38,7 +46,8 @@ export default function AddTeacherToSubjectButton(props: {
                         onClose={() => setOpen(false)}
                         subjectId={props.subjectId}
                         electiveId={nonNull(props.electiveId)}
-                        currentTeacherIds={props.currentTeacherIds}
+                        currentTeacherIds={currentTeacherIds()}
+                        onInvalidate={props.onInvalidate}
                     />
                 </Portal>
             </Show>

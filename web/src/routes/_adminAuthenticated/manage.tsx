@@ -105,6 +105,11 @@ function RouteComponent() {
     })
 
     createEffect(() => {
+        if (modalNav()) pageData.setFocusable(!navOpen())
+        else pageData.setFocusable(true)
+    })
+
+    createEffect(() => {
         setNavOpen(!modalNav())
     })
 
@@ -152,11 +157,29 @@ function RouteComponent() {
                                 viewLinkProps: (electiveId, subjectId) => ({
                                     to: '/manage/subjects/$subjectId',
                                     params: { subjectId },
-                                    search: { elective_id: electiveId },
+                                    search: { enrollment_id: electiveId },
                                 }),
                             }}
                         >
-                            <UserDisplayContextProvider value={{ ...userDisplayContext, editable: true }}>
+                            <UserDisplayContextProvider
+                                value={{
+                                    ...userDisplayContext,
+                                    editable: true,
+                                    createLinkProps: type => ({
+                                        to: '/manage/users/$userId',
+                                        params: { userId: 'new' },
+                                        search: { type },
+                                    }),
+                                    editLinkProps: userId => ({
+                                        to: '/manage/users/$userId',
+                                        params: { userId },
+                                    }),
+                                    viewLinkProps: userId => ({
+                                        to: '/manage/users/$userId',
+                                        params: { userId },
+                                    }),
+                                }}
+                            >
                                 <Outlet />
                             </UserDisplayContextProvider>
                         </SubjectDisplayContextProvider>

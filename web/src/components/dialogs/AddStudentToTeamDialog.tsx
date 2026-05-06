@@ -1,7 +1,7 @@
-import { useRouter } from '@tanstack/solid-router'
+import { useQueryClient } from '@tanstack/solid-query'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import AddUserDialog from './AddUserDialog'
+import AddUserDialog from './base/AddUserDialog'
 import type { User } from '../../api'
 
 export default function AddStudentToTeamDialog(props: {
@@ -11,7 +11,7 @@ export default function AddStudentToTeamDialog(props: {
     teamId: number
 }) {
     const api = useAPI()
-    const router = useRouter()
+    const qc = useQueryClient()
     const { string } = useI18n()
 
     return (
@@ -36,8 +36,10 @@ export default function AddStudentToTeamDialog(props: {
 
                     await api.client.users.fetch(user.id, { force: true })
 
-                    // TODO: Make this more specific?
-                    await router.invalidate()
+                    await Promise.all([
+                        qc.invalidateQueries({ queryKey: ['teams', 'memberCounts'] }),
+                        qc.invalidateQueries({ queryKey: ['teams', props.teamId, 'members'] }),
+                    ])
                 }
             }}
         />

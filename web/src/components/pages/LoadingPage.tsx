@@ -1,4 +1,5 @@
 import { LoadingIndicator } from 'm3-solid'
+import { type ParentComponent, Suspense } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
 import { VStack } from '../Stack'
 
@@ -15,4 +16,8 @@ export default function LoadingPage() {
             </p>
         </VStack>
     )
+}
+
+export const SuspenseLoadingPage: ParentComponent = props => {
+    return <Suspense fallback={<LoadingPage />}>{props.children}</Suspense>
 }
