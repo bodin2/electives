@@ -17,7 +17,7 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.mock.testElectiveSelectionServiceResponse
 import th.ac.bodin2.electives.proto.api.User
 import th.ac.bodin2.electives.proto.api.UserType
-import th.ac.bodin2.electives.proto.api.UsersServiceKt.setStudentElectiveSelectionRequest
+import th.ac.bodin2.electives.proto.api.UsersService as ProtoUsersService
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -54,7 +54,7 @@ class UsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<User>()
 
-        assertEquals(STUDENT_ID, user.id)
+        assertEquals(STUDENT_ID.toInt(), user.id)
         assertEquals(UserType.STUDENT, user.type)
     }
 
@@ -64,7 +64,7 @@ class UsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<User>()
 
-        assertEquals(TEACHER_ID, user.id)
+        assertEquals(TEACHER_ID.toInt(), user.id)
         assertEquals(UserType.TEACHER, user.type)
     }
 
@@ -74,7 +74,7 @@ class UsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<User>()
 
-        assertEquals(STUDENT_ID, user.id)
+        assertEquals(STUDENT_ID.toInt(), user.id)
         assertEquals(UserType.STUDENT, user.type)
     }
 
@@ -100,10 +100,10 @@ class UsersRoutesTest : ApplicationTest() {
     fun `get student selections`() = runRouteTest {
         val selections = client.getWithAuth("/users/@me/selections", studentToken())
             .assertOK()
-            .parse<th.ac.bodin2.electives.proto.api.UsersService.StudentSelections>()
+            .parse<ProtoUsersService.StudentSelections>()
 
-        assertEquals(SUBJECT_ID, selections.subjectsMap[ELECTIVE_ID]?.id)
-        assertEquals(TEACHER_ID, selections.subjectsMap[ELECTIVE_ID]?.teachersList?.first()?.id)
+        assertEquals(SUBJECT_ID.toInt(), selections.subjects[ELECTIVE_ID.toInt()]?.id)
+        assertEquals(TEACHER_ID.toInt(), selections.subjects[ELECTIVE_ID.toInt()]?.teachers?.first()?.id)
     }
 
     @Test
@@ -127,9 +127,9 @@ class UsersRoutesTest : ApplicationTest() {
 
         return client.putProtoWithAuth(
             url,
-            setStudentElectiveSelectionRequest {
-                subjectId = SUBJECT_ID
-            },
+            ProtoUsersService.SetStudentElectiveSelectionRequest(
+                subject_id = SUBJECT_ID.toInt()
+            ),
             token
         )
     }
@@ -215,10 +215,10 @@ class UsersRoutesTest : ApplicationTest() {
     fun `get teacher subjects`() = runRouteTest {
         val response = client.getWithAuth("/users/@me/subjects", teacherToken())
             .assertOK()
-            .parse<th.ac.bodin2.electives.proto.api.UsersService.TeacherSubjects>()
+            .parse<ProtoUsersService.TeacherSubjects>()
 
-        assertTrue(response.subjectsMap.isNotEmpty())
-        assertEquals(SUBJECT_ID, response.subjectsMap.values.first().id)
+        assertTrue(response.subjects.isNotEmpty())
+        assertEquals(SUBJECT_ID.toInt(), response.subjects.values.first().id)
     }
 
     @Test

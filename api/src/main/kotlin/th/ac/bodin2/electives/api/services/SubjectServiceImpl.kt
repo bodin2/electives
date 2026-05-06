@@ -21,14 +21,14 @@ import th.ac.bodin2.electives.proto.api.SubjectTag
 class SubjectServiceImpl : SubjectService {
     @Transactional
     override fun create(
-        id: Int,
+        id: UInt,
         name: String,
         description: String?,
         code: String?,
         tag: SubjectTag,
         location: String?,
         capacity: Int,
-        team: Int?,
+        team: UInt?,
         thumbnailUrl: String?,
         imageUrl: String?,
     ) = transaction {
@@ -36,7 +36,7 @@ class SubjectServiceImpl : SubjectService {
             it[this.id] = id
             it[this.name] = name
             it[this.capacity] = capacity
-            it[this.tag] = tag.number
+            it[this.tag] = tag.value
             if (description != null) it[this.description] = description
             if (code != null) it[this.code] = code
             if (location != null) it[this.location] = location
@@ -54,7 +54,7 @@ class SubjectServiceImpl : SubjectService {
     }
 
     @Transactional
-    override fun delete(id: Int) {
+    override fun delete(id: UInt) {
         transaction {
             val rows = Subjects.deleteWhere { Subjects.id eq id }
             if (rows == 0) {
@@ -64,7 +64,7 @@ class SubjectServiceImpl : SubjectService {
     }
 
     @Transactional
-    override fun update(id: Int, update: SubjectService.SubjectUpdate) = transaction {
+    override fun update(id: UInt, update: SubjectService.SubjectUpdate) = transaction {
         Subject.assertExists(id)
 
         val subject = try {
@@ -77,7 +77,7 @@ class SubjectServiceImpl : SubjectService {
                 }
 
                 update.name?.let { name -> it[this.name] = name }
-                update.tag?.let { tag -> it[this.tag] = tag.number }
+                update.tag?.let { tag -> it[this.tag] = tag.value }
                 update.capacity?.let { capacity -> it[this.capacity] = capacity }
 
                 if (update.setDescription) it[description] = update.description
@@ -114,9 +114,9 @@ class SubjectServiceImpl : SubjectService {
 
     override fun getAll() = Subject.all().toList()
 
-    override fun getById(subjectId: Int) = Subject.findById(subjectId)
+    override fun getById(subjectId: UInt) = Subject.findById(subjectId)
 
-    override fun getTeacherSubjects(teacherId: Int): Map<Int, Subject> {
+    override fun getTeacherSubjects(teacherId: UInt): Map<UInt, Subject> {
         Teacher.assertExists(teacherId)
         return (TeacherSubjects innerJoin Subjects)
             .select(Subjects.columns + TeacherSubjects.elective)
@@ -124,7 +124,7 @@ class SubjectServiceImpl : SubjectService {
             .associate { it[TeacherSubjects.elective].value to Subject.wrapRow(it) }
     }
 
-    override fun getElectiveIds(subjectId: Int): List<Int>? {
+    override fun getElectiveIds(subjectId: UInt): List<UInt>? {
         if (!Subject.exists(subjectId)) return null
 
         return ElectiveSubjects

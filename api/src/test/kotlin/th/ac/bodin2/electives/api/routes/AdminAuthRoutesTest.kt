@@ -13,7 +13,6 @@ import th.ac.bodin2.electives.api.services.AdminAuthService
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
 import th.ac.bodin2.electives.proto.api.AdminService
 import th.ac.bodin2.electives.proto.api.AuthService
-import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -44,9 +43,9 @@ class AdminAuthRoutesTest : ApplicationTest() {
 
         val response = client.postProto(
             "/admin/auth",
-            authenticateRequest {
+            AuthService.AuthenticateRequest(
                 password = "signed-challenge"
-            }
+            )
         ).assertOK().parse<AuthService.AuthenticateResponse>()
 
         assertEquals(response.token, "admin-token-123")
@@ -60,9 +59,9 @@ class AdminAuthRoutesTest : ApplicationTest() {
 
         client.postProto(
             "/admin/auth",
-            authenticateRequest {
+            AuthService.AuthenticateRequest(
                 password = "some-signature"
-            }
+            )
         ).assertNotFound()
     }
 
@@ -74,9 +73,9 @@ class AdminAuthRoutesTest : ApplicationTest() {
 
         val response = client.postProto(
             "/admin/auth",
-            authenticateRequest {
+            AuthService.AuthenticateRequest(
                 password = "bad-signature"
-            }
+            )
         )
 
         response.assertUnauthorized()
@@ -90,9 +89,9 @@ class AdminAuthRoutesTest : ApplicationTest() {
 
         client.postProto(
             "/admin/auth",
-            authenticateRequest {
+            AuthService.AuthenticateRequest(
                 password = "signed-challenge"
-            }
+            )
         ).assertNotFound()
     }
 
@@ -114,9 +113,9 @@ class AdminAuthRoutesTest : ApplicationTest() {
 
         val response = client.postProto(
             "/admin/auth",
-            authenticateRequest {
+            AuthService.AuthenticateRequest(
                 password = "signed-challenge"
-            }
+            )
         )
 
         response.assertUnauthorized()

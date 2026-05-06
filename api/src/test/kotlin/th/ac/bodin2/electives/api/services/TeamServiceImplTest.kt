@@ -40,7 +40,7 @@ class TeamServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create team`() = runTest {
-        val newId = 500
+        val newId = 500u
 
         @OptIn(Transactional::class)
         val created = teamService.create(newId, "New Team")
@@ -63,7 +63,7 @@ class TeamServiceImplTest : ApplicationTest() {
     @Test
     fun `delete team`() = runTest {
         // Create a team that's not referenced by any subjects/electives
-        val tempId = 600
+        val tempId = 600u
         @OptIn(Transactional::class)
         teamService.create(tempId, "Temporary Team")
 
@@ -125,7 +125,7 @@ class TeamServiceImplTest : ApplicationTest() {
 
     @Test
     fun `get member count empty team`() = runTest {
-        val tempId = 500
+        val tempId = 500u
         @OptIn(Transactional::class)
         teamService.create(tempId, "Empty Team")
 

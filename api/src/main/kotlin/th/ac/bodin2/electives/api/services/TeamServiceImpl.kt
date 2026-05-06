@@ -25,7 +25,7 @@ class TeamServiceImpl : TeamService {
 
     @Transactional
     override fun create(
-        id: Int,
+        id: UInt,
         name: String,
     ) = transaction {
         val stmt = Teams.insertIgnore {
@@ -38,7 +38,7 @@ class TeamServiceImpl : TeamService {
     }
 
     @Transactional
-    override fun delete(id: Int) {
+    override fun delete(id: UInt) {
         transaction {
             val rows = Teams.deleteWhere { Teams.id eq id }
             if (rows == 0) {
@@ -48,7 +48,7 @@ class TeamServiceImpl : TeamService {
     }
 
     @Transactional
-    override fun update(id: Int, update: TeamService.TeamUpdate) = transaction {
+    override fun update(id: UInt, update: TeamService.TeamUpdate) = transaction {
         Team.findById(id) ?: throw EntityNotFoundException(ExceptionEntity.TEAM)
         val rows = Teams.updateReturning(where = { Teams.id eq id }) {
             update.name?.let { name -> it[this.name] = name }
@@ -60,10 +60,10 @@ class TeamServiceImpl : TeamService {
 
     override fun getAll() = Team.all().toList()
 
-    override fun getById(teamId: Int) = Team.findById(teamId)
+    override fun getById(teamId: UInt) = Team.findById(teamId)
 
     @Transactional
-    override fun getMembers(teamId: Int, page: Int, query: String?): Pair<List<Student>, Long> = transaction {
+    override fun getMembers(teamId: UInt, page: Int, query: String?): Pair<List<Student>, Long> = transaction {
         Team.findById(teamId) ?: throw EntityNotFoundException(ExceptionEntity.TEAM)
 
         val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
@@ -92,11 +92,11 @@ class TeamServiceImpl : TeamService {
         members to count
     }
 
-    override fun getMemberCounts() = StudentTeams.select(StudentTeams.team, StudentTeams.student.count())
+    override fun getMemberCounts(): Map<UInt, Int> = StudentTeams.select(StudentTeams.team, StudentTeams.student.count())
         .groupBy(StudentTeams.team)
         .associate { it[StudentTeams.team].value to it[StudentTeams.student.count()].toInt() }
 
-    override fun getMemberCount(teamId: Int): Int =
+    override fun getMemberCount(teamId: UInt): Int =
         StudentTeams.selectAll()
             .where { StudentTeams.team eq teamId }
             .count().toInt()

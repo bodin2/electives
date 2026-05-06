@@ -10,7 +10,6 @@ import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.proto.api.AuthService
-import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
 
 val authController = controller {
     val usersService: UsersService by dependencies
@@ -33,10 +32,9 @@ suspend fun RoutingContext.handleAuth() {
     val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return badRequest()
 
     try {
-        call.respond(authenticateResponse {
-            @OptIn(Transactional::class)
-            token = usersService.createSession(req.id, req.password, req.clientName)
-        })
+        @OptIn(Transactional::class)
+        val token = usersService.createSession(req.id.toUInt(), req.password, req.client_name)
+        call.respond(AuthService.AuthenticateResponse(token = token))
     } catch (e: Throwable) {
         when (e) {
             is EntityNotFoundException,

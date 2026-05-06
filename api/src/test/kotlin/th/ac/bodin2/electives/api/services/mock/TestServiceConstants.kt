@@ -1,20 +1,20 @@
 package th.ac.bodin2.electives.api.services.mock
 
 object TestServiceConstants {
-    const val TEACHER_ID = 1
-    const val ADMIN_ID = 2
+    val TEACHER_ID = 1u
+    val ADMIN_ID = 2u
 
-    const val STUDENT_ID = 10
+    val STUDENT_ID = 10u
 
-    const val UNUSED_ID = 9999
+    val UNUSED_ID = 9999u
 
-    const val ELECTIVE_TEAM_ID = 100
-    const val SUBJECT_TEAM_ID = 101
+    val ELECTIVE_TEAM_ID = 100u
+    val SUBJECT_TEAM_ID = 101u
 
-    const val SUBJECT_ID = 200
+    val SUBJECT_ID = 200u
 
-    const val ELECTIVE_ID = 300
-    const val ELECTIVE_WITHOUT_SUBJECTS_ID = 301
+    val ELECTIVE_ID = 300u
+    val ELECTIVE_WITHOUT_SUBJECTS_ID = 301u
 
     const val PASSWORD = "password"
     const val ADMIN_TOKEN = "admin-token"

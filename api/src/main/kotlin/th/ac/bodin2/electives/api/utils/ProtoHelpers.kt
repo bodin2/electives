@@ -1,54 +1,54 @@
 package th.ac.bodin2.electives.api.utils
 
-import com.google.protobuf.InvalidProtocolBufferException
-import com.google.protobuf.MessageLite
-import com.google.protobuf.Parser
+import com.squareup.wire.Message
+import com.squareup.wire.ProtoAdapter
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.websocket.*
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
-private val parserCache = ConcurrentHashMap<Class<*>, Parser<*>>()
+private val adapterCache = ConcurrentHashMap<Class<*>, ProtoAdapter<*>>()
 
-fun <T : MessageLite> getParser(clazz: Class<T>): Parser<T> {
+fun <T : Message<T, *>> getAdapter(clazz: Class<T>): ProtoAdapter<T> {
     @Suppress("UNCHECKED_CAST")
-    return parserCache.getOrPut(clazz) {
-        val parserMethod = clazz.getDeclaredMethod("parser")
-        parserMethod.invoke(null) as Parser<T>
-    } as Parser<T>
+    return adapterCache.getOrPut(clazz) {
+        val field = clazz.getDeclaredField("ADAPTER")
+        field.get(null) as ProtoAdapter<T>
+    } as ProtoAdapter<T>
 }
 
-suspend inline fun <reified T : MessageLite> ApplicationCall.parseOrNull(): T? {
+suspend inline fun <reified T : Message<T, *>> ApplicationCall.parseOrNull(): T? {
     val bytes = receive<ByteArray>()
     return parseProtoOrNull<T>(bytes)
 }
 
-inline fun <reified T : MessageLite> Frame.Binary.parseOrNull(): T? {
+inline fun <reified T : Message<T, *>> Frame.Binary.parseOrNull(): T? {
     val bytes = readBytes()
     return parseProtoOrNull<T>(bytes)
 }
 
-inline fun <reified T : MessageLite> parseProtoOrNull(bytes: ByteArray): T? {
-    val parser = getParser(T::class.java)
+inline fun <reified T : Message<T, *>> parseProtoOrNull(bytes: ByteArray): T? {
+    val adapter = getAdapter(T::class.java)
     return try {
-        parser.parseFrom(bytes)
-    } catch (_: InvalidProtocolBufferException) {
+        adapter.decode(bytes)
+    } catch (_: IOException) {
         null
     }
 }
 
-suspend inline fun WebSocketSession.send(message: MessageLite) {
-    send(message.toByteArray())
+suspend inline fun WebSocketSession.send(message: Message<*, *>) {
+    send(message.encode())
 }
 
 suspend inline fun ApplicationCall.respond(
-    message: MessageLite,
+    message: Message<*, *>,
     status: HttpStatusCode = HttpStatusCode.OK
 ) {
     respondBytes(
-        message.toByteArray(),
+        message.encode(),
         contentType = ContentType("application", "x-protobuf"),
         status = status
     )

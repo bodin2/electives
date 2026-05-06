@@ -8,8 +8,8 @@ interface NotificationsService {
      * Notifies connected clients about an update in subject selection.
      */
     fun notifySubjectSelectionUpdate(
-        electiveId: Int,
-        subjectId: Int,
+        electiveId: UInt,
+        subjectId: UInt,
         enrolledCount: Int,
     )
 

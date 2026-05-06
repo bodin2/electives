@@ -15,7 +15,7 @@ interface AdminAuthService {
      * @param ip The IP address of the requester.
      */
     suspend fun createSession(
-        id: Int,
+        id: UInt,
         signature: String,
         aud: String,
         ip: String,

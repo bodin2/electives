@@ -19,9 +19,9 @@ interface ElectiveService {
      */
     @Transactional
     fun create(
-        id: Int,
+        id: UInt,
         name: String,
-        team: Int? = null,
+        team: UInt? = null,
         startDate: LocalDateTime? = null,
         endDate: LocalDateTime? = null
     ): Elective
@@ -32,7 +32,7 @@ interface ElectiveService {
      * @throws EntityNotFoundException if the elective does not exist.
      */
     @Transactional
-    fun delete(id: Int)
+    fun delete(id: UInt)
 
     /**
      * Updates an elective's information.
@@ -41,17 +41,17 @@ interface ElectiveService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun update(id: Int, update: ElectiveUpdate): Elective
+    fun update(id: UInt, update: ElectiveUpdate): Elective
 
     /**
      * Sets the subjects that are part of the elective.
      */
     @Transactional
-    fun setSubjects(electiveId: Int, subjectIds: List<Int>)
+    fun setSubjects(electiveId: UInt, subjectIds: List<UInt>)
 
     data class ElectiveUpdate(
         val name: String? = null,
-        val team: Int? = null,
+        val team: UInt? = null,
         val startDate: LocalDateTime? = null,
         val endDate: LocalDateTime? = null,
         val setTeam: Boolean = false,
@@ -61,23 +61,23 @@ interface ElectiveService {
 
     fun getAll(): List<Elective>
 
-    fun getById(electiveId: Int): Elective?
+    fun getById(electiveId: UInt): Elective?
 
-    fun getSubjects(electiveId: Int): QueryResult<out List<Subject>>
+    fun getSubjects(electiveId: UInt): QueryResult<out List<Subject>>
 
-    fun getSubject(electiveId: Int, subjectId: Int): QueryResult<out Subject>
+    fun getSubject(electiveId: UInt, subjectId: UInt): QueryResult<out Subject>
 
     fun getSubjectMembers(
-        electiveId: Int,
-        subjectId: Int,
+        electiveId: UInt,
+        subjectId: UInt,
         withStudents: Boolean,
     ): QueryResult<out Pair<List<Teacher>, List<Student>>>
 
-    fun getEnrolledCount(electiveId: Int): Int
+    fun getEnrolledCount(electiveId: UInt): Int
 
     fun getUnenrolledMembers(
-        electiveId: Int,
-        teamId: Int,
+        electiveId: UInt,
+        teamId: UInt,
         page: Int,
     ): QueryResult<out Pair<List<Student>, Long>>
 
@@ -86,6 +86,6 @@ interface ElectiveService {
 
         data object ElectiveNotFound : QueryResult<Nothing>()
         data object SubjectNotFound : QueryResult<Nothing>()
-        data class SubjectNotPartOfElective(val subjectId: Int, val electiveId: Int) : QueryResult<Nothing>()
+        data class SubjectNotPartOfElective(val subjectId: UInt, val electiveId: UInt) : QueryResult<Nothing>()
     }
 }

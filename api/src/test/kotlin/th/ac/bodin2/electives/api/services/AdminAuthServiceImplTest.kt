@@ -20,7 +20,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class AdminAuthServiceImplTest : ApplicationTest() {
     companion object {
-        private const val ADMIN_USER_ID = 9001
+        private val ADMIN_USER_ID = 9001u
 
         private fun sign(challenge: String): String {
             val challengeBytes = Base64.getUrlDecoder().decode(challenge)
@@ -76,7 +76,7 @@ class AdminAuthServiceImplTest : ApplicationTest() {
     }
 
     private fun ApplicationTestBuilder.insertAdminUser(
-        id: Int = ADMIN_USER_ID,
+        id: UInt = ADMIN_USER_ID,
         publicKey: String = Base64.getEncoder().encodeToString(adminKeyPair.public.encoded),
     ) {
         val argon2: Argon2 by application.dependencies

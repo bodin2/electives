@@ -18,36 +18,36 @@ class TestSubjectService : SubjectService {
 
     @Transactional
     override fun create(
-        id: Int,
+        id: UInt,
         name: String,
         description: String?,
         code: String?,
         tag: SubjectTag,
         location: String?,
         capacity: Int,
-        team: Int?,
+        team: UInt?,
         thumbnailUrl: String?,
         imageUrl: String?,
     ): Subject = error("Not testable")
 
     @Transactional
-    override fun delete(id: Int) = error("Not testable")
+    override fun delete(id: UInt) = error("Not testable")
 
     @Transactional
-    override fun update(id: Int, update: SubjectService.SubjectUpdate): Subject {
+    override fun update(id: UInt, update: SubjectService.SubjectUpdate): Subject {
         if (id !in SUBJECT_IDS) throw EntityNotFoundException(ExceptionEntity.SUBJECT)
         return MockUtils.mockSubject(id)
     }
 
     override fun getAll() = SUBJECT_IDS.map { id -> MockUtils.mockSubject(id) }
 
-    override fun getById(subjectId: Int) =
+    override fun getById(subjectId: UInt) =
         if (subjectId in SUBJECT_IDS) MockUtils.mockSubject(subjectId)
         else null
 
-    override fun getElectiveIds(subjectId: Int): List<Int> = listOf(ELECTIVE_ID)
+    override fun getElectiveIds(subjectId: UInt): List<UInt> = listOf(ELECTIVE_ID)
 
-    override fun getTeacherSubjects(teacherId: Int): Map<Int, Subject> {
+    override fun getTeacherSubjects(teacherId: UInt): Map<UInt, Subject> {
         if (teacherId != TEACHER_ID) throw EntityNotFoundException(ExceptionEntity.TEACHER)
         return mapOf(ELECTIVE_ID to MockUtils.mockSubject(SUBJECT_ID))
     }

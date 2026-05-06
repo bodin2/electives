@@ -16,30 +16,30 @@ class TestTeamService : TeamService {
     }
 
     @Transactional
-    override fun create(id: Int, name: String): Team = error("Not testable")
+    override fun create(id: UInt, name: String): Team = error("Not testable")
 
     @Transactional
-    override fun delete(id: Int) = error("Not testable")
+    override fun delete(id: UInt) = error("Not testable")
 
     @Transactional
-    override fun update(id: Int, update: TeamService.TeamUpdate): Team {
+    override fun update(id: UInt, update: TeamService.TeamUpdate): Team {
         if (id !in TEAM_IDS) throw EntityNotFoundException(ExceptionEntity.TEAM)
         return MockUtils.mockTeam(id)
     }
 
     override fun getAll() = TEAM_IDS.map { id -> MockUtils.mockTeam(id) }
 
-    override fun getById(teamId: Int) =
+    override fun getById(teamId: UInt) =
         if (teamId in TEAM_IDS) MockUtils.mockTeam(teamId)
         else null
 
     @Transactional
-    override fun getMembers(teamId: Int, page: Int, query: String?): Pair<List<Student>, Long> {
+    override fun getMembers(teamId: UInt, page: Int, query: String?): Pair<List<Student>, Long> {
         if (teamId !in TEAM_IDS) throw EntityNotFoundException(ExceptionEntity.TEAM)
         return emptyList<Student>() to 0L
     }
 
-    override fun getMemberCounts() = TEAM_IDS.associateWith { 0 }
+    override fun getMemberCounts(): Map<UInt, Int> = TEAM_IDS.associateWith { 0 }
 
-    override fun getMemberCount(teamId: Int): Int = 0
+    override fun getMemberCount(teamId: UInt): Int = 0
 }

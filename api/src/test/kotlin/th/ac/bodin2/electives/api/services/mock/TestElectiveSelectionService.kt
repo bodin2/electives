@@ -18,25 +18,25 @@ var testElectiveSelectionServiceResponse: ModifySelectionResult = ModifySelectio
 
 class TestElectiveSelectionService : ElectiveSelectionService {
     @Transactional
-    override fun forceSetAllStudentSelections(studentId: Int, selections: Map<Int, Int>) = error("Not testable")
+    override fun forceSetAllStudentSelections(studentId: UInt, selections: Map<UInt, UInt>) = error("Not testable")
 
     @Transactional
     override suspend fun setStudentSelection(
         executor: UsersService.SessionUser,
-        studentId: Int,
-        electiveId: Int,
-        subjectId: Int,
+        studentId: UInt,
+        electiveId: UInt,
+        subjectId: UInt,
     ) = testElectiveSelectionServiceResponse
 
     @Transactional
     override suspend fun deleteStudentSelection(
         executor: UsersService.SessionUser,
-        studentId: Int,
-        electiveId: Int,
+        studentId: UInt,
+        electiveId: UInt,
     ) = testElectiveSelectionServiceResponse
 
     @Transactional
-    override fun getStudentSelections(studentId: Int): Map<Int, Subject> {
+    override fun getStudentSelections(studentId: UInt): Map<UInt, Subject> {
         if (studentId != STUDENT_ID) throw EntityNotFoundException(ExceptionEntity.STUDENT)
         return mapOf(ELECTIVE_ID to MockUtils.mockSubject(SUBJECT_ID))
     }

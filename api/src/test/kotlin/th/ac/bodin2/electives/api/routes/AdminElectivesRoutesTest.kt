@@ -11,7 +11,6 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.AdminService
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.electivePatch
 import th.ac.bodin2.electives.proto.api.Elective
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,11 +44,11 @@ class AdminElectivesRoutesTest : ApplicationTest() {
 
         val elective = client.patchProtoWithAuth(
             "/admin/electives/$ELECTIVE_ID",
-            electivePatch { name = "New Name" },
+            AdminService.ElectivePatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertOK().parse<Elective>()
 
-        assertEquals(ELECTIVE_ID, elective.id)
+        assertEquals(ELECTIVE_ID.toInt(), elective.id)
     }
 
     @Test
@@ -58,7 +57,7 @@ class AdminElectivesRoutesTest : ApplicationTest() {
 
         client.patchProtoWithAuth(
             "/admin/electives/$UNUSED_ID",
-            electivePatch { name = "New Name" },
+            AdminService.ElectivePatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertNotFound("Elective not found")
     }
@@ -71,8 +70,8 @@ class AdminElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListElectivesEnrolledCounts>()
 
-        assertTrue(response.countsMap.containsKey(ELECTIVE_ID))
-        assertEquals(0, response.countsMap[ELECTIVE_ID]!!.selected)
+        assertTrue(response.counts.containsKey(ELECTIVE_ID.toInt()))
+        assertEquals(0, response.counts[ELECTIVE_ID.toInt()]!!.selected)
     }
 
     @Test
@@ -83,8 +82,8 @@ class AdminElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListElectivesEnrolledCounts>()
 
-        assertTrue(response.countsMap.containsKey(ELECTIVE_ID))
-        assertFalse(response.countsMap.containsKey(UNUSED_ID))
+        assertTrue(response.counts.containsKey(ELECTIVE_ID.toInt()))
+        assertFalse(response.counts.containsKey(UNUSED_ID.toInt()))
     }
 
     @Test

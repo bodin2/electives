@@ -16,14 +16,14 @@ interface SubjectService {
      */
     @Transactional
     fun create(
-        id: Int,
+        id: UInt,
         name: String,
         description: String? = null,
         code: String? = null,
         tag: SubjectTag = SubjectTag.THAI,
         location: String? = null,
         capacity: Int,
-        team: Int? = null,
+        team: UInt? = null,
         thumbnailUrl: String? = null,
         imageUrl: String? = null,
     ): Subject
@@ -34,7 +34,7 @@ interface SubjectService {
      * @throws EntityNotFoundException if the subject does not exist.
      */
     @Transactional
-    fun delete(id: Int)
+    fun delete(id: UInt)
 
     /**
      * Updates a subject's information.
@@ -43,7 +43,7 @@ interface SubjectService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun update(id: Int, update: SubjectUpdate): Subject
+    fun update(id: UInt, update: SubjectUpdate): Subject
 
     data class SubjectUpdate(
         val name: String? = null,
@@ -52,9 +52,9 @@ interface SubjectService {
         val tag: SubjectTag? = null,
         val location: String? = null,
         val capacity: Int? = null,
-        val team: Int? = null,
-        val teacherIds: List<Int>? = null,
-        val electiveId: Int? = null,
+        val team: UInt? = null,
+        val teacherIds: List<UInt>? = null,
+        val electiveId: UInt? = null,
         val thumbnailUrl: String? = null,
         val imageUrl: String? = null,
         val setDescription: Boolean = false,
@@ -67,14 +67,14 @@ interface SubjectService {
 
     fun getAll(): List<Subject>
 
-    fun getById(subjectId: Int): Subject?
+    fun getById(subjectId: UInt): Subject?
 
-    fun getElectiveIds(subjectId: Int): List<Int>?
+    fun getElectiveIds(subjectId: UInt): List<UInt>?
 
     /**
      * Gets all subjects that a teacher teaches, grouped by elective ID.
      *
      * @throws EntityNotFoundException if the teacher does not exist.
      */
-    fun getTeacherSubjects(teacherId: Int): Map<Int, Subject>
+    fun getTeacherSubjects(teacherId: UInt): Map<UInt, Subject>
 }

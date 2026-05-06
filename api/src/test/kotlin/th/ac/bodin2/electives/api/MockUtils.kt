@@ -32,7 +32,7 @@ object MockUtils {
         unmockkObject(Elective.Companion)
     }
 
-    fun mockElective(id: Int): Elective {
+    fun mockElective(id: UInt): Elective {
         val mock = mockk<Elective>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Electives)
         every { mock.name } returns id.toString()
@@ -44,14 +44,14 @@ object MockUtils {
         return mock
     }
 
-    fun mockTeam(id: Int): Team {
+    fun mockTeam(id: UInt): Team {
         val mock = mockk<Team>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Teams)
 
         return mock
     }
 
-    fun mockSubject(id: Int): Subject {
+    fun mockSubject(id: UInt): Subject {
         val mock = mockk<Subject>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Subjects)
         every { mock.teamId } returns DaoEntityID(SUBJECT_TEAM_ID, Teams)
@@ -61,14 +61,14 @@ object MockUtils {
         return mock
     }
 
-    private fun mockUser(id: Int): User {
+    private fun mockUser(id: UInt): User {
         val mock = mockk<User>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Users)
 
         return mock
     }
 
-    fun mockTeacher(id: Int): Teacher {
+    fun mockTeacher(id: UInt): Teacher {
         val user = mockUser(id)
         val mock = mockk<Teacher>(relaxed = true)
         every { mock.user } returns user
@@ -77,7 +77,7 @@ object MockUtils {
         return mock
     }
 
-    fun mockAdmin(id: Int): Admin {
+    fun mockAdmin(id: UInt): Admin {
         val user = mockUser(id)
         val mock = mockk<Admin>(relaxed = true)
         every { mock.user } returns user
@@ -86,7 +86,7 @@ object MockUtils {
         return mock
     }
 
-    fun mockStudent(id: Int): Student {
+    fun mockStudent(id: UInt): Student {
         val user = mockUser(id)
         val mock = mockk<Student>(relaxed = true)
         every { mock.user } returns user
@@ -96,8 +96,8 @@ object MockUtils {
         return mock
     }
 
-    fun mockId(id: Int): EntityID<Int> {
-        val entId = mockk<EntityID<Int>>()
+    fun mockId(id: UInt): EntityID<UInt> {
+        val entId = mockk<EntityID<UInt>>()
         every { entId.value } returns id
         return entId
     }

@@ -16,8 +16,8 @@ interface ElectiveSelectionService {
      */
     @Transactional
     fun forceSetAllStudentSelections(
-        studentId: Int,
-        selections: Map<Int, Int>,
+        studentId: UInt,
+        selections: Map<UInt, UInt>,
     )
 
     /**
@@ -28,7 +28,7 @@ interface ElectiveSelectionService {
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student, elective, or subject does not exist.
      */
     @Transactional
-    suspend fun setStudentSelection(executor: UsersService.SessionUser, studentId: Int, electiveId: Int, subjectId: Int): ModifySelectionResult
+    suspend fun setStudentSelection(executor: UsersService.SessionUser, studentId: UInt, electiveId: UInt, subjectId: UInt): ModifySelectionResult
 
     /**
      * Deletes the subject selection for a student in a given elective.
@@ -38,7 +38,7 @@ interface ElectiveSelectionService {
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student or elective does not exist.
      */
     @Transactional
-    suspend fun deleteStudentSelection(executor: UsersService.SessionUser, studentId: Int, electiveId: Int): ModifySelectionResult
+    suspend fun deleteStudentSelection(executor: UsersService.SessionUser, studentId: UInt, electiveId: UInt): ModifySelectionResult
 
     /**
      * Gets all subject selections for a student.
@@ -48,7 +48,7 @@ interface ElectiveSelectionService {
      *
      * @throws th.ac.bodin2.electives.EntityNotFoundException if the student does not exist.
      */
-    fun getStudentSelections(studentId: Int): Map<Int, Subject>
+    fun getStudentSelections(studentId: UInt): Map<UInt, Subject>
 
     enum class CanEnrollStatus {
         CAN_ENROLL,

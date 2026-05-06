@@ -1,16 +1,14 @@
 package th.ac.bodin2.electives.db.models
 
 import org.jetbrains.exposed.v1.core.ReferenceOption
-import org.jetbrains.exposed.v1.core.dao.id.IdTable
+import org.jetbrains.exposed.v1.core.dao.id.UIntIdTable
 import org.jetbrains.exposed.v1.javatime.datetime
 
 /**
  * Electives are a collection of subjects that students can choose from.
  * Each elective can be associated with a team, allowing only students from that team to access the elective to enroll in its subjects.
  */
-object Electives : IdTable<Int>("electives") {
-    override val id = integer("id").entityId()
-
+object Electives : UIntIdTable("electives") {
     val name = varchar("name", 255)
 
     /**
@@ -22,6 +20,4 @@ object Electives : IdTable<Int>("electives") {
 
     val startDate = datetime("start_date").nullable()
     val endDate = datetime("end_date").nullable()
-
-    override val primaryKey = PrimaryKey(id)
 }

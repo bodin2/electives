@@ -21,11 +21,7 @@ import th.ac.bodin2.electives.api.utils.send
 import th.ac.bodin2.electives.api.utils.unauthorized
 import th.ac.bodin2.electives.db.Elective
 import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope
-import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope.PayloadCase
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.acknowledged
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.bulkSubjectEnrollmentUpdate
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.envelope
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
+import th.ac.bodin2.electives.proto.api.NotificationsService as ProtoNotificationsService
 import th.ac.bodin2.electives.utils.env
 import th.ac.bodin2.electives.utils.setInterval
 import java.util.concurrent.ConcurrentHashMap
@@ -48,7 +44,7 @@ fun DependencyRegistry.provideNotificationsService() = provide<NotificationsServ
     )
 }
 
-private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
+private typealias SubjectSelectionUpdateListener = (electiveId: UInt, subjectId: UInt, enrolledCount: Int) -> Unit
 
 class NotificationsServiceImpl(
     val config: Config,
@@ -77,16 +73,16 @@ class NotificationsServiceImpl(
      *
      * Map<ElectiveId, StateFlow<Envelope?>>
      */
-    internal val bulkUpdateFlows = MutableStateFlow<Map<Int, MutableStateFlow<Envelope?>>>(emptyMap())
+    internal val bulkUpdateFlows = MutableStateFlow<Map<UInt, MutableStateFlow<Envelope?>>>(emptyMap())
 
     private val globalScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val bulkUpdateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val updateScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val connections = ConcurrentHashMap<Int, ClientConnection>()
+    private val connections = ConcurrentHashMap<UInt, ClientConnection>()
 
     private val subjectSelectionSubscriptions =
-        ConcurrentHashMap<Int, ConcurrentHashMap<Int, CopyOnWriteArrayList<SubjectSelectionUpdateListener>>>()
+        ConcurrentHashMap<UInt, ConcurrentHashMap<UInt, CopyOnWriteArrayList<SubjectSelectionUpdateListener>>>()
 
     init {
         globalScope.launch {
@@ -97,7 +93,7 @@ class NotificationsServiceImpl(
 
     internal fun isBulkUpdatesEnabled() = config.bulkUpdatesEnabled
 
-    internal fun bulkUpdateFlowForElective(electiveId: Int): StateFlow<Envelope?> =
+    internal fun bulkUpdateFlowForElective(electiveId: UInt): StateFlow<Envelope?> =
         bulkUpdateFlows.value[electiveId] ?: MutableStateFlow<Envelope?>(null).also { newFlow ->
             bulkUpdateFlows.update { current ->
                 if (electiveId in current) current
@@ -106,8 +102,8 @@ class NotificationsServiceImpl(
         }
 
     override fun notifySubjectSelectionUpdate(
-        electiveId: Int,
-        subjectId: Int,
+        electiveId: UInt,
+        subjectId: UInt,
         enrolledCount: Int,
     ) {
         logger.debug("Notifying subject selection update, electiveId: $electiveId, subjectId: $subjectId, enrolledCount: $enrolledCount")
@@ -139,12 +135,12 @@ class NotificationsServiceImpl(
                 Elective.getAllActiveIds().map { electiveId ->
                     val enrolledCounts = Elective.getSubjectsEnrolledCounts(electiveId)
 
-                    electiveId to envelope {
-                        bulkSubjectEnrollmentUpdate = bulkSubjectEnrollmentUpdate {
-                            this.electiveId = electiveId
-                            subjectEnrolledCounts.putAll(enrolledCounts)
-                        }
-                    }
+                    electiveId to Envelope(
+                        bulk_subject_enrollment_update = ProtoNotificationsService.BulkSubjectEnrollmentUpdate(
+                            elective_id = electiveId.toInt(),
+                            subject_enrolled_counts = enrolledCounts.mapKeys { it.key.toInt() },
+                        )
+                    )
                 }
             }
 
@@ -167,14 +163,14 @@ class NotificationsServiceImpl(
         }
     }
 
-    private suspend fun WebSocketServerSession.handleSession(userId: Int) {
+    private suspend fun WebSocketServerSession.handleSession(userId: UInt) {
         logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
         val connection = ClientConnection(
             notificationsService = this@NotificationsServiceImpl,
             userId = userId,
             session = this,
-            subscriptions = ConcurrentHashMap(),
+            subscriptions = ConcurrentHashMap<UInt, ConcurrentHashMap.KeySetView<UInt, Boolean>>(),
             cleanups = ConcurrentHashMap.newKeySet(),
             parentScope = updateScope,
         )
@@ -228,21 +224,21 @@ class NotificationsServiceImpl(
 
             val envelope = frame.parseOrNull<Envelope>() ?: return badFrame()
 
-            when (envelope.payloadCase) {
-                PayloadCase.SUBJECT_ENROLLMENT_UPDATE_SUBSCRIPTION_REQUEST -> {
+            when {
+                envelope.subject_enrollment_update_subscription_request != null -> {
                     val subscriptions = envelope
-                        .subjectEnrollmentUpdateSubscriptionRequest
-                        .subscriptionsMap
+                        .subject_enrollment_update_subscription_request!!
+                        .subscriptions
 
                     if (subscriptions
-                            .map { (_, subscription) -> subscription.subjectIdsCount }
+                            .map { (_, subscription) -> subscription.subject_ids.size }
                             .sum() > config.maxSubjectSubscriptionsPerClient
                     )
                         return badFrame("Exceeded maximum subject subscriptions per client: ${config.maxSubjectSubscriptionsPerClient}")
 
-                    subscriptions.forEach { (electiveId, subjectIds) ->
+                    subscriptions.forEach { (electiveId, subscription) ->
                         this@handleFrame.subscriptions
-                            .getOrPut(electiveId) { ConcurrentHashMap.newKeySet() } += subjectIds.subjectIdsList
+                            .getOrPut(electiveId.toUInt()) { ConcurrentHashMap.newKeySet() } += subscription.subject_ids.map { it.toUInt() }
                     }
 
                     acknowledge(envelope)
@@ -262,26 +258,25 @@ class NotificationsServiceImpl(
                 }
 
                 // Server payloads
-                PayloadCase.SUBJECT_ENROLLMENT_UPDATE,
-                PayloadCase.BULK_SUBJECT_ENROLLMENT_UPDATE,
-                PayloadCase.ACKNOWLEDGED -> return badFrame()
+                envelope.subject_enrollment_update != null ||
+                envelope.bulk_subject_enrollment_update != null ||
+                envelope.acknowledged != null -> return badFrame()
 
                 // Invalid payload
-                PayloadCase.PAYLOAD_NOT_SET,
-                PayloadCase.IDENTIFY -> return badFrame()
+                else -> return badFrame()
             }
         }
     }
 
     private fun ClientConnection.sendEnrollmentUpdates(): () -> Unit {
         val listener: SubjectSelectionUpdateListener = { electiveId, subjectId, enrolledCount ->
-            trySend(envelope {
-                subjectEnrollmentUpdate = subjectEnrollmentUpdate {
-                    this.electiveId = electiveId
-                    this.subjectId = subjectId
-                    this.enrolledCount = enrolledCount
-                }
-            })
+            trySend(Envelope(
+                subject_enrollment_update = ProtoNotificationsService.SubjectEnrollmentUpdate(
+                    elective_id = electiveId.toInt(),
+                    subject_id = subjectId.toInt(),
+                    enrolled_count = enrolledCount,
+                )
+            ))
         }
 
         for ((electiveId, subjectIds) in subscriptions) {
@@ -302,19 +297,19 @@ class NotificationsServiceImpl(
     }
 
     private suspend fun ClientConnection.acknowledge(envelope: Envelope) {
-        send(envelope {
-            messageId = envelope.messageId
-            acknowledged = acknowledged {}
-        })
+        send(Envelope(
+            message_id = envelope.message_id,
+            acknowledged = ProtoNotificationsService.Acknowledged(),
+        ))
     }
 }
 
 private class ClientConnection(
     private val notificationsService: NotificationsServiceImpl,
-    val userId: Int,
+    val userId: UInt,
     val session: WebSocketServerSession,
     // Map<ElectiveId, Set<SubjectId>>
-    val subscriptions: ConcurrentHashMap<Int, ConcurrentHashMap.KeySetView<Int, Boolean>>,
+    val subscriptions: ConcurrentHashMap<UInt, ConcurrentHashMap.KeySetView<UInt, Boolean>>,
     val cleanups: ConcurrentHashMap.KeySetView<() -> Unit, Boolean>,
     parentScope: CoroutineScope,
 ) {
@@ -360,7 +355,7 @@ private class ClientConnection(
         // Collect the outer StateFlow so we react to both existing elective flows
         // and any new ones added after this client connected
         scope.launch {
-            val active = mutableMapOf<Int, Job>()
+            val active = mutableMapOf<UInt, Job>()
             notificationsService.bulkUpdateFlows.collect { flows ->
                 // Cancel collectors for electives that have been removed
                 val removed = active.keys - flows.keys

@@ -101,7 +101,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
     }
     @Test
     fun `create elective`() = runTest {
-        val newId = 500
+        val newId = 500u
         @OptIn(Transactional::class)
         val created = electiveService.create(newId, "New Elective")
 
@@ -122,7 +122,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create elective with team`() = runTest {
-        val newId = 501
+        val newId = 501u
         @OptIn(Transactional::class)
         val created = electiveService.create(
             id = newId,
@@ -139,7 +139,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
 
     @Test
     fun `delete elective`() = runTest {
-        val tempId = 600
+        val tempId = 600u
         @OptIn(Transactional::class)
         electiveService.create(tempId, "Temporary Elective")
 
@@ -253,7 +253,7 @@ class ElectiveServiceImplTest : ApplicationTest() {
         assertFailsWith<EntityNotFoundException> {
             @OptIn(Transactional::class)
             electiveService.create(
-                id = 700,
+                id = 700u,
                 name = "Invalid Team Elective",
                 team = UNUSED_ID
             )

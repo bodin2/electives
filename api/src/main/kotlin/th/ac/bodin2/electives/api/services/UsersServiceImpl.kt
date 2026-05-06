@@ -54,8 +54,8 @@ fun userSearchCondition(query: String): Op<Boolean> {
 class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     class Config(val sessionDurationSeconds: Long, val minimumSessionCreationTime: Duration)
 
-    private val _sessionCreationFlow = MutableSharedFlow<Int>()
-    override val sessionCreationFlow: SharedFlow<Int> = _sessionCreationFlow.asSharedFlow()
+    private val _sessionCreationFlow = MutableSharedFlow<UInt>()
+    override val sessionCreationFlow: SharedFlow<UInt> = _sessionCreationFlow.asSharedFlow()
 
     companion object {
         private const val PAGE_SIZE = 50
@@ -72,7 +72,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         )
     }
 
-    override fun getUserType(id: Int): UserType {
+    override fun getUserType(id: UInt): UserType {
         val query = Users
             .leftJoin(Students)
             .leftJoin(Teachers)
@@ -92,13 +92,13 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     override fun createStudent(
-        id: Int,
+        id: UInt,
         firstName: String,
         middleName: String?,
         lastName: String?,
         password: String,
         avatarUrl: String?,
-        teams: List<Int>?,
+        teams: List<UInt>?,
     ): Student {
         val user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
         val studentRow = Students
@@ -167,7 +167,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     )
 
     override fun createTeacher(
-        id: Int,
+        id: UInt,
         firstName: String,
         middleName: String?,
         lastName: String?,
@@ -253,7 +253,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override fun deleteUser(id: Int) {
+    override fun deleteUser(id: UInt) {
         val rows = transaction { Users.deleteWhere { Users.id eq id } }
         if (rows == 0) {
             throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
@@ -263,7 +263,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override suspend fun deleteUsers(id: List<Int>) {
+    override suspend fun deleteUsers(id: List<UInt>) {
         if (id.isEmpty()) return
 
         suspendTransaction {
@@ -284,7 +284,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = transaction {
+    override fun updateStudent(id: UInt, update: UsersService.StudentUpdate) = transaction {
         Student.assertExists(id)
 
         try {
@@ -307,13 +307,13 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = transaction {
+    override fun updateTeacher(id: UInt, update: UsersService.TeacherUpdate) = transaction {
         Teacher.assertExists(id)
         updateUser(id, update.user)
         Teacher.findById(id)!!.load(Teacher::user)
     }
 
-    private fun updateUser(id: Int, update: UsersService.UserUpdate) {
+    private fun updateUser(id: UInt, update: UsersService.UserUpdate) {
         Users.update(where = { Users.id eq id }) {
             with(update) {
                 if (firstName != null) it[Users.firstName] = firstName
@@ -327,7 +327,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override fun setPassword(id: Int, newPassword: String) {
+    override fun setPassword(id: UInt, newPassword: String) {
         val password = newPassword.assertPasswordRequirements()
 
         val rows = transaction {
@@ -339,11 +339,11 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         if (rows == 0) throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
     }
 
-    override fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)
+    override fun getTeacherById(id: UInt): Teacher? = Teacher.findById(id)
 
-    override fun getStudentById(id: Int): Student? = Student.findById(id)
+    override fun getStudentById(id: UInt): Student? = Student.findById(id)
 
-    override fun getAdminById(id: Int): Admin? = Admin.findById(id)
+    override fun getAdminById(id: UInt): Admin? = Admin.findById(id)
 
     @Transactional
     override fun getStudents(page: Int, query: String?): Pair<List<Student>, Long> {
@@ -394,7 +394,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override suspend fun createSession(id: Int, password: String, aud: String): String =
+    override suspend fun createSession(id: UInt, password: String, aud: String): String =
         withMinimumDelay(config.minimumSessionCreationTime) {
             val password = password.assertPasswordRequirements()
 
@@ -425,7 +425,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
 
     @Transactional
-    override fun insecurelyCreateSessionWithoutValidation(id: Int, customDurationSeconds: Long?): String {
+    override fun insecurelyCreateSessionWithoutValidation(id: UInt, customDurationSeconds: Long?): String {
         val session = Base64.getUrlEncoder()
             .withoutPadding()
             .encodeToString(ByteArray(TOKEN_SIZE).apply { secureRand.nextBytes(this) })
@@ -444,7 +444,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         val (subject, session) = token.split(".", limit = 2).takeIf { it.size == 2 }
             ?: throw IllegalArgumentException("Invalid session token format")
 
-        val userId = subject.toIntOrNull() ?: throw IllegalArgumentException("Invalid token subject: $subject")
+        val userId = subject.toUIntOrNull() ?: throw IllegalArgumentException("Invalid token subject: $subject")
 
         val user = Users.select(Users.sessionHash, Users.sessionExpiry).where { Users.id eq userId }.singleOrNull()
             ?: throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $userId")
@@ -466,7 +466,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         return UsersService.SessionUser(userId, getUserType(userId))
     }
 
-    override fun clearSession(userId: Int) {
+    override fun clearSession(userId: UInt) {
         Users.update({ Users.id eq userId }) {
             it[Users.sessionExpiry] = null
             it[Users.sessionHash] = null
@@ -476,7 +476,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     private fun createUser(
-        id: Int,
+        id: UInt,
         firstName: String,
         middleName: String?,
         lastName: String?,

@@ -20,24 +20,24 @@ class TestElectiveService : ElectiveService {
 
     @Transactional
     override fun create(
-        id: Int,
+        id: UInt,
         name: String,
-        team: Int?,
+        team: UInt?,
         startDate: LocalDateTime?,
         endDate: LocalDateTime?
     ): Elective = error("Not testable")
 
     @Transactional
-    override fun delete(id: Int) = error("Not testable")
+    override fun delete(id: UInt) = error("Not testable")
 
     @Transactional
-    override fun update(id: Int, update: ElectiveService.ElectiveUpdate): Elective {
+    override fun update(id: UInt, update: ElectiveService.ElectiveUpdate): Elective {
         if (id !in ELECTIVE_IDS) throw EntityNotFoundException(ExceptionEntity.ELECTIVE)
         return MockUtils.mockElective(id)
     }
 
     @Transactional
-    override fun setSubjects(electiveId: Int, subjectIds: List<Int>) = error("Not testable")
+    override fun setSubjects(electiveId: UInt, subjectIds: List<UInt>) = error("Not testable")
 
     companion object {
         val ELECTIVE_IDS = listOf(
@@ -48,11 +48,11 @@ class TestElectiveService : ElectiveService {
 
     override fun getAll() = ELECTIVE_IDS.map { id -> MockUtils.mockElective(id) }
 
-    override fun getById(electiveId: Int) =
+    override fun getById(electiveId: UInt) =
         if (electiveId in ELECTIVE_IDS) MockUtils.mockElective(electiveId)
         else null
 
-    override fun getSubjects(electiveId: Int): ElectiveService.QueryResult<out List<Subject>> {
+    override fun getSubjects(electiveId: UInt): ElectiveService.QueryResult<out List<Subject>> {
         val elective = getById(electiveId)
             ?: return ElectiveService.QueryResult.ElectiveNotFound
 
@@ -60,8 +60,8 @@ class TestElectiveService : ElectiveService {
     }
 
     override fun getSubject(
-        electiveId: Int,
-        subjectId: Int
+        electiveId: UInt,
+        subjectId: UInt
     ): ElectiveService.QueryResult<out Subject> {
         val elective = getById(electiveId)
             ?: return ElectiveService.QueryResult.ElectiveNotFound
@@ -77,8 +77,8 @@ class TestElectiveService : ElectiveService {
     }
 
     override fun getSubjectMembers(
-        electiveId: Int,
-        subjectId: Int,
+        electiveId: UInt,
+        subjectId: UInt,
         withStudents: Boolean,
     ): ElectiveService.QueryResult<out Pair<List<Teacher>, List<Student>>> {
         return when (val result = getSubject(electiveId, subjectId)) {
@@ -96,11 +96,11 @@ class TestElectiveService : ElectiveService {
         }
     }
 
-    override fun getEnrolledCount(electiveId: Int): Int = 0
+    override fun getEnrolledCount(electiveId: UInt): Int = 0
 
     override fun getUnenrolledMembers(
-        electiveId: Int,
-        teamId: Int,
+        electiveId: UInt,
+        teamId: UInt,
         page: Int
     ): ElectiveService.QueryResult<out Pair<List<Student>, Long>> {
         val elective = getById(electiveId)

@@ -36,7 +36,7 @@ suspend fun RoutingContext.authenticated(
  * @param block A lambda function that takes the authenticated user ID as a parameter.
  */
 suspend fun RoutingContext.authenticated(
-    getTypes: (userId: Int) -> List<UserType>,
+    getTypes: (userId: UInt) -> List<UserType>,
     block: suspend RoutingContext.(user: UsersService.SessionUser) -> Unit
 ) {
     val user = call.user ?: return unauthorized()
@@ -55,7 +55,7 @@ fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
 
 val ApplicationCall.user get() = principal<UsersService.SessionUser>()
 
-fun ApplicationCall.userId(): Int? {
+fun ApplicationCall.userId(): UInt? {
     return principal<UsersService.SessionUser>()?.id
 }
 

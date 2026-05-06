@@ -25,7 +25,7 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
     }
 
     @Transactional
-    override fun forceSetAllStudentSelections(studentId: Int, selections: Map<Int, Int>) {
+    override fun forceSetAllStudentSelections(studentId: UInt, selections: Map<UInt, UInt>) {
         transaction {
             Student.assertExists(studentId)
 
@@ -57,9 +57,9 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
     @Transactional
     override suspend fun setStudentSelection(
         executor: UsersService.SessionUser,
-        studentId: Int,
-        electiveId: Int,
-        subjectId: Int
+        studentId: UInt,
+        electiveId: UInt,
+        subjectId: UInt
     ): ModifySelectionResult {
         var onSuccess: (() -> Unit)? = null
 
@@ -105,7 +105,7 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
 
                 val inserted = StudentElectives.insertIgnore(
                     Subjects
-                        .select(intParam(studentId), intParam(electiveId), intParam(subjectId))
+                        .select(uintParam(studentId), uintParam(electiveId), uintParam(subjectId))
                         .where {
                             (Subjects.id eq subjectId) and (currentCount less capacity.castTo(LongColumnType()))
                         },
@@ -144,8 +144,8 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
     @Transactional
     override suspend fun deleteStudentSelection(
         executor: UsersService.SessionUser,
-        studentId: Int,
-        electiveId: Int
+        studentId: UInt,
+        electiveId: UInt
     ): ModifySelectionResult =
         transaction {
             try {
@@ -203,12 +203,12 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
         }
     }
 
-    override fun getStudentSelections(studentId: Int): Map<Int, Subject> {
+    override fun getStudentSelections(studentId: UInt): Map<UInt, Subject> {
         Student.assertExists(studentId)
         return buildMap { Student.getAllElectiveSelections(studentId).forEach { put(it.first, it.second) } }
     }
 
-    private fun checkDateRange(electiveId: Int, bypass: Boolean): CanEnrollStatus? {
+    private fun checkDateRange(electiveId: UInt, bypass: Boolean): CanEnrollStatus? {
         val (startDate, endDate) = Elective.getEnrollmentDateRange(electiveId)
         val now = LocalDateTime.now()
         if (!bypass) {
@@ -230,9 +230,9 @@ class ElectiveSelectionServiceImpl(private val notificationsService: Notificatio
      * **Subject capacity is not checked here and should be handled by the caller within a transaction with proper isolation level to prevent TOCTOU issues.**
      */
     private fun canEnrollInSubject(
-        studentId: Int,
-        electiveId: Int,
-        subjectId: Int,
+        studentId: UInt,
+        electiveId: UInt,
+        subjectId: UInt,
         bypassDateCheck: Boolean,
     ): CanEnrollStatus {
         // Check elective date range

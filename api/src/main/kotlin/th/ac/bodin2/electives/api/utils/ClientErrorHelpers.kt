@@ -1,6 +1,6 @@
 package th.ac.bodin2.electives.api.utils
 
-import com.google.protobuf.MessageLite
+import com.squareup.wire.Message
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -29,7 +29,7 @@ class ErrorResponse(val status: HttpStatusCode, val message: String?)
 
 sealed class RouteResponse
 data class Err(val response: ErrorResponse) : RouteResponse()
-data class Ok(val response: MessageLite) : RouteResponse()
+data class Ok(val response: Message<*, *>) : RouteResponse()
 
 suspend inline fun RoutingContext.error(response: ErrorResponse) {
     call.response.status(response.status)

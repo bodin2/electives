@@ -23,9 +23,9 @@ class ElectiveServiceImpl : ElectiveService {
 
     @Transactional
     override fun create(
-        id: Int,
+        id: UInt,
         name: String,
-        team: Int?,
+        team: UInt?,
         startDate: LocalDateTime?,
         endDate: LocalDateTime?
     ) = transaction {
@@ -47,7 +47,7 @@ class ElectiveServiceImpl : ElectiveService {
 
 
     @Transactional
-    override fun delete(id: Int) {
+    override fun delete(id: UInt) {
         transaction {
             val rows = Electives.deleteWhere { Electives.id eq id }
             if (rows == 0) {
@@ -57,7 +57,7 @@ class ElectiveServiceImpl : ElectiveService {
     }
 
     @Transactional
-    override fun update(id: Int, update: ElectiveService.ElectiveUpdate) = transaction {
+    override fun update(id: UInt, update: ElectiveService.ElectiveUpdate) = transaction {
         Elective.assertExists(id)
 
         val rows = Electives.updateReturning(where = { Electives.id eq id }) {
@@ -75,7 +75,7 @@ class ElectiveServiceImpl : ElectiveService {
     }
 
     @Transactional
-    override fun setSubjects(electiveId: Int, subjectIds: List<Int>) {
+    override fun setSubjects(electiveId: UInt, subjectIds: List<UInt>) {
         transaction {
             Elective.assertExists(electiveId)
 
@@ -92,14 +92,14 @@ class ElectiveServiceImpl : ElectiveService {
 
     override fun getAll() = Elective.all().toList()
 
-    override fun getById(electiveId: Int) = Elective.findById(electiveId)
+    override fun getById(electiveId: UInt) = Elective.findById(electiveId)
 
-    override fun getSubjects(electiveId: Int): QueryResult<out List<Subject>> {
+    override fun getSubjects(electiveId: UInt): QueryResult<out List<Subject>> {
         if (!Elective.exists(electiveId)) return QueryResult.ElectiveNotFound
         return QueryResult.Success(Elective.getSubjects(electiveId))
     }
 
-    override fun getSubject(electiveId: Int, subjectId: Int): QueryResult<out Subject> {
+    override fun getSubject(electiveId: UInt, subjectId: UInt): QueryResult<out Subject> {
         try {
             Elective.assertExists(electiveId)
             Subject.assertExists(subjectId)
@@ -119,8 +119,8 @@ class ElectiveServiceImpl : ElectiveService {
     }
 
     override fun getSubjectMembers(
-        electiveId: Int,
-        subjectId: Int,
+        electiveId: UInt,
+        subjectId: UInt,
         withStudents: Boolean,
     ): QueryResult<out Pair<List<Teacher>, List<Student>>> {
         try {
@@ -144,14 +144,14 @@ class ElectiveServiceImpl : ElectiveService {
         }
     }
 
-    override fun getEnrolledCount(electiveId: Int): Int =
+    override fun getEnrolledCount(electiveId: UInt): Int =
         StudentElectives.selectAll()
             .where { StudentElectives.elective eq electiveId }
             .count().toInt()
 
     override fun getUnenrolledMembers(
-        electiveId: Int,
-        teamId: Int,
+        electiveId: UInt,
+        teamId: UInt,
         page: Int
     ): QueryResult<out Pair<List<Student>, Long>> {
         if (!Elective.exists(electiveId)) return QueryResult.ElectiveNotFound

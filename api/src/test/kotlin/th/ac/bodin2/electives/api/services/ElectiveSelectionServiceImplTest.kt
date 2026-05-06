@@ -46,7 +46,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         val selectedSubject = transaction {
             electiveSelectionService.getStudentSelections(TestConstants.Students.JOHN_ID)[TestConstants.Electives.SCIENCE_ID]?.toProto()
         }
-        assertEquals(TestConstants.Subjects.PHYSICS_ID, selectedSubject?.id)
+        assertEquals(TestConstants.Subjects.PHYSICS_ID, selectedSubject?.id?.toUInt())
     }
 
     @Test
@@ -56,7 +56,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
                 it[id] = TestConstants.Subjects.OTHER_ID
                 it[name] = "Other Subject"
                 it[code] = "OTH999"
-                it[tag] = SubjectTag.MATH.number
+                it[tag] = SubjectTag.MATH.value
                 it[location] = "Room B"
                 it[capacity] = 10
                 it[team] = null
@@ -103,14 +103,14 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
     fun `put student elective selection as teacher not teaching subject in elective`() = runTest {
         transaction {
             Electives.insert {
-                it[id] = 3
+                it[id] = 3u
                 it[name] = "Other Elective"
                 it[startDate] = null
                 it[endDate] = null
                 it[team] = TestConstants.Teams.TEAM_1_ID
             }
             ElectiveSubjects.insert {
-                it[elective] = 3
+                it[elective] = 3u
                 it[subject] = TestConstants.Subjects.PHYSICS_ID
             }
             // Bob teaches Physics in SCIENCE_ID, but not in elective 3
@@ -119,7 +119,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
         val result = electiveSelectionService.setStudentSelection(
             bobSessionUser,
             TestConstants.Students.JOHN_ID,
-            3,
+            3u,
             TestConstants.Subjects.PHYSICS_ID
         )
 
@@ -289,7 +289,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
                 it[id] = TestConstants.Subjects.OTHER_ID
                 it[name] = "Team Subject"
                 it[code] = "TMS101"
-                it[tag] = SubjectTag.MATH.number
+                it[tag] = SubjectTag.MATH.value
                 it[location] = "Room C"
                 it[capacity] = 10
                 it[team] = TestConstants.Teams.TEAM_2_ID
@@ -319,7 +319,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
                 it[id] = TestConstants.Subjects.OTHER_ID
                 it[name] = "Team Subject"
                 it[code] = "TMS101"
-                it[tag] = SubjectTag.MATH.number
+                it[tag] = SubjectTag.MATH.value
                 it[location] = "Room C"
                 it[capacity] = 10
                 it[team] = null
@@ -536,7 +536,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
                 .mapValues { it.value.toProto() }
         }
 
-        assertEquals(TestConstants.Subjects.PHYSICS_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id)
+        assertEquals(TestConstants.Subjects.PHYSICS_ID, selections[TestConstants.Electives.SCIENCE_ID]?.id?.toUInt())
     }
 
     @Test
@@ -595,7 +595,7 @@ class ElectiveSelectionServiceImplTest : ApplicationTest() {
                 it[id] = TestConstants.Subjects.OTHER_ID
                 it[name] = "Other Subject"
                 it[code] = "OTH999"
-                it[tag] = SubjectTag.MATH.number
+                it[tag] = SubjectTag.MATH.value
                 it[location] = "Room B"
                 it[capacity] = 10
                 it[team] = null

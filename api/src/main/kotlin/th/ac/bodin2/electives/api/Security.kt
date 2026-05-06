@@ -28,7 +28,7 @@ fun DependencyRegistry.provideArgon2() {
 const val USER_AUTHENTICATION = "user"
 const val ADMIN_AUTHENTICATION = "admin"
 
-class AdminPrincipal(val id: Int)
+class AdminPrincipal(val id: UInt)
 
 fun Application.configureSecurity() {
     val usersService: UsersService by dependencies

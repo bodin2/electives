@@ -12,7 +12,7 @@ import th.ac.bodin2.electives.proto.api.UserType
 import java.security.PublicKey
 
 interface UsersService {
-    val sessionCreationFlow: SharedFlow<Int>
+    val sessionCreationFlow: SharedFlow<UInt>
 
     /**
      * Gets the [UserType] of the given user ID.
@@ -20,7 +20,7 @@ interface UsersService {
      * @throws EntityNotFoundException if the user does not exist.
      * @throws IllegalStateException if the user is neither a Student, Teacher, nor Admin.
      */
-    fun getUserType(id: Int): UserType
+    fun getUserType(id: UInt): UserType
 
     /**
      * Creates a new student with the given information.
@@ -30,13 +30,13 @@ interface UsersService {
      * @throws IllegalArgumentException if the password does not meet the requirements.
      */
     fun createStudent(
-        id: Int,
+        id: UInt,
         firstName: String,
         middleName: String? = null,
         lastName: String? = null,
         password: String,
         avatarUrl: String? = null,
-        teams: List<Int>? = null,
+        teams: List<UInt>? = null,
     ): Student
 
     /**
@@ -57,7 +57,7 @@ interface UsersService {
      * @throws IllegalArgumentException if the password does not meet the requirements.
      */
     fun createTeacher(
-        id: Int,
+        id: UInt,
         firstName: String,
         middleName: String? = null,
         lastName: String? = null,
@@ -90,7 +90,7 @@ interface UsersService {
      * @throws EntityNotFoundException if the user does not exist.
      */
     @Transactional
-    fun deleteUser(id: Int)
+    fun deleteUser(id: UInt)
 
     /**
      * Deletes the users with the given ID.
@@ -98,7 +98,7 @@ interface UsersService {
      * @throws BatchOperationException.NotFoundEntities if any of the specified IDs do not exist, with the list of missing IDs in [BatchOperationException.NotFoundEntities.ids].
      */
     @Transactional
-    suspend fun deleteUsers(id: List<Int>)
+    suspend fun deleteUsers(id: List<UInt>)
 
     /**
      * Updates the student's profile information.
@@ -108,7 +108,7 @@ interface UsersService {
      */
     @Transactional
     fun updateStudent(
-        id: Int,
+        id: UInt,
         update: StudentUpdate,
     ): Student
 
@@ -120,23 +120,23 @@ interface UsersService {
      */
     @Transactional
     fun updateTeacher(
-        id: Int,
+        id: UInt,
         update: TeacherUpdate,
     ): Teacher
 
     sealed class BatchOperationException(msg: String, cause: Throwable?) : Exception(msg, cause) {
         constructor(msg: String) : this(msg, null)
 
-        class NotFoundEntities(val ids: List<Int>) : BatchOperationException("Entity with the given IDs does not exist")
-        class ConflictingEntities(val ids: List<Int>) :
+        class NotFoundEntities(val ids: List<UInt>) : BatchOperationException("Entity with the given IDs does not exist")
+        class ConflictingEntities(val ids: List<UInt>) :
             BatchOperationException("Entity with the same IDs already exists")
 
-        class MissingTeams(val ids: List<Int>) : BatchOperationException("Teams are missing")
-        class InvalidUserData(val id: Int, cause: Throwable) : BatchOperationException("Invalid user data", cause)
+        class MissingTeams(val ids: List<UInt>) : BatchOperationException("Teams are missing")
+        class InvalidUserData(val id: UInt, cause: Throwable) : BatchOperationException("Invalid user data", cause)
     }
 
     class UserData(
-        val id: Int,
+        val id: UInt,
         val firstName: String,
         val middleName: String? = null,
         val lastName: String? = null,
@@ -145,7 +145,7 @@ interface UsersService {
     )
 
     sealed class UserInsert(val user: UserData)
-    class StudentInsert(user: UserData, val teams: List<Int> = emptyList()) : UserInsert(user)
+    class StudentInsert(user: UserData, val teams: List<UInt> = emptyList()) : UserInsert(user)
     class TeacherInsert(user: UserData) : UserInsert(user)
     class AdminInsert(user: UserData, val publicKey: PublicKey) : UserInsert(user)
 
@@ -171,7 +171,7 @@ interface UsersService {
 
     data class StudentUpdate(
         val user: UserUpdate,
-        val teams: List<Int>? = null,
+        val teams: List<UInt>? = null,
     )
 
     data class TeacherUpdate(
@@ -187,11 +187,11 @@ interface UsersService {
      * @throws IllegalArgumentException if the new password does not meet the requirements.
      */
     @Transactional
-    fun setPassword(id: Int, newPassword: String)
+    fun setPassword(id: UInt, newPassword: String)
 
-    fun getTeacherById(id: Int): Teacher?
-    fun getStudentById(id: Int): Student?
-    fun getAdminById(id: Int): Admin?
+    fun getTeacherById(id: UInt): Teacher?
+    fun getStudentById(id: UInt): Student?
+    fun getAdminById(id: UInt): Admin?
 
     /**
      * Gets a paginated list of students, optionally filtered by a search query.
@@ -224,14 +224,14 @@ interface UsersService {
      * @throws IllegalArgumentException if the token or session is invalid.
      */
     @Transactional
-    suspend fun createSession(id: Int, password: String, aud: String): String
+    suspend fun createSession(id: UInt, password: String, aud: String): String
 
     /**
      * Creates a new session for the given user ID without validating the password.
      * Assumes the user exists.
      */
     @Transactional
-    fun insecurelyCreateSessionWithoutValidation(id: Int, customDurationSeconds: Long? = null): String
+    fun insecurelyCreateSessionWithoutValidation(id: UInt, customDurationSeconds: Long? = null): String
 
     /**
      * Gets the basic user data associated with the given session token.
@@ -241,10 +241,10 @@ interface UsersService {
      */
     fun getSessionUser(token: String): SessionUser
 
-    class SessionUser(val id: Int, val type: UserType)
+    class SessionUser(val id: UInt, val type: UserType)
 
     /**
      * Clears the session (logs out) for the user with the given ID.
      */
-    fun clearSession(userId: Int)
+    fun clearSession(userId: UInt)
 }

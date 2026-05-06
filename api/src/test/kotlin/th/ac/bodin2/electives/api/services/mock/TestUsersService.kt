@@ -19,26 +19,26 @@ import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.UserType
 
 class TestUsersService : UsersService {
-    private val hasSessions = mutableSetOf<Int>()
+    private val hasSessions = mutableSetOf<UInt>()
 
-    override val sessionCreationFlow: SharedFlow<Int>
+    override val sessionCreationFlow: SharedFlow<UInt>
         get() = error("Not testable")
 
     override fun createStudent(
-        id: Int,
+        id: UInt,
         firstName: String,
         middleName: String?,
         lastName: String?,
         password: String,
         avatarUrl: String?,
-        teams: List<Int>?,
+        teams: List<UInt>?,
     ) = error("Not testable")
 
     @Transactional
     override fun createStudents(inserts: List<UsersService.StudentInsert>) = error("Not testable")
 
     override fun createTeacher(
-        id: Int,
+        id: UInt,
         firstName: String,
         middleName: String?,
         lastName: String?,
@@ -53,29 +53,29 @@ class TestUsersService : UsersService {
     override fun createAdmin(insert: UsersService.AdminInsert) = error("Not testable")
 
     @Transactional
-    override fun deleteUser(id: Int) = error("Not testable")
+    override fun deleteUser(id: UInt) = error("Not testable")
 
     @Transactional
-    override suspend fun deleteUsers(id: List<Int>) = error("Not testable")
+    override suspend fun deleteUsers(id: List<UInt>) = error("Not testable")
 
     @Transactional
-    override fun updateStudent(id: Int, update: UsersService.StudentUpdate): Student {
+    override fun updateStudent(id: UInt, update: UsersService.StudentUpdate): Student {
         if (id != STUDENT_ID) throw EntityNotFoundException(ExceptionEntity.STUDENT)
         return mockStudent(id)
     }
 
     @Transactional
-    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate): Teacher {
+    override fun updateTeacher(id: UInt, update: UsersService.TeacherUpdate): Teacher {
         if (id != TEACHER_ID) throw EntityNotFoundException(ExceptionEntity.TEACHER)
         return mockTeacher(id)
     }
 
     @Transactional
-    override fun setPassword(id: Int, newPassword: String) {
+    override fun setPassword(id: UInt, newPassword: String) {
         getUserType(id) // throws if user not found
     }
 
-    override fun getUserType(id: Int) = when (id) {
+    override fun getUserType(id: UInt) = when (id) {
         ADMIN_ID -> UserType.ADMIN
         TEACHER_ID -> UserType.TEACHER
         STUDENT_ID -> UserType.STUDENT
@@ -83,7 +83,7 @@ class TestUsersService : UsersService {
     }
 
     @Transactional
-    override suspend fun createSession(id: Int, password: String, aud: String): String {
+    override suspend fun createSession(id: UInt, password: String, aud: String): String {
         if (password != PASSWORD) {
             throw IllegalArgumentException("Invalid password for user ID: $id")
         }
@@ -92,7 +92,7 @@ class TestUsersService : UsersService {
     }
 
     @Transactional
-    override fun insecurelyCreateSessionWithoutValidation(id: Int, customDurationSeconds: Long?): String {
+    override fun insecurelyCreateSessionWithoutValidation(id: UInt, customDurationSeconds: Long?): String {
         hasSessions.add(id)
         return id.toString()
     }
@@ -105,7 +105,7 @@ class TestUsersService : UsersService {
             )
         }
 
-        val id = token.toIntOrNull()
+        val id = token.toUIntOrNull()
             ?: throw IllegalArgumentException("No session for token: $token")
 
         if (!hasSessions.contains(id)) {
@@ -118,11 +118,11 @@ class TestUsersService : UsersService {
         )
     }
 
-    override fun clearSession(userId: Int) {
+    override fun clearSession(userId: UInt) {
         hasSessions.remove(userId)
     }
 
-    override fun getTeacherById(id: Int): Teacher? {
+    override fun getTeacherById(id: UInt): Teacher? {
         return if (id == TEACHER_ID) {
             mockTeacher(id)
         } else {
@@ -130,7 +130,7 @@ class TestUsersService : UsersService {
         }
     }
 
-    override fun getAdminById(id: Int): Admin? {
+    override fun getAdminById(id: UInt): Admin? {
         return if (id == ADMIN_ID) {
             mockAdmin(id)
         } else {
@@ -138,7 +138,7 @@ class TestUsersService : UsersService {
         }
     }
 
-    override fun getStudentById(id: Int): Student? {
+    override fun getStudentById(id: UInt): Student? {
         return if (id == STUDENT_ID) {
             mockStudent(id)
         } else {

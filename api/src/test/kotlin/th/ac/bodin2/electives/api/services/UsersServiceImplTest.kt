@@ -58,7 +58,7 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create student`() = runTest {
         transaction {
             val student = usersService.createStudent(
-                1010,
+                1010u,
                 "New",
                 "Student",
                 "User",
@@ -67,7 +67,7 @@ class UsersServiceImplTest : ApplicationTest() {
             )
 
             assertNotNull(student)
-            assertEquals(1010, student.id.value)
+            assertEquals(1010u, student.id.value)
             assertEquals("New", student.user.firstName)
             assertEquals(TestConstants.Teams.TEAM_1_ID, student.teams.first().id.value)
         }
@@ -77,7 +77,7 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create teacher`() = runTest {
         transaction {
             val teacher = usersService.createTeacher(
-                2010,
+                2010u,
                 "New",
                 null,
                 "Teacher",
@@ -86,7 +86,7 @@ class UsersServiceImplTest : ApplicationTest() {
             )
 
             assertNotNull(teacher)
-            assertEquals(2010, teacher.id.value)
+            assertEquals(2010u, teacher.id.value)
             assertEquals("New", teacher.user.firstName)
         }
     }
@@ -707,11 +707,11 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create students batch`() = runTest {
         val inserts = listOf(
             UsersService.StudentInsert(
-                UsersService.UserData(3001, "Alice", null, "Smith", password = "testpass"),
+                UsersService.UserData(3001u, "Alice", null, "Smith", password = "testpass"),
                 teams = listOf(TestConstants.Teams.TEAM_1_ID)
             ),
             UsersService.StudentInsert(
-                UsersService.UserData(3002, "Bob", null, "Jones", password = "testpass"),
+                UsersService.UserData(3002u, "Bob", null, "Jones", password = "testpass"),
                 teams = emptyList()
             ),
         )
@@ -719,11 +719,11 @@ class UsersServiceImplTest : ApplicationTest() {
         val students = transaction { usersService.createStudents(inserts) }
 
         assertEquals(2, students.size)
-        assertTrue(students.any { it.id.value == 3001 })
-        assertTrue(students.any { it.id.value == 3002 })
+        assertTrue(students.any { it.id.value == 3001u })
+        assertTrue(students.any { it.id.value == 3002u })
 
         transaction {
-            val alice = usersService.getStudentById(3001)
+            val alice = usersService.getStudentById(3001u)
             assertNotNull(alice)
             assertEquals(TestConstants.Teams.TEAM_1_ID, alice.teams.first().id.value)
         }
@@ -739,7 +739,7 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create students batch with missing team throws`() = runTest {
         val inserts = listOf(
             UsersService.StudentInsert(
-                UsersService.UserData(3003, "Charlie", password = "testpass"),
+                UsersService.UserData(3003u, "Charlie", password = "testpass"),
                 teams = listOf(UNUSED_ID)
             )
         )
@@ -786,14 +786,14 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create students batch with short password throws`() = runTest {
         val inserts = listOf(
             UsersService.StudentInsert(
-                UsersService.UserData(3004, "Short", password = "abc")
+                UsersService.UserData(3004u, "Short", password = "abc")
             )
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
             transaction { usersService.createStudents(inserts) }
         }
-        assertEquals(3004, ex.id)
+        assertEquals(3004u, ex.id)
         assertIs<IllegalArgumentException>(ex.cause)
     }
 
@@ -801,14 +801,14 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create students batch with long password throws`() = runTest {
         val inserts = listOf(
             UsersService.StudentInsert(
-                UsersService.UserData(3005, "Long", password = "a".repeat(4097))
+                UsersService.UserData(3005u, "Long", password = "a".repeat(4097))
             )
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
             transaction { usersService.createStudents(inserts) }
         }
-        assertEquals(3005, ex.id)
+        assertEquals(3005u, ex.id)
         assertIs<IllegalArgumentException>(ex.cause)
     }
 
@@ -816,18 +816,18 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create teachers batch`() = runTest {
         val inserts = listOf(
             UsersService.TeacherInsert(
-                UsersService.UserData(4001, "Carol", null, "White", password = "testpass")
+                UsersService.UserData(4001u, "Carol", null, "White", password = "testpass")
             ),
             UsersService.TeacherInsert(
-                UsersService.UserData(4002, "Dave", null, "Black", password = "testpass")
+                UsersService.UserData(4002u, "Dave", null, "Black", password = "testpass")
             ),
         )
 
         val teachers = transaction { usersService.createTeachers(inserts) }
 
         assertEquals(2, teachers.size)
-        assertTrue(teachers.any { it.id.value == 4001 })
-        assertTrue(teachers.any { it.id.value == 4002 })
+        assertTrue(teachers.any { it.id.value == 4001u })
+        assertTrue(teachers.any { it.id.value == 4002u })
     }
 
     @Test
@@ -854,14 +854,14 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create teachers batch with short password throws`() = runTest {
         val inserts = listOf(
             UsersService.TeacherInsert(
-                UsersService.UserData(4003, "Short", password = "abc")
+                UsersService.UserData(4003u, "Short", password = "abc")
             )
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
             transaction { usersService.createTeachers(inserts) }
         }
-        assertEquals(4003, ex.id)
+        assertEquals(4003u, ex.id)
         assertIs<IllegalArgumentException>(ex.cause)
     }
 
@@ -869,14 +869,14 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create teachers batch with long password throws`() = runTest {
         val inserts = listOf(
             UsersService.TeacherInsert(
-                UsersService.UserData(4004, "Long", password = "a".repeat(4097))
+                UsersService.UserData(4004u, "Long", password = "a".repeat(4097))
             )
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
             transaction { usersService.createTeachers(inserts) }
         }
-        assertEquals(4004, ex.id)
+        assertEquals(4004u, ex.id)
         assertIs<IllegalArgumentException>(ex.cause)
     }
 

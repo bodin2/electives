@@ -1,11 +1,9 @@
 package th.ac.bodin2.electives.db.models
 
 import org.jetbrains.exposed.v1.core.ReferenceOption
-import org.jetbrains.exposed.v1.core.dao.id.IdTable
+import org.jetbrains.exposed.v1.core.dao.id.UIntIdTable
 
-object Subjects : IdTable<Int>("subjects") {
-    override val id = integer("id").entityId()
-
+object Subjects : UIntIdTable("subjects") {
     /**
      * The team that this subject belongs to. A subject does not need to be associated with a team.
      *
@@ -54,6 +52,4 @@ object Subjects : IdTable<Int>("subjects") {
 
     val imageUrl = varchar("image_url", 1000).nullable()
     val thumbnailUrl = varchar("thumbnail_url", 1000).nullable()
-
-    override val primaryKey = PrimaryKey(id)
 }

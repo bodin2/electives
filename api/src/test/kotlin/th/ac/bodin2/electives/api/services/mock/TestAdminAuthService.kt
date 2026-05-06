@@ -6,7 +6,7 @@ class TestAdminAuthService : AdminAuthService {
     override fun newChallenge() = "test-challenge"
 
     override suspend fun createSession(
-        id: Int,
+        id: UInt,
         signature: String,
         aud: String,
         ip: String,

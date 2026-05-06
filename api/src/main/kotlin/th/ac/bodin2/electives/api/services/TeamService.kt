@@ -15,7 +15,7 @@ interface TeamService {
      */
     @Transactional
     fun create(
-        id: Int,
+        id: UInt,
         name: String,
     ): Team
 
@@ -25,7 +25,7 @@ interface TeamService {
      * @throws EntityNotFoundException if the team does not exist.
      */
     @Transactional
-    fun delete(id: Int)
+    fun delete(id: UInt)
 
     /**
      * Updates a team's information.
@@ -34,7 +34,7 @@ interface TeamService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun update(id: Int, update: TeamUpdate): Team
+    fun update(id: UInt, update: TeamUpdate): Team
 
     data class TeamUpdate(
         val name: String? = null,
@@ -42,7 +42,7 @@ interface TeamService {
 
     fun getAll(): List<Team>
 
-    fun getById(teamId: Int): Team?
+    fun getById(teamId: UInt): Team?
 
     /**
      * Gets a paginated list of team members, optionally filtered by a search query.
@@ -53,9 +53,9 @@ interface TeamService {
      * @throws EntityNotFoundException if the team does not exist.
      */
     @Transactional
-    fun getMembers(teamId: Int, page: Int = 1, query: String? = null): Pair<List<Student>, Long>
+    fun getMembers(teamId: UInt, page: Int = 1, query: String? = null): Pair<List<Student>, Long>
 
-    fun getMemberCounts(): Map<Int, Int>
+    fun getMemberCounts(): Map<UInt, Int>
 
-    fun getMemberCount(teamId: Int): Int
+    fun getMemberCount(teamId: UInt): Int
 }

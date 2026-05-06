@@ -1,11 +1,9 @@
 package th.ac.bodin2.electives.db.models
 
-import org.jetbrains.exposed.v1.core.dao.id.IdTable
+import org.jetbrains.exposed.v1.core.dao.id.UIntIdTable
 import org.jetbrains.exposed.v1.javatime.datetime
 
-object Users : IdTable<Int>("users") {
-    override val id = integer("id").entityId()
-
+object Users : UIntIdTable("users") {
     val firstName = varchar("first_name", 255)
     val middleName = varchar("middle_name", 255).nullable()
     val lastName = varchar("last_name", 255).nullable()
@@ -24,6 +22,4 @@ object Users : IdTable<Int>("users") {
      * If not set, consider the session expired.
      */
     val sessionExpiry = datetime("session_expiry").nullable()
-
-    override val primaryKey = PrimaryKey(id)
 }

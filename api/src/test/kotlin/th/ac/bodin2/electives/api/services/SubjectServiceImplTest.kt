@@ -41,7 +41,7 @@ class SubjectServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create subject`() = runTest {
-        val newId = 500
+        val newId = 500u
 
         @OptIn(Transactional::class)
         val created = subjectService.create(
@@ -138,7 +138,7 @@ class SubjectServiceImplTest : ApplicationTest() {
         assertFailsWith<EntityNotFoundException> {
             @OptIn(Transactional::class)
             subjectService.create(
-                id = 600,
+                id = 600u,
                 name = "Invalid Team Subject",
                 description = null,
                 code = null,

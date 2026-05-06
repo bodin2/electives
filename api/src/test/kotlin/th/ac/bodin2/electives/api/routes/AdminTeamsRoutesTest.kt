@@ -12,7 +12,6 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_TE
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.mock.TestTeamService
 import th.ac.bodin2.electives.proto.api.AdminService
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.teamPatch
 import th.ac.bodin2.electives.proto.api.Team
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -34,7 +33,7 @@ class AdminTeamsRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListTeamsResponse>()
 
-        assertEquals(TestTeamService.TEAM_IDS.size, response.teamsCount)
+        assertEquals(TestTeamService.TEAM_IDS.size, response.teams.size)
     }
 
     @Test
@@ -45,7 +44,7 @@ class AdminTeamsRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<Team>()
 
-        assertEquals(ELECTIVE_TEAM_ID, team.id)
+        assertEquals(ELECTIVE_TEAM_ID.toInt(), team.id)
     }
 
     @Test
@@ -73,9 +72,9 @@ class AdminTeamsRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.TeamMemberCounts>()
 
-        assertEquals(TestTeamService.TEAM_IDS.size, response.memberCountsCount)
+        assertEquals(TestTeamService.TEAM_IDS.size, response.member_counts.size)
         TestTeamService.TEAM_IDS.forEach { teamId ->
-            assertEquals(0, response.memberCountsMap[teamId])
+            assertEquals(0, response.member_counts[teamId.toInt()])
         }
     }
 
@@ -93,7 +92,7 @@ class AdminTeamsRoutesTest : ApplicationTest() {
             .parse<AdminService.ListUsersResponse>()
 
         assertEquals(0, response.total)
-        assertEquals(0, response.usersCount)
+        assertEquals(0, response.users.size)
     }
 
     @Test
@@ -114,11 +113,11 @@ class AdminTeamsRoutesTest : ApplicationTest() {
 
         val team = client.patchProtoWithAuth(
             "/admin/teams/$ELECTIVE_TEAM_ID",
-            teamPatch { name = "New Name" },
+            AdminService.TeamPatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertOK().parse<Team>()
 
-        assertEquals(ELECTIVE_TEAM_ID, team.id)
+        assertEquals(ELECTIVE_TEAM_ID.toInt(), team.id)
     }
 
     @Test
@@ -127,7 +126,7 @@ class AdminTeamsRoutesTest : ApplicationTest() {
 
         client.patchProtoWithAuth(
             "/admin/teams/$UNUSED_ID",
-            teamPatch { name = "New Name" },
+            AdminService.TeamPatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertNotFound("Team not found")
     }

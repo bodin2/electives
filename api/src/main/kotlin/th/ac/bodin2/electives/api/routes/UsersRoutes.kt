@@ -6,6 +6,7 @@ import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.routing
+import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
@@ -20,9 +21,7 @@ import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.UserType
-import th.ac.bodin2.electives.proto.api.UsersService.SetStudentElectiveSelectionRequest
-import th.ac.bodin2.electives.proto.api.UsersServiceKt.studentSelections
-import th.ac.bodin2.electives.proto.api.UsersServiceKt.teacherSubjects
+import th.ac.bodin2.electives.proto.api.UsersService as ProtoUsersService
 
 val usersController = controller {
     val usersService: UsersService by dependencies
@@ -75,21 +74,21 @@ val usersController = controller {
 }
 
 context(electiveSelectionService: ElectiveSelectionService)
-suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
+suspend fun RoutingContext.handleGetStudentSelections(userId: UInt) {
     try {
         val response = transaction {
             val selections = electiveSelectionService.getStudentSelections(userId)
 
-            studentSelections {
-                subjects.putAll(selections.mapValues {
+            ProtoUsersService.StudentSelections(
+                subjects = selections.mapKeys { it.key.toInt() }.mapValues {
                     it.value.toProto(
-                        electiveId = it.key,
+                        electiveId = it.key.toUInt(),
                         withDescription = false,
                         withTeachers = true,
                         withEnrolledCounts = true,
                     )
-                })
-            }
+                }
+            )
         }
 
         // @TODO: Return more specific error if user is not a student?
@@ -102,15 +101,13 @@ suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
 }
 
 context(usersService: UsersService)
-suspend fun RoutingContext.handleGetUser(userId: Int) {
+suspend fun RoutingContext.handleGetUser(userId: UInt) {
     val userProto = transaction {
         try {
             when (val type = usersService.getUserType(userId)) {
                 UserType.STUDENT -> usersService.getStudentById(userId)?.toProto()
                 UserType.TEACHER -> usersService.getTeacherById(userId)?.toProto()
                 UserType.ADMIN -> usersService.getAdminById(userId)?.toProto()
-
-                else -> throw IllegalStateException("Unknown user type: $type (id: $userId)")
             }
         } catch (_: EntityNotFoundException) {
             null
@@ -121,18 +118,18 @@ suspend fun RoutingContext.handleGetUser(userId: Int) {
 }
 
 context(subjectService: SubjectService)
-suspend fun RoutingContext.handleGetTeacherSubjects(userId: Int) {
+suspend fun RoutingContext.handleGetTeacherSubjects(userId: UInt) {
     try {
         val response = transaction {
-            teacherSubjects {
-                subjects.putAll(subjectService.getTeacherSubjects(userId).mapValues {
+            ProtoUsersService.TeacherSubjects(
+                subjects = subjectService.getTeacherSubjects(userId).mapKeys { it.key.toInt() }.mapValues {
                     it.value.toProto(
-                        electiveId = it.key,
+                        electiveId = it.key.toUInt(),
                         withDescription = false,
                         withTeachers = false,
                     )
-                })
-            }
+                }
+            )
         }
 
         call.respond(response)
@@ -143,15 +140,15 @@ suspend fun RoutingContext.handleGetTeacherSubjects(userId: Int) {
 
 context(electiveSelectionService: ElectiveSelectionService)
 private suspend fun RoutingContext.handlePutStudentElectiveSelection(
-    electiveId: Int,
-    studentId: Int,
+    electiveId: UInt,
+    studentId: UInt,
     executor: UsersService.SessionUser
 ) {
-    val req = call.parseOrNull<SetStudentElectiveSelectionRequest>() ?: return badRequest()
+    val req = call.parseOrNull<ProtoUsersService.SetStudentElectiveSelectionRequest>() ?: return badRequest()
 
     @OptIn(Transactional::class)
     when (val result =
-        electiveSelectionService.setStudentSelection(executor, studentId, electiveId, req.subjectId)) {
+        electiveSelectionService.setStudentSelection(executor, studentId, electiveId, req.subject_id.toUInt())) {
         ModifySelectionResult.Success -> ok()
 
         is ModifySelectionResult.NotFound -> {
@@ -199,8 +196,8 @@ private suspend fun RoutingContext.handlePutStudentElectiveSelection(
 
 context(electiveSelectionService: ElectiveSelectionService)
 private suspend fun RoutingContext.handleDeleteStudentElectiveSelection(
-    electiveId: Int,
-    studentId: Int,
+    electiveId: UInt,
+    studentId: UInt,
     executor: UsersService.SessionUser
 ) {
     @OptIn(Transactional::class)
@@ -244,11 +241,11 @@ private const val ME_USER_ID = "@me"
  */
 private suspend inline fun RoutingContext.resolveUserIdEnforced(
     idParam: String,
-    crossinline block: suspend (gettingUserId: Int, executor: UsersService.SessionUser) -> Unit
+    crossinline block: suspend (gettingUserId: UInt, executor: UsersService.SessionUser) -> Unit
 ) {
     authenticated({ userId ->
         // If accessing own data, allow all user types
-        idParam.toIntOrNull()?.let {
+        idParam.toUIntOrNull()?.let {
             if (it == userId) {
                 return@authenticated ALL_USER_TYPES
             }
@@ -259,7 +256,7 @@ private suspend inline fun RoutingContext.resolveUserIdEnforced(
         val gettingUserId = if (idParam == ME_USER_ID) {
             user.id
         } else {
-            idParam.toIntOrNull() ?: return@authenticated badRequest()
+            idParam.toUIntOrNull() ?: return@authenticated badRequest()
         }
 
         block(gettingUserId, user)
@@ -278,7 +275,11 @@ private class Users {
         @Resource("selections")
         class Selections(val parent: Id) {
             @Resource("{electiveId}")
-            class ElectiveId(val parent: Selections, val electiveId: Int)
+            class ElectiveId(
+                val parent: Selections,
+                @Serializable(with = UIntStringSerializer::class)
+                val electiveId: UInt
+            )
         }
 
         @Resource("subjects")

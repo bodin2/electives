@@ -46,10 +46,10 @@ class ElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<ElectivesService.ListResponse>()
 
-        assertEquals(response.electivesCount, TestElectiveService.ELECTIVE_IDS.size)
+        assertEquals(response.electives.size, TestElectiveService.ELECTIVE_IDS.size)
 
         for (electiveId in TestElectiveService.ELECTIVE_IDS) {
-            assertTrue(response.electivesList.any { it.id == electiveId })
+            assertTrue(response.electives.any { it.id == electiveId.toInt() })
         }
     }
 
@@ -59,7 +59,7 @@ class ElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<Elective>()
 
-        assertEquals(ELECTIVE_ID, elective.id)
+        assertEquals(ELECTIVE_ID.toInt(), elective.id)
     }
 
     @Test
@@ -73,10 +73,10 @@ class ElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<ElectivesService.ListSubjectsResponse>()
 
-        assertEquals(SUBJECT_ID, response.subjectsList[0].id)
-        assertEquals(TEACHER_ID, response.subjectsList[0].teachersList[0].id)
-        assertTrue(response.subjectsList[0].hasEnrolledCount())
-        assertEquals(0, response.subjectsList[0].enrolledCount)
+        assertEquals(SUBJECT_ID.toInt(), response.subjects[0].id)
+        assertEquals(TEACHER_ID.toInt(), response.subjects[0].teachers[0].id)
+        assertTrue(response.subjects[0].enrolled_count != null)
+        assertEquals(0, response.subjects[0].enrolled_count)
     }
 
     @Test
@@ -90,10 +90,10 @@ class ElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<Subject>()
 
-        assertEquals(SUBJECT_ID, subject.id)
-        assertEquals(TEACHER_ID, subject.teachersList[0].id)
-        assertTrue(subject.hasEnrolledCount())
-        assertEquals(0, subject.enrolledCount)
+        assertEquals(SUBJECT_ID.toInt(), subject.id)
+        assertEquals(TEACHER_ID.toInt(), subject.teachers[0].id)
+        assertTrue(subject.enrolled_count != null)
+        assertEquals(0, subject.enrolled_count)
     }
 
     @Test
@@ -115,8 +115,8 @@ class ElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<ElectivesService.ListSubjectMembersResponse>()
 
-        assertEquals(0, response.studentsCount)
-        assertEquals(TEACHER_ID, response.teachersList[0].id)
+        assertEquals(0, response.students.size)
+        assertEquals(TEACHER_ID.toInt(), response.teachers[0].id)
     }
 
     @Test
@@ -128,8 +128,8 @@ class ElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<ElectivesService.ListSubjectMembersResponse>()
 
-        assertEquals(TEACHER_ID, response.teachersList[0].id)
-        assertEquals(STUDENT_ID, response.studentsList[0].id)
+        assertEquals(TEACHER_ID.toInt(), response.teachers[0].id)
+        assertEquals(STUDENT_ID.toInt(), response.students[0].id)
     }
 
     @Test
@@ -144,7 +144,7 @@ class ElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<ElectivesService.ListSubjectMembersResponse>()
 
-        assertEquals(0, response.studentsCount)
+        assertEquals(0, response.students.size)
     }
 
     @Test
@@ -157,7 +157,7 @@ class ElectivesRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<ElectivesService.ListSubjectMembersResponse>()
 
-        assertEquals(0, response.studentsCount)
+        assertEquals(0, response.students.size)
     }
 
     @Test
@@ -175,12 +175,12 @@ class ElectivesRoutesTest : ApplicationTest() {
         startApplication()
         @OptIn(Transactional::class)
         val token = usersService.createSession(TEACHER_ID, PASSWORD, "")
-        
+
         val response = client.getWithAuth("/electives/${ELECTIVE_ID}/unenrolled-members?team=1", token)
             .assertOK()
             .parse<th.ac.bodin2.electives.proto.api.AdminService.ListUsersResponse>()
 
         assertEquals(1, response.total)
-        assertEquals(STUDENT_ID, response.usersList[0].id)
+        assertEquals(STUDENT_ID.toInt(), response.users[0].id)
     }
 }

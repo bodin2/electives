@@ -7,6 +7,7 @@ import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_ELECTIVES
@@ -15,10 +16,8 @@ import th.ac.bodin2.electives.api.services.ElectiveService
 import th.ac.bodin2.electives.api.services.ElectiveService.QueryResult
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
-import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listResponse
-import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectMembersResponse
-import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
+import th.ac.bodin2.electives.proto.api.AdminService
+import th.ac.bodin2.electives.proto.api.ElectivesService
 
 val electivesController = controller {
     val electiveService: ElectiveService by dependencies
@@ -55,15 +54,16 @@ val electivesController = controller {
 
 context(electiveService: ElectiveService)
 suspend fun RoutingContext.handleGetElectives() {
-    call.respond(listResponse {
-        transaction {
-            electives += electiveService.getAll().map { it.toProto() }
-        }
-    })
+    call.respond(
+        ElectivesService.ListResponse(
+            electives = transaction {
+                electiveService.getAll().map { it.toProto() }
+            }
+        ))
 }
 
 context(electiveService: ElectiveService)
-suspend fun RoutingContext.handleGetElective(electiveId: Int) {
+suspend fun RoutingContext.handleGetElective(electiveId: UInt) {
     val response = transaction { electiveService.getById(electiveId)?.toProto() }
         ?: return electiveNotFoundError()
 
@@ -71,13 +71,13 @@ suspend fun RoutingContext.handleGetElective(electiveId: Int) {
 }
 
 context(electiveService: ElectiveService)
-suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
+suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: UInt) {
     val response = transaction {
         return@transaction when (val result = electiveService.getSubjects(electiveId)) {
             is QueryResult.ElectiveNotFound -> null
             is QueryResult.Success ->
-                listSubjectsResponse {
-                    subjects += result.value.map {
+                ElectivesService.ListSubjectsResponse(
+                    subjects = result.value.map {
                         it.toProto(
                             withDescription = false,
                             withTeachers = true,
@@ -85,7 +85,7 @@ suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
                             withEnrolledCounts = true,
                         )
                     }
-                }
+                )
 
             else -> throw IllegalStateException("Unreachable case: $result")
         }
@@ -95,7 +95,7 @@ suspend fun RoutingContext.handleGetElectiveSubjects(electiveId: Int) {
 }
 
 context(electiveService: ElectiveService)
-private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, subjectId: Int) {
+private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: UInt, subjectId: UInt) {
     val response = transaction<RouteResponse> {
         when (val result = electiveService.getSubject(electiveId, subjectId)) {
             is QueryResult.ElectiveNotFound -> Err(electiveNotFound)
@@ -121,8 +121,8 @@ private suspend fun RoutingContext.handleGetElectiveSubject(electiveId: Int, sub
 
 context(electiveService: ElectiveService)
 suspend fun RoutingContext.handleGetElectiveSubjectMembers(
-    electiveId: Int,
-    subjectId: Int,
+    electiveId: UInt,
+    subjectId: UInt,
     withStudents: Boolean,
 ) {
     val response = transaction<RouteResponse> {
@@ -131,12 +131,12 @@ suspend fun RoutingContext.handleGetElectiveSubjectMembers(
             is QueryResult.SubjectNotFound -> Err(subjectNotFound)
             is QueryResult.SubjectNotPartOfElective -> Err(subjectNotPartOfElective(electiveId, subjectId))
 
-            is QueryResult.Success -> Ok(listSubjectMembersResponse {
-                val (teachers, students) = result.value
-
-                this.teachers += teachers.map { it.toProto() }
-                this.students += students.map { it.toProto() }
-            })
+            is QueryResult.Success -> Ok(
+                ElectivesService.ListSubjectMembersResponse(
+                    teachers = result.value.first.map { it.toProto() },
+                    students = result.value.second.map { it.toProto() },
+                )
+            )
         }
     }
 
@@ -148,8 +148,8 @@ suspend fun RoutingContext.handleGetElectiveSubjectMembers(
 
 context(electiveService: ElectiveService)
 suspend fun RoutingContext.handleGetUnenrolledMembers(
-    electiveId: Int,
-    teamId: Int,
+    electiveId: UInt,
+    teamId: UInt,
     page: Int
 ) {
     val response = transaction<RouteResponse> {
@@ -158,10 +158,12 @@ suspend fun RoutingContext.handleGetUnenrolledMembers(
                 is QueryResult.ElectiveNotFound -> Err(electiveNotFound)
                 is QueryResult.Success -> {
                     val (students, count) = result.value
-                    Ok(listUsersResponse {
-                        users += students.map { it.toProto() }
-                        total = count.toInt()
-                    })
+                    Ok(
+                        AdminService.ListUsersResponse(
+                            users = students.map { it.toProto() },
+                            total = count.toInt(),
+                        )
+                    )
                 }
 
                 else -> throw IllegalStateException("Unreachable case: $result")
@@ -191,7 +193,7 @@ private val subjectNotFound: ErrorResponse
         message = "Subject not found",
     )
 
-private fun subjectNotPartOfElective(subjectId: Int, electiveId: Int) = ErrorResponse(
+private fun subjectNotPartOfElective(subjectId: UInt, electiveId: UInt) = ErrorResponse(
     status = HttpStatusCode.BadRequest,
     message = "Subject $subjectId is not part of elective $electiveId",
 )
@@ -202,17 +204,29 @@ private suspend inline fun RoutingContext.electiveNotFoundError() = error(electi
 @Resource("/electives")
 private class Electives {
     @Resource("{id}")
-    class Id(val parent: Electives = Electives(), val id: Int) {
+    class Id(
+        val parent: Electives = Electives(),
+        @Serializable(with = UIntStringSerializer::class)
+        val id: UInt
+    ) {
         @Resource("subjects")
         class Subjects(val parent: Id) {
             @Resource("{subjectId}")
-            class SubjectId(val parent: Subjects, val subjectId: Int) {
+            class SubjectId(
+                val parent: Subjects,
+                @Serializable(with = UIntStringSerializer::class)
+                val subjectId: UInt
+            ) {
                 @Resource("members")
                 class Members(val parent: SubjectId, @SerialName("with_students") val withStudents: Boolean? = null)
             }
         }
 
         @Resource("unenrolled-members")
-        class UnenrolledMembers(val parent: Id, val team: Int, val page: Int = 1)
+        class UnenrolledMembers(
+            val parent: Id,
+            @Serializable(with = UIntStringSerializer::class)
+            val team: UInt, val page: Int = 1
+        )
     }
 }

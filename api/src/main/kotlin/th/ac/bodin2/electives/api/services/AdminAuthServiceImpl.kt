@@ -121,7 +121,7 @@ class AdminAuthServiceImpl(
         val allowedIPs: List<CIDR>?,
         val challengeTimeoutSeconds: Long,
         // @TODO: Test this
-        val defaultUserId: Int = 0,
+        val defaultUserId: UInt = 0u,
         val defaultUserPublicKey: PublicKey? = null,
     )
 
@@ -164,7 +164,7 @@ class AdminAuthServiceImpl(
     override fun permitsIP(ip: String) =
         config.allowedIPs?.let { ip in it } ?: true
 
-    private fun getAdminPublicKey(id: Int): PublicKey? = transaction {
+    private fun getAdminPublicKey(id: UInt): PublicKey? = transaction {
         val publicKeyString = Admins
             .select(Admins.publicKey)
             .where { Admins.user eq id }
@@ -226,7 +226,7 @@ class AdminAuthServiceImpl(
 
     @OptIn(Transactional::class)
     override suspend fun createSession(
-        id: Int,
+        id: UInt,
         signature: String,
         aud: String,
         ip: String,
