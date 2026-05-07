@@ -1,7 +1,6 @@
 import MagnifyIcon from '@iconify-icons/mdi/magnify'
 import { mergeClasses, TextField } from 'm3-solid'
 import { createEffect, createSignal, For, type JSX, on, onCleanup, Show } from 'solid-js'
-import { debounce } from '../utils'
 import styles from './SectionedList.module.css'
 import { HStack, VStack } from './Stack'
 
@@ -45,11 +44,11 @@ export default function SectionedList<T, TSection>(props: SectionedListProps<T, 
     const [query, setQuery] = createSignal('')
     let gridRef!: HTMLDivElement
 
-    const updateQuery = debounce((value: string) => {
+    const updateQuery = (value: string) => {
         const q = value.toLowerCase()
         setQuery(q)
         props.onSearch?.(q)
-    }, 250)
+    }
 
     const relayout = () => layoutMasonry(gridRef)
 
