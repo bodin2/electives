@@ -9,7 +9,7 @@ export type PatchSetterKey = {
 export interface SubjectDisplayContext {
     editable: boolean
     createLinkProps: () => LinkProps
-    viewLinkProps: (electiveId: number, subjectId: number) => LinkProps
+    viewLinkProps: (electiveId: number, subjectId: number, tab?: string) => LinkProps
     editLinkProps: (subjectId: number) => LinkProps
 }
 
@@ -30,13 +30,14 @@ export const BaseSubjectDisplayContext = {
         to: '/manage/subjects/$subjectId',
         params: { subjectId: 'new' },
     }),
-    editLinkProps: (subjectId: number) => ({
+    editLinkProps: subjectId => ({
         to: '/manage/subjects/$subjectId',
         params: { subjectId },
     }),
-    viewLinkProps: (electiveId: number, subjectId: number) => ({
+    viewLinkProps: (electiveId, subjectId, tab?: string) => ({
         to: '/enroll/$electiveId/$subjectId',
         params: { electiveId, subjectId },
+        search: { tab },
     }),
     editable: false,
 } as const satisfies SubjectDisplayContext

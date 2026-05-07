@@ -16,27 +16,21 @@ export interface TeacherSubjectsTabProps {
 }
 
 export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
-    const api = useAPI()
+    const { client } = useAPI()
     const enrollment = useEnrollmentCounts()
     const { string } = useI18n()
     const subjectDisplayContext = useSubjectDisplayContext()
 
-    const subjectsQuery = createQuery(() => teacherSubjectsQueryOptions(api.client, props.userId))
-    const electivesQuery = createQuery(() => electivesQueryOptions(api.client))
+    const subjectsQuery = createQuery(() => ({
+        ...teacherSubjectsQueryOptions(client, props.userId),
+        notifyOnChangeProps: ['data'],
+    }))
+    const electivesQuery = createQuery(() => ({ ...electivesQueryOptions(client), notifyOnChangeProps: ['data'] }))
 
     const data = () => {
         if (!subjectsQuery.data || !electivesQuery.data) return undefined
         return { subjects: subjectsQuery.data, electives: electivesQuery.data }
     }
-
-    createEffect(() => {
-        const d = data()
-        if (!d) return
-
-        for (const [electiveId] of d.subjects) {
-            enrollment.initializeCounts(electiveId, api.client.electives.resolveAllEnrolledCounts(electiveId))
-        }
-    })
 
     const groupedSubjects = createMemo(() => {
         const d = data()
@@ -60,6 +54,15 @@ export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
         )
     })
 
+    createEffect(() => {
+        const d = data()
+        if (!d) return
+
+        for (const [electiveId] of d.subjects) {
+            enrollment.initializeCounts(electiveId, client.electives.resolveAllEnrolledCounts(electiveId))
+        }
+    })
+
     return (
         <Show when={data()}>
             <SectionedList
@@ -79,7 +82,11 @@ export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
                                     <SubjectListItem
                                         subject={subject}
                                         electiveId={elective.id}
-                                        linkProps={subjectDisplayContext.viewLinkProps(elective.id, subject.id)}
+                                        linkProps={subjectDisplayContext.viewLinkProps(
+                                            elective.id,
+                                            subject.id,
+                                            'members',
+                                        )}
                                     />
                                 )}
                             </For>

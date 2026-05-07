@@ -154,10 +154,10 @@ function RouteComponent() {
                                 editable: true,
                                 createLinkProps: BaseSubjectDisplayContext.createLinkProps,
                                 editLinkProps: BaseSubjectDisplayContext.editLinkProps,
-                                viewLinkProps: (electiveId, subjectId) => ({
+                                viewLinkProps: (electiveId, subjectId, tab) => ({
                                     to: '/manage/subjects/$subjectId',
                                     params: { subjectId },
-                                    search: { enrollment_id: electiveId },
+                                    search: { enrollment_id: electiveId, tab },
                                 }),
                             }}
                         >
