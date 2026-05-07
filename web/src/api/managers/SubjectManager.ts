@@ -72,6 +72,14 @@ export class SubjectManager implements CacheableManager {
     }
 
     /**
+     * Clear the cached subject-to-elective mapping for a specific elective,
+     * forcing the next fetch to hit the API.
+     */
+    clearElectiveMapping(electiveId: number): void {
+        this.electiveSubjectIds.delete(electiveId)
+    }
+
+    /**
      * Get or create a subject instance and update it with new data.
      */
     _getOrCreate(data: RawSubject, cache = true): Subject {

@@ -35,7 +35,7 @@ export class ElectiveManager implements CacheableManager {
         private readonly subjects: SubjectManager,
     ) {
         this.cache = cache
-        this.admin = new ElectiveAdminActions(rest, this)
+        this.admin = new ElectiveAdminActions(rest, this, subjects)
     }
 
     clearCache(): void {
@@ -174,6 +174,7 @@ export class ElectiveAdminActions {
     constructor(
         private readonly rest: RESTClient,
         private readonly manager: ElectiveManager,
+        private readonly subjects: SubjectManager,
     ) {}
 
     /**
@@ -224,5 +225,7 @@ export class ElectiveAdminActions {
         await this.rest.put(`/admin/electives/${electiveId}/subjects`, body, {
             encoder: AdminSetElectiveSubjectsRequest,
         })
+        // Clear stale cache so re-fetch returns fresh data
+        this.subjects.clearElectiveMapping(electiveId)
     }
 }
