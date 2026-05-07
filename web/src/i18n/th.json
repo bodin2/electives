@@ -191,5 +191,7 @@
   "CONFIRM_DELETE_ENROLLMENT": "ลบการลงทะเบียน: {{ name }}? การดำเนินการนี้ไม่สามารถย้อนกลับได้",
   "SEARCH_ENROLLMENTS": "ค้นหาการลงทะเบียน",
   "CREATE_ELECTIVE": "สร้างวิชาเพิ่มเติม",
-  "MY_SUBJECTS": "วิชาของฉัน"
+  "MY_SUBJECTS": "วิชาของฉัน",
+  "DISCARD": "ยกเลิก",
+  "ADD_SUBJECTS": "เพิ่มวิชา"
 }

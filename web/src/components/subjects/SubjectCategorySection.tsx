@@ -23,6 +23,8 @@ interface SubjectCategorySectionProps {
     elective?: Elective
     itemActions?: (subject: Subject) => JSX.Element
     viewLinkProps?: (subjectId: number) => LinkProps
+    selectedIds?: number[]
+    onSubjectClick?: (subject: Subject) => void
 }
 
 export default function SubjectCategorySection(props: SubjectCategorySectionProps) {
@@ -84,6 +86,8 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
                             electiveId={props.elective?.id}
                             actions={props.itemActions?.(subject)}
                             linkProps={props.viewLinkProps?.(subject.id)}
+                            selected={props.selectedIds?.includes(subject.id)}
+                            onClick={props.onSubjectClick && (() => props.onSubjectClick!(subject))}
                         />
                     )}
                 </For>

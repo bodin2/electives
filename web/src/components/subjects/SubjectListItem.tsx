@@ -1,5 +1,6 @@
 import { createQuery, skipToken } from '@tanstack/solid-query'
-import { type JSX, Show } from 'solid-js'
+import { ListItem, mergeClasses } from 'm3-solid'
+import { createMemo, type JSX, Show, Suspense } from 'solid-js'
 import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placeholder.webp'
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
@@ -18,6 +19,8 @@ interface SubjectListItemProps {
     electiveId?: number
     actions?: JSX.Element
     linkProps?: LinkProps
+    onClick?: () => void
+    selected?: boolean
 }
 
 export default function SubjectListItem(props: SubjectListItemProps) {
@@ -77,22 +80,29 @@ export default function SubjectListItem(props: SubjectListItemProps) {
         </>
     )
 
-    return (
-        <LinkListItem
-            {...props.linkProps}
-            class={styles.item}
-            lines={4}
-            headline={
-                /* @once */
-                <HStack alignVertical="center">
-                    {props.subject.name}
+    const commonProps = createMemo(() => ({
+        class: mergeClasses(styles.item, props.selected && styles.selected),
+        lines: 4 as const,
+        headline: (
+            /* @once */
+            <HStack alignVertical="center">
+                {props.subject.name}
+                <Suspense>
                     <Show when={teamQuery.data}>{team => <Badge variant="tonal">{team().name}</Badge>}</Show>
-                </HStack>
-            }
-            preloadDelay={500}
-            leading={Leading}
-            trailing={Trailing}
-            supporting={supporting}
-        />
+                </Suspense>
+            </HStack>
+        ),
+        leading: Leading,
+        trailing: Trailing,
+        supporting,
+    }))
+
+    return (
+        <Show
+            when={props.onClick}
+            fallback={<LinkListItem {...props.linkProps} {...commonProps()} preloadDelay={500} />}
+        >
+            {onClick => <ListItem onClick={onClick()} {...commonProps()} />}
+        </Show>
     )
 }

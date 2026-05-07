@@ -191,5 +191,7 @@
   "CONFIRM_DELETE_ENROLLMENT": "Delete enrollment: {{ name }}? This can't be undone.",
   "SEARCH_ENROLLMENTS": "Search enrollments",
   "CREATE_ELECTIVE": "Create elective",
-  "MY_SUBJECTS": "My subjects"
+  "MY_SUBJECTS": "My subjects",
+  "DISCARD": "Discard",
+  "ADD_SUBJECTS": "Add subjects"
 }

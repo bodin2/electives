@@ -19,6 +19,8 @@ export interface SubjectListProps {
     searchContainerClass?: string
     itemActions?: (subject: Subject) => JSX.Element
     viewLinkProps?: (subjectId: number) => LinkProps
+    selectedIds?: number[]
+    onSubjectClick?: (subject: Subject) => void
 }
 
 export default function SubjectList(props: SubjectListProps) {
@@ -49,7 +51,12 @@ export default function SubjectList(props: SubjectListProps) {
                 }),
                 s => s.tag,
             ),
-        ]
+        ].sort(([a], [b]) => {
+            if (typeof a === 'number' && typeof b === 'number') return a - b
+            if (typeof a === 'number') return -1
+            if (typeof b === 'number') return 1
+            return a.localeCompare(b)
+        })
 
         const u = props.user
         if (u?.isTeacher() && props.elective) {
@@ -61,15 +68,17 @@ export default function SubjectList(props: SubjectListProps) {
     }
 
     const filteredSubjects = createMemo(() => {
+        const subjectsList = subjects()
+
         const q = query()
-        if (!q) return subjects()
+        if (!q) return subjectsList
 
         const filterSubjects = (subject: Subject) =>
             subject.name.toLowerCase().includes(q) ||
             teachersOf(props.elective, subject)?.some(teacher => teacher.fullName.toLowerCase().includes(q)) ||
             subject.location.toLowerCase().includes(q)
 
-        return subjects()
+        return subjectsList
             .map(
                 ([category, categorySubjects]) =>
                     [category, nonNull(categorySubjects).filter(filterSubjects)] as const satisfies [
@@ -100,6 +109,8 @@ export default function SubjectList(props: SubjectListProps) {
                         elective={props.elective}
                         itemActions={props.itemActions}
                         viewLinkProps={props.viewLinkProps}
+                        selectedIds={props.selectedIds}
+                        onSubjectClick={props.onSubjectClick}
                     />
                 )}
             />
