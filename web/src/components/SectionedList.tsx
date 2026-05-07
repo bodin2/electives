@@ -24,7 +24,7 @@ function layoutMasonry(container: HTMLElement) {
     const children = Array.from(container.children) as HTMLElement[]
     if (children.length === 0) return
 
-    const containerWidth = container.clientWidth
+    const containerWidth = container.getBoundingClientRect().width
     const columnCount = Math.max(1, Math.floor(containerWidth / COLUMN_MIN_WIDTH))
     const columnWidth = containerWidth / columnCount
     const columnHeights = new Array(columnCount).fill(0)
