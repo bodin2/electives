@@ -201,8 +201,11 @@ function TeamMembers() {
     const [addDialogOpen, setAddDialogOpen] = createSignal(false)
     let listHandle: PaginatedUserListHandle | undefined
 
-    const membersQuery = createQuery(() => teamMembersQueryOptions(client, teamId(), search().page, query()))
-    const debouncedSetQuery = createMemo(() => debounce(setQuery, 500))
+    const membersQuery = createQuery(() => ({
+        ...teamMembersQueryOptions(client, teamId(), search().page, query()),
+        placeholderData: keepPreviousData,
+    }))
+    const debouncedSetQuery = createMemo(() => debounce(setQuery, 350))
 
     const removeUserFromTeam = async (user: User) => {
         try {

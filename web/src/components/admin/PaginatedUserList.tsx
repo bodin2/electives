@@ -119,7 +119,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                         leadingIcon={MagnifyingIcon}
                         variant="filled"
                         label={props.searchLabel}
-                        onInput={debounce(e => nonNull(props.onSearch)(e.target.value.trim() || undefined), 500)}
+                        onInput={debounce(e => nonNull(props.onSearch)(e.target.value.trim() || undefined), 350)}
                     />
                 </Show>
                 <Show when={totalPages() > 1}>

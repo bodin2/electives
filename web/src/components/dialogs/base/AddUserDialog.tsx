@@ -31,45 +31,7 @@ export default function AddUserDialog(props: AddUserDialogProps) {
     const [user, setUser] = createSignal<User | null>(null)
     const [error, setError] = createSignal<string | null>(null)
 
-    const updateFoundUser = debounce(async (id: string) => {
-        if (!props.open) return
-
-        if (id.trim() === '') {
-            setUser(null)
-            setError(null)
-            return
-        }
-
-        const realId = Number(id)
-        if (Number.isNaN(realId)) {
-            setUser(null)
-            setError(string.ERROR_NUMERIC_VALUE({ field: props.idLabel }))
-            return
-        }
-
-        try {
-            const foundUser = await api.client.users.fetch(realId)
-            if (!props.open) return
-
-            const validationError = props.validateUser(foundUser)
-            if (validationError) {
-                setError(validationError)
-                setUser(null)
-                return
-            }
-
-            setUser(foundUser)
-            setError(null)
-        } catch {
-            if (!props.open) return
-            setUser(null)
-            setError(string.ERROR_INVALID_CREDENTIALS())
-        }
-    }, 1000)
-
-    createEffect(on(idInput, id => updateFoundUser(id), { defer: true }))
-
-    let btn!: HTMLButtonElement
+    const debouncedSetSearch = createMemo(() => debounce(setSearchQuery, 350))
 
     return (
         <Dialog

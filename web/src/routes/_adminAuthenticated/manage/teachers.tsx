@@ -1,5 +1,5 @@
 import PlusIcon from '@iconify-icons/mdi/plus'
-import { createQuery, useQueryClient } from '@tanstack/solid-query'
+import { createQuery, keepPreviousData, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { createMemo, createSignal } from 'solid-js'
 import { UserType } from '../../../api/types'
@@ -34,9 +34,12 @@ function RouteComponent() {
     const qc = useQueryClient()
 
     const [query, setQuery] = createSignal<string | undefined>()
-    const teachersQuery = createQuery(() => teachersQueryOptions(client, search().page, query()))
+    const teachersQuery = createQuery(() => ({
+        ...teachersQueryOptions(client, search().page, query()),
+        placeholderData: keepPreviousData,
+    }))
 
-    const debouncedSetQuery = createMemo(() => debounce(setQuery, 500))
+    const debouncedSetQuery = createMemo(() => debounce(setQuery, 350))
 
     let listHandle: PaginatedUserListHandle | undefined
 
