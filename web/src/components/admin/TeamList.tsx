@@ -48,7 +48,6 @@ export default function TeamList(props: TeamListProps) {
                         variant="filled"
                         class={styles.search}
                         placeholder={string.SEARCH_TEAMS()}
-                        value={search()}
                         onInput={e => setSearch(e.target.value)}
                     />
                 </div>
@@ -69,6 +68,7 @@ export default function TeamList(props: TeamListProps) {
                     )}
                 </For>
             </VStack>
+
             <Portal>
                 <ConfirmDialog
                     open={deletingTeam()}
