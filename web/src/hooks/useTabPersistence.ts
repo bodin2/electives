@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from '@tanstack/solid-router'
-import { createEffect, on, onMount } from 'solid-js'
+import { createEffect, createRenderEffect, on } from 'solid-js'
 
 export function useTabPersistence<T extends string>(
     tab: () => T,
@@ -13,7 +13,7 @@ export function useTabPersistence<T extends string>(
     const navigate = useNavigate()
     const key = options.key ?? 'tab'
 
-    onMount(() => {
+    createRenderEffect(() => {
         if (options.disabled) return
         const urlTab = (search() as Record<string, unknown>)[key] as T
         if (urlTab) {
