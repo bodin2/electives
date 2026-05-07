@@ -66,7 +66,7 @@ export default function ElectiveUnenrolledTab() {
             </div>
 
             <Show when={teamId() !== undefined}>
-                <SuspenseLoadingPage>
+                <SuspenseLoadingPage debugName="ElectiveUnenrolledMembers">
                     <Show when={unenrolledQuery.data}>
                         {d => (
                             <PaginatedUserList

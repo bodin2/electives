@@ -3,11 +3,17 @@ import { SubjectTag, type UserType } from '@bodin2/electives-common/proto/api'
 import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { createEffect, createMemo, createSignal, Show } from 'solid-js'
-import { type AdminSubjectPatch, ConflictError, type RawSubject, Subject, type User } from '../../../../api'
+import {
+    type AdminSubjectPatch,
+    ConflictError,
+    type Elective,
+    type RawSubject,
+    Subject,
+    type User,
+} from '../../../../api'
 import AddStudentToSubjectButton from '../../../../components/buttons/AddStudentToSubjectButton'
 import AddTeacherToSubjectButton from '../../../../components/buttons/AddTeacherToSubjectButton'
 import Page from '../../../../components/Page'
-import { SuspenseLoadingPage } from '../../../../components/pages/LoadingPage'
 import { HStack, VStack } from '../../../../components/Stack'
 import SubjectAdminEnrollmentActions from '../../../../components/subjects/SubjectAdminEnrollmentActions'
 import SubjectInfo from '../../../../components/subjects/SubjectInfo'
@@ -194,8 +200,6 @@ function RouteComponent() {
         },
     )
 
-    const isFull = useSubjectFull(subject, () => nonNull(elective()))
-
     const currentTeacherIds = () => {
         return teachers().map(t => t.id)
     }
@@ -324,56 +328,81 @@ function RouteComponent() {
 
     return (
         <Page name={isNew() ? string.CREATE_SUBJECT() : subject().name} allowBacking leading={null} trailing={null}>
-            <SuspenseLoadingPage>
-                <SubjectInfo
-                    subject={subject()}
-                    elective={elective()}
-                    teachers={teachers()}
-                    user={client.user ?? undefined}
-                    editable
-                    creating={isNew()}
-                    onEdit={handleEdit}
-                    onSave={isNew() ? handleCreate : undefined}
-                    onStudentRemove={handleStudentRemove}
-                    onTeacherRemove={handleTeacherRemove}
-                    extraActions={props => (
-                        <Show when={!isNew()}>
-                            <VStack>
-                                <SubjectAdminEnrollmentActions
-                                    subject={props.subject}
-                                    elective={props.elective}
-                                    allElectives={allElectives()}
-                                    addedElectives={electives()}
-                                    setElectiveId={id =>
-                                        navigate({
-                                            search: prev => ({ ...prev, enrollment_id: id }),
-                                            replace: true,
-                                        })
-                                    }
-                                    onInvalidate={invalidate}
-                                />
-                                <HStack grow wrap gap={8} class={styles.actionButton}>
-                                    <AddStudentToSubjectButton
-                                        variant="tonal"
-                                        class={styles.subActionButton}
-                                        electiveId={elective()?.id}
-                                        subjectId={subject().id}
-                                        disabled={!elective() || isFull()}
-                                    />
-                                    <AddTeacherToSubjectButton
-                                        variant="tonal"
-                                        class={styles.subActionButton}
-                                        subjectId={subject().id}
-                                        electiveId={elective()?.id}
-                                        disabled={!elective()}
-                                        onInvalidate={invalidate}
-                                    />
-                                </HStack>
-                            </VStack>
-                        </Show>
-                    )}
-                />
-            </SuspenseLoadingPage>
+            <SubjectInfo
+                subject={subject()}
+                elective={elective()}
+                teachers={teachers()}
+                user={client.user ?? undefined}
+                editable
+                creating={isNew()}
+                onEdit={handleEdit}
+                onSave={isNew() ? handleCreate : undefined}
+                onStudentRemove={handleStudentRemove}
+                onTeacherRemove={handleTeacherRemove}
+                extraActions={props => (
+                    <ExtraActions
+                        subject={props.subject}
+                        elective={props.elective}
+                        isNew={isNew()}
+                        electives={electives()}
+                        allElectives={allElectives()}
+                        onInvalidate={invalidate}
+                    />
+                )}
+            />
         </Page>
+    )
+}
+
+function ExtraActions(props: {
+    subject: Subject
+    elective?: Elective
+    isNew: boolean
+    electives: Elective[]
+    allElectives: Elective[]
+    onInvalidate: () => unknown
+}) {
+    const navigate = Route.useNavigate()
+
+    const isFull = useSubjectFull(
+        () => props.subject,
+        () => nonNull(props.elective),
+    )
+
+    return (
+        <Show when={!props.isNew}>
+            <VStack>
+                <SubjectAdminEnrollmentActions
+                    subject={props.subject}
+                    elective={props.elective}
+                    allElectives={props.allElectives}
+                    addedElectives={props.electives}
+                    setElectiveId={id =>
+                        navigate({
+                            search: prev => ({ ...prev, enrollment_id: id }),
+                            replace: true,
+                        })
+                    }
+                    onInvalidate={props.onInvalidate}
+                />
+                <HStack grow wrap gap={8} class={styles.actionButton}>
+                    <AddStudentToSubjectButton
+                        variant="tonal"
+                        class={styles.subActionButton}
+                        electiveId={props.elective?.id}
+                        subjectId={props.subject.id}
+                        disabled={!props.elective || isFull()}
+                    />
+                    <AddTeacherToSubjectButton
+                        variant="tonal"
+                        class={styles.subActionButton}
+                        subjectId={props.subject.id}
+                        electiveId={props.elective?.id}
+                        disabled={!props.elective}
+                        onInvalidate={props.onInvalidate}
+                    />
+                </HStack>
+            </VStack>
+        </Show>
     )
 }

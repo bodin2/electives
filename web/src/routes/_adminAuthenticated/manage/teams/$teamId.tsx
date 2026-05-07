@@ -1,6 +1,6 @@
 import CloseIcon from '@iconify-icons/mdi/close'
 import PlusIcon from '@iconify-icons/mdi/plus'
-import { createQuery, useQueryClient } from '@tanstack/solid-query'
+import { createQuery, keepPreviousData, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { TextField } from 'm3-solid'
 import { createEffect, createMemo, createSignal, Match, Show, Switch } from 'solid-js'
@@ -11,7 +11,6 @@ import { Button } from '../../../../components/Button'
 import AddStudentToTeamDialog from '../../../../components/dialogs/AddStudentToTeamDialog'
 import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
 import Page from '../../../../components/Page'
-import { SuspenseLoadingPage } from '../../../../components/pages/LoadingPage'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
 import { VStack } from '../../../../components/Stack'
 import StickyTabs from '../../../../components/StickyTabs'
@@ -43,11 +42,6 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/teams/$teamId'
 })
 
 const isNewRoute = (teamId: string) => teamId === 'new'
-
-const tryCoerceValidId = (id: string) => {
-    const parsed = Number(id)
-    return Number.isNaN(parsed) ? null : parsed < 0 ? null : parsed
-}
 
 function RouteComponent() {
     const params = Route.useParams()
@@ -159,30 +153,24 @@ function RouteComponent() {
                 />
             </Show>
 
-            <SuspenseLoadingPage>
-                <Switch>
-                    <Match when={tab() === 'info' || isNew()}>
-                        <VStack gap={16} style={{ padding: '16px' }}>
-                            <TextField
-                                label={string.NAME()}
-                                value={name()}
-                                onInput={e => setName(e.currentTarget.value)}
-                            />
-                            <Button variant="filled" onClick={handleSave} disabled={!name().trim()}>
-                                {string.SAVE()}
+            <Switch>
+                <Match when={tab() === 'info' || isNew()}>
+                    <VStack gap={16} style={{ padding: '16px' }}>
+                        <TextField label={string.NAME()} value={name()} onInput={e => setName(e.currentTarget.value)} />
+                        <Button variant="filled" onClick={handleSave} disabled={!name().trim()}>
+                            {string.SAVE()}
+                        </Button>
+                        <Show when={!isNew()}>
+                            <Button variant="tonal-error" onClick={handleDelete}>
+                                {string.DELETE_TEAM()}
                             </Button>
-                            <Show when={!isNew()}>
-                                <Button variant="tonal-error" onClick={handleDelete}>
-                                    {string.DELETE_TEAM()}
-                                </Button>
-                            </Show>
-                        </VStack>
-                    </Match>
-                    <Match when={tab() === 'members' && !isNew()}>
-                        <TeamMembers />
-                    </Match>
-                </Switch>
-            </SuspenseLoadingPage>
+                        </Show>
+                    </VStack>
+                </Match>
+                <Match when={tab() === 'members' && !isNew()}>
+                    <TeamMembers />
+                </Match>
+            </Switch>
         </Page>
     )
 }

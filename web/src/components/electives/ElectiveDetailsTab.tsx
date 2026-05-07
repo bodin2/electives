@@ -18,6 +18,7 @@ import BottomBar from '../BottomBar'
 import { Button } from '../Button'
 import TextFieldDialog from '../dialogs/base/TextFieldDialog'
 import { SelectTeamDialog } from '../dialogs/SelectTeamDialog'
+import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { HStack, VStack } from '../Stack'
 import { useElectiveInfoContext } from './ElectiveInfo'
 import ElectiveSubjectsTab from './ElectiveSubjectsTab'
@@ -261,9 +262,12 @@ export default function ElectiveDetailsTab(props: { stickyOffset?: number }) {
                 />
 
                 <Show when={!ctx.creating}>
-                    <ElectiveSubjectsTab stickyOffset={dynamicStickyOffset()} />
+                    <SuspenseLoadingPage debugName="ElectiveSubjects">
+                        <ElectiveSubjectsTab stickyOffset={dynamicStickyOffset()} />
+                    </SuspenseLoadingPage>
                 </Show>
             </VStack>
+
             <Show when={ctx.creating && ctx.onSave}>
                 <BottomBar>
                     <Button size="m" icon={SaveIcon} onClick={ctx.onSave} style={{ width: '100%' }}>

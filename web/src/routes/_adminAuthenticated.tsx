@@ -31,7 +31,7 @@ function AdminAuthenticatedLayout() {
                 <Outlet />
             </Match>
             <Match when={api.authState() === AuthenticationState.Loading}>
-                <LoadingPage />
+                <LoadingPage debugName="AdminAuthenticatedLayout" />
             </Match>
         </Switch>
     )

@@ -37,7 +37,7 @@ function AuthenticatedLayout() {
                     <Outlet />
                 </Match>
                 <Match when={api.authState() === AuthenticationState.Loading}>
-                    <LoadingPage />
+                    <LoadingPage debugName="AuthenticatedLayout" />
                 </Match>
             </Switch>
         </ScrollDataProvider>

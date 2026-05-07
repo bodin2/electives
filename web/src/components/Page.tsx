@@ -76,7 +76,7 @@ export default function Page(props: PageProps) {
 
     return (
         <VStack gap={0} as="main" grow inert={!pageData.focusable} {...others}>
-            <SuspenseLoadingPage>{local.children}</SuspenseLoadingPage>
+            <SuspenseLoadingPage debugName="Page">{local.children}</SuspenseLoadingPage>
         </VStack>
     )
 }

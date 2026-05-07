@@ -27,7 +27,7 @@ const router = createRouter({
     defaultStaleTime: 5000,
     defaultPendingMs: 250,
     defaultPendingMinMs: 250,
-    defaultPendingComponent: LoadingPage,
+    defaultPendingComponent: () => <LoadingPage debugName="RoutePending" />,
     defaultErrorComponent: ErrorPage,
     defaultNotFoundComponent: NotFoundPage,
     scrollRestoration: true,
