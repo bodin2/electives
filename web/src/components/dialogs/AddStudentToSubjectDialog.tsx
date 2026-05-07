@@ -18,9 +18,7 @@ export default function AddStudentToSubjectDialog(props: {
             open={props.open}
             onClose={props.onClose}
             headline={string.ADD_STUDENT_TO_SUBJECT()}
-            actionLabel={string.ADD_STUDENT_TO_SUBJECT()}
-            idLabel={string.STUDENT_ID()}
-            validateUser={user => (!user.isStudent() ? string.ERROR_NOT_STUDENT() : null)}
+            type="student"
             onConfirm={async user => {
                 await api.client.selections.set(user.id, props.electiveId, props.subjectId)
                 enrolledCounts.setCount(props.electiveId, props.subjectId, current => current + 1)

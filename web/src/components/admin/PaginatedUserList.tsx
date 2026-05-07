@@ -41,6 +41,10 @@ interface PaginatedUserListProps {
     listHeader?: Component
     /** Custom component that renders on the right side of the header. */
     headerRight?: Component
+    /** IDs of users that should appear visually selected. */
+    selectedIds?: number[]
+    /** IDs of users that should appear disabled and non-interactive. */
+    disabledIds?: number[]
 }
 
 const DEFAULT_PAGE_SIZE = 50
@@ -154,7 +158,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                     {props.headerRight?.({})}
                 </HStack>
             </VStack>
-            <SuspenseLoadingPage>
+            <SuspenseLoadingPage debugName="PaginatedUserListContent">
                 <div class={styles.grid}>
                     {props.listHeader?.({})}
                     <Show when={props.isLoading && !props.data && store.users.size === 0}>
@@ -174,6 +178,8 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                             {user => (
                                 <UserListItem
                                     showId
+                                    selected={props.selectedIds?.includes(user.id)}
+                                    disabled={props.disabledIds?.includes(user.id)}
                                     onClick={props.onClick && (() => nonNull(props.onClick)(user))}
                                     user={user}
                                     trailing={props.trailing}

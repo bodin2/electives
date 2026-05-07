@@ -1,5 +1,5 @@
 import CloseIcon from '@iconify-icons/mdi/close'
-import { ListItem } from 'm3-solid'
+import { ListItem, mergeClasses } from 'm3-solid'
 import { type Component, For, Show } from 'solid-js'
 import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
 import { useI18n } from '../../providers/I18nProvider'
@@ -25,6 +25,10 @@ export interface UserListItemProps {
      * Overrides the remove button if `onRemove` is also provided.
      */
     trailing?: Component<{ user: User }>
+    /** Whether this item is visually selected. */
+    selected?: boolean
+    /** Whether this item is disabled (non-interactive). */
+    disabled?: boolean
 }
 
 export function UserListItem(props: UserListItemProps) {
@@ -32,7 +36,8 @@ export function UserListItem(props: UserListItemProps) {
 
     return (
         <ListItem
-            onClick={props.onClick}
+            class={mergeClasses(props.selected && styles.selected, props.disabled && styles.disabled)}
+            onClick={props.disabled ? undefined : props.onClick}
             leading={
                 <img class={styles.avatar} src={props.user.avatarUrl || AvatarPlaceholder} alt={string.AVATAR()} />
             }

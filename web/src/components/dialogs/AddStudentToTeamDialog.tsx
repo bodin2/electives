@@ -20,9 +20,7 @@ export default function AddStudentToTeamDialog(props: {
             onClose={props.onClose}
             onSuccess={props.onSuccess}
             headline={string.ADD_STUDENT_TO_TEAM()}
-            actionLabel={string.ADD_STUDENT()}
-            idLabel={string.STUDENT_ID()}
-            validateUser={user => (!user.isStudent() ? string.ERROR_NOT_STUDENT() : null)}
+            type="student"
             onConfirm={async user => {
                 const currentTeams = user.teams.map(t => t.id)
                 if (!currentTeams.includes(props.teamId)) {

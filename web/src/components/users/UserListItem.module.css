@@ -1,3 +1,12 @@
+.selected {
+    --m3-list-item-container-color: var(--m3c-primary-container);
+}
+
+.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
 .avatar {
     width: 40px;
     height: 40px;

@@ -21,16 +21,9 @@ export default function AddTeacherToSubjectDialog(props: {
             open={props.open}
             onClose={props.onClose}
             headline={string.ADD_TEACHER_TO_SUBJECT()}
-            actionLabel={string.ADD_TEACHER_TO_SUBJECT()}
-            idLabel={string.TEACHER_ID()}
-            validateUser={user => (!user.isTeacher() ? string.ERROR_NOT_TEACHER() : null)}
+            type="teacher"
+            disabledIds={props.currentTeacherIds}
             onConfirm={async user => {
-                // Check if already teaching
-                if (props.currentTeacherIds.includes(user.id)) {
-                    props.onClose()
-                    return false
-                }
-
                 const newTeachers = [...props.currentTeacherIds, user.id]
 
                 const patch: AdminSubjectPatch = {
