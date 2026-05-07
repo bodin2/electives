@@ -15,7 +15,7 @@ export default defineConfig({
             autoname: true,
             locator: true,
         }),
-        tanstackRouter({ target: 'solid', autoCodeSplitting: true }),
+        tanstackRouter({ target: 'solid', autoCodeSplitting: process.env.NODE_ENV === 'production' }),
         solid(),
         imageOptimizer({
             webp: {
