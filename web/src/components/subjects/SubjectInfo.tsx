@@ -1,4 +1,13 @@
-import { type Component, createContext, createEffect, createSignal, Match, Show, Switch, useContext } from 'solid-js'
+import {
+    type Component,
+    createContext,
+    createRenderEffect,
+    createSignal,
+    Match,
+    Show,
+    Switch,
+    useContext,
+} from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useTabPersistence } from '../../hooks/useTabPersistence'
 import { useI18n } from '../../providers/I18nProvider'
@@ -51,7 +60,7 @@ export default function SubjectInfo(props: SubjectInfoProps) {
 
     // SolidJS moment
     const [info, setInfo] = createStore<SubjectInfoContext>(null as unknown as SubjectInfoContext)
-    createEffect(() => {
+    createRenderEffect(() => {
         setInfo({
             subject: props.subject,
             elective: props.elective,
@@ -78,10 +87,12 @@ export default function SubjectInfo(props: SubjectInfoProps) {
             <VStack gap={16} grow class={`padded ${styles.tabContent}`}>
                 <Switch>
                     <Match when={tab() === 'info'}>
-                        <SubjectDetailsTab />
+                        <SuspenseLoadingPage debugName="SubjectDetails">
+                            <SubjectDetailsTab />
+                        </SuspenseLoadingPage>
                     </Match>
                     <Match when={tab() === 'members'}>
-                        <SuspenseLoadingPage>
+                        <SuspenseLoadingPage debugName="SubjectMembers">
                             <SubjectMembersTab
                                 onStudentRemove={props.onStudentRemove}
                                 studentRemoveDisabled={props.studentRemoveDisabled}

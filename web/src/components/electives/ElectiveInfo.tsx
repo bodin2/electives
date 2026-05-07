@@ -1,4 +1,4 @@
-import { createContext, createEffect, createSignal, Match, Show, Switch, useContext } from 'solid-js'
+import { createContext, createRenderEffect, createSignal, Match, Show, Switch, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useTabPersistence } from '../../hooks/useTabPersistence'
 import { useI18n } from '../../providers/I18nProvider'
@@ -40,7 +40,7 @@ export default function ElectiveInfo(props: ElectiveInfoProps) {
     useTabPersistence(tab, setTab, { disabled: props.persistTab === false })
 
     const [info, setInfo] = createStore<ElectiveInfoContext>(null as unknown as ElectiveInfoContext)
-    createEffect(() => {
+    createRenderEffect(() => {
         setInfo({
             elective: props.elective,
             editable: props.editable,
@@ -63,7 +63,7 @@ export default function ElectiveInfo(props: ElectiveInfoProps) {
                 <StickyTabs value={tab()} onChange={setTab} tabs={tabs()} />
             </Show>
             <VStack gap={16} grow>
-                <SuspenseLoadingPage>
+                <SuspenseLoadingPage debugName="ElectiveInfo">
                     <Switch>
                         <Match when={tab() === 'details'}>
                             <ElectiveDetailsTab stickyOffset={tabs().length > 1 ? 48 : 0} />

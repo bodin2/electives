@@ -1,7 +1,6 @@
 import { type Component, createSignal, Match, Show, Switch } from 'solid-js'
 import { useTabPersistence } from '../../hooks/useTabPersistence'
 import { useI18n } from '../../providers/I18nProvider'
-import { nonNull } from '../../utils'
 import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { VStack } from '../Stack'
 import StickyTabs from '../StickyTabs'
@@ -49,7 +48,7 @@ export default function UserInfo(props: UserInfoProps) {
                 </Show>
             </Show>
             <VStack gap={16} grow class={`padded ${styles.tabContent}`}>
-                <SuspenseLoadingPage>
+                <SuspenseLoadingPage debugName="UserInfo">
                     <Switch>
                         <Match when={tab() === 'info'}>
                             <UserDetailsTab
@@ -61,11 +60,11 @@ export default function UserInfo(props: UserInfoProps) {
                                 teams={props.teams}
                             />
                         </Match>
-                        <Match when={tab() === 'selections'}>
-                            <StudentSelectionsTab userId={nonNull(ctx.user).id} />
+                        <Match when={tab() === 'selections' && ctx.user}>
+                            {user => <StudentSelectionsTab userId={user().id} />}
                         </Match>
-                        <Match when={tab() === 'subjects'}>
-                            <TeacherSubjectsTab userId={nonNull(ctx.user).id} />
+                        <Match when={tab() === 'subjects' && ctx.user}>
+                            {user => <TeacherSubjectsTab userId={user().id} />}
                         </Match>
                     </Switch>
                 </SuspenseLoadingPage>

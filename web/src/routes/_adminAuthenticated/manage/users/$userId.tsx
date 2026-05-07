@@ -1,6 +1,6 @@
 import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
-import { batch, createEffect, createMemo, createSignal, on, onCleanup, onMount } from 'solid-js'
+import { batch, createEffect, createMemo, createRenderEffect, createSignal, on, onCleanup, onMount } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { type AdminUserPatch, User, UserType } from '../../../../api'
 import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
@@ -255,7 +255,7 @@ function RouteComponent() {
         })
     })
 
-    createEffect(() => {
+    createRenderEffect(() => {
         batch(() => {
             displayContext.setCreating(isNew())
             displayContext.setUser(user())
