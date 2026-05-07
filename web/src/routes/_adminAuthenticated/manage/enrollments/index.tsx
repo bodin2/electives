@@ -3,7 +3,7 @@ import PlusIcon from '@iconify-icons/mdi/plus'
 import { createQuery } from '@tanstack/solid-query'
 import { createFileRoute, useNavigate } from '@tanstack/solid-router'
 import { TextField } from 'm3-solid'
-import { createMemo, createSignal, For, Show } from 'solid-js'
+import { createSignal, For, Show } from 'solid-js'
 import { Button } from '../../../../components/Button'
 import AdminElectiveCard from '../../../../components/electives/AdminElectiveCard'
 import Page from '../../../../components/Page'
@@ -13,7 +13,7 @@ import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { electivesQueryOptions } from '../../../../queries/electives'
 import { teamsQueryOptions } from '../../../../queries/teams'
-import { electiveSorter } from '../../../../utils'
+import { electiveSorter, nonNull } from '../../../../utils'
 import styles from './index.module.css'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/enrollments/')({
@@ -35,12 +35,13 @@ function RouteComponent() {
     const electivesQuery = createQuery(() => ({
         ...electivesQueryOptions(client),
         select: data => data.sort(electiveSorter),
+        notifyOnChangeProps: ['data'],
     }))
 
-    const filteredElectives = createMemo(() => {
+    const filteredElectives = () => {
         const query = search().toLowerCase()
-        return (electivesQuery.data ?? []).filter(e => e.name.toLowerCase().includes(query))
-    })
+        return nonNull(electivesQuery.data).filter(e => e.name.toLowerCase().includes(query))
+    }
 
     const handle = () => {
         navigate({
@@ -67,7 +68,7 @@ function RouteComponent() {
                         {string.CREATE_ENROLLMENT()}
                     </Button>
                 </HStack>
-                <SuspenseLoadingPage>
+                <SuspenseLoadingPage debugName="AdminEnrollmentsList">
                     <Show
                         when={filteredElectives().length > 0}
                         fallback={<p class="text-surface-variant">{string.NO_RESULTS_FOUND()}</p>}

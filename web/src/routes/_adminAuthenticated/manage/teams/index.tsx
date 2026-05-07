@@ -5,6 +5,7 @@ import Page from '../../../../components/Page'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { teamMemberCountsQueryOptions, teamsQueryOptions } from '../../../../queries/teams'
+import { nonNull } from '../../../../utils'
 import type { Team } from '../../../../api/structures'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/teams/')({
@@ -23,8 +24,11 @@ function RouteComponent() {
     const { string } = useI18n()
     const qc = useQueryClient()
 
-    const teamsQuery = createQuery(() => teamsQueryOptions(client))
-    const memberCountsQuery = createQuery(() => teamMemberCountsQueryOptions(client))
+    const teamsQuery = createQuery(() => ({ ...teamsQueryOptions(client), notifyOnChangeProps: ['data'] }))
+    const memberCountsQuery = createQuery(() => ({
+        ...teamMemberCountsQueryOptions(client),
+        notifyOnChangeProps: ['data'],
+    }))
 
     const invalidate = () => qc.invalidateQueries({ queryKey: ['teams'] })
 
@@ -53,7 +57,7 @@ function RouteComponent() {
     return (
         <Page name={string.TEAMS()} leading={null} trailing={null}>
             <TeamList
-                teams={teamsQuery.data ?? []}
+                teams={nonNull(teamsQuery.data)}
                 memberCounts={memberCountsQuery.data ?? {}}
                 onCreate={handleCreate}
                 onEdit={handleEdit}

@@ -9,14 +9,12 @@ import { Button } from '../../../../components/Button'
 import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
 import LinkButton from '../../../../components/LinkButton'
 import Page from '../../../../components/Page'
-import { SuspenseLoadingPage } from '../../../../components/pages/LoadingPage'
 import { HStack } from '../../../../components/Stack'
 import { useSubjectDisplayContext } from '../../../../components/subjects/SubjectDisplayContext'
 import SubjectList from '../../../../components/subjects/SubjectList'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { adminSubjectsQueryOptions } from '../../../../queries/subjects'
-import { nonNull } from '../../../../utils'
 import styles from './index.module.css'
 import type { Subject } from '../../../../api'
 
@@ -33,45 +31,43 @@ function RouteComponent() {
     const [deletingSubject, setDeletingSubject] = createSignal<Subject | undefined>(undefined)
     const subjectDisplayContext = useSubjectDisplayContext()
 
-    const subjectsQuery = createQuery(() => adminSubjectsQueryOptions(client))
+    const subjectsQuery = createQuery(() => ({ ...adminSubjectsQueryOptions(client), notifyOnChangeProps: ['data'] }))
 
     return (
         <Page name={string.SUBJECTS()} leading={null} trailing={null}>
-            <SuspenseLoadingPage>
-                <SubjectList
-                    noRandom
-                    searchContainerClass={styles.adminSearchContainer}
-                    subjects={nonNull(subjectsQuery.data)}
-                    editable
-                    viewLinkProps={subjectId => subjectDisplayContext.editLinkProps(subjectId)}
-                    headerActions={
-                        <LinkButton {...subjectDisplayContext.createLinkProps()} variant="filled" icon={PlusIcon}>
-                            {string.CREATE_SUBJECT()}
-                        </LinkButton>
-                    }
-                    itemActions={subject => (
-                        <HStack gap={8}>
-                            <LinkButton
-                                {...subjectDisplayContext.editLinkProps(subject.id)}
-                                variant="text"
-                                iconType="only"
-                                icon={PencilOutlineIcon}
-                                aria-label={string.EDIT_SUBJECT()}
-                            />
-                            <Button
-                                variant="tonal-error"
-                                iconType="only"
-                                icon={DeleteOutlineIcon}
-                                aria-label={string.DELETE_SUBJECT()}
-                                onClick={e => {
-                                    e.stopPropagation()
-                                    setDeletingSubject(subject)
-                                }}
-                            />
-                        </HStack>
-                    )}
-                />
-            </SuspenseLoadingPage>
+            <SubjectList
+                noRandom
+                searchContainerClass={styles.adminSearchContainer}
+                subjects={subjectsQuery.isSuccess ? subjectsQuery.data : []}
+                editable
+                viewLinkProps={subjectId => subjectDisplayContext.editLinkProps(subjectId)}
+                headerActions={
+                    <LinkButton {...subjectDisplayContext.createLinkProps()} variant="filled" icon={PlusIcon}>
+                        {string.CREATE_SUBJECT()}
+                    </LinkButton>
+                }
+                itemActions={subject => (
+                    <HStack gap={8}>
+                        <LinkButton
+                            {...subjectDisplayContext.editLinkProps(subject.id)}
+                            variant="text"
+                            iconType="only"
+                            icon={PencilOutlineIcon}
+                            aria-label={string.EDIT_SUBJECT()}
+                        />
+                        <Button
+                            variant="tonal-error"
+                            iconType="only"
+                            icon={DeleteOutlineIcon}
+                            aria-label={string.DELETE_SUBJECT()}
+                            onClick={e => {
+                                e.stopPropagation()
+                                setDeletingSubject(subject)
+                            }}
+                        />
+                    </HStack>
+                )}
+            />
             <Portal>
                 <SubjectDeletionDialog deletingSubject={deletingSubject()} setDeletingSubject={setDeletingSubject} />
             </Portal>

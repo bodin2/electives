@@ -36,7 +36,10 @@ function RouteComponent() {
     const user = nonNull(client.user)
 
     const electiveQuery = createQuery(() => electiveQueryOptions(client, params().electiveId))
-    const subjectsQuery = createQuery(() => electiveSubjectsQueryOptions(client, params().electiveId))
+    const subjectsQuery = createQuery(() => ({
+        ...electiveSubjectsQueryOptions(client, params().electiveId),
+        notifyOnChangeProps: ['data'],
+    }))
 
     return (
         <Show when={electiveQuery.data}>
