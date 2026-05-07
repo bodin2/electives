@@ -1,3 +1,4 @@
+import { API_CLIENT_NAME } from '../constants'
 import { signChallenge } from './ssh'
 import {
     AdminChallengeResponse,
@@ -142,7 +143,7 @@ export class AdminAuthenticator implements Authenticator<AdminAuthenticateOption
         const body: AuthenticateRequest = {
             id: options.id,
             password: signature,
-            clientName: `web@${process.env.APP_VERSION}`,
+            clientName: API_CLIENT_NAME,
         }
 
         const data = await this.rest.post<AuthenticateResponse>('/admin/auth', body, {

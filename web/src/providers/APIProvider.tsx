@@ -25,6 +25,7 @@ import {
 } from '../api'
 import { GatewayEndpoints } from '../api/gateway'
 import { NetworkError } from '../api/types'
+import { API_BASE_URL, API_CLIENT_NAME } from '../constants'
 import { nonNull } from '../utils'
 
 export enum AuthenticationState {
@@ -86,7 +87,7 @@ const configureClientAuth = (client: APIClient, tokenType: TokenType): Authentic
 }
 
 export const createClient = () => {
-    const baseURL = process.env.API_BASE_URL || `http://${window.location.hostname}:8080`
+    const baseURL = API_BASE_URL
     const tokenType = getTokenType()
     const rest = new RESTClient({ baseURL })
     const gateway = new Gateway({
@@ -199,7 +200,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             }
 
             const onUnauthorized = (error: ClientEventMap['unauthorized']) => {
-                if (authState() === AuthenticationState.LoggedOut || loggingOut) {
+                if (authState() === AuthenticationState.LoggedOut) {
                     log.warn('Received unauthorized event while logged out, likely a bad session.')
                     return
                 }
@@ -254,7 +255,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
         tokenType: tokenType,
         login: async (id: number, password: string) => {
             configureClientAuth(client, TokenType.User)
-            const credentials: LoginOptions = { id, password, clientName: `web@${process.env.APP_VERSION}` }
+            const credentials: LoginOptions = { id, password, clientName: API_CLIENT_NAME }
             await client.login(credentials)
 
             const token = client.rest.token
