@@ -50,6 +50,12 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
         for (const [subjectId, count] of Object.entries(event.subjectEnrolledCounts)) {
             const sid = Number(subjectId)
 
+            if (!store.counts[event.electiveId]) {
+                setStore('counts', event.electiveId, { [sid]: count })
+                changed = true
+                continue
+            }
+
             if (store.counts[event.electiveId]?.[sid] !== count) {
                 setStore('counts', event.electiveId, sid, count)
                 changed = true
