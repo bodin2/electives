@@ -50,11 +50,11 @@ if (!rootElement.innerHTML) {
     render(
         () => (
             <MetaProvider>
-                <I18nProvider>
-                    <QueryClientProvider client={queryClient}>
+                <QueryClientProvider client={queryClient}>
+                    <I18nProvider>
                         <RouterProvider router={router} />
-                    </QueryClientProvider>
-                </I18nProvider>
+                    </I18nProvider>
+                </QueryClientProvider>
             </MetaProvider>
         ),
         rootElement,

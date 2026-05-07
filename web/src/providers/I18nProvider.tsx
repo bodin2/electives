@@ -1,10 +1,10 @@
 import Logger from '@bodin2/electives-common/Logger'
 import * as i18n from '@solid-primitives/i18n'
+import { createQuery } from '@tanstack/solid-query'
 import {
     createContext,
     createEffect,
     createRenderEffect,
-    createResource,
     createSignal,
     type JSXElement,
     on,
@@ -50,8 +50,6 @@ async function fetchDictionary(locale: Locale) {
 const I18nProvider: ParentComponent = props => {
     const [locale, setLocale] = createSignal<Locale>('en')
 
-    let fetchAttempts = 0
-
     createRenderEffect(() => {
         const localStored = localStorage.getItem('locale') as Locale | null
         if (localStored) {
@@ -74,40 +72,39 @@ const I18nProvider: ParentComponent = props => {
         { defer: true },
     )
 
+    const dictQuery = createQuery(() => ({
+        queryKey: ['i18n', locale()] as const,
+        queryFn: () => fetchDictionary(locale()),
+        staleTime: Number.POSITIVE_INFINITY,
+        gcTime: Number.POSITIVE_INFINITY,
+        retry: 3,
+    }))
+    const tr = i18n.translator(() => dictQuery.data, resolveTemplateWithJSX) as i18n.Translator<Dict, string>
+
     createEffect(
         on(
-            () => [dict.latest, dict.error],
-            ([latest, error]) => {
-                if (error) {
-                    log.error(`Failed to load i18n dictionary (attempt ${fetchAttempts}):`, error)
-
-                    if (++fetchAttempts > 3) {
-                        log.warn('Max i18n fetch attempts reached, giving up')
-                        setValue({
-                            ready: true,
-                            string: new Proxy({}, { get: (_, key) => () => key }) as I18nApi['string'],
-                        })
-                        return
-                    }
-
-                    mutateDict.refetch()
+            () => [dictQuery.data, dictQuery.error, dictQuery.failureCount] as const,
+            ([data, error, failureCount]) => {
+                if (error && failureCount >= 3) {
+                    log.error('Failed to load i18n dictionary after retries:', error)
+                    log.warn('Max i18n fetch attempts reached, giving up')
+                    setValue({
+                        ready: true,
+                        string: new Proxy({}, { get: (_, key) => () => key }) as I18nApi['string'],
+                    })
+                    return
                 }
 
-                if (latest) {
-                    fetchAttempts = 0
-
+                if (data) {
                     log.info('Loaded i18n dictionary for locale:', locale())
                     setValue({
                         ready: true,
-                        string: i18n.chainedTranslator(latest, tr) as ChainedTranslatorWithJSX<Dict, string>,
+                        string: i18n.chainedTranslator(data, tr) as ChainedTranslatorWithJSX<Dict, string>,
                     })
                 }
             },
         ),
     )
-
-    const [dict, mutateDict] = createResource(locale, fetchDictionary)
-    const tr = i18n.translator(dict, resolveTemplateWithJSX) as i18n.Translator<Dict, string>
 
     const [value, setValue] = createStore<I18nApi>({
         ready: false,
