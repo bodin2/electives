@@ -6,7 +6,7 @@ import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { subjectMembersQueryOptions } from '../../queries/subjects'
 import { nonNull } from '../../utils'
-import LoadingPage, { SuspenseLoadingPage } from '../pages/LoadingPage'
+import LoadingPage from '../pages/LoadingPage'
 import { VStack } from '../Stack'
 import { useUserDisplayContext } from '../users/UserDisplayContext'
 import { UserListItem } from '../users/UserListItem'
@@ -67,7 +67,7 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
         if (ctx.elective) {
             // Subscribe to version changes
             const v = counts.getVersion(ctx.elective.id)
-            if (v !== prev) {
+            if (prev !== undefined && v !== prev) {
                 setOutdatedMembers(true)
             }
 
@@ -82,41 +82,39 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
     )
 
     return (
-        <SuspenseLoadingPage>
-            <Show
-                when={ctx.elective}
-                fallback={
-                    <VStack grow alignHorizontal="center" alignVertical="center">
-                        <h1 class="m3-headline-medium text-balance">{string.SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT()}</h1>
-                        <p class="m3-body-large text-surface-variant text-center text-balance">
-                            {string.SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT_DESCRIPTION()}
-                        </p>
-                        {/* TODO: Add picker here? */}
-                    </VStack>
-                }
-            >
-                <Show when={members()} fallback={<LoadingPage />}>
-                    {data => (
-                        <div class={styles.grid}>
-                            <SubjectMembersSection
-                                users={data().teachers}
-                                title={string.TEACHERS()}
-                                onRemove={props.onTeacherRemove}
-                                showId={Boolean(props.onTeacherRemove)}
-                            />
-                            <SubjectMembersSection
-                                users={data().students}
-                                title={string.STUDENTS()}
-                                onRemove={props.onStudentRemove}
-                                removeDisabled={props.studentRemoveDisabled}
-                                maxCapacity={data().capacity}
-                                showId
-                            />
-                        </div>
-                    )}
-                </Show>
+        <Show
+            when={ctx.elective}
+            fallback={
+                <VStack grow alignHorizontal="center" alignVertical="center">
+                    <h1 class="m3-headline-medium text-balance">{string.SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT()}</h1>
+                    <p class="m3-body-large text-surface-variant text-center text-balance">
+                        {string.SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT_DESCRIPTION()}
+                    </p>
+                    {/* TODO: Add picker here? */}
+                </VStack>
+            }
+        >
+            <Show when={members()} fallback={<LoadingPage debugName="SubjectMembersShow" />}>
+                {data => (
+                    <div class={styles.grid}>
+                        <SubjectMembersSection
+                            users={data().teachers}
+                            title={string.TEACHERS()}
+                            onRemove={props.onTeacherRemove}
+                            showId={Boolean(props.onTeacherRemove)}
+                        />
+                        <SubjectMembersSection
+                            users={data().students}
+                            title={string.STUDENTS()}
+                            onRemove={props.onStudentRemove}
+                            removeDisabled={props.studentRemoveDisabled}
+                            maxCapacity={data().capacity}
+                            showId
+                        />
+                    </div>
+                )}
             </Show>
-        </SuspenseLoadingPage>
+        </Show>
     )
 }
 
