@@ -52,9 +52,12 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subj
         if (isNewRoute(subjectId)) return
 
         const subjectIdNum = Number(subjectId)
-        const promises: Promise<unknown>[] = [
-            queryClient.ensureQueryData(adminSubjectElectiveIdsQueryOptions(client, subjectIdNum)),
-        ]
+        const electiveIds = await queryClient.ensureQueryData(adminSubjectElectiveIdsQueryOptions(client, subjectIdNum))
+
+        // Speculative loading
+        electiveId = (electiveId ?? electiveIds.length === 1) ? electiveIds[0] : undefined
+
+        const promises: Promise<unknown>[] = []
 
         if (electiveId !== undefined) {
             promises.push(
