@@ -65,6 +65,7 @@ export function EnrollmentDatePickerForm(props: {
     mode: 'center' | 'stretch'
     startDate: Date | undefined
     endDate: Date | undefined
+    saveOnUnfocus?: boolean
 }) {
     const { string } = useI18n()
 
@@ -113,6 +114,18 @@ export function EnrollmentDatePickerForm(props: {
         validating = false
     }
 
+    const handleBlur = () => {
+        if (!props.saveOnUnfocus) return
+        if (!startDate() || !startTime() || !endDate() || !endTime()) return
+        const start = getDateTime(startDate(), startTime())
+        const end = getDateTime(endDate(), endTime())
+        if (!start || !end || start >= end) return
+        props.onSave({
+            start: [startDate(), startTime()],
+            end: [endDate(), endTime()],
+        })
+    }
+
     return (
         <VStack
             ref={mergeRefs(form, props.ref)}
@@ -140,6 +153,7 @@ export function EnrollmentDatePickerForm(props: {
                             setStartDate(e.currentTarget.value)
                             validate()
                         }}
+                        onBlur={handleBlur}
                         containerStyle={{ flex: 1 }}
                     />
                     <TextField
@@ -151,6 +165,7 @@ export function EnrollmentDatePickerForm(props: {
                             setStartTime(e.currentTarget.value)
                             validate()
                         }}
+                        onBlur={handleBlur}
                         containerStyle={{ flex: 1 }}
                     />
                 </HStack>
@@ -170,6 +185,7 @@ export function EnrollmentDatePickerForm(props: {
                             setEndDate(e.currentTarget.value)
                             validate()
                         }}
+                        onBlur={handleBlur}
                         containerStyle={{ flex: 1 }}
                     />
                     <TextField
@@ -181,6 +197,7 @@ export function EnrollmentDatePickerForm(props: {
                             setEndTime(e.currentTarget.value)
                             validate()
                         }}
+                        onBlur={handleBlur}
                         containerStyle={{ flex: 1 }}
                     />
                 </HStack>

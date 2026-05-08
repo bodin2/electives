@@ -80,6 +80,10 @@ export default function ElectiveDetailsTab(props: { stickyOffset?: number }) {
         })
     }
 
+    const isValid = () => {
+        return ctx.elective.name && ctx.elective.startDate && ctx.elective.endDate
+    }
+
     const onSave = async (value: string | null) => {
         const active = activeField()
         if (!active) return
@@ -194,6 +198,7 @@ export default function ElectiveDetailsTab(props: { stickyOffset?: number }) {
                                     startDate={elective().startDate}
                                     endDate={elective().endDate}
                                     onSave={onDateSave}
+                                    saveOnUnfocus
                                 />
                             </VStack>
                         }
@@ -270,7 +275,13 @@ export default function ElectiveDetailsTab(props: { stickyOffset?: number }) {
 
             <Show when={ctx.creating && ctx.onSave}>
                 <BottomBar>
-                    <Button size="m" icon={SaveIcon} onClick={ctx.onSave} style={{ width: '100%' }}>
+                    <Button
+                        size="m"
+                        icon={SaveIcon}
+                        onClick={ctx.onSave}
+                        style={{ width: '100%' }}
+                        disabled={!isValid()}
+                    >
                         {string.SAVE()}
                     </Button>
                 </BottomBar>
