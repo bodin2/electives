@@ -1,6 +1,8 @@
 package th.ac.bodin2.electives.api
 
 import com.google.protobuf.MessageLite
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -35,15 +37,16 @@ object TestDatabase {
 
     fun connect() {
         if (!::db.isInitialized) {
-            db = org.jetbrains.exposed.v1.jdbc.Database.connect(
-                "jdbc:sqlite:file:./build/tmp/test/db",
-                "org.sqlite.JDBC",
-                setupConnection = {
-                    it.createStatement().use { stmt ->
-                        stmt.execute("PRAGMA foreign_keys=ON;")
-                    }
-                }
-            )
+            val dataSource = HikariDataSource(HikariConfig().apply {
+                // SQLite in-memory shared cache so all pooled connections see the
+                // same database. The pool is capped at 1 because SQLite serializes
+                // writes anyway, and to avoid surprises with the in-memory store.
+                jdbcUrl = "jdbc:sqlite:file:test?mode=memory&cache=shared"
+                driverClassName = "org.sqlite.JDBC"
+                maximumPoolSize = 1
+                connectionInitSql = "PRAGMA foreign_keys=ON;"
+            })
+            db = org.jetbrains.exposed.v1.jdbc.Database.connect(dataSource)
         }
 
         TransactionManager.defaultDatabase = db
