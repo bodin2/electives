@@ -97,6 +97,7 @@ export default function ElectiveSubjectsTab(props: { stickyOffset?: number }) {
                         >
                             <div style={{ '--sticky-offset': `${props.stickyOffset ?? 48}px` }}>
                                 <SubjectList
+                                    noRandom
                                     headerActions={
                                         <Button icon={PlusIcon} onClick={enterEditMode}>
                                             {string.ADD_SUBJECTS()}
