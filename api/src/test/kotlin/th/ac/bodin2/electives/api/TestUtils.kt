@@ -67,18 +67,17 @@ object TestDatabase {
         }
 
         usersService.createStudent(
-            TestConstants.Students.JOHN_ID,
-            TestConstants.Students.JOHN_FIRST_NAME,
-            TestConstants.Students.JOHN_MIDDLE_NAME,
-            TestConstants.Students.JOHN_LAST_NAME,
-            TestConstants.Students.JOHN_PASSWORD
+            id = TestConstants.Students.JOHN_ID,
+            firstName = TestConstants.Students.JOHN_FIRST_NAME,
+            middleName = TestConstants.Students.JOHN_MIDDLE_NAME,
+            lastName = TestConstants.Students.JOHN_LAST_NAME,
+            password = TestConstants.Students.JOHN_PASSWORD
         )
         usersService.createStudent(
-            TestConstants.Students.JANE_ID,
-            TestConstants.Students.JANE_FIRST_NAME,
-            null,
-            TestConstants.Students.JANE_LAST_NAME,
-            TestConstants.Students.JANE_PASSWORD
+            id = TestConstants.Students.JANE_ID,
+            firstName = TestConstants.Students.JANE_FIRST_NAME,
+            lastName = TestConstants.Students.JANE_LAST_NAME,
+            password = TestConstants.Students.JANE_PASSWORD
         )
 
         StudentTeams.insert {
@@ -91,18 +90,17 @@ object TestDatabase {
         }
 
         usersService.createTeacher(
-            TestConstants.Teachers.BOB_ID,
-            TestConstants.Teachers.BOB_FIRST_NAME,
-            null,
-            TestConstants.Teachers.BOB_LAST_NAME,
-            TestConstants.Teachers.BOB_PASSWORD
+            id = TestConstants.Teachers.BOB_ID,
+            firstName = TestConstants.Teachers.BOB_FIRST_NAME,
+            lastName = TestConstants.Teachers.BOB_LAST_NAME,
+            password = TestConstants.Teachers.BOB_PASSWORD
         )
         usersService.createTeacher(
-            TestConstants.Teachers.ALICE_ID,
-            TestConstants.Teachers.ALICE_FIRST_NAME,
-            TestConstants.Teachers.ALICE_MIDDLE_NAME,
-            TestConstants.Teachers.ALICE_LAST_NAME,
-            TestConstants.Teachers.ALICE_PASSWORD
+            id = TestConstants.Teachers.ALICE_ID,
+            firstName = TestConstants.Teachers.ALICE_FIRST_NAME,
+            middleName = TestConstants.Teachers.ALICE_MIDDLE_NAME,
+            lastName = TestConstants.Teachers.ALICE_LAST_NAME,
+            password = TestConstants.Teachers.ALICE_PASSWORD
         )
 
         Electives.insert {

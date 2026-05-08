@@ -75,7 +75,7 @@ export default function SubjectList(props: SubjectListProps) {
 
         const filterSubjects = (subject: Subject) =>
             subject.name.toLowerCase().includes(q) ||
-            teachersOf(props.elective, subject)?.some(teacher => teacher.fullName.toLowerCase().includes(q)) ||
+            teachersOf(props.elective, subject)?.some(teacher => teacher.displayName.toLowerCase().includes(q)) ||
             subject.location.toLowerCase().includes(q)
 
         return subjectsList

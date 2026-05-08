@@ -32,6 +32,7 @@ interface UsersService {
     fun createStudent(
         id: Int,
         firstName: String,
+        prefix: String? = null,
         middleName: String? = null,
         lastName: String? = null,
         password: String,
@@ -59,6 +60,7 @@ interface UsersService {
     fun createTeacher(
         id: Int,
         firstName: String,
+        prefix: String? = null,
         middleName: String? = null,
         lastName: String? = null,
         password: String,
@@ -138,6 +140,7 @@ interface UsersService {
     class UserData(
         val id: Int,
         val firstName: String,
+        val prefix: String? = null,
         val middleName: String? = null,
         val lastName: String? = null,
         val avatarUrl: String? = null,
@@ -150,6 +153,9 @@ interface UsersService {
     class AdminInsert(user: UserData, val publicKey: PublicKey) : UserInsert(user)
 
     /**
+     * If [setPrefix] is true, the prefix is updated to the given value (which may be null).
+     * If false, the prefix is left unchanged.
+     *
      * If [setMiddleName] is true, the middle name is updated to the given value (which may be null).
      * If false, the middle name is left unchanged.
      *
@@ -161,9 +167,11 @@ interface UsersService {
      */
     data class UserUpdate(
         val firstName: String?,
+        val prefix: String? = null,
         val middleName: String?,
         val lastName: String?,
         val avatarUrl: String?,
+        val setPrefix: Boolean = false,
         val setMiddleName: Boolean = false,
         val setLastName: Boolean = false,
         val setAvatarUrl: Boolean = false,

@@ -179,6 +179,7 @@ class AdminUsersController(
                     UserType.STUDENT -> usersService.createStudent(
                         id = user.id,
                         firstName = user.firstName,
+                        prefix = if (user.hasPrefix()) user.prefix else null,
                         middleName = if (user.hasMiddleName()) user.middleName else null,
                         lastName = if (user.hasLastName()) user.lastName else null,
                         password = req.password,
@@ -189,6 +190,7 @@ class AdminUsersController(
                     UserType.TEACHER -> usersService.createTeacher(
                         id = user.id,
                         firstName = user.firstName,
+                        prefix = if (user.hasPrefix()) user.prefix else null,
                         middleName = if (user.hasMiddleName()) user.middleName else null,
                         lastName = if (user.hasLastName()) user.lastName else null,
                         password = req.password,
@@ -228,9 +230,11 @@ class AdminUsersController(
 
                 val update = UsersService.UserUpdate(
                     firstName = if (req.hasFirstName()) req.firstName else null,
+                    prefix = if (req.hasPrefix()) req.prefix else null,
                     middleName = if (req.hasMiddleName()) req.middleName else null,
                     lastName = if (req.hasLastName()) req.lastName else null,
                     avatarUrl = if (req.hasAvatarUrl()) req.avatarUrl else null,
+                    setPrefix = req.patchPrefix,
                     setMiddleName = req.patchMiddleName,
                     setLastName = req.patchLastName,
                     setAvatarUrl = req.patchAvatarUrl,
@@ -293,6 +297,7 @@ class AdminUsersController(
         return UsersService.UserData(
             id = user.id,
             firstName = user.firstName,
+            prefix = if (user.hasPrefix()) user.prefix else null,
             middleName = if (user.hasMiddleName()) user.middleName else null,
             lastName = if (user.hasLastName()) user.lastName else null,
             avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,

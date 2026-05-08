@@ -123,7 +123,7 @@ function RouteComponent() {
     })
 
     const title = () => {
-        if (!isNew()) return user().fullName
+        if (!isNew()) return user().displayName
 
         switch (userData().type) {
             case UserType.STUDENT:
@@ -181,10 +181,12 @@ function RouteComponent() {
             const patch: AdminUserPatch = {
                 teams: u.teams?.map(t => t.id) ?? [],
                 patchTeams: modified.has('teams') || modified.has('patchTeams'),
+                patchPrefix: modified.has('prefix') || modified.has('patchPrefix'),
                 patchMiddleName: modified.has('middleName') || modified.has('patchMiddleName'),
                 patchAvatarUrl: modified.has('avatarUrl') || modified.has('patchAvatarUrl'),
                 patchLastName: modified.has('lastName') || modified.has('patchLastName'),
                 firstName: u.firstName,
+                prefix: u.prefix,
                 middleName: u.middleName,
                 lastName: u.lastName,
                 avatarUrl: u.avatarUrl || undefined,
@@ -275,7 +277,7 @@ function RouteComponent() {
                     confirmText={string.DELETE_USER()}
                     headline={string.DELETE_USER()}
                 >
-                    <p>{string.CONFIRM_DELETE_USER({ name: <strong>{user().fullName}</strong> })}</p>
+                    <p>{string.CONFIRM_DELETE_USER({ name: <strong>{user().displayName}</strong> })}</p>
                 </ConfirmDialog>
             </Portal>
             <UserInfo initialType={initialType()} teams={teams()} />

@@ -150,6 +150,8 @@
   "FIRST_NAME": "ชื่อ",
   "MIDDLE_NAME": "ชื่อกลาง",
   "LAST_NAME": "นามสกุล",
+  "PREFIX": "คำนำหน้า",
+  "PREFIX_NONE": "ไม่มี",
   "USER_TYPE": "ประเภทผู้ใช้งาน",
   "USER_TYPE_STUDENT": "นักเรียน",
   "USER_TYPE_TEACHER": "ครู",

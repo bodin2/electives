@@ -28,6 +28,7 @@ export class Team {
 export class User {
     id: number
     firstName: string
+    prefix?: string
     middleName?: string
     lastName?: string
     type: UserType
@@ -42,6 +43,7 @@ export class User {
         this.client = client
         this.id = data.id
         this.firstName = data.firstName
+        this.prefix = data.prefix
         this.middleName = data.middleName
         this.lastName = data.lastName
         this.type = data.type
@@ -55,6 +57,14 @@ export class User {
     get fullName(): string {
         const names = [this.firstName, this.middleName, this.lastName].filter(Boolean)
         return names.join(' ')
+    }
+
+    /**
+     * Get the user's display name, including their full name and prefixes.
+     */
+    get displayName(): string {
+        const parts = [this.prefix, this.firstName, this.middleName, this.lastName].filter(Boolean)
+        return parts.join(' ')
     }
 
     /**
@@ -93,6 +103,7 @@ export class User {
      */
     update(data: Partial<RawUser>): void {
         if (data.firstName !== undefined) this.firstName = data.firstName
+        if (data.prefix !== undefined) this.prefix = data.prefix
         if (data.middleName !== undefined) this.middleName = data.middleName
         if (data.lastName !== undefined) this.lastName = data.lastName
         if (data.type !== undefined) this.type = data.type
@@ -105,6 +116,7 @@ export class User {
         return {
             id: this.id,
             firstName: this.firstName,
+            prefix: this.prefix,
             middleName: this.middleName,
             lastName: this.lastName,
             type: this.type,

@@ -60,7 +60,7 @@ export default function ElectiveCard(props: ElectiveCardProps) {
         const subject = selectedSubject()
         if (!subject) return ''
         const teachers = api.client.subjects.resolveTeachers(props.elective.id, subject.id)
-        return (teachers?.map(t => t.fullName) ?? []).join(', ')
+        return (teachers?.map(t => t.displayName) ?? []).join(', ')
     }
 
     return (

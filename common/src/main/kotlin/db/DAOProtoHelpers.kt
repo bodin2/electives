@@ -10,6 +10,7 @@ fun Student.toProto(): th.ac.bodin2.electives.proto.api.User {
         firstName = user.firstName
         type = UserType.STUDENT
 
+        user.prefix?.let { prefix = it }
         user.middleName?.let { middleName = it }
         user.lastName?.let { lastName = it }
 
@@ -25,6 +26,7 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
         firstName = user.firstName
         type = UserType.TEACHER
 
+        user.prefix?.let { prefix = it }
         user.middleName?.let { middleName = it }
         user.lastName?.let { lastName = it }
 
@@ -38,6 +40,7 @@ fun Admin.toProto(): th.ac.bodin2.electives.proto.api.User {
         firstName = user.firstName
         type = UserType.ADMIN
 
+        user.prefix?.let { prefix = it }
         user.middleName?.let { middleName = it }
         user.lastName?.let { lastName = it }
 

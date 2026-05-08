@@ -66,6 +66,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         private val userInfoFields = listOf(
             Users.id,
             Users.avatarUrl,
+            Users.prefix,
             Users.firstName,
             Users.middleName,
             Users.lastName
@@ -94,13 +95,14 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     override fun createStudent(
         id: Int,
         firstName: String,
+        prefix: String?,
         middleName: String?,
         lastName: String?,
         password: String,
         avatarUrl: String?,
         teams: List<Int>?,
     ): Student {
-        val user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
+        val user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
         val studentRow = Students
             .insert {
                 it[Students.id] = user.id
@@ -169,12 +171,13 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     override fun createTeacher(
         id: Int,
         firstName: String,
+        prefix: String?,
         middleName: String?,
         lastName: String?,
         password: String,
         avatarUrl: String?,
     ) = Teacher.new(id) {
-        user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
+        user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
     }
 
     @Transactional
@@ -202,6 +205,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             user = createUser(
                 id = insert.user.id,
                 firstName = insert.user.firstName,
+                prefix = insert.user.prefix,
                 middleName = insert.user.middleName,
                 lastName = insert.user.lastName,
                 password = insert.user.password,
@@ -243,6 +247,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
             this[Users.id] = user.id
             this[Users.avatarUrl] = user.avatarUrl
+            this[Users.prefix] = user.prefix
             this[Users.firstName] = user.firstName
             this[Users.middleName] = user.middleName
             this[Users.lastName] = user.lastName
@@ -317,6 +322,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         Users.update(where = { Users.id eq id }) {
             with(update) {
                 if (firstName != null) it[Users.firstName] = firstName
+                if (setPrefix) it[Users.prefix] = prefix
                 if (setMiddleName) it[Users.middleName] = middleName
                 if (setLastName) it[Users.lastName] = lastName
                 if (setAvatarUrl) it[Users.avatarUrl] = avatarUrl
@@ -478,6 +484,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     private fun createUser(
         id: Int,
         firstName: String,
+        prefix: String? = null,
         middleName: String?,
         lastName: String?,
         password: String,
@@ -488,6 +495,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
         val stmt = Users.insertIgnore {
             it[Users.id] = id
+            it[Users.prefix] = prefix
             it[Users.firstName] = firstName
             it[Users.middleName] = middleName
             it[Users.lastName] = lastName

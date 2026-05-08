@@ -21,7 +21,7 @@ export default function UserInfoCard(props: UserInfoCardProps) {
             <VStack gap={16}>
                 <HStack alignHorizontal="space-between" class={styles.userInfo}>
                     <VStack>
-                        <p class="m3-title-large">{user().fullName}</p>
+                        <p class="m3-title-large">{user().displayName}</p>
                         <HStack alignVertical="center" gap={4} style={{ 'row-gap': '2px' }} wrap>
                             <For each={user().teams}>
                                 {team => (

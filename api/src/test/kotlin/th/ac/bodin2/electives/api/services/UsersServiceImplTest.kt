@@ -18,6 +18,7 @@ import th.ac.bodin2.electives.api.TestConstants.Teachers
 import th.ac.bodin2.electives.api.TestConstants.TestData
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import kotlin.test.*
@@ -58,11 +59,11 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create student`() = runTest {
         transaction {
             val student = usersService.createStudent(
-                1010,
-                "New",
-                "Student",
-                "User",
-                "testpass",
+                id = 1010,
+                firstName = "New",
+                middleName = "Student",
+                lastName = "User",
+                password = "testpass",
                 teams = listOf(TestConstants.Teams.TEAM_1_ID)
             )
 
@@ -77,12 +78,10 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create teacher`() = runTest {
         transaction {
             val teacher = usersService.createTeacher(
-                2010,
-                "New",
-                null,
-                "Teacher",
-                "testpass",
-                ""
+                id = 2010,
+                firstName = "New",
+                lastName = "Teacher",
+                password = "testpass"
             )
 
             assertNotNull(teacher)
@@ -96,12 +95,10 @@ class UsersServiceImplTest : ApplicationTest() {
         assertFailsWith<ConflictException> {
             transaction {
                 usersService.createStudent(
-                    Students.JOHN_ID,
-                    "Duplicate",
-                    null,
-                    "Student",
-                    "testpass",
-                    null
+                    id = Students.JOHN_ID,
+                    firstName = "Duplicate",
+                    lastName = "Student",
+                    password = "testpass"
                 )
             }
         }
@@ -112,12 +109,10 @@ class UsersServiceImplTest : ApplicationTest() {
         assertFailsWith<ConflictException> {
             transaction {
                 usersService.createTeacher(
-                    Teachers.BOB_ID,
-                    "Duplicate",
-                    null,
-                    "Teacher",
-                    "testpass",
-                    null
+                    id = Teachers.BOB_ID,
+                    firstName = "Duplicate",
+                    lastName = "Teacher",
+                    password = "testpass"
                 )
             }
         }
@@ -919,6 +914,264 @@ class UsersServiceImplTest : ApplicationTest() {
         assertFailsWith<IllegalArgumentException> {
             transaction { usersService.getSessionUser(token) }
         }
+    }
+
+    @Test
+    fun `create student with prefix`() = runTest {
+        transaction {
+            val student = usersService.createStudent(
+                id = 5001,
+                firstName = "Maria",
+                prefix = "Dr.",
+                lastName = "Santos",
+                password = "testpass"
+            )
+
+            assertNotNull(student)
+            assertEquals("Dr.", student.user.prefix)
+        }
+    }
+
+    @Test
+    fun `create teacher with prefix`() = runTest {
+        transaction {
+            val teacher = usersService.createTeacher(
+                id = 5002,
+                firstName = "Alan",
+                prefix = "Prof.",
+                lastName = "Turing",
+                password = "testpass"
+            )
+
+            assertNotNull(teacher)
+            assertEquals("Prof.", teacher.user.prefix)
+        }
+    }
+
+    @Test
+    fun `create student without prefix`() = runTest {
+        transaction {
+            val student = usersService.createStudent(
+                id = 5003,
+                firstName = "Alice",
+                lastName = "Wonder",
+                password = "testpass"
+            )
+
+            assertNotNull(student)
+            assertNull(student.user.prefix)
+        }
+    }
+
+    @Test
+    fun `update student prefix`() = runTest {
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Mr.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        transaction {
+            val student = usersService.getStudentById(Students.JOHN_ID)
+            assertNotNull(student)
+            assertEquals("Mr.", student.user.prefix)
+        }
+    }
+
+    @Test
+    fun `update student clears prefix when setPrefix true and prefix null`() = runTest {
+        // First assign a prefix
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Mr.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        // Then clear it
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        transaction {
+            val student = usersService.getStudentById(Students.JOHN_ID)
+            assertNotNull(student)
+            assertNull(student.user.prefix)
+        }
+    }
+
+    @Test
+    fun `update student does not change prefix when setPrefix false`() = runTest {
+        // First assign a prefix
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Ms.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        // Update firstName without touching prefix
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = "Updated",
+                    prefix = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = false,
+                )
+            )
+        )
+
+        transaction {
+            val student = usersService.getStudentById(Students.JOHN_ID)
+            assertNotNull(student)
+            assertEquals("Ms.", student.user.prefix)
+            assertEquals("Updated", student.user.firstName)
+        }
+    }
+
+    @Test
+    fun `update teacher prefix`() = runTest {
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Dr.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        transaction {
+            val teacher = usersService.getTeacherById(Teachers.BOB_ID)
+            assertNotNull(teacher)
+            assertEquals("Dr.", teacher.user.prefix)
+        }
+    }
+
+    @Test
+    fun `update teacher clears prefix when setPrefix true and prefix null`() = runTest {
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Prof.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        transaction {
+            val teacher = usersService.getTeacherById(Teachers.BOB_ID)
+            assertNotNull(teacher)
+            assertNull(teacher.user.prefix)
+        }
+    }
+
+    @Test
+    fun `create student with prefix is included in proto serialization`() = runTest {
+        val student = transaction {
+            usersService.createStudent(
+                id = 5004,
+                firstName = "Anna",
+                prefix = "Mrs.",
+                lastName = "Brown",
+                password = "testpass"
+            )
+        }
+
+        val proto = transaction { student.toProto() }
+        assertEquals("Mrs.", proto.prefix)
+        assertEquals("Anna", proto.firstName)
+    }
+
+    @Test
+    fun `create teacher with prefix is included in proto serialization`() = runTest {
+        val teacher = transaction {
+            usersService.createTeacher(
+                id = 5005,
+                firstName = "Charles",
+                prefix = "Mr.",
+                lastName = "Darwin",
+                password = "testpass"
+            )
+        }
+
+        val proto = transaction { teacher.toProto() }
+        assertEquals("Mr.", proto.prefix)
+        assertEquals("Charles", proto.firstName)
+    }
+
+    @Test
+    fun `create student without prefix has no prefix in proto serialization`() = runTest {
+        val student = transaction {
+            usersService.createStudent(
+                id = 5006,
+                firstName = "Bob",
+                lastName = "Noprefix",
+                password = "testpass"
+            )
+        }
+
+        val proto = transaction { student.toProto() }
+        assertFalse(proto.hasPrefix())
     }
 }
 

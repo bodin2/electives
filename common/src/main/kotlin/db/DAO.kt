@@ -16,6 +16,7 @@ import java.time.LocalDateTime
 class User(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : EntityClass<Int, User>(Users)
 
+    var prefix by Users.prefix
     var firstName by Users.firstName
     var middleName by Users.middleName
     var lastName by Users.lastName

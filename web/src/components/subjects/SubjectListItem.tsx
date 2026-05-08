@@ -45,7 +45,7 @@ export default function SubjectListItem(props: SubjectListItemProps) {
     const teacherNames = () => {
         if (props.electiveId === undefined) return null
         const teachers = api.client.subjects.resolveTeachers(props.electiveId, props.subject.id)
-        return (teachers?.map(t => t.fullName) ?? []).join(', ') || null
+        return (teachers?.map(t => t.displayName) ?? []).join(', ') || null
     }
 
     const Leading = (

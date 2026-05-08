@@ -68,6 +68,11 @@ message AdminService {
     bool patch_last_name = 9;
     // Whether the `avatar_url` field should be considered during patching.
     bool patch_avatar_url = 10;
+
+    // Mr. Ms. Dr. etc.
+    optional string prefix = 11;
+    // Whether the `prefix` field should be considered during patching.
+    bool patch_prefix = 12;
   }
 
   message TeamPatch {
@@ -272,6 +277,8 @@ message User {
   optional string middle_name = 3;
   optional string last_name = 4;
   UserType type = 5;
+  // Mr. Ms. Dr. etc.
+  optional string prefix = 6;
   // Only passed for Students
   repeated Team teams = 7;
   optional string avatar_url = 8;

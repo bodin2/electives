@@ -150,6 +150,8 @@
   "FIRST_NAME": "First name",
   "MIDDLE_NAME": "Middle name",
   "LAST_NAME": "Last name",
+  "PREFIX": "Prefix",
+  "PREFIX_NONE": "None",
   "USER_TYPE": "User type",
   "USER_TYPE_STUDENT": "Student",
   "USER_TYPE_TEACHER": "Teacher",

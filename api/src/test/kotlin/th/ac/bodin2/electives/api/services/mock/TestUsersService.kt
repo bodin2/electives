@@ -27,6 +27,7 @@ class TestUsersService : UsersService {
     override fun createStudent(
         id: Int,
         firstName: String,
+        prefix: String?,
         middleName: String?,
         lastName: String?,
         password: String,
@@ -40,6 +41,7 @@ class TestUsersService : UsersService {
     override fun createTeacher(
         id: Int,
         firstName: String,
+        prefix: String?,
         middleName: String?,
         lastName: String?,
         password: String,

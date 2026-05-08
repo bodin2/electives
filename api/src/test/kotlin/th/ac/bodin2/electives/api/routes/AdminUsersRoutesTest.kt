@@ -126,4 +126,54 @@ class AdminUsersRoutesTest : ApplicationTest() {
             ADMIN_TOKEN
         ).assertNotFound("User not found")
     }
+
+    @Test
+    fun `patch student with prefix sets prefix in response`() = runRouteTest {
+        startApplication()
+
+        val user = client.patchProtoWithAuth(
+            "/admin/users/$STUDENT_ID",
+            userPatch {
+                prefix = "Dr."
+                patchPrefix = true
+            },
+            ADMIN_TOKEN
+        ).assertOK().parse<User>()
+
+        assertEquals(STUDENT_ID, user.id)
+        assertEquals(UserType.STUDENT, user.type)
+    }
+
+    @Test
+    fun `patch teacher with prefix sets prefix in response`() = runRouteTest {
+        startApplication()
+
+        val user = client.patchProtoWithAuth(
+            "/admin/users/$TEACHER_ID",
+            userPatch {
+                prefix = "Prof."
+                patchPrefix = true
+            },
+            ADMIN_TOKEN
+        ).assertOK().parse<User>()
+
+        assertEquals(TEACHER_ID, user.id)
+        assertEquals(UserType.TEACHER, user.type)
+    }
+
+    @Test
+    fun `patch student without patchPrefix does not require prefix field`() = runRouteTest {
+        startApplication()
+
+        val user = client.patchProtoWithAuth(
+            "/admin/users/$STUDENT_ID",
+            userPatch {
+                firstName = "Updated"
+                // patchPrefix = false (default), prefix not set
+            },
+            ADMIN_TOKEN
+        ).assertOK().parse<User>()
+
+        assertEquals(STUDENT_ID, user.id)
+    }
 }

@@ -127,7 +127,7 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
 
                     <VStack gap={4} grow>
                         <HStack alignVertical="center" gap={8} wrap>
-                            <h1 class="m3-headline-medium">{user().fullName}</h1>
+                            <h1 class="m3-headline-medium">{user().displayName}</h1>
                             <Show when={user().isStudent()}>
                                 <UserTeamsRenderer user={user()} />
                                 <HStack gap={4} alignVertical="center" wrap>
@@ -198,6 +198,19 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                             </Option>
                         </Select>
                     </Show>
+
+                    <TextField
+                        name="prefix"
+                        variant="outlined"
+                        autocomplete="honorific-prefix"
+                        label={string.PREFIX()}
+                        value={user().prefix ?? ''}
+                        onInput={e => {
+                            ctx.onEdit?.('prefix', e.currentTarget.value, 'patchPrefix')
+                            validate('prefix', e.target)
+                        }}
+                        disabled={!ctx.editable}
+                    />
 
                     <TextField
                         required
