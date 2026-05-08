@@ -6,7 +6,7 @@ import { useI18n } from '../../providers/I18nProvider'
 import { electiveSubjectsQueryOptions } from '../../queries/electives'
 import { adminSubjectsQueryOptions } from '../../queries/subjects'
 import { Button } from '../Button'
-import { HStack } from '../Stack'
+import { HStack, VStack } from '../Stack'
 import SubjectList from '../subjects/SubjectList'
 import { useElectiveInfoContext } from './ElectiveInfo'
 import type { Subject } from '../../api'
@@ -90,9 +90,11 @@ export default function ElectiveSubjectsTab(props: { stickyOffset?: number }) {
                         <Show
                             when={data().length > 0}
                             fallback={
-                                <Button class="padded" size="m" icon={PlusIcon} onClick={enterEditMode}>
-                                    {string.ADD_SUBJECTS()}
-                                </Button>
+                                <VStack grow class="padded" style={{ 'padding-top': '8px' }}>
+                                    <Button size="m" icon={PlusIcon} onClick={enterEditMode}>
+                                        {string.ADD_SUBJECTS()}
+                                    </Button>
+                                </VStack>
                             }
                         >
                             <div style={{ '--sticky-offset': `${props.stickyOffset ?? 48}px` }}>
