@@ -22,26 +22,26 @@ import { debounce } from '../../../../utils'
 import { catchErrors } from '../../../../utils/error-component'
 import { simpleXXHash31 } from '../../../../utils/xxhash'
 
-export const Route = createFileRoute('/_adminAuthenticated/manage/teams/$teamId')({
+export const Route = createFileRoute('/_adminAuthenticated/manage/groups/$groupId')({
     errorComponent: catchErrors([NotFoundError, NotFoundPage]),
     validateSearch: (search: Record<string, unknown>): { page: number; tab?: 'info' | 'members' } => ({
         page: Math.max(Number(search?.page ?? 1), 1),
         tab: search?.tab as 'info' | 'members' | undefined,
     }),
     loaderDeps: ({ search }) => ({ page: search.page }),
-    loader: async ({ params: { teamId }, context: { client, queryClient }, deps: { page } }) => {
-        if (isNewRoute(teamId)) return
+    loader: async ({ params: { groupId }, context: { client, queryClient }, deps: { page } }) => {
+        if (isNewRoute(groupId)) return
 
-        const teamIdNum = Number(teamId)
+        const groupIdNum = Number(groupId)
         await Promise.all([
-            queryClient.ensureQueryData(teamQueryOptions(client, teamIdNum)),
-            queryClient.prefetchQuery(teamMembersQueryOptions(client, teamIdNum, page)),
+            queryClient.ensureQueryData(teamQueryOptions(client, groupIdNum)),
+            queryClient.prefetchQuery(teamMembersQueryOptions(client, groupIdNum, page)),
         ])
     },
     component: RouteComponent,
 })
 
-const isNewRoute = (teamId: string) => teamId === 'new'
+const isNewRoute = (groupId: string) => groupId === 'new'
 
 function RouteComponent() {
     const params = Route.useParams()
@@ -50,10 +50,10 @@ function RouteComponent() {
     const navigate = Route.useNavigate()
     const qc = useQueryClient()
 
-    const isNew = () => isNewRoute(params().teamId)
+    const isNew = () => isNewRoute(params().groupId)
 
     const teamQuery = createQuery(() => ({
-        ...teamQueryOptions(client, Number(params().teamId)),
+        ...teamQueryOptions(client, Number(params().groupId)),
         enabled: !isNew(),
     }))
 
@@ -83,9 +83,9 @@ function RouteComponent() {
                     const id = simpleXXHash31(`${trimmed}:${performance.now()}`, Math.floor(Math.random() * 0x7fffffff))
                     await client.teams.admin.put(id, { id, name: trimmed })
                     // After creating, we should probably navigate to the new ID
-                    navigate({ params: { teamId: id.toString() }, search: { page: 1 }, replace: true })
+                    navigate({ params: { groupId: id.toString() }, search: { page: 1 }, replace: true })
                 } else {
-                    await client.teams.admin.patch(Number(params().teamId), { name: trimmed })
+                    await client.teams.admin.patch(Number(params().groupId), { name: trimmed })
                 }
 
                 await client.teams.fetchAll({ force: true })
@@ -183,7 +183,7 @@ function TeamMembers() {
     const { string } = useI18n()
     const qc = useQueryClient()
 
-    const teamId = () => Number(params().teamId)
+    const teamId = () => Number(params().groupId)
 
     const [query, setQuery] = createSignal<string | undefined>(undefined)
     const [addDialogOpen, setAddDialogOpen] = createSignal(false)

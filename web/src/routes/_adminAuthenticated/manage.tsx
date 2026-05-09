@@ -131,7 +131,7 @@ function RouteComponent() {
                         <Separator />
                         <LinkNavigationRailItem icon={PeopleIcon} label={string.STUDENTS()} to="/manage/students" />
                         <LinkNavigationRailItem icon={TeacherIcon} label={string.TEACHERS()} to="/manage/teachers" />
-                        <LinkNavigationRailItem icon={TeamIcon} label={string.TEAMS()} to="/manage/teams" />
+                        <LinkNavigationRailItem icon={TeamIcon} label={string.TEAMS()} to="/manage/groups" />
                         <Separator />
                         <LinkNavigationRailItem
                             icon={TicketIcon}

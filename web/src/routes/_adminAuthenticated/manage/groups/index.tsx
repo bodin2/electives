@@ -11,7 +11,7 @@ import { teamMemberCountsQueryOptions, teamsQueryOptions } from '../../../../que
 import { nonNull } from '../../../../utils'
 import type { Team } from '../../../../api/structures'
 
-export const Route = createFileRoute('/_adminAuthenticated/manage/teams/')({
+export const Route = createFileRoute('/_adminAuthenticated/manage/groups/')({
     component: RouteComponent,
     loader: async ({ context: { client, queryClient } }) => {
         await Promise.all([
@@ -36,13 +36,13 @@ function RouteComponent() {
     const invalidate = () => qc.invalidateQueries({ queryKey: ['teams'] })
 
     const handleCreate = () => {
-        navigate({ to: '/manage/teams/$teamId', params: { teamId: 'new' }, search: { page: 0 } })
+        navigate({ to: '/manage/groups/$groupId', params: { groupId: 'new' }, search: { page: 0 } })
     }
 
     const handleEdit = (team: Team) => {
         navigate({
-            to: '/manage/teams/$teamId',
-            params: { teamId: team.id.toString() },
+            to: '/manage/groups/$groupId',
+            params: { groupId: team.id.toString() },
             search: { page: 0 },
         })
     }
