@@ -2,7 +2,7 @@ package th.ac.bodin2.electives.api.services
 
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.notInList
+import org.jetbrains.exposed.v1.core.notInSubQuery
 import org.jetbrains.exposed.v1.dao.with
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -154,24 +154,18 @@ class ElectiveServiceImpl : ElectiveService {
         teamId: Int,
         page: Int
     ): QueryResult<out Pair<List<Student>, Long>> {
+        require(page >= 1) { "Page must be at least 1" }
         if (!Elective.exists(electiveId)) return QueryResult.ElectiveNotFound
         if (!Team.exists(teamId)) throw EntityNotFoundException(ExceptionEntity.TEAM)
-        if (page < 1) throw IllegalArgumentException("Page must be at least 1")
 
-        val enrolledStudentIds = StudentElectives
+        val enrolledStudents = StudentElectives
             .select(StudentElectives.student)
             .where { StudentElectives.elective eq electiveId }
-            .map { it[StudentElectives.student] }
 
         val query = (Students innerJoin StudentTeams)
             .select(Students.columns)
-            .where {
-                if (enrolledStudentIds.isEmpty()) {
-                    (StudentTeams.team eq teamId)
-                } else {
-                    (StudentTeams.team eq teamId) and (Students.id notInList enrolledStudentIds)
-                }
-            }
+            .where { (StudentTeams.team eq teamId) and (Students.id notInSubQuery enrolledStudents) }
+            .orderBy(Students.id)
 
         val total = query.count()
 
