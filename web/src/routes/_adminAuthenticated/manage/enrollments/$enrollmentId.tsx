@@ -2,13 +2,15 @@ import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { createMemo, createSignal } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { ConflictError, Elective, type RawElective } from '../../../../api'
+import { ConflictError, Elective, NotFoundError, type RawElective } from '../../../../api'
 import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
 import ElectiveInfo from '../../../../components/electives/ElectiveInfo'
 import Page from '../../../../components/Page'
+import NotFoundPage from '../../../../components/pages/NotFoundPage'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { electiveQueryOptions, electiveSubjectsQueryOptions } from '../../../../queries/electives'
+import { catchErrors } from '../../../../utils/error-component'
 import { simpleXXHash31 } from '../../../../utils/xxhash'
 import type { AdminElectivePatch } from '../../../../api/types'
 
@@ -17,6 +19,7 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/enrollments/$e
         tab: (search.tab as string) || undefined,
     }),
     component: RouteComponent,
+    errorComponent: catchErrors([NotFoundError, NotFoundPage]),
     params: {
         parse: (raw): { enrollmentId: string | number } => ({
             enrollmentId: raw.enrollmentId,

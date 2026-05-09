@@ -2,9 +2,10 @@ import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { batch, createEffect, createMemo, createRenderEffect, createSignal, on, onCleanup, onMount } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { type AdminUserPatch, User, UserType } from '../../../../api'
+import { type AdminUserPatch, NotFoundError, User, UserType } from '../../../../api'
 import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
 import Page from '../../../../components/Page'
+import NotFoundPage from '../../../../components/pages/NotFoundPage'
 import {
     type UserData,
     type UserPatchSetterKey,
@@ -15,6 +16,7 @@ import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { teamsQueryOptions } from '../../../../queries/teams'
 import { userQueryOptions } from '../../../../queries/users'
+import { catchErrors } from '../../../../utils/error-component'
 
 type UserSearch = {
     type?: 'student' | 'teacher'
@@ -32,12 +34,13 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/users/$userId'
         }
     },
     component: RouteComponent,
+    errorComponent: catchErrors([NotFoundError, NotFoundPage]),
     loader: async ({ params: { userId }, context: { client, queryClient } }) => {
         const promises: Promise<unknown>[] = [queryClient.ensureQueryData(teamsQueryOptions(client)).catch(() => [])]
 
         if (!isNewRoute(userId)) {
             const userIdNum = Number(userId)
-            promises.push(queryClient.ensureQueryData(userQueryOptions(client, userIdNum)).catch(() => null))
+            promises.push(queryClient.ensureQueryData(userQueryOptions(client, userIdNum)))
         }
 
         await Promise.all(promises)
