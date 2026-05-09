@@ -24,6 +24,7 @@ import {
 } from '../../../../queries/subjects'
 import { nonNull } from '../../../../utils'
 import { formatCountdown } from '../../../../utils/date'
+import { catchErrors } from '../../../../utils/error-component'
 import { AUTHENTICATED_ROUTE_DEFAULTS } from '../../../_authenticated'
 import styles from './$subjectId.module.css'
 
@@ -53,10 +54,7 @@ export const Route = createFileRoute('/_authenticated/enroll/$electiveId/$subjec
             queryClient.ensureQueryData(subjectEnrolledCountQueryOptions(client, { electiveId, subjectId })),
         ])
     },
-    errorComponent: props => {
-        if (props.error instanceof NotFoundError) return <NotFoundPage />
-        throw props.error
-    },
+    errorComponent: catchErrors([NotFoundError, NotFoundPage]),
     component: RouteComponent,
 })
 
