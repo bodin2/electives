@@ -11,4 +11,9 @@ object TeacherSubjects : Table("teachers_to_subjects") {
     val elective =
         reference("elective_id", Electives, onDelete = ReferenceOption.CASCADE, onUpdate = ReferenceOption.CASCADE)
     override val primaryKey = PrimaryKey(teacher, subject, elective)
+
+    init {
+        // For: WHERE subject = ? AND elective = ?
+        index(false, subject, elective)
+    }
 }

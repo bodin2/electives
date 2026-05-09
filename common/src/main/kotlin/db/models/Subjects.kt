@@ -38,7 +38,7 @@ object Subjects : IdTable<Int>("subjects") {
      * - You set the subject's elective's team to `A`.
      * - You set the subject's team to `B`.
      */
-    val team = reference("team_id", Teams, onDelete = ReferenceOption.RESTRICT, onUpdate = ReferenceOption.CASCADE).nullable()
+    val team = reference("team_id", Teams, onDelete = ReferenceOption.RESTRICT, onUpdate = ReferenceOption.CASCADE).nullable().index()
 
     val name = varchar("name", 255)
     val description = varchar("description", 10000).nullable()

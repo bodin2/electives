@@ -18,7 +18,7 @@ object Electives : IdTable<Int>("electives") {
      *
      * If set, only users who belong to this team can access this elective.
      */
-    val team = reference("team_id", Teams, onDelete = ReferenceOption.RESTRICT, onUpdate = ReferenceOption.CASCADE).nullable()
+    val team = reference("team_id", Teams, onDelete = ReferenceOption.RESTRICT, onUpdate = ReferenceOption.CASCADE).nullable().index()
 
     val startDate = datetime("start_date").nullable()
     val endDate = datetime("end_date").nullable()

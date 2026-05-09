@@ -5,6 +5,6 @@ import org.jetbrains.exposed.v1.core.Table
 
 object StudentTeams : Table("students_to_teams") {
     val student = reference("student_id", Students, onDelete = ReferenceOption.CASCADE, onUpdate = ReferenceOption.CASCADE)
-    val team = reference("team_id", Teams, onDelete = ReferenceOption.CASCADE, onUpdate = ReferenceOption.CASCADE)
+    val team = reference("team_id", Teams, onDelete = ReferenceOption.CASCADE, onUpdate = ReferenceOption.CASCADE).index()
     override val primaryKey = PrimaryKey(student, team)
 }

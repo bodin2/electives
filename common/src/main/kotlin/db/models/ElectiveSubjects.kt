@@ -7,4 +7,9 @@ object ElectiveSubjects : Table("electives_to_subjects") {
     val elective = reference("elective_id", Electives, onDelete = ReferenceOption.CASCADE, onUpdate = ReferenceOption.CASCADE)
     val subject = reference("subject_id", Subjects, onDelete = ReferenceOption.CASCADE, onUpdate = ReferenceOption.CASCADE)
     override val primaryKey = PrimaryKey(elective, subject)
+
+    init {
+        // PK already covers (elective, subject). This is for looking subjects of an elective
+        index(false, subject, elective)
+    }
 }
