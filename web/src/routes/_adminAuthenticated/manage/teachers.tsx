@@ -6,7 +6,7 @@ import { UserType } from '../../../api/types'
 import PaginatedUserList, { type PaginatedUserListHandle } from '../../../components/admin/PaginatedUserList'
 import LinkButton from '../../../components/LinkButton'
 import Page from '../../../components/Page'
-import { HStack } from '../../../components/Stack'
+import { HStack, VStack } from '../../../components/Stack'
 import { BulkAddUserAction } from '../../../components/users/BulkAddUserAction'
 import { useUserDisplayContext } from '../../../components/users/UserDisplayContext'
 import { useAPI } from '../../../providers/APIProvider'
@@ -65,6 +65,27 @@ function RouteComponent() {
                 onPagePreload={page => qc.prefetchQuery(teachersQueryOptions(client, page))}
                 onRefresh={onRefresh}
                 onClick={user => navigate(userDisplayContext.editLinkProps(user.id))}
+                emptyElement={
+                    <VStack grow alignHorizontal="center" alignVertical="center" gap={16}>
+                        <VStack alignHorizontal="center">
+                            <h1 class="m3-headline-medium text-balance">{string.NO_TEACHERS_HINT()}</h1>
+                            <p class="m3-body-large text-surface-variant text-center text-balance text-ws-pre-line">
+                                {string.NO_TEACHERS_HINT_DESCRIPTION()}
+                            </p>
+                        </VStack>
+                        <HStack gap={12}>
+                            <LinkButton
+                                size="m"
+                                variant="filled"
+                                icon={PlusIcon}
+                                {...userDisplayContext.createLinkProps('teacher')}
+                            >
+                                {string.ADD_TEACHER()}
+                            </LinkButton>
+                            {/* TODO: Bulk add hint */}
+                        </HStack>
+                    </VStack>
+                }
             />
         </Page>
     )

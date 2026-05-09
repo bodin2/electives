@@ -42,7 +42,7 @@ function layoutMasonry(container: HTMLElement) {
 
 export default function SectionedList<T, TSection>(props: SectionedListProps<T, TSection>) {
     const [query, setQuery] = createSignal('')
-    let gridRef!: HTMLDivElement
+    const [gridRef, setGridRef] = createSignal<HTMLDivElement | undefined>()
 
     const updateQuery = (value: string) => {
         const q = value.toLowerCase()
@@ -50,7 +50,10 @@ export default function SectionedList<T, TSection>(props: SectionedListProps<T, 
         props.onSearch?.(q)
     }
 
-    const relayout = () => layoutMasonry(gridRef)
+    const relayout = () => {
+        const grid = gridRef()
+        if (grid) layoutMasonry(grid)
+    }
 
     createEffect(
         on(
@@ -63,11 +66,14 @@ export default function SectionedList<T, TSection>(props: SectionedListProps<T, 
     )
 
     createEffect(() => {
+        const grid = gridRef()
+        if (!grid) return
+
         const resizeObserver = new ResizeObserver(relayout)
-        resizeObserver.observe(gridRef)
+        resizeObserver.observe(grid)
 
         const mutationObserver = new MutationObserver(relayout)
-        mutationObserver.observe(gridRef, { childList: true, subtree: true, attributes: true })
+        mutationObserver.observe(grid, { childList: true, subtree: true, attributes: true })
 
         onCleanup(() => {
             resizeObserver.disconnect()
@@ -76,7 +82,7 @@ export default function SectionedList<T, TSection>(props: SectionedListProps<T, 
     })
 
     return (
-        <VStack gap={0} class={props.class} style={props.style}>
+        <VStack gap={0} class={props.class} style={props.style} grow>
             <HStack
                 alignVertical="center"
                 gap={16}
@@ -96,11 +102,13 @@ export default function SectionedList<T, TSection>(props: SectionedListProps<T, 
                 </Show>
                 <Show when={props.headerActions}>{props.headerActions}</Show>
             </HStack>
-            <div ref={gridRef} class={styles.grid}>
-                <For each={props.items} fallback={query() ? props.noResultsFallback : props.fallback}>
-                    {([section, sectionItems]) => props.renderSection(section, sectionItems, query())}
-                </For>
-            </div>
+            <Show when={props.items.length > 0} fallback={query() ? props.noResultsFallback : props.fallback}>
+                <div ref={setGridRef} class={styles.grid}>
+                    <For each={props.items}>
+                        {([section, sectionItems]) => props.renderSection(section, sectionItems, query())}
+                    </For>
+                </div>
+            </Show>
         </VStack>
     )
 }

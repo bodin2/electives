@@ -201,6 +201,7 @@ function TeamMembers() {
                 patchLastName: false,
                 patchAvatarUrl: false,
                 patchMiddleName: false,
+                patchPrefix: false,
                 patchTeams: true,
                 teams: user.teams.filter(t => t.id !== teamId()).map(t => t.id),
             })

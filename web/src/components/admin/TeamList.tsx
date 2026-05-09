@@ -1,7 +1,7 @@
 import MagnifyIcon from '@iconify-icons/mdi/magnify'
 import PlusIcon from '@iconify-icons/mdi/plus'
 import { TextField } from 'm3-solid'
-import { createMemo, createSignal, For } from 'solid-js'
+import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'
@@ -17,6 +17,7 @@ interface TeamListProps {
     onEdit: (team: Team) => void
     onCreate: () => void
     onDelete: (team: Team) => Promise<void>
+    emptyElement?: JSX.Element
 }
 
 export default function TeamList(props: TeamListProps) {
@@ -39,35 +40,35 @@ export default function TeamList(props: TeamListProps) {
     }
 
     return (
-        <VStack class={styles.container} gap={16}>
-            <HStack alignVertical="center" gap={16} wrap>
-                <div class={styles.searchContainer}>
-                    <TextField
-                        leadingIcon={MagnifyIcon}
-                        label={string.SEARCH_TEAMS()}
-                        variant="filled"
-                        class={styles.search}
-                        placeholder={string.SEARCH_TEAMS()}
-                        onInput={e => setSearch(e.target.value)}
-                    />
-                </div>
+        <VStack class={styles.container} gap={0} grow>
+            <HStack class={styles.searchContainer} alignVertical="center" gap={16} wrap>
+                <TextField
+                    leadingIcon={MagnifyIcon}
+                    label={string.SEARCH_TEAMS()}
+                    variant="filled"
+                    class={styles.search}
+                    placeholder={string.SEARCH_TEAMS()}
+                    onInput={e => setSearch(e.target.value)}
+                />
                 <Button variant="filled" icon={PlusIcon} onClick={props.onCreate}>
                     {string.CREATE_TEAM()}
                 </Button>
             </HStack>
 
-            <VStack gap={0} class={styles.list}>
-                <For each={filteredTeams()}>
-                    {team => (
-                        <TeamItem
-                            team={team}
-                            onEdit={props.onEdit}
-                            onDelete={t => setTeamToDelete(t)}
-                            memberCount={props.memberCounts[team.id] ?? 0}
-                        />
-                    )}
-                </For>
-            </VStack>
+            <Show when={props.teams.length > 0} fallback={props.emptyElement}>
+                <VStack gap={0} class={styles.list}>
+                    <For each={filteredTeams()}>
+                        {team => (
+                            <TeamItem
+                                team={team}
+                                onEdit={props.onEdit}
+                                onDelete={t => setTeamToDelete(t)}
+                                memberCount={props.memberCounts[team.id] ?? 0}
+                            />
+                        )}
+                    </For>
+                </VStack>
+            </Show>
 
             <Portal>
                 <ConfirmDialog

@@ -195,5 +195,15 @@
   "CREATE_ELECTIVE": "Create elective",
   "MY_SUBJECTS": "My subjects",
   "DISCARD": "Discard",
-  "ADD_SUBJECTS": "Add subjects"
+  "ADD_SUBJECTS": "Add subjects",
+  "NO_SUBJECTS_HINT": "No subjects yet",
+  "NO_SUBJECTS_HINT_DESCRIPTION": "Create a subject to get started",
+  "NO_TEAMS_HINT": "No groups yet",
+  "NO_TEAMS_HINT_DESCRIPTION": "Create a group to get started",
+  "NO_ENROLLMENTS_HINT": "No enrollments yet",
+  "NO_ENROLLMENTS_HINT_DESCRIPTION": "Create an enrollment to get started",
+  "NO_STUDENTS_HINT": "No students yet",
+  "NO_STUDENTS_HINT_DESCRIPTION": "Add students to get started.\nYou can also bulk add students by importing a CSV file.",
+  "NO_TEACHERS_HINT": "No teachers yet",
+  "NO_TEACHERS_HINT_DESCRIPTION": "Add teachers to get started.\nYou can also bulk add teachers by importing a CSV file."
 }

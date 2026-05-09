@@ -1,7 +1,10 @@
+import PlusIcon from '@iconify-icons/mdi/plus'
 import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import TeamList from '../../../../components/admin/TeamList'
+import { Button } from '../../../../components/Button'
 import Page from '../../../../components/Page'
+import { VStack } from '../../../../components/Stack'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { teamMemberCountsQueryOptions, teamsQueryOptions } from '../../../../queries/teams'
@@ -58,10 +61,23 @@ function RouteComponent() {
         <Page name={string.TEAMS()} leading={null} trailing={null}>
             <TeamList
                 teams={nonNull(teamsQuery.data)}
-                memberCounts={memberCountsQuery.data ?? {}}
+                memberCounts={nonNull(memberCountsQuery.data)}
                 onCreate={handleCreate}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                emptyElement={
+                    <VStack grow alignHorizontal="center" alignVertical="center" gap={16}>
+                        <VStack alignHorizontal="center">
+                            <h1 class="m3-headline-medium text-balance">{string.NO_TEAMS_HINT()}</h1>
+                            <p class="m3-body-large text-surface-variant text-center text-balance">
+                                {string.NO_TEAMS_HINT_DESCRIPTION()}
+                            </p>
+                        </VStack>
+                        <Button size="m" variant="filled" icon={PlusIcon} onClick={handleCreate}>
+                            {string.CREATE_TEAM()}
+                        </Button>
+                    </VStack>
+                }
             />
         </Page>
     )

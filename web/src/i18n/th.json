@@ -195,5 +195,15 @@
   "CREATE_ELECTIVE": "สร้างวิชาเพิ่มเติม",
   "MY_SUBJECTS": "วิชาของฉัน",
   "DISCARD": "ยกเลิก",
-  "ADD_SUBJECTS": "เพิ่มวิชา"
+  "ADD_SUBJECTS": "เพิ่มวิชา",
+  "NO_SUBJECTS_HINT": "ยังไม่มีรายวิชา",
+  "NO_SUBJECTS_HINT_DESCRIPTION": "สร้างรายวิชาเพื่อเริ่มต้นใช้งาน",
+  "NO_TEAMS_HINT": "ยังไม่มีกลุ่ม",
+  "NO_TEAMS_HINT_DESCRIPTION": "สร้างกลุ่มเพื่อเริ่มต้นใช้งาน",
+  "NO_ENROLLMENTS_HINT": "ยังไม่มีการลงทะเบียน",
+  "NO_ENROLLMENTS_HINT_DESCRIPTION": "สร้างการลงทะเบียนเพื่อเริ่มต้นใช้งาน",
+  "NO_STUDENTS_HINT": "ยังไม่มีนักเรียน",
+  "NO_STUDENTS_HINT_DESCRIPTION": "เพิ่มนักเรียนเพื่อเริ่มต้นใช้งาน\nคุณยังสามารถเพิ่มนักเรียนจำนวนมากได้โดยการนำเข้าไฟล์ CSV",
+  "NO_TEACHERS_HINT": "ยังไม่มีครู",
+  "NO_TEACHERS_HINT_DESCRIPTION": "เพิ่มครูเพื่อเริ่มต้นใช้งาน\nคุณยังสามารถเพิ่มครูจำนวนมากได้โดยการนำเข้าไฟล์ CSV"
 }

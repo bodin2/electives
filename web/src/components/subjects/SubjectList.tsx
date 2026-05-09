@@ -20,6 +20,7 @@ export interface SubjectListProps {
     itemActions?: (subject: Subject) => JSX.Element
     viewLinkProps?: (subjectId: number) => LinkProps
     selectedIds?: number[]
+    emptyElement?: JSX.Element
     onSubjectClick?: (subject: Subject) => void
 }
 
@@ -90,13 +91,14 @@ export default function SubjectList(props: SubjectListProps) {
     })
 
     return (
-        <Show when={subjects().length > 0 || props.editable}>
+        <Show when={subjects().length > 0 || props.editable} fallback={props.emptyElement}>
             <SectionedList
                 items={filteredSubjects()}
                 onSearch={setQuery}
                 searchLabel={string.SEARCH_SUBJECTS()}
                 searchContainerClass={props.searchContainerClass}
                 headerActions={props.headerActions}
+                fallback={props.emptyElement}
                 noResultsFallback={<p class="padded text-surface-variant">{string.NO_RESULTS_FOUND()}</p>}
                 renderSection={(category, categorySubjects, q) => (
                     <SubjectCategorySection

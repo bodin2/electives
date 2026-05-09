@@ -9,7 +9,7 @@ import { Button } from '../../../../components/Button'
 import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
 import LinkButton from '../../../../components/LinkButton'
 import Page from '../../../../components/Page'
-import { HStack } from '../../../../components/Stack'
+import { HStack, VStack } from '../../../../components/Stack'
 import { useSubjectDisplayContext } from '../../../../components/subjects/SubjectDisplayContext'
 import SubjectList from '../../../../components/subjects/SubjectList'
 import { useAPI } from '../../../../providers/APIProvider'
@@ -41,6 +41,24 @@ function RouteComponent() {
                 subjects={subjectsQuery.isSuccess ? subjectsQuery.data : []}
                 editable
                 viewLinkProps={subjectId => subjectDisplayContext.editLinkProps(subjectId)}
+                emptyElement={
+                    <VStack style={{ height: '100%' }} alignHorizontal="center" alignVertical="center" gap={16}>
+                        <VStack alignHorizontal="center">
+                            <h1 class="m3-headline-medium text-balance">{string.NO_SUBJECTS_HINT()}</h1>
+                            <p class="m3-body-large text-surface-variant text-center text-balance">
+                                {string.NO_SUBJECTS_HINT_DESCRIPTION()}
+                            </p>
+                        </VStack>
+                        <LinkButton
+                            {...subjectDisplayContext.createLinkProps()}
+                            size="m"
+                            variant="filled"
+                            icon={PlusIcon}
+                        >
+                            {string.CREATE_SUBJECT()}
+                        </LinkButton>
+                    </VStack>
+                }
                 headerActions={
                     <LinkButton {...subjectDisplayContext.createLinkProps()} variant="filled" icon={PlusIcon}>
                         {string.CREATE_SUBJECT()}

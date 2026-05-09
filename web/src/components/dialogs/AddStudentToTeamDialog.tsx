@@ -28,6 +28,7 @@ export default function AddStudentToTeamDialog(props: {
                         patchLastName: false,
                         patchAvatarUrl: false,
                         patchMiddleName: false,
+                        patchPrefix: false,
                         patchTeams: true,
                         teams: [...currentTeams, props.teamId],
                     })

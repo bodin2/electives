@@ -1,13 +1,9 @@
-.container {
+.searchContainer {
     padding: 16px;
 }
 
-.searchContainer {
-    flex: 1;
-}
-
 .search {
-    width: 100%;
+    flex: 1;
 }
 
 .list {

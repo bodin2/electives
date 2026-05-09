@@ -1,6 +1,6 @@
 import MagnifyingIcon from '@iconify-icons/mdi/magnify'
 import { ListItem, mergeClasses, TextField } from 'm3-solid'
-import { type Component, createEffect, For, Show, Suspense } from 'solid-js'
+import { type Component, createEffect, For, type JSXElement, Show, Suspense } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useI18n } from '../../providers/I18nProvider'
 import { useScrollData } from '../../providers/ScrollDataProvider'
@@ -45,6 +45,7 @@ interface PaginatedUserListProps {
     selectedIds?: number[]
     /** IDs of users that should appear disabled and non-interactive. */
     disabledIds?: number[]
+    emptyElement?: JSXElement
 }
 
 const DEFAULT_PAGE_SIZE = 50
@@ -159,35 +160,37 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                 </HStack>
             </VStack>
             <SuspenseLoadingPage debugName="PaginatedUserListContent">
-                <div class={styles.grid}>
-                    {props.listHeader?.({})}
-                    <Show when={props.isLoading && !props.data && store.users.size === 0}>
-                        <ListItem headline={string.LOADING()} />
-                    </Show>
-                    <Show when={props.data || store.users.size > 0}>
-                        <For
-                            each={Array.from(store.users.values())}
-                            fallback={
-                                <Show when={!props.isLoading}>
-                                    <p class={mergeClasses('text-surface-variant', styles.padded)}>
-                                        {string.NO_USERS_FOUND()}
-                                    </p>
-                                </Show>
-                            }
-                        >
-                            {user => (
-                                <UserListItem
-                                    showId
-                                    selected={props.selectedIds?.includes(user.id)}
-                                    disabled={props.disabledIds?.includes(user.id)}
-                                    onClick={props.onClick && (() => nonNull(props.onClick)(user))}
-                                    user={user}
-                                    trailing={props.trailing}
-                                />
-                            )}
-                        </For>
-                    </Show>
-                </div>
+                <Show when={store.users.size > 0} fallback={props.emptyElement}>
+                    <div class={styles.grid}>
+                        {props.listHeader?.({})}
+                        <Show when={props.isLoading && !props.data && store.users.size === 0}>
+                            <ListItem headline={string.LOADING()} />
+                        </Show>
+                        <Show when={props.data || store.users.size > 0}>
+                            <For
+                                each={Array.from(store.users.values())}
+                                fallback={
+                                    <Show when={!props.isLoading}>
+                                        <p class={mergeClasses('text-surface-variant', styles.padded)}>
+                                            {string.NO_USERS_FOUND()}
+                                        </p>
+                                    </Show>
+                                }
+                            >
+                                {user => (
+                                    <UserListItem
+                                        showId
+                                        selected={props.selectedIds?.includes(user.id)}
+                                        disabled={props.disabledIds?.includes(user.id)}
+                                        onClick={props.onClick && (() => nonNull(props.onClick)(user))}
+                                        user={user}
+                                        trailing={props.trailing}
+                                    />
+                                )}
+                            </For>
+                        </Show>
+                    </div>
+                </Show>
             </SuspenseLoadingPage>
         </>
     )
