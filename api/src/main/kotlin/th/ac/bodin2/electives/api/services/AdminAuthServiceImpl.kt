@@ -170,7 +170,7 @@ class AdminAuthServiceImpl(
     private fun getAdminPublicKey(id: Int): PublicKey? = transaction {
         val publicKeyString = Admins
             .select(Admins.publicKey)
-            .where { Admins.user eq id }
+            .where { Admins.id eq id }
             .singleOrNull()
             ?.get(Admins.publicKey)
             ?: return@transaction null

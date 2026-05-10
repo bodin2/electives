@@ -106,7 +106,6 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         val studentRow = Students
             .insert {
                 it[Students.id] = user.id
-                it[Students.user] = user.id
             }
             .resultedValues!!
             .first()
@@ -143,7 +142,6 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         Students.batchInsert(prepared) { item ->
             val uid = item.request.user.id
 
-            this[Students.user] = uid
             this[Students.id] = uid
         }
 
@@ -176,8 +174,9 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
-    ) = Teacher.new(id) {
-        user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
+    ): Teacher {
+        val user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
+        return Teacher.new(user.id.value) {}
     }
 
     @Transactional
@@ -189,7 +188,6 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         Teachers.batchInsert(prepared) { item ->
             val uid = item.request.user.id
 
-            this[Teachers.user] = uid
             this[Teachers.id] = uid
         }
 
@@ -201,18 +199,18 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     // @TODO: Test this
     @Transactional
     override fun createAdmin(insert: UsersService.AdminInsert) = transaction {
-        Admin.new(insert.user.id) {
-            user = createUser(
-                id = insert.user.id,
-                firstName = insert.user.firstName,
-                prefix = insert.user.prefix,
-                middleName = insert.user.middleName,
-                lastName = insert.user.lastName,
-                password = insert.user.password,
-                avatarUrl = insert.user.avatarUrl,
-                assertPassword = false
-            )
+        val user = createUser(
+            id = insert.user.id,
+            firstName = insert.user.firstName,
+            prefix = insert.user.prefix,
+            middleName = insert.user.middleName,
+            lastName = insert.user.lastName,
+            password = insert.user.password,
+            avatarUrl = insert.user.avatarUrl,
+            assertPassword = false
+        )
 
+        Admin.new(user.id.value) {
             publicKey = Base64.getEncoder().encodeToString(insert.publicKey.encoded)
         }
     }

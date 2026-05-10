@@ -25,7 +25,7 @@ class User(id: EntityID<Int>) : Entity<Int>(id) {
 }
 
 class Student(id: EntityID<Int>) : Entity<Int>(id) {
-    var user by User referencedOn Students.user
+    val user by User referencedOn Students.id
     var groups by Group via StudentGroups
 
     companion object : EntityClass<Int, Student>(Students) {
@@ -71,7 +71,7 @@ class Student(id: EntityID<Int>) : Entity<Int>(id) {
 }
 
 class Teacher(id: EntityID<Int>) : Entity<Int>(id) {
-    var user by User referencedOn Teachers.user
+    val user by User referencedOn Teachers.id
 
     companion object : EntityClass<Int, Teacher>(Teachers) {
         fun assertExists(teacherId: Int) {
@@ -99,7 +99,7 @@ class Teacher(id: EntityID<Int>) : Entity<Int>(id) {
 }
 
 class Admin(id: EntityID<Int>) : Entity<Int>(id) {
-    var user by User referencedOn Admins.user
+    val user by User referencedOn Admins.id
     var publicKey by Admins.publicKey
 
     companion object : EntityClass<Int, Admin>(Admins) {

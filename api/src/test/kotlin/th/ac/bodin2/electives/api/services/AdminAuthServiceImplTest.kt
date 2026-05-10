@@ -94,7 +94,7 @@ class AdminAuthServiceImplTest : ApplicationTest() {
             }
 
             Admins.insert {
-                it[Admins.user] = id
+                it[Admins.id] = id
                 it[Admins.publicKey] = publicKey
             }
         }
