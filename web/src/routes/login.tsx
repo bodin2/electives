@@ -57,7 +57,10 @@ function Login() {
                 centerHeadline
                 headline={
                     <VStack gap={16}>
-                        <SchoolLogo style={{ width: '48px', height: '55px', 'align-self': 'center' }} />
+                        <SchoolLogo
+                            style={{ width: '48px', height: '55px', 'align-self': 'center' }}
+                            imageProps={{ fetchpriority: 'high' }}
+                        />
                         <VStack gap={8} alignHorizontal="center" style={{ 'margin-bottom': '16px' }}>
                             {string.ELECTIVES_SYSTEM()}
                             <p class="m3-body-medium text-surface-variant">{string.LOGIN_HINT()}</p>

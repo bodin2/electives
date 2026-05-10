@@ -62,7 +62,10 @@ function AdminLogin() {
                 centerHeadline
                 headline={
                     <VStack gap={16}>
-                        <SchoolLogo style={{ width: '48px', height: '55px', 'align-self': 'center' }} />
+                        <SchoolLogo
+                            style={{ width: '48px', height: '55px', 'align-self': 'center' }}
+                            imageProps={{ fetchpriority: 'high' }}
+                        />
                         <VStack gap={8} alignHorizontal="center">
                             {string.ADMIN_LOGIN()}
                             <p class="m3-body-medium text-surface-variant">{string.ADMIN_LOGIN_HINT()}</p>
