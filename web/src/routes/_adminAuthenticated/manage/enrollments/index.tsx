@@ -85,24 +85,26 @@ function RouteComponent() {
                             </VStack>
                         }
                     >
-                        <Show
-                            when={filteredEnrollments().length > 0}
-                            fallback={<p class="text-surface-variant">{string.NO_RESULTS_FOUND()}</p>}
-                        >
-                            <For each={filteredEnrollments()}>
-                                {enrollment => (
-                                    <AdminEnrollmentCard
-                                        enrollment={enrollment}
-                                        onClick={id =>
-                                            navigate({
-                                                to: '/manage/enrollments/$enrollmentId',
-                                                params: { enrollmentId: String(id) },
-                                            })
-                                        }
-                                    />
-                                )}
-                            </For>
-                        </Show>
+                        <VStack style={{ 'padding-inline': '16px' }} gap={16}>
+                            <Show
+                                when={filteredEnrollments().length > 0}
+                                fallback={<p class="text-surface-variant">{string.NO_RESULTS_FOUND()}</p>}
+                            >
+                                <For each={filteredEnrollments()}>
+                                    {enrollment => (
+                                        <AdminEnrollmentCard
+                                            enrollment={enrollment}
+                                            onClick={id =>
+                                                navigate({
+                                                    to: '/manage/enrollments/$enrollmentId',
+                                                    params: { enrollmentId: String(id) },
+                                                })
+                                            }
+                                        />
+                                    )}
+                                </For>
+                            </Show>
+                        </VStack>
                     </Show>
                 </SuspenseLoadingPage>
             </VStack>
