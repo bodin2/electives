@@ -10,4 +10,5 @@
     border-radius: var(--m3-shape-large);
     overflow: hidden;
     background-color: var(--m3c-surface-container);
+    margin-inline: 16px;
 }
