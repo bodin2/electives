@@ -1,6 +1,6 @@
 import Logger from '@bodin2/electives-common/Logger'
 import * as i18n from '@solid-primitives/i18n'
-import { createQuery } from '@tanstack/solid-query'
+import { createQuery, keepPreviousData } from '@tanstack/solid-query'
 import {
     createContext,
     createEffect,
@@ -77,6 +77,7 @@ const I18nProvider: ParentComponent = props => {
         queryFn: () => fetchDictionary(locale()),
         staleTime: Number.POSITIVE_INFINITY,
         gcTime: Number.POSITIVE_INFINITY,
+        placeholderData: keepPreviousData,
         retry: 3,
     }))
     const tr = i18n.translator(() => dictQuery.data, resolveTemplateWithJSX) as i18n.Translator<Dict, string>
