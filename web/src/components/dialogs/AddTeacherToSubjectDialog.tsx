@@ -8,7 +8,7 @@ export default function AddTeacherToSubjectDialog(props: {
     open: boolean
     onClose: () => unknown
     subjectId: number
-    electiveId: number
+    enrollmentId: number
     currentTeacherIds: number[]
     onInvalidate?: () => Promise<unknown> | unknown
 }) {
@@ -31,15 +31,15 @@ export default function AddTeacherToSubjectDialog(props: {
                     patchDescription: false,
                     patchCode: false,
                     patchLocation: false,
-                    patchTeamId: false,
+                    patchGroupId: false,
                     patchTeachers: true,
                     patchThumbnailUrl: false,
                     patchImageUrl: false,
-                    electiveId: props.electiveId,
+                    enrollmentId: props.enrollmentId,
                 }
 
                 await api.client.subjects.admin.patch(props.subjectId, patch)
-                enrolledCounts.bumpVersion(props.electiveId)
+                enrolledCounts.bumpVersion(props.enrollmentId)
                 await props.onInvalidate?.()
             }}
         />

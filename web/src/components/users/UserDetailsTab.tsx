@@ -8,12 +8,12 @@ import { TextField } from 'm3-solid'
 import { createSignal, For, Show } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { Portal } from 'solid-js/web'
-import { type Team, type User, UserType } from '../../api'
+import { type Group, type User, UserType } from '../../api'
 import { useI18n } from '../../providers/I18nProvider'
 import { nonNull } from '../../utils'
 import Badge from '../Badge'
 import { Button } from '../Button'
-import AddTeamToStudentDialog from '../dialogs/AddTeamToStudentDialog'
+import AddGroupToStudentDialog from '../dialogs/AddGroupToStudentDialog'
 import TextFieldDialog from '../dialogs/base/TextFieldDialog'
 import IconLabel from '../IconLabel'
 import { Option, Select } from '../Select'
@@ -28,7 +28,7 @@ interface UserDetailsTabProps {
     descriptionClass?: string
     labelClass?: string
     initialType?: UserType
-    teams?: Team[]
+    groups?: Group[]
 }
 
 export default function UserDetailsTab(props: UserDetailsTabProps) {
@@ -36,7 +36,7 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
     const ctx = useUserDisplayContext()
 
     const [avatarDialogOpen, setAvatarDialogOpen] = createSignal(false)
-    const [addTeamOpen, setAddTeamOpen] = createSignal(false)
+    const [addGroupOpen, setAddGroupOpen] = createSignal(false)
 
     const [fieldErrors, setFieldErrors] = createStore<Record<string, string | undefined>>({})
 
@@ -129,15 +129,15 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                         <HStack alignVertical="center" gap={8} wrap>
                             <h1 class="m3-headline-medium">{user().displayName}</h1>
                             <Show when={user().isStudent()}>
-                                <UserTeamsRenderer user={user()} />
+                                <UserGroupsRenderer user={user()} />
                                 <HStack gap={4} alignVertical="center" wrap>
                                     <Button
                                         size="xs"
                                         variant="tonal"
                                         icon={PlusIcon}
-                                        onClick={() => setAddTeamOpen(true)}
+                                        onClick={() => setAddGroupOpen(true)}
                                     >
-                                        {string.ADD_TEAM()}
+                                        {string.ADD_GROUP()}
                                     </Button>
                                 </HStack>
                             </Show>
@@ -282,20 +282,20 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
             </VStack>
 
             <Portal>
-                <AddTeamToStudentDialog
-                    open={addTeamOpen()}
-                    onClose={team => {
-                        setAddTeamOpen(false)
-                        if (team && ctx.onEdit) {
+                <AddGroupToStudentDialog
+                    open={addGroupOpen()}
+                    onClose={group => {
+                        setAddGroupOpen(false)
+                        if (group && ctx.onEdit) {
                             ctx.onEdit(
-                                'teams',
-                                [...user().teams.map(t => t.toJSON()), team.toJSON()].sort((a, b) => a.id - b.id),
-                                'patchTeams',
+                                'groups',
+                                [...user().groups.map(g => g.toJSON()), group.toJSON()].sort((a, b) => a.id - b.id),
+                                'patchGroups',
                             )
                         }
                     }}
-                    teams={props.teams || []}
-                    currentTeamIds={user().teams.map(t => t.id)}
+                    groups={props.groups || []}
+                    currentGroupIds={user().groups.map(g => g.id)}
                 />
                 <TextFieldDialog
                     dialog={{ quick: true }}
@@ -310,14 +310,14 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
     )
 }
 
-function UserTeamsRenderer(props: { user: User }) {
+function UserGroupsRenderer(props: { user: User }) {
     const ctx = useUserDisplayContext()
 
     return (
-        <For each={props.user.teams}>
-            {team => (
+        <For each={props.user.groups}>
+            {group => (
                 <Badge variant="tonal" class={styles.badge}>
-                    {team.name}
+                    {group.name}
                     <Show when={ctx.editable && ctx.onEdit}>
                         <Button
                             size="xs"
@@ -327,9 +327,9 @@ function UserTeamsRenderer(props: { user: User }) {
                             class={styles.deleteButton}
                             onClick={() =>
                                 nonNull(ctx.onEdit)(
-                                    'teams',
-                                    props.user.teams.filter(t => t.id !== team.id).map(t => t.toJSON()),
-                                    'patchTeams',
+                                    'groups',
+                                    props.user.groups.filter(g => g.id !== group.id).map(g => g.toJSON()),
+                                    'patchGroups',
                                 )
                             }
                         />

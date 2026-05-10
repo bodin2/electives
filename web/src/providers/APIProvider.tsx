@@ -153,17 +153,12 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
         })
     })
 
-    let loggingOut = false
-
     function checkSession(error: Error) {
-        loggingOut = true
         client.hasSession().then(hasSession => {
             if (!hasSession) {
                 log.warn('Unauthorized, logging out:', error.message)
                 return client.logout()
             }
-
-            loggingOut = false
         })
     }
 

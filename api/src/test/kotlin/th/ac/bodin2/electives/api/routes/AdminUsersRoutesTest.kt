@@ -3,11 +3,7 @@ package th.ac.bodin2.electives.api.routes
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import th.ac.bodin2.electives.api.ApplicationTest
-import th.ac.bodin2.electives.api.deleteWithAuth
-import th.ac.bodin2.electives.api.getWithAuth
-import th.ac.bodin2.electives.api.parse
-import th.ac.bodin2.electives.api.patchProtoWithAuth
+import th.ac.bodin2.electives.api.*
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID

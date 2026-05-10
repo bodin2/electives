@@ -60,13 +60,13 @@ object TestDatabase {
     fun Application.mockData() {
         val usersService: UsersService by dependencies
 
-        Teams.insert {
-            it[id] = TestConstants.Teams.TEAM_1_ID
-            it[name] = TestConstants.Teams.TEAM_1_NAME
+        Groups.insert {
+            it[id] = TestConstants.Groups.GROUP_1_ID
+            it[name] = TestConstants.Groups.GROUP_1_NAME
         }
-        Teams.insert {
-            it[id] = TestConstants.Teams.TEAM_2_ID
-            it[name] = TestConstants.Teams.TEAM_2_NAME
+        Groups.insert {
+            it[id] = TestConstants.Groups.GROUP_2_ID
+            it[name] = TestConstants.Groups.GROUP_2_NAME
         }
 
         usersService.createStudent(
@@ -83,13 +83,13 @@ object TestDatabase {
             password = TestConstants.Students.JANE_PASSWORD
         )
 
-        StudentTeams.insert {
+        StudentGroups.insert {
             it[student] = TestConstants.Students.JOHN_ID
-            it[team] = TestConstants.Teams.TEAM_1_ID
+            it[group] = TestConstants.Groups.GROUP_1_ID
         }
-        StudentTeams.insert {
+        StudentGroups.insert {
             it[student] = TestConstants.Students.JANE_ID
-            it[team] = TestConstants.Teams.TEAM_2_ID
+            it[group] = TestConstants.Groups.GROUP_2_ID
         }
 
         usersService.createTeacher(
@@ -106,12 +106,12 @@ object TestDatabase {
             password = TestConstants.Teachers.ALICE_PASSWORD
         )
 
-        Electives.insert {
-            it[id] = TestConstants.Electives.SCIENCE_ID
-            it[name] = TestConstants.Electives.SCIENCE_NAME
+        Enrollments.insert {
+            it[id] = TestConstants.Enrollments.SCIENCE_ID
+            it[name] = TestConstants.Enrollments.SCIENCE_NAME
             it[startDate] = null
             it[endDate] = null
-            it[team] = TestConstants.Teams.TEAM_1_ID
+            it[group] = TestConstants.Groups.GROUP_1_ID
         }
 
         Subjects.insert {
@@ -122,7 +122,7 @@ object TestDatabase {
             it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.number
             it[location] = TestConstants.Subjects.PHYSICS_LOCATION
             it[capacity] = TestConstants.Subjects.PHYSICS_CAPACITY
-            it[team] = TestConstants.Teams.TEAM_1_ID
+            it[group] = TestConstants.Groups.GROUP_1_ID
         }
 
         Subjects.insert {
@@ -133,27 +133,27 @@ object TestDatabase {
             it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.number
             it[location] = TestConstants.Subjects.CHEMISTRY_LOCATION
             it[capacity] = TestConstants.Subjects.CHEMISTRY_CAPACITY
-            it[team] = TestConstants.Teams.TEAM_1_ID
+            it[group] = TestConstants.Groups.GROUP_1_ID
         }
 
-        ElectiveSubjects.insert {
-            it[elective] = TestConstants.Electives.SCIENCE_ID
+        EnrollmentSubjects.insert {
+            it[enrollment] = TestConstants.Enrollments.SCIENCE_ID
             it[subject] = TestConstants.Subjects.PHYSICS_ID
         }
-        ElectiveSubjects.insert {
-            it[elective] = TestConstants.Electives.SCIENCE_ID
+        EnrollmentSubjects.insert {
+            it[enrollment] = TestConstants.Enrollments.SCIENCE_ID
             it[subject] = TestConstants.Subjects.CHEMISTRY_ID
         }
 
         TeacherSubjects.insert {
             it[teacher] = TestConstants.Teachers.BOB_ID
             it[subject] = TestConstants.Subjects.PHYSICS_ID
-            it[elective] = TestConstants.Electives.SCIENCE_ID
+            it[enrollment] = TestConstants.Enrollments.SCIENCE_ID
         }
         TeacherSubjects.insert {
             it[teacher] = TestConstants.Teachers.ALICE_ID
             it[subject] = TestConstants.Subjects.CHEMISTRY_ID
-            it[elective] = TestConstants.Electives.SCIENCE_ID
+            it[enrollment] = TestConstants.Enrollments.SCIENCE_ID
         }
     }
 }

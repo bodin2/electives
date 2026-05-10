@@ -6,7 +6,7 @@ import AddUserDialog from './base/AddUserDialog'
 export default function AddStudentToSubjectDialog(props: {
     open: boolean
     onClose: () => unknown
-    electiveId: number
+    enrollmentId: number
     subjectId: number
 }) {
     const api = useAPI()
@@ -20,8 +20,8 @@ export default function AddStudentToSubjectDialog(props: {
             headline={string.ADD_STUDENT_TO_SUBJECT()}
             type="student"
             onConfirm={async user => {
-                await api.client.selections.set(user.id, props.electiveId, props.subjectId)
-                enrolledCounts.setCount(props.electiveId, props.subjectId, current => current + 1)
+                await api.client.selections.set(user.id, props.enrollmentId, props.subjectId)
+                enrolledCounts.setCount(props.enrollmentId, props.subjectId, current => current + 1)
             }}
         />
     )

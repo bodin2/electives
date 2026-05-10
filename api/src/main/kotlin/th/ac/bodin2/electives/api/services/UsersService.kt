@@ -25,7 +25,7 @@ interface UsersService {
     /**
      * Creates a new student with the given information.
      *
-     * @throws EntityNotFoundException if any of the specified teams do not exist.
+     * @throws EntityNotFoundException if any of the specified groups do not exist.
      * @throws ConflictException if a user/student with the same ID already exists.
      * @throws IllegalArgumentException if the password does not meet the requirements.
      */
@@ -37,13 +37,13 @@ interface UsersService {
         lastName: String? = null,
         password: String,
         avatarUrl: String? = null,
-        teams: List<Int>? = null,
+        groups: List<Int>? = null,
     ): Student
 
     /**
      * Creates multiple students in a batch operation.
      *
-     * @throws BatchOperationException.MissingTeams if any of the specified teams do not exist, with the list of missing team IDs in [UsersService.BatchOperationException.MissingTeams.ids].
+     * @throws BatchOperationException.MissingGroups if any of the specified groups do not exist, with the list of missing group IDs in [UsersService.BatchOperationException.MissingGroups.ids].
      * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [UsersService.BatchOperationException.ConflictingEntities.ids].
      * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
      *   - [IllegalArgumentException] if the password does not meet the requirements.
@@ -133,7 +133,7 @@ interface UsersService {
         class ConflictingEntities(val ids: List<Int>) :
             BatchOperationException("Entity with the same IDs already exists")
 
-        class MissingTeams(val ids: List<Int>) : BatchOperationException("Teams are missing")
+        class MissingGroups(val ids: List<Int>) : BatchOperationException("Groups are missing")
         class InvalidUserData(val id: Int, cause: Throwable) : BatchOperationException("Invalid user data", cause)
     }
 
@@ -148,7 +148,7 @@ interface UsersService {
     )
 
     sealed class UserInsert(val user: UserData)
-    class StudentInsert(user: UserData, val teams: List<Int> = emptyList()) : UserInsert(user)
+    class StudentInsert(user: UserData, val groups: List<Int> = emptyList()) : UserInsert(user)
     class TeacherInsert(user: UserData) : UserInsert(user)
     class AdminInsert(user: UserData, val publicKey: PublicKey) : UserInsert(user)
 
@@ -179,7 +179,7 @@ interface UsersService {
 
     data class StudentUpdate(
         val user: UserUpdate,
-        val teams: List<Int>? = null,
+        val groups: List<Int>? = null,
     )
 
     data class TeacherUpdate(

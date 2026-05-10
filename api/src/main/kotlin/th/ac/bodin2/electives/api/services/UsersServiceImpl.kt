@@ -100,7 +100,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
-        teams: List<Int>?,
+        groups: List<Int>?,
     ): Student {
         val user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
         val studentRow = Students
@@ -111,32 +111,32 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             .resultedValues!!
             .first()
 
-        StudentTeams.batchInsert(teams ?: emptyList()) {
-            Team.assertExists(it)
+        StudentGroups.batchInsert(groups ?: emptyList()) {
+            Group.assertExists(it)
 
-            this[StudentTeams.student] = id
-            this[StudentTeams.team] = it
+            this[StudentGroups.student] = id
+            this[StudentGroups.group] = it
         }
 
-        return Student.wrapRow(studentRow).load(Student::teams)
+        return Student.wrapRow(studentRow).load(Student::groups)
     }
 
     @Transactional
     override fun createStudents(inserts: List<UsersService.StudentInsert>) = transaction {
         if (inserts.isEmpty()) return@transaction emptyList()
 
-        val requestedTeamIds = inserts
-            .flatMap { it.teams }
+        val requestedGroupIds = inserts
+            .flatMap { it.groups }
             .toSet()
 
-        val existingTeamIds = Teams
-            .select(Teams.id)
-            .where { Teams.id inList requestedTeamIds.toList() }
-            .map { it[Teams.id].value }
+        val existingGroupIds = Groups
+            .select(Groups.id)
+            .where { Groups.id inList requestedGroupIds.toList() }
+            .map { it[Groups.id].value }
             .toSet()
 
-        val missingTeamIds = requestedTeamIds.filter { it !in existingTeamIds }
-        if (!missingTeamIds.isEmpty()) throw UsersService.BatchOperationException.MissingTeams(missingTeamIds)
+        val missingGroupIds = requestedGroupIds.filter { it !in existingGroupIds }
+        if (!missingGroupIds.isEmpty()) throw UsersService.BatchOperationException.MissingGroups(missingGroupIds)
 
         val prepared = insertUserBatch(inserts)
 
@@ -147,19 +147,19 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             this[Students.id] = uid
         }
 
-        val studentTeams = prepared.flatMap { item ->
-            item.request.teams
+        val studentGroups = prepared.flatMap { item ->
+            item.request.groups
                 .distinct()
-                .map { teamId -> item.request.user.id to teamId }
+                .map { groupId -> item.request.user.id to groupId }
         }
 
-        StudentTeams.batchInsert(studentTeams) { (studentId, teamId) ->
-            this[StudentTeams.student] = studentId
-            this[StudentTeams.team] = teamId
+        StudentGroups.batchInsert(studentGroups) { (studentId, groupId) ->
+            this[StudentGroups.student] = studentId
+            this[StudentGroups.group] = groupId
         }
 
         return@transaction Student.find { Students.id inList prepared.map { it.request.user.id } }
-            .with(Student::user, Student::teams)
+            .with(Student::user, Student::groups)
             .toList()
     }
 
@@ -295,20 +295,20 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         try {
             updateUser(id, update.user)
         } catch (e: NothingToUpdateException) {
-            update.teams ?: throw e
+            update.groups ?: throw e
         }
 
-        update.teams?.let { teams ->
-            StudentTeams.deleteWhere { StudentTeams.student eq id }
-            StudentTeams.batchInsert(teams) {
-                Team.assertExists(it)
+        update.groups?.let { groups ->
+            StudentGroups.deleteWhere { StudentGroups.student eq id }
+            StudentGroups.batchInsert(groups) {
+                Group.assertExists(it)
 
-                this[StudentTeams.student] = id
-                this[StudentTeams.team] = it
+                this[StudentGroups.student] = id
+                this[StudentGroups.group] = it
             }
         }
 
-        Student.findById(id)!!.load(Student::user, Student::teams)
+        Student.findById(id)!!.load(Student::user, Student::groups)
     }
 
     @Transactional
@@ -368,7 +368,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             }.orderBy(Students.id).limit(PAGE_SIZE).offset(offset)
 
             val students = Student.wrapRows(dataQuery)
-                .with(Student::user, Student::teams)
+                .with(Student::user, Student::groups)
                 .toList()
 
             students to count

@@ -1,0 +1,13 @@
+.searchContainer {
+    padding: 16px;
+}
+
+.search {
+    flex: 1;
+}
+
+.list {
+    border-radius: var(--m3-shape-large);
+    overflow: hidden;
+    background-color: var(--m3c-surface-container);
+}

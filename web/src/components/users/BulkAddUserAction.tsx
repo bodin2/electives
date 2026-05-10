@@ -34,7 +34,7 @@ export function BulkAddUserAction(props: BulkAddUserActionProps) {
         if (!file) return
 
         const text = await file.text()
-        const requests = parseUserCSV(text, props.type, await client.teams.fetchAll())
+        const requests = parseUserCSV(text, props.type, await client.groups.fetchAll())
 
         if (requests.length > 0) {
             setImportRequests(requests)

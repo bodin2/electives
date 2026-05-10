@@ -35,33 +35,33 @@ import th.ac.bodin2.electives.db.models.Students
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.*
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.challengeResponse
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.listElectivesEnrolledCounts
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.listTeamsResponse
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.groupMemberCounts
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.listEnrollmentsEnrolledCounts
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.listGroupsResponse
 import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.subjectElectiveIds
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.teamMemberCounts
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.subjectEnrollmentIds
 import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
-import th.ac.bodin2.electives.proto.api.ElectivesServiceKt.listSubjectsResponse
+import th.ac.bodin2.electives.proto.api.EnrollmentsServiceKt.listSubjectsResponse
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.ListElectivesEnrolledCountsKt.counts as electiveCounts
+import th.ac.bodin2.electives.proto.api.AdminServiceKt.ListEnrollmentsEnrolledCountsKt.counts as enrollmentCounts
 
 val adminController = controller {
     val usersService: UsersService by dependencies
-    val electiveSelectionService: ElectiveSelectionService by dependencies
-    val electiveService: ElectiveService by dependencies
+    val enrollmentSelectionService: EnrollmentSelectionService by dependencies
+    val enrollmentService: EnrollmentService by dependencies
     val subjectService: SubjectService by dependencies
-    val teamService: TeamService by dependencies
+    val groupService: GroupService by dependencies
 
     listOf(
         adminAuthController,
         AdminUsersController(usersService),
-        AdminUsersSelectionsController(electiveSelectionService),
-        AdminElectivesController(electiveService, teamService),
-        AdminElectivesSubjectsController(electiveService),
+        AdminUsersSelectionsController(enrollmentSelectionService),
+        AdminEnrollmentsController(enrollmentService, groupService),
+        AdminEnrollmentsSubjectsController(enrollmentService),
         AdminSubjectsController(subjectService),
-        AdminTeamsController(teamService),
+        AdminGroupsController(groupService),
     ).forEach { ctl -> ctl.apply { this@controller.register() } }
 
     routing {
@@ -184,7 +184,7 @@ class AdminUsersController(
                         lastName = if (user.hasLastName()) user.lastName else null,
                         password = req.password,
                         avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,
-                        teams = req.teamIdsList.ifEmpty { null }
+                        groups = req.groupIdsList.ifEmpty { null }
                     )
 
                     UserType.TEACHER -> usersService.createTeacher(
@@ -212,7 +212,7 @@ class AdminUsersController(
         } catch (_: IllegalArgumentException) {
             badRequest("Password does not meet the requirements")
         } catch (_: EntityNotFoundException) {
-            badRequest("One or more specified teams not found")
+            badRequest("One or more specified groups not found")
         } catch (_: ConflictException) {
             conflict("User with the same ID already exists")
         } catch (e: ExposedSQLException) {
@@ -246,7 +246,7 @@ class AdminUsersController(
                         id,
                         UsersService.StudentUpdate(
                             update,
-                            teams = if (req.patchTeams) req.teamsList else null
+                            groups = if (req.patchGroups) req.groupsList else null
                         )
                     ).toProto()
 
@@ -270,7 +270,7 @@ class AdminUsersController(
                 ExceptionEntity.TEACHER,
                 ExceptionEntity.STUDENT -> notFound("User not found")
 
-                ExceptionEntity.TEAM -> badRequest("One or more teams not found")
+                ExceptionEntity.GROUP -> badRequest("One or more groups not found")
 
                 else -> throw e
             }
@@ -329,7 +329,7 @@ class AdminUsersController(
         val studentInserts = inserts[UserType.STUDENT]?.map {
             UsersService.StudentInsert(
                 user = it.toUserInsert(),
-                teams = it.teamIdsList,
+                groups = it.groupIdsList,
             )
         }
 
@@ -360,7 +360,7 @@ class AdminUsersController(
                     is IllegalArgumentException -> badRequest("Password for user ${e.id} does not meet requirements")
                 }
 
-                is UsersService.BatchOperationException.MissingTeams -> badRequest("One or more specified teams not found")
+                is UsersService.BatchOperationException.MissingGroups -> badRequest("One or more specified groups not found")
 
                 is UsersService.BatchOperationException.ConflictingEntities -> conflict("One or more users with the same ID already exists")
 
@@ -384,7 +384,7 @@ class AdminUsersController(
 }
 
 class AdminUsersSelectionsController(
-    private val electiveSelectionService: ElectiveSelectionService,
+    private val enrollmentSelectionService: EnrollmentSelectionService,
 ) : Controller {
     override fun Application.register() {
         adminRoutes {
@@ -398,98 +398,98 @@ class AdminUsersSelectionsController(
 
         try {
             @OptIn(Transactional::class)
-            electiveSelectionService.forceSetAllStudentSelections(id, req.selectionsMap)
+            enrollmentSelectionService.forceSetAllStudentSelections(id, req.selectionsMap)
 
             ok()
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.STUDENT -> notFound("Student not found")
-                ExceptionEntity.ELECTIVE -> badRequest("One or more electives not found")
+                ExceptionEntity.ENROLLMENT -> badRequest("One or more enrollments not found")
                 ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
 
                 else -> throw e
             }
         } catch (_: IllegalArgumentException) {
-            badRequest("One or more subjects are not part of their respective electives")
+            badRequest("One or more subjects are not part of their respective enrollments")
         }
     }
 }
 
-class AdminElectivesController(
-    private val electiveService: ElectiveService,
-    private val teamService: TeamService,
+class AdminEnrollmentsController(
+    private val enrollmentService: EnrollmentService,
+    private val groupService: GroupService,
 ) : Controller {
     override fun Application.register() {
         adminRoutes {
-            get<Admin.Electives.Progress> { params -> handleGetElectivesProgress(params.ids) }
+            get<Admin.Enrollments.Progress> { params -> handleGetEnrollmentsProgress(params.ids) }
 
-            context(electiveService) {
-                put<Admin.Electives.Id> { params -> handlePutElective(params.id) }
+            context(enrollmentService) {
+                put<Admin.Enrollments.Id> { params -> handlePutEnrollment(params.id) }
 
-                delete<Admin.Electives.Id> { params -> handleDeleteElective(params.id) }
+                delete<Admin.Enrollments.Id> { params -> handleDeleteEnrollment(params.id) }
 
-                patch<Admin.Electives.Id> { params -> handlePatchElective(params.id) }
+                patch<Admin.Enrollments.Id> { params -> handlePatchEnrollment(params.id) }
             }
         }
     }
 
-    private suspend fun RoutingContext.handlePutElective(id: Int) {
-        val elective = call.parseOrNull<Elective>()
+    private suspend fun RoutingContext.handlePutEnrollment(id: Int) {
+        val enrollment = call.parseOrNull<Enrollment>()
             ?: return badRequest()
 
-        if (elective.id != id) return badRequest("ID in URL does not match body")
+        if (enrollment.id != id) return badRequest("ID in URL does not match body")
 
         try {
             @OptIn(Transactional::class)
-            electiveService.create(
-                id = elective.id,
-                name = elective.name,
-                team = if (elective.hasTeamId()) elective.teamId else null,
-                startDate = if (elective.hasStartDate()) elective.startDate.secondsToUTCDateTime else null,
-                endDate = if (elective.hasEndDate()) elective.endDate.secondsToUTCDateTime else null
+            enrollmentService.create(
+                id = enrollment.id,
+                name = enrollment.name,
+                group = if (enrollment.hasGroupId()) enrollment.groupId else null,
+                startDate = if (enrollment.hasStartDate()) enrollment.startDate.secondsToUTCDateTime else null,
+                endDate = if (enrollment.hasEndDate()) enrollment.endDate.secondsToUTCDateTime else null
             )
 
             ok()
         } catch (_: EntityNotFoundException) {
-            badRequest("Team not found")
+            badRequest("Group not found")
         } catch (_: ConflictException) {
-            conflict("Elective with the same ID already exists")
+            conflict("Enrollment with the same ID already exists")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
     }
 
-    private suspend fun RoutingContext.handleDeleteElective(id: Int) {
+    private suspend fun RoutingContext.handleDeleteEnrollment(id: Int) {
         try {
             @OptIn(Transactional::class)
-            electiveService.delete(id)
+            enrollmentService.delete(id)
             ok()
         } catch (_: EntityNotFoundException) {
-            notFound("Elective not found")
+            notFound("Enrollment not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
     }
 
-    private suspend fun RoutingContext.handleGetElectivesProgress(idsParam: String) {
+    private suspend fun RoutingContext.handleGetEnrollmentsProgress(idsParam: String) {
         val ids = idsParam.split(",").mapNotNull { it.trim().toIntOrNull() }
         if (ids.isEmpty()) return badRequest()
 
-        call.respond(listElectivesEnrolledCounts {
+        call.respond(listEnrollmentsEnrolledCounts {
             transaction {
                 val totalStudents by lazy { Students.selectAll().count().toInt() }
 
-                for (electiveId in ids) {
-                    val elective = electiveService.getById(electiveId) ?: continue
-                    val enrolledCount = electiveService.getEnrolledCount(electiveId)
-                    val teamId = elective.teamId
-                    val total = if (teamId != null) {
-                        teamService.getMemberCount(teamId.value)
+                for (enrollmentId in ids) {
+                    val enrollment = enrollmentService.getById(enrollmentId) ?: continue
+                    val enrolledCount = enrollmentService.getEnrolledCount(enrollmentId)
+                    val groupId = enrollment.groupId
+                    val total = if (groupId != null) {
+                        groupService.getMemberCount(groupId.value)
                     } else {
                         totalStudents
                     }
 
-                    counts[electiveId] = electiveCounts {
+                    counts[enrollmentId] = enrollmentCounts {
                         this.selected = enrolledCount
                         this.total = total
                     }
@@ -498,16 +498,16 @@ class AdminElectivesController(
         })
     }
 
-    private suspend fun RoutingContext.handlePatchElective(id: Int) {
-        val req = call.parseOrNull<AdminService.ElectivePatch>()
+    private suspend fun RoutingContext.handlePatchEnrollment(id: Int) {
+        val req = call.parseOrNull<AdminService.EnrollmentPatch>()
             ?: return badRequest()
 
-        val update = ElectiveService.ElectiveUpdate(
+        val update = EnrollmentService.EnrollmentUpdate(
             name = if (req.hasName()) req.name else null,
-            team = if (req.hasTeamId()) req.teamId else null,
+            group = if (req.hasGroupId()) req.groupId else null,
             startDate = if (req.hasStartDate()) req.startDate.secondsToUTCDateTime else null,
             endDate = if (req.hasEndDate()) req.endDate.secondsToUTCDateTime else null,
-            setTeam = req.patchTeamId,
+            setGroup = req.patchGroupId,
             setStartDate = req.patchStartDate,
             setEndDate = req.patchEndDate,
         )
@@ -515,13 +515,13 @@ class AdminElectivesController(
         try {
             val proto = transaction {
                 @OptIn(Transactional::class)
-                electiveService.update(id, update).toProto()
+                enrollmentService.update(id, update).toProto()
             }
             call.respond(proto)
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
-                ExceptionEntity.ELECTIVE -> notFound("Elective not found")
-                ExceptionEntity.TEAM -> badRequest("Team not found")
+                ExceptionEntity.ENROLLMENT -> notFound("Enrollment not found")
+                ExceptionEntity.GROUP -> badRequest("Group not found")
 
                 else -> throw e
             }
@@ -531,27 +531,27 @@ class AdminElectivesController(
     }
 }
 
-class AdminElectivesSubjectsController(private val electiveService: ElectiveService) : Controller {
+class AdminEnrollmentsSubjectsController(private val enrollmentService: EnrollmentService) : Controller {
     override fun Application.register() {
         adminRoutes {
-            context(electiveService) {
-                put<Admin.Electives.Id.Subjects> { params -> handlePutElectiveSubjects(params.parent.id) }
+            context(enrollmentService) {
+                put<Admin.Enrollments.Id.Subjects> { params -> handlePutEnrollmentSubjects(params.parent.id) }
             }
         }
     }
 
-    private suspend fun RoutingContext.handlePutElectiveSubjects(electiveId: Int) {
-        val req = call.parseOrNull<AdminService.SetElectiveSubjectsRequest>()
+    private suspend fun RoutingContext.handlePutEnrollmentSubjects(enrollmentId: Int) {
+        val req = call.parseOrNull<AdminService.SetEnrollmentSubjectsRequest>()
             ?: return badRequest()
 
         try {
             @OptIn(Transactional::class)
-            electiveService.setSubjects(electiveId, req.subjectIdsList)
+            enrollmentService.setSubjects(enrollmentId, req.subjectIdsList)
 
             ok()
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
-                ExceptionEntity.ELECTIVE -> notFound("Elective not found")
+                ExceptionEntity.ENROLLMENT -> notFound("Enrollment not found")
                 ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
 
                 else -> throw e
@@ -573,7 +573,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
 
             patch<Admin.Subjects.Id> { params -> handlePatchSubject(params.id) }
 
-            get<Admin.Subjects.Id.ElectiveIds> { params -> handleGetSubjectElectiveIds(params.parent.id) }
+            get<Admin.Subjects.Id.EnrollmentIds> { params -> handleGetSubjectEnrollmentIds(params.parent.id) }
         }
     }
 
@@ -609,7 +609,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
                 tag = subject.tag,
                 location = subject.location,
                 capacity = subject.capacity,
-                team = if (subject.hasTeamId()) subject.teamId else null,
+                group = if (subject.hasGroupId()) subject.groupId else null,
                 thumbnailUrl = if (subject.hasThumbnailUrl()) subject.thumbnailUrl else null,
                 imageUrl = if (subject.hasImageUrl()) subject.imageUrl else null,
             )
@@ -617,7 +617,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             ok()
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
-                ExceptionEntity.TEAM -> badRequest("Team not found")
+                ExceptionEntity.GROUP -> badRequest("Group not found")
                 ExceptionEntity.TEACHER -> badRequest("One or more teachers not found")
 
                 else -> throw e
@@ -650,15 +650,15 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             tag = if (req.hasTag()) req.tag else null,
             capacity = if (req.hasCapacity()) req.capacity else null,
             teacherIds = if (req.patchTeachers) req.teachersList else null,
-            electiveId = if (req.hasElectiveId()) req.electiveId else null,
+            enrollmentId = if (req.hasEnrollmentId()) req.enrollmentId else null,
             description = if (req.hasDescription()) req.description else null,
             code = if (req.hasCode()) req.code else null,
             location = if (req.hasLocation()) req.location else null,
-            team = if (req.hasTeamId()) req.teamId else null,
+            group = if (req.hasGroupId()) req.groupId else null,
             thumbnailUrl = if (req.hasThumbnailUrl()) req.thumbnailUrl else null,
             imageUrl = if (req.hasImageUrl()) req.imageUrl else null,
             setCode = req.patchCode,
-            setTeam = req.patchTeamId,
+            setGroup = req.patchGroupId,
             setLocation = req.patchLocation,
             setImageUrl = req.patchImageUrl,
             setDescription = req.patchDescription,
@@ -675,7 +675,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             return when (e.entity) {
                 ExceptionEntity.SUBJECT -> notFound("Subject not found")
                 ExceptionEntity.TEACHER -> badRequest("One or more teachers not found")
-                ExceptionEntity.TEAM -> badRequest("Team not found")
+                ExceptionEntity.GROUP -> badRequest("Group not found")
 
                 else -> throw e
             }
@@ -684,39 +684,44 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
         }
     }
 
-    private suspend fun RoutingContext.handleGetSubjectElectiveIds(id: Int) {
-        val ids = transaction { subjectService.getElectiveIds(id) }
+    private suspend fun RoutingContext.handleGetSubjectEnrollmentIds(id: Int) {
+        val ids = transaction { subjectService.getEnrollmentIds(id) }
             ?: return notFound()
 
-        call.respond(subjectElectiveIds {
-            electiveIds.addAll(ids)
+        call.respond(subjectEnrollmentIds {
+            enrollmentIds.addAll(ids)
         })
     }
 }
 
-class AdminTeamsController(private val teamService: TeamService) : Controller {
+class AdminGroupsController(private val groupService: GroupService) : Controller {
     override fun Application.register() {
         adminRoutes {
-            get<Admin.Teams> { handleGetTeams() }
+            get<Admin.Groups> { handleGetGroups() }
 
-            get<Admin.Teams.Id> { params -> handleGetTeam(params.id) }
+            get<Admin.Groups.Id> { params -> handleGetGroup(params.id) }
 
-            put<Admin.Teams.Id> { params -> handlePutTeam(params.id) }
+            put<Admin.Groups.Id> { params -> handlePutGroup(params.id) }
 
-            delete<Admin.Teams.Id> { params -> handleDeleteTeam(params.id) }
+            delete<Admin.Groups.Id> { params -> handleDeleteGroup(params.id) }
 
-            patch<Admin.Teams.Id> { params -> handlePatchTeam(params.id) }
+            patch<Admin.Groups.Id> { params -> handlePatchGroup(params.id) }
 
-            get<Admin.Teams.MemberCounts> { handleGetTeamMemberCounts() }
+            get<Admin.Groups.MemberCounts> { handleGetGroupMemberCounts() }
 
-            get<Admin.Teams.Id.Members> { params -> handleGetTeamMembers(params.parent.id, params.page, params.query.ifBlank { null }) }
+            get<Admin.Groups.Id.Members> { params ->
+                handleGetGroupMembers(
+                    params.parent.id,
+                    params.page,
+                    params.query.ifBlank { null })
+            }
         }
     }
 
-    private suspend fun RoutingContext.handleGetTeamMembers(teamId: Int, page: Int, query: String?) {
+    private suspend fun RoutingContext.handleGetGroupMembers(groupId: Int, page: Int, query: String?) {
         try {
             call.respond(transaction {
-                val (members, count) = @OptIn(Transactional::class) teamService.getMembers(teamId, page, query)
+                val (members, count) = @OptIn(Transactional::class) groupService.getMembers(groupId, page, query)
 
                 listUsersResponse {
                     users += members.map { it.toProto() }
@@ -724,71 +729,71 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
                 }
             })
         } catch (_: EntityNotFoundException) {
-            notFound("Team not found")
+            notFound("Group not found")
         }
     }
 
-    private suspend fun RoutingContext.handleGetTeams() {
-        call.respond(listTeamsResponse {
+    private suspend fun RoutingContext.handleGetGroups() {
+        call.respond(listGroupsResponse {
             transaction {
-                teams += teamService.getAll().map { it.toProto() }
+                groups += groupService.getAll().map { it.toProto() }
             }
         })
     }
 
-    private suspend fun RoutingContext.handleGetTeam(id: Int) {
-        val response = transaction { teamService.getById(id)?.toProto() }
+    private suspend fun RoutingContext.handleGetGroup(id: Int) {
+        val response = transaction { groupService.getById(id)?.toProto() }
             ?: return notFound()
 
         call.respond(response)
     }
 
-    private suspend fun RoutingContext.handlePutTeam(id: Int) {
-        val team = call.parseOrNull<Team>()
+    private suspend fun RoutingContext.handlePutGroup(id: Int) {
+        val group = call.parseOrNull<Group>()
             ?: return badRequest()
 
-        if (team.id != id) return badRequest("ID in URL does not match body")
+        if (group.id != id) return badRequest("ID in URL does not match body")
 
         try {
             @OptIn(Transactional::class)
-            teamService.create(team.id, team.name)
+            groupService.create(group.id, group.name)
             ok()
         } catch (_: ConflictException) {
-            conflict("Team with the same ID already exists")
+            conflict("Group with the same ID already exists")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
     }
 
-    private suspend fun RoutingContext.handleDeleteTeam(id: Int) {
+    private suspend fun RoutingContext.handleDeleteGroup(id: Int) {
         try {
             @OptIn(Transactional::class)
-            teamService.delete(id)
+            groupService.delete(id)
             ok()
         } catch (_: EntityNotFoundException) {
-            notFound("Team not found")
+            notFound("Group not found")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }
     }
 
-    private suspend fun RoutingContext.handlePatchTeam(id: Int) {
-        val req = call.parseOrNull<AdminService.TeamPatch>()
+    private suspend fun RoutingContext.handlePatchGroup(id: Int) {
+        val req = call.parseOrNull<AdminService.GroupPatch>()
             ?: return badRequest()
 
-        val update = TeamService.TeamUpdate(
+        val update = GroupService.GroupUpdate(
             name = if (req.hasName()) req.name else null,
         )
 
         try {
             val proto = transaction {
                 @OptIn(Transactional::class)
-                teamService.update(id, update).toProto()
+                groupService.update(id, update).toProto()
             }
             call.respond(proto)
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
-                ExceptionEntity.TEAM -> notFound("Team not found")
+                ExceptionEntity.GROUP -> notFound("Group not found")
 
                 else -> throw e
             }
@@ -797,9 +802,9 @@ class AdminTeamsController(private val teamService: TeamService) : Controller {
         }
     }
 
-    private suspend fun RoutingContext.handleGetTeamMemberCounts() {
-        call.respond(teamMemberCounts {
-            val counts = transaction { teamService.getMemberCounts() }
+    private suspend fun RoutingContext.handleGetGroupMemberCounts() {
+        call.respond(groupMemberCounts {
+            val counts = transaction { groupService.getMemberCounts() }
             memberCounts.putAll(counts)
         })
     }
@@ -843,46 +848,46 @@ private class Admin {
         }
     }
 
-    @Resource("electives")
-    class Electives(val parent: Admin) {
-        // GET: ListElectivesEnrolledCounts
+    @Resource("enrollments")
+    class Enrollments(val parent: Admin) {
+        // GET: ListEnrollmentsEnrolledCounts
         @Resource("progress")
-        class Progress(val parent: Electives, val ids: String)
+        class Progress(val parent: Enrollments, val ids: String)
 
-        // PUT: Elective, DELETE, PATCH: ElectivePatch
+        // PUT: Enrollment, DELETE, PATCH: EnrollmentPatch
         @Resource("{id}")
-        class Id(val parent: Electives, val id: Int) {
+        class Id(val parent: Enrollments, val id: Int) {
             // GET, PUT
             @Resource("subjects")
             class Subjects(val parent: Id)
         }
     }
 
-    // GET: ElectivesService.ListSubjectsResponse
+    // GET: EnrollmentsService.ListSubjectsResponse
     @Resource("subjects")
     class Subjects(val parent: Admin) {
         // PUT: Subject, GET: Subject, DELETE, PATCH: SubjectPatch
         @Resource("{id}")
         class Id(val parent: Subjects, val id: Int) {
-            @Resource("elective-ids")
-            class ElectiveIds(val parent: Id)
+            @Resource("enrollment-ids")
+            class EnrollmentIds(val parent: Id)
         }
     }
 
-    // GET: ListTeamsResponse
-    @Resource("teams")
-    class Teams(val parent: Admin) {
-        // PUT: Team, GET: Team, DELETE, PATCH: TeamPatch
+    // GET: ListGroupsResponse
+    @Resource("groups")
+    class Groups(val parent: Admin) {
+        // PUT: Group, GET: Group, DELETE, PATCH: GroupPatch
         @Resource("{id}")
-        class Id(val parent: Teams, val id: Int) {
+        class Id(val parent: Groups, val id: Int) {
             // GET: ListUsersResponse
             @Resource("members")
             class Members(val parent: Id, val page: Int = 1, val query: String = "")
         }
 
-        // GET: TeamMemberCounts
+        // GET: GroupMemberCounts
         @Resource("member-counts")
-        class MemberCounts(val parent: Teams)
+        class MemberCounts(val parent: Groups)
     }
 }
 

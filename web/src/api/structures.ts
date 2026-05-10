@@ -1,23 +1,23 @@
-import { type RawElective, type RawSubject, type RawTeam, type RawUser, type SubjectTag, UserType } from './types'
+import { type RawEnrollment, type RawGroup, type RawSubject, type RawUser, type SubjectTag, UserType } from './types'
 import type { Client } from './client'
 
-export class Team {
+export class Group {
     id: number
     name: string
     readonly client: Client<unknown>
 
-    constructor(client: Client<unknown>, data: RawTeam) {
+    constructor(client: Client<unknown>, data: RawGroup) {
         this.client = client
         this.id = data.id
         this.name = data.name
     }
 
-    update(data: Partial<RawTeam>) {
+    update(data: Partial<RawGroup>) {
         if (data.id !== undefined) this.id = data.id
         if (data.name !== undefined) this.name = data.name
     }
 
-    toJSON(): RawTeam {
+    toJSON(): RawGroup {
         return {
             id: this.id,
             name: this.name,
@@ -34,8 +34,8 @@ export class User {
     type: UserType
     /** The user's avatar as bytes (optional) */
     avatarUrl?: string
-    /** Teams the user belongs to (only for students) */
-    teams: Team[]
+    /** Groups the user belongs to (only for students) */
+    groups: Group[]
 
     readonly client: Client<unknown>
 
@@ -48,7 +48,7 @@ export class User {
         this.lastName = data.lastName
         this.type = data.type
         this.avatarUrl = data.avatarUrl
-        this.teams = (data.teams ?? []).map(t => client.teams._getOrCreate(t)).sort((a, b) => a.id - b.id)
+        this.groups = (data.groups ?? []).map(g => client.groups._getOrCreate(g)).sort((a, b) => a.id - b.id)
     }
 
     /**
@@ -89,10 +89,10 @@ export class User {
     }
 
     /**
-     * Check if the user belongs to a specific team
+     * Check if the user belongs to a specific group
      */
-    hasTeam(teamId: number): boolean {
-        return this.teams.some(t => t.id === teamId)
+    hasGroup(groupId: number): boolean {
+        return this.groups.some(g => g.id === groupId)
     }
 
     /**
@@ -108,8 +108,8 @@ export class User {
         if (data.lastName !== undefined) this.lastName = data.lastName
         if (data.type !== undefined) this.type = data.type
         if (data.avatarUrl !== undefined) this.avatarUrl = data.avatarUrl
-        if (data.teams !== undefined)
-            this.teams = data.teams.map(t => this.client.teams._getOrCreate(t)).sort((a, b) => a.id - b.id)
+        if (data.groups !== undefined)
+            this.groups = data.groups.map(g => this.client.groups._getOrCreate(g)).sort((a, b) => a.id - b.id)
     }
 
     toJSON(): RawUser {
@@ -121,32 +121,32 @@ export class User {
             lastName: this.lastName,
             type: this.type,
             avatarUrl: this.avatarUrl,
-            teams: this.teams.map(t => t.toJSON()),
+            groups: this.groups.map(g => g.toJSON()),
         }
     }
 }
 
-export class Elective {
+export class Enrollment {
     id: number
     name: string
     startDate?: Date
     endDate?: Date
-    readonly teamId: number | null
-    /** Subjects within this elective. `null` if not fetched. */
+    readonly groupId: number | null
+    /** Subjects within this enrollment. `null` if not fetched. */
     subjects: Subject[] | null = null
 
     readonly client: Client<unknown>
 
-    constructor(client: Client<unknown>, data: RawElective) {
+    constructor(client: Client<unknown>, data: RawEnrollment) {
         this.client = client
         this.id = data.id
         this.name = data.name
         this.startDate = data.startDate ? new Date(data.startDate * 1000) : undefined
         this.endDate = data.endDate ? new Date(data.endDate * 1000) : undefined
-        this.teamId = data.teamId ?? null
+        this.groupId = data.groupId ?? null
     }
 
-    update(data: Partial<RawElective>): void {
+    update(data: Partial<RawEnrollment>): void {
         if (data.name !== undefined) this.name = data.name
         if (data.startDate !== undefined) this.startDate = data.startDate ? new Date(data.startDate * 1000) : undefined
         if (data.endDate !== undefined) this.endDate = data.endDate ? new Date(data.endDate * 1000) : undefined
@@ -192,13 +192,13 @@ export class Elective {
         return Math.max(0, diff)
     }
 
-    toJSON(): RawElective {
+    toJSON(): RawEnrollment {
         return {
             id: this.id,
             name: this.name,
             startDate: this.startDate ? Math.floor(this.startDate.getTime() / 1000) : undefined,
             endDate: this.endDate ? Math.floor(this.endDate.getTime() / 1000) : undefined,
-            teamId: this.teamId ?? undefined,
+            groupId: this.groupId ?? undefined,
         }
     }
 }
@@ -211,7 +211,7 @@ export class Subject {
     tag: SubjectTag
     location: string
     capacity: number
-    teamId?: number
+    groupId?: number
     thumbnailUrl?: string
     imageUrl?: string
 
@@ -226,7 +226,7 @@ export class Subject {
         this.tag = data.tag
         this.location = data.location
         this.capacity = data.capacity
-        this.teamId = data.teamId
+        this.groupId = data.groupId
         this.thumbnailUrl = data.thumbnailUrl
         this.imageUrl = data.imageUrl
     }
@@ -244,7 +244,7 @@ export class Subject {
         if (data.tag !== undefined) this.tag = data.tag
         if (data.location !== undefined) this.location = data.location
         if (data.capacity !== undefined) this.capacity = data.capacity
-        if (data.teamId !== undefined) this.teamId = data.teamId
+        if (data.groupId !== undefined) this.groupId = data.groupId
         if (data.thumbnailUrl !== undefined) this.thumbnailUrl = data.thumbnailUrl
         if (data.imageUrl !== undefined) this.imageUrl = data.imageUrl
     }
@@ -252,7 +252,7 @@ export class Subject {
     canUserEnroll(user: User): boolean {
         if (!user.isStudent()) return false
 
-        if (this.teamId != null && !user.hasTeam(this.teamId)) {
+        if (this.groupId != null && !user.hasGroup(this.groupId)) {
             return false
         }
 
@@ -271,7 +271,7 @@ export class Subject {
             tag: this.tag,
             location: this.location,
             capacity: this.capacity,
-            teamId: this.teamId,
+            groupId: this.groupId,
             teachers: [],
             thumbnailUrl: this.thumbnailUrl,
             imageUrl: this.imageUrl,

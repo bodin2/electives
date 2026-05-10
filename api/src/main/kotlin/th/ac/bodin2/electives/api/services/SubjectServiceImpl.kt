@@ -9,11 +9,11 @@ import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
+import th.ac.bodin2.electives.db.Group
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
-import th.ac.bodin2.electives.db.Team
 import th.ac.bodin2.electives.db.exists
-import th.ac.bodin2.electives.db.models.ElectiveSubjects
+import th.ac.bodin2.electives.db.models.EnrollmentSubjects
 import th.ac.bodin2.electives.db.models.Subjects
 import th.ac.bodin2.electives.db.models.TeacherSubjects
 import th.ac.bodin2.electives.proto.api.SubjectTag
@@ -28,7 +28,7 @@ class SubjectServiceImpl : SubjectService {
         tag: SubjectTag,
         location: String?,
         capacity: Int,
-        team: Int?,
+        group: Int?,
         thumbnailUrl: String?,
         imageUrl: String?,
     ) = transaction {
@@ -42,9 +42,9 @@ class SubjectServiceImpl : SubjectService {
             if (location != null) it[this.location] = location
             if (thumbnailUrl != null) it[this.thumbnailUrl] = thumbnailUrl
             if (imageUrl != null) it[this.imageUrl] = imageUrl
-            if (team != null) {
-                if (!Team.exists(team)) throw EntityNotFoundException(ExceptionEntity.TEAM)
-                it[this.team] = team
+            if (group != null) {
+                if (!Group.exists(group)) throw EntityNotFoundException(ExceptionEntity.GROUP)
+                it[this.group] = group
             }
         }
 
@@ -69,11 +69,11 @@ class SubjectServiceImpl : SubjectService {
 
         val subject = try {
             val rows = Subjects.updateReturning(where = { Subjects.id eq id }) {
-                if (update.setTeam) {
-                    if (update.team != null && !Team.exists(update.team)) throw EntityNotFoundException(
-                        ExceptionEntity.TEAM
+                if (update.setGroup) {
+                    if (update.group != null && !Group.exists(update.group)) throw EntityNotFoundException(
+                        ExceptionEntity.GROUP
                     )
-                    it[team] = update.team
+                    it[group] = update.group
                 }
 
                 update.name?.let { name -> it[this.name] = name }
@@ -94,18 +94,18 @@ class SubjectServiceImpl : SubjectService {
             Subject.findById(id)!!
         }
 
-        if (update.teacherIds != null && update.electiveId != null) {
+        if (update.teacherIds != null && update.enrollmentId != null) {
             val teacherIds = update.teacherIds.distinct()
             teacherIds.forEach { Teacher.assertExists(it) }
 
             TeacherSubjects.deleteWhere {
-                (TeacherSubjects.subject eq id) and (TeacherSubjects.elective eq update.electiveId)
+                (TeacherSubjects.subject eq id) and (TeacherSubjects.enrollment eq update.enrollmentId)
             }
 
             TeacherSubjects.batchInsert(teacherIds) { teacherId ->
                 this[TeacherSubjects.teacher] = teacherId
                 this[TeacherSubjects.subject] = id
-                this[TeacherSubjects.elective] = update.electiveId
+                this[TeacherSubjects.enrollment] = update.enrollmentId
             }
         }
 
@@ -119,16 +119,16 @@ class SubjectServiceImpl : SubjectService {
     override fun getTeacherSubjects(teacherId: Int): Map<Int, Subject> {
         Teacher.assertExists(teacherId)
         return (TeacherSubjects innerJoin Subjects)
-            .select(Subjects.columns + TeacherSubjects.elective)
+            .select(Subjects.columns + TeacherSubjects.enrollment)
             .where { TeacherSubjects.teacher eq teacherId }
-            .associate { it[TeacherSubjects.elective].value to Subject.wrapRow(it) }
+            .associate { it[TeacherSubjects.enrollment].value to Subject.wrapRow(it) }
     }
 
-    override fun getElectiveIds(subjectId: Int): List<Int>? {
+    override fun getEnrollmentIds(subjectId: Int): List<Int>? {
         if (!Subject.exists(subjectId)) return null
 
-        return ElectiveSubjects
-            .selectAll().where { ElectiveSubjects.subject eq subjectId }
-            .map { it[ElectiveSubjects.elective].value }
+        return EnrollmentSubjects
+            .selectAll().where { EnrollmentSubjects.subject eq subjectId }
+            .map { it[EnrollmentSubjects.enrollment].value }
     }
 }

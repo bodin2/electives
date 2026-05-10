@@ -1,17 +1,17 @@
-import { Team as TeamProto, User } from '@bodin2/electives-common/proto/api'
+import { Group as GroupProto, User } from '@bodin2/electives-common/proto/api'
 import { inferSchema, initParser } from 'udsv'
 import { AdminAddUserRequest, type UserType } from '../api/types'
-import type { Team } from '../api'
+import type { Group } from '../api'
 
 /**
  * Parse a CSV file into AdminAddUserRequest objects.
  *
  * @param text The CSV text content
  * @param type The user type to assign
- * @param cachedTeams A cached list of teams for rendering data
+ * @param cachedGroups A cached list of groups for rendering data
  * @returns An array of user creation requests
  */
-export function parseUserCSV(text: string, type: UserType, cachedTeams?: Team[]): AdminAddUserRequest[] {
+export function parseUserCSV(text: string, type: UserType, cachedGroups?: Group[]): AdminAddUserRequest[] {
     const parser = initParser(inferSchema(text, { trim: true }))
     const rows = parser.stringObjs<{ [header: string]: string }>(text)
 
@@ -22,11 +22,11 @@ export function parseUserCSV(text: string, type: UserType, cachedTeams?: Team[])
 
         const user = User.create({
             type,
-            teams: [],
+            groups: [],
         })
 
         const req = AdminAddUserRequest.create({
-            teamIds: [],
+            groupIds: [],
             password: '',
         })
 
@@ -54,22 +54,22 @@ export function parseUserCSV(text: string, type: UserType, cachedTeams?: Team[])
                 case 'password':
                     req.password = value
                     break
-                case 'teams':
-                case 'team_ids': {
-                    const teamIdStrings = value.split(',')
-                    const teamIds: number[] = []
-                    for (let k = 0; k < teamIdStrings.length; k++) {
-                        const id = Number.parseInt(teamIdStrings[k].trim(), 10)
+                case 'groups':
+                case 'group_ids': {
+                    const groupIdStrings = value.split(',')
+                    const groupIds: number[] = []
+                    for (let k = 0; k < groupIdStrings.length; k++) {
+                        const id = Number.parseInt(groupIdStrings[k].trim(), 10)
                         if (!Number.isNaN(id)) {
-                            const team = cachedTeams?.find(team => team.id === id)
-                            if (team) {
-                                user.teams.push(TeamProto.fromJSON(team))
+                            const group = cachedGroups?.find(group => group.id === id)
+                            if (group) {
+                                user.groups.push(GroupProto.fromJSON(group))
                             }
 
-                            teamIds.push(id)
+                            groupIds.push(id)
                         }
                     }
-                    req.teamIds = teamIds
+                    req.groupIds = groupIds
                     break
                 }
             }

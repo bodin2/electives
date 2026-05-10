@@ -4,12 +4,13 @@ import KBArrowUpIcon from '@iconify-icons/mdi/keyboard-arrow-up'
 import { Button } from 'm3-solid'
 import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
+import { nonNull } from '../../utils'
 import { createHashFromString, seededShuffle } from '../../utils/random'
 import { HStack, VStack } from '../Stack'
 import styles from './SubjectCategorySection.module.css'
 import SubjectListItem from './SubjectListItem'
 import type { LinkProps } from '@tanstack/solid-router'
-import type { Elective, Subject } from '../../api'
+import type { Enrollment, Subject } from '../../api'
 
 const randomSeed = Math.floor(Math.random() * 2147483647)
 
@@ -20,7 +21,7 @@ interface SubjectCategorySectionProps {
     maxUnexpandedShown: number
     noRandom?: boolean
     editable?: boolean
-    elective?: Elective
+    enrollment?: Enrollment
     itemActions?: (subject: Subject) => JSX.Element
     viewLinkProps?: (subjectId: number) => LinkProps
     selectedIds?: number[]
@@ -83,11 +84,11 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
                         <SubjectListItem
                             subject={subject}
                             editable={props.editable}
-                            electiveId={props.elective?.id}
+                            enrollmentId={props.enrollment?.id}
                             actions={props.itemActions?.(subject)}
                             linkProps={props.viewLinkProps?.(subject.id)}
                             selected={props.selectedIds?.includes(subject.id)}
-                            onClick={props.onSubjectClick && (() => props.onSubjectClick!(subject))}
+                            onClick={props.onSubjectClick && (() => nonNull(props.onSubjectClick)(subject))}
                         />
                     )}
                 </For>

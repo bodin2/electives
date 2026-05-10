@@ -64,13 +64,13 @@ class UsersServiceImplTest : ApplicationTest() {
                 middleName = "Student",
                 lastName = "User",
                 password = "testpass",
-                teams = listOf(TestConstants.Teams.TEAM_1_ID)
+                groups = listOf(TestConstants.Groups.GROUP_1_ID)
             )
 
             assertNotNull(student)
             assertEquals(1010, student.id.value)
             assertEquals("New", student.user.firstName)
-            assertEquals(TestConstants.Teams.TEAM_1_ID, student.teams.first().id.value)
+            assertEquals(TestConstants.Groups.GROUP_1_ID, student.groups.first().id.value)
         }
     }
 
@@ -354,7 +354,7 @@ class UsersServiceImplTest : ApplicationTest() {
                     lastName = null,
                     avatarUrl = null,
                 ),
-                teams = listOf(TestConstants.Teams.TEAM_1_ID)
+                groups = listOf(TestConstants.Groups.GROUP_1_ID)
             )
         )
 
@@ -366,7 +366,7 @@ class UsersServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `update student nonexistent team`() = runTest {
+    fun `update student nonexistent group`() = runTest {
         assertFailsWith<EntityNotFoundException> {
             usersService.updateStudent(
                 Students.JOHN_ID,
@@ -377,7 +377,7 @@ class UsersServiceImplTest : ApplicationTest() {
                         lastName = null,
                         avatarUrl = null,
                     ),
-                    teams = listOf(UNUSED_ID)
+                    groups = listOf(UNUSED_ID)
                 )
             )
         }
@@ -703,11 +703,11 @@ class UsersServiceImplTest : ApplicationTest() {
         val inserts = listOf(
             UsersService.StudentInsert(
                 UsersService.UserData(3001, "Alice", null, "Smith", password = "testpass"),
-                teams = listOf(TestConstants.Teams.TEAM_1_ID)
+                groups = listOf(TestConstants.Groups.GROUP_1_ID)
             ),
             UsersService.StudentInsert(
                 UsersService.UserData(3002, "Bob", null, "Jones", password = "testpass"),
-                teams = emptyList()
+                groups = emptyList()
             ),
         )
 
@@ -720,7 +720,7 @@ class UsersServiceImplTest : ApplicationTest() {
         transaction {
             val alice = usersService.getStudentById(3001)
             assertNotNull(alice)
-            assertEquals(TestConstants.Teams.TEAM_1_ID, alice.teams.first().id.value)
+            assertEquals(TestConstants.Groups.GROUP_1_ID, alice.groups.first().id.value)
         }
     }
 
@@ -731,15 +731,15 @@ class UsersServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `create students batch with missing team throws`() = runTest {
+    fun `create students batch with missing group throws`() = runTest {
         val inserts = listOf(
             UsersService.StudentInsert(
                 UsersService.UserData(3003, "Charlie", password = "testpass"),
-                teams = listOf(UNUSED_ID)
+                groups = listOf(UNUSED_ID)
             )
         )
 
-        val ex = assertFailsWith<UsersService.BatchOperationException.MissingTeams> {
+        val ex = assertFailsWith<UsersService.BatchOperationException.MissingGroups> {
             transaction { usersService.createStudents(inserts) }
         }
         assertTrue(UNUSED_ID in ex.ids)

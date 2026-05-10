@@ -32,7 +32,7 @@ class TestUsersService : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
-        teams: List<Int>?,
+        groups: List<Int>?,
     ) = error("Not testable")
 
     @Transactional

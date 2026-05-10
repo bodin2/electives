@@ -2,17 +2,17 @@ import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
 import { createMemo, createSignal, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import useElectiveOpen from '../../hooks/useElectiveOpen'
+import useEnrollmentOpen from '../../hooks/useEnrollmentOpen'
 import useSubjectFull from '../../hooks/useSubjectFull'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'
 import SubjectEnrollmentFailedDialog from '../dialogs/SubjectEnrollmentFailedDialog'
 import UnenrollDialog from '../dialogs/UnenrollDialog'
-import type { Elective, Subject } from '../../api'
+import type { Enrollment, Subject } from '../../api'
 
 export default function DynamicEnrollButton(props: {
-    elective: Elective
+    enrollment: Enrollment
     subject: Subject
     selectedSubject: Subject | undefined
     class?: string
@@ -23,10 +23,10 @@ export default function DynamicEnrollButton(props: {
     const [error, setError] = createSignal<string | null>(null)
     const [dialogOpen, setDialogOpen] = createSignal(false)
 
-    const electiveOpen = useElectiveOpen(props.elective)
+    const enrollmentOpen = useEnrollmentOpen(props.enrollment)
     const isFull = useSubjectFull(
         () => props.subject,
-        () => props.elective,
+        () => props.enrollment,
     )
 
     const enrollState = () => {
@@ -69,13 +69,13 @@ export default function DynamicEnrollButton(props: {
             <Button
                 class={props.class}
                 {...buttonProps()}
-                disabled={!electiveOpen() || (enrollState() !== EnrollState.EnrolledCurrent && isFull())}
+                disabled={!enrollmentOpen() || (enrollState() !== EnrollState.EnrolledCurrent && isFull())}
                 size="m"
                 onClick={async () => {
                     switch (enrollState()) {
                         case EnrollState.NotEnrolled:
                             try {
-                                await api.client.selections.set('@me', props.elective.id, props.subject.id)
+                                await api.client.selections.set('@me', props.enrollment.id, props.subject.id)
                                 await props.onInvalidate()
                             } catch (e) {
                                 setError(String(e))
@@ -103,7 +103,7 @@ export default function DynamicEnrollButton(props: {
                         setDialogOpen(false)
                         if (removed) await props.onInvalidate()
                     }}
-                    electiveId={props.elective.id}
+                    enrollmentId={props.enrollment.id}
                     selectedSubject={props.selectedSubject}
                 />
                 <SubjectEnrollmentFailedDialog reason={error()} onClose={() => setError(null)} />

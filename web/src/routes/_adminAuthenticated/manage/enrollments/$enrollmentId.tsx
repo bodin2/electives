@@ -2,17 +2,17 @@ import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { createMemo, createSignal } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { ConflictError, Elective, NotFoundError, type RawElective } from '../../../../api'
+import { ConflictError, Enrollment, NotFoundError, type RawEnrollment } from '../../../../api'
 import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
-import ElectiveInfo from '../../../../components/electives/ElectiveInfo'
+import EnrollmentInfo from '../../../../components/electives/EnrollmentInfo'
 import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
-import { electiveQueryOptions, electiveSubjectsQueryOptions } from '../../../../queries/electives'
+import { enrollmentQueryOptions, enrollmentSubjectsQueryOptions } from '../../../../queries/enrollments'
 import { catchErrors } from '../../../../utils/error-component'
 import { simpleXXHash31 } from '../../../../utils/xxhash'
-import type { AdminElectivePatch } from '../../../../api/types'
+import type { AdminEnrollmentPatch } from '../../../../api/types'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/enrollments/$enrollmentId')({
     validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
@@ -28,10 +28,10 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/enrollments/$e
     loader: async ({ params: { enrollmentId }, context: { client, queryClient } }) => {
         if (isNewRoute(enrollmentId)) return
 
-        const electiveIdNum = Number(enrollmentId)
+        const enrollmentIdNum = Number(enrollmentId)
         await Promise.all([
-            queryClient.ensureQueryData(electiveQueryOptions(client, electiveIdNum)),
-            queryClient.ensureQueryData(electiveSubjectsQueryOptions(client, electiveIdNum)),
+            queryClient.ensureQueryData(enrollmentQueryOptions(client, enrollmentIdNum)),
+            queryClient.ensureQueryData(enrollmentSubjectsQueryOptions(client, enrollmentIdNum)),
         ])
     },
 })
@@ -48,45 +48,45 @@ function RouteComponent() {
     const { string } = useI18n()
     const qc = useQueryClient()
 
-    const electiveQuery = createQuery(() => ({
-        ...electiveQueryOptions(client, Number(params().enrollmentId)),
+    const enrollmentQuery = createQuery(() => ({
+        ...enrollmentQueryOptions(client, Number(params().enrollmentId)),
         enabled: !isNew(),
     }))
 
-    const [electiveData, setElectiveData] = createSignal<RawElective>(
-        electiveQuery.data?.toJSON() ?? {
+    const [enrollmentData, setEnrollmentData] = createSignal<RawEnrollment>(
+        enrollmentQuery.data?.toJSON() ?? {
             id: -1,
             name: string.NEW_ENROLLMENT_NAME(),
-            teamId: undefined,
+            groupId: undefined,
         },
     )
 
-    const elective = createMemo(() => new Elective(client, electiveData()))
+    const enrollment = createMemo(() => new Enrollment(client, enrollmentData()))
 
     const [confirmDeleteOpen, setConfirmDeleteOpen] = createSignal(false)
 
-    const invalidate = () => qc.invalidateQueries({ queryKey: ['electives'] })
+    const invalidate = () => qc.invalidateQueries({ queryKey: ['enrollments'] })
 
     const handleEdit = async (key: string, val: unknown, patchKey?: string) => {
         if (isNew()) {
-            setElectiveData({ ...electiveData(), [key]: val })
+            setEnrollmentData({ ...enrollmentData(), [key]: val })
         } else {
-            const patch: AdminElectivePatch = {
+            const patch: AdminEnrollmentPatch = {
                 patchStartDate: false,
                 patchEndDate: false,
-                patchTeamId: false,
+                patchGroupId: false,
             }
 
             // @ts-expect-error
-            patch[key as keyof AdminElectivePatch] = val ?? undefined
+            patch[key as keyof AdminEnrollmentPatch] = val ?? undefined
             if (patchKey) {
                 // @ts-expect-error
-                patch[patchKey as keyof AdminElectivePatch] = true
+                patch[patchKey as keyof AdminEnrollmentPatch] = true
             }
 
             try {
-                await client.electives.admin.patch(elective().id, patch)
-                setElectiveData({ ...electiveData(), [key]: val })
+                await client.enrollments.admin.patch(enrollment().id, patch)
+                setEnrollmentData({ ...enrollmentData(), [key]: val })
                 await invalidate()
             } catch (e) {
                 console.error(e)
@@ -96,15 +96,15 @@ function RouteComponent() {
     }
 
     const handleCreate = async () => {
-        const s = electiveData()
+        const s = enrollmentData()
 
         while (true) {
             if (s.id < 0)
                 s.id = simpleXXHash31(`${s.name}:${performance.now()}`, Math.floor(Math.random() * 0x7fffffff))
 
             try {
-                await client.electives.admin.put(s.id, s)
-                await client.electives.fetchAll({ force: true })
+                await client.enrollments.admin.put(s.id, s)
+                await client.enrollments.fetchAll({ force: true })
                 await invalidate()
 
                 navigate({
@@ -117,15 +117,15 @@ function RouteComponent() {
                 if (e instanceof ConflictError) continue
 
                 console.error(e)
-                alert(`Failed to create elective: ${String(e)}`)
+                alert(`Failed to create enrollment: ${String(e)}`)
                 break
             }
         }
     }
 
     const doDelete = async () => {
-        await client.electives.admin.delete(elective().id)
-        await qc.removeQueries({ queryKey: ['electives', elective().id] })
+        await client.enrollments.admin.delete(enrollment().id)
+        await qc.removeQueries({ queryKey: ['enrollments', enrollment().id] })
         await invalidate()
         await navigate({ to: '..' })
     }
@@ -135,10 +135,15 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={isNew() ? string.CREATE_ENROLLMENT() : elective().name} allowBacking leading={null} trailing={null}>
-            <ElectiveInfo
+        <Page
+            name={isNew() ? string.CREATE_ENROLLMENT() : enrollment().name}
+            allowBacking
+            leading={null}
+            trailing={null}
+        >
+            <EnrollmentInfo
                 creating={isNew()}
-                elective={elective()}
+                enrollment={enrollment()}
                 editable
                 onEdit={handleEdit}
                 onSave={isNew() ? handleCreate : undefined}
@@ -151,10 +156,10 @@ function RouteComponent() {
                     closedBy="any"
                     onCancel={() => setConfirmDeleteOpen(false)}
                     onConfirm={doDelete}
-                    confirmText={string.DELETE_USER()}
-                    headline={string.DELETE_USER()}
+                    confirmText={string.DELETE_ENROLLMENT()}
+                    headline={string.DELETE_ENROLLMENT()}
                 >
-                    <p>{string.CONFIRM_DELETE_ENROLLMENT({ name: <strong>{elective().name}</strong> })}</p>
+                    <p>{string.CONFIRM_DELETE_ENROLLMENT({ name: <strong>{enrollment().name}</strong> })}</p>
                 </ConfirmDialog>
             </Portal>
         </Page>

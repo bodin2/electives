@@ -19,12 +19,12 @@ import SubjectBottomActions from './SubjectBottomActions'
 import SubjectDetailsTab from './SubjectDetailsTab'
 import styles from './SubjectInfo.module.css'
 import SubjectMembersTab from './SubjectMembersTab'
-import type { Elective, Subject, User } from '../../api'
+import type { Enrollment, Subject, User } from '../../api'
 import type { PatchSetterKey } from './SubjectDisplayContext'
 
 export interface SubjectInfoProps {
     subject: Subject
-    elective?: Elective
+    enrollment?: Enrollment
     user?: User
     editable?: boolean
     onEdit?: (field: string, value: any, patchKey?: PatchSetterKey) => Promise<void> | void
@@ -33,14 +33,14 @@ export interface SubjectInfoProps {
     studentRemoveDisabled?: boolean
     onTeacherRemove?: (teacher: User) => Promise<void> | void
     creating?: boolean
-    extraActions?: Component<{ subject: Subject; elective?: Elective }>
+    extraActions?: Component<{ subject: Subject; enrollment?: Enrollment }>
     persistTab?: boolean
     teachers?: User[]
 }
 
 interface SubjectInfoContext {
     subject: Subject
-    elective?: Elective
+    enrollment?: Enrollment
     user?: User
     editable?: boolean
     onEdit?: (field: string, value: any, patchKey?: PatchSetterKey) => Promise<void> | void
@@ -63,7 +63,7 @@ export default function SubjectInfo(props: SubjectInfoProps) {
     createRenderEffect(() => {
         setInfo({
             subject: props.subject,
-            elective: props.elective,
+            enrollment: props.enrollment,
             user: props.user,
             editable: props.editable,
             onEdit: props.onEdit,
@@ -105,7 +105,7 @@ export default function SubjectInfo(props: SubjectInfoProps) {
 
             <SubjectBottomActions>
                 {props.extraActions
-                    ? nonNull(props.extraActions)({ subject: props.subject, elective: props.elective })
+                    ? nonNull(props.extraActions)({ subject: props.subject, enrollment: props.enrollment })
                     : undefined}
             </SubjectBottomActions>
         </SubjectInfoContext.Provider>

@@ -98,7 +98,7 @@ export class UserManager implements CacheableManager {
     }
 
     /**
-     * Fetch subjects that a teacher is assigned to, grouped by elective
+     * Fetch subjects that a teacher is assigned to, grouped by enrollment
      *
      * @param userId The user's ID, or "@me" for the authenticated user
      */
@@ -109,9 +109,9 @@ export class UserManager implements CacheableManager {
         })
 
         const subjects = new Map<number, Subject>()
-        for (const [electiveIdStr, rawSubject] of Object.entries(data.subjects)) {
-            const electiveId = Number.parseInt(electiveIdStr, 10)
-            subjects.set(electiveId, this.client.subjects._getOrCreate(rawSubject))
+        for (const [enrollmentIdStr, rawSubject] of Object.entries(data.subjects)) {
+            const enrollmentId = Number.parseInt(enrollmentIdStr, 10)
+            subjects.set(enrollmentId, this.client.subjects._getOrCreate(rawSubject))
         }
 
         return subjects

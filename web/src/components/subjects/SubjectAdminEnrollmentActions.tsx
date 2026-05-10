@@ -3,43 +3,43 @@ import { createEffect, createSignal, For, on, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'
-import AddSubjectToElectiveDialog from '../dialogs/AddSubjectToElectiveDialog'
-import RemoveSubjectFromElectiveDialog from '../dialogs/RemoveSubjectFromElectiveDialog'
+import AddSubjectToEnrollmentDialog from '../dialogs/AddSubjectToEnrollmentDialog'
+import RemoveSubjectFromEnrollmentDialog from '../dialogs/RemoveSubjectFromEnrollmentDialog'
 import { Option, Select } from '../Select'
 import { HStack } from '../Stack'
-import type { Elective, Subject } from '../../api'
+import type { Enrollment, Subject } from '../../api'
 
 export default function SubjectAdminEnrollmentActions(props: {
     subject: Subject
-    elective?: Elective
-    allElectives: Elective[]
-    addedElectives: Elective[]
-    setElectiveId: (id?: number) => void
+    enrollment?: Enrollment
+    allEnrollments: Enrollment[]
+    addedEnrollments: Enrollment[]
+    setEnrollmentId: (id?: number) => void
     onInvalidate: () => Promise<unknown> | unknown
 }) {
     const { string } = useI18n()
-    const [addToElectiveDialogOpen, setAddToElectiveDialogOpen] = createSignal(false)
-    const [removeFromElectiveDialogOpen, setRemoveFromElectiveDialogOpen] = createSignal(false)
-    const [removalElective, setRemovalElective] = createSignal<Elective | undefined>(undefined)
+    const [addToEnrollmentDialogOpen, setAddToEnrollmentDialogOpen] = createSignal(false)
+    const [removeFromEnrollmentDialogOpen, setRemoveFromEnrollmentDialogOpen] = createSignal(false)
+    const [removalEnrollment, setRemovalEnrollment] = createSignal<Enrollment | undefined>(undefined)
 
-    const setSearchElectiveId = async (electiveId?: string | number) => {
-        props.setElectiveId(electiveId !== undefined ? Number(electiveId) : undefined)
+    const setSearchEnrollmentId = async (enrollmentId?: string | number) => {
+        props.setEnrollmentId(enrollmentId !== undefined ? Number(enrollmentId) : undefined)
         await props.onInvalidate()
     }
 
     return (
         <HStack alignVertical="end">
-            <SubjectElectiveSelector
-                elective={props.elective}
-                setElectiveId={props.setElectiveId}
-                addedElectives={props.addedElectives}
-                onAdd={() => setAddToElectiveDialogOpen(true)}
+            <SubjectEnrollmentSelector
+                enrollment={props.enrollment}
+                setEnrollmentId={props.setEnrollmentId}
+                addedEnrollments={props.addedEnrollments}
+                onAdd={() => setAddToEnrollmentDialogOpen(true)}
             />
             <Button
-                disabled={!props.elective}
+                disabled={!props.enrollment}
                 onClick={() => {
-                    setRemovalElective(props.elective)
-                    setRemoveFromElectiveDialogOpen(true)
+                    setRemovalEnrollment(props.enrollment)
+                    setRemoveFromEnrollmentDialogOpen(true)
                 }}
                 size="m"
                 icon={DeleteIcon}
@@ -48,32 +48,34 @@ export default function SubjectAdminEnrollmentActions(props: {
                 aria-label={string.REMOVE_SUBJECT_FROM_ENROLLMENT()}
             />
 
-            <Show when={addToElectiveDialogOpen()}>
+            <Show when={addToEnrollmentDialogOpen()}>
                 <Portal>
-                    <AddSubjectToElectiveDialog
+                    <AddSubjectToEnrollmentDialog
                         subjectId={props.subject.id}
-                        electives={props.allElectives.filter(e => !props.addedElectives.some(el => el.id === e.id))}
-                        open={addToElectiveDialogOpen()}
+                        enrollments={props.allEnrollments.filter(
+                            e => !props.addedEnrollments.some(en => en.id === e.id),
+                        )}
+                        open={addToEnrollmentDialogOpen()}
                         onClose={picked => {
-                            setAddToElectiveDialogOpen(false)
-                            if (picked) setSearchElectiveId(picked.id)
+                            setAddToEnrollmentDialogOpen(false)
+                            if (picked) setSearchEnrollmentId(picked.id)
                         }}
                     />
                 </Portal>
             </Show>
-            <Show when={removalElective()}>
-                {elective => (
+            <Show when={removalEnrollment()}>
+                {enrollment => (
                     <Portal>
-                        <RemoveSubjectFromElectiveDialog
+                        <RemoveSubjectFromEnrollmentDialog
                             subject={props.subject}
-                            elective={elective()}
-                            open={removeFromElectiveDialogOpen()}
+                            enrollment={enrollment()}
+                            open={removeFromEnrollmentDialogOpen()}
                             onClose={removed => {
-                                setRemoveFromElectiveDialogOpen(false)
+                                setRemoveFromEnrollmentDialogOpen(false)
                                 if (removed) {
-                                    setSearchElectiveId(undefined)
+                                    setSearchEnrollmentId(undefined)
                                 }
-                                setRemovalElective(undefined)
+                                setRemovalEnrollment(undefined)
                             }}
                         />
                     </Portal>
@@ -83,18 +85,18 @@ export default function SubjectAdminEnrollmentActions(props: {
     )
 }
 
-export function SubjectElectiveSelector(props: {
-    elective?: Elective
-    setElectiveId: (id?: number) => void
-    addedElectives: Elective[]
+export function SubjectEnrollmentSelector(props: {
+    enrollment?: Enrollment
+    setEnrollmentId: (id?: number) => void
+    addedEnrollments: Enrollment[]
     onAdd: () => void
 }) {
     const { string } = useI18n()
 
     createEffect(
-        on([() => props.addedElectives, () => props.elective], ([addedElectives, elective]) => {
-            if (addedElectives.length === 1 && !elective) {
-                props.setElectiveId(addedElectives[0].id)
+        on([() => props.addedEnrollments, () => props.enrollment], ([addedEnrollments, enrollment]) => {
+            if (addedEnrollments.length === 1 && !enrollment) {
+                props.setEnrollmentId(addedEnrollments[0].id)
             }
         }),
     )
@@ -102,26 +104,26 @@ export function SubjectElectiveSelector(props: {
     return (
         <Select
             label={string.ENROLLMENTS()}
-            value={props.elective?.id ?? ''}
+            value={props.enrollment?.id ?? ''}
             onInput={e => {
                 const value = e.currentTarget.value
                 if (value === 'add') {
-                    e.currentTarget.value = props.elective?.id.toString() ?? ''
+                    e.currentTarget.value = props.enrollment?.id.toString() ?? ''
                     props.onAdd()
                     return
                 }
 
-                props.setElectiveId(value ? Number(value) : undefined)
+                props.setEnrollmentId(value ? Number(value) : undefined)
             }}
         >
-            <Option value="" hidden selected={!props.elective}>
+            <Option value="" hidden selected={!props.enrollment}>
                 {string.SELECT_ENROLLMENT()}
             </Option>
             <Option value="add">{string.ADD_ELLIPSIS()}</Option>
-            <For each={props.addedElectives}>
-                {elective => (
-                    <Option value={elective.id} selected={elective.id === props.elective?.id}>
-                        {elective.name}
+            <For each={props.addedEnrollments}>
+                {enrollment => (
+                    <Option value={enrollment.id} selected={enrollment.id === props.enrollment?.id}>
+                        {enrollment.name}
                     </Option>
                 )}
             </For>

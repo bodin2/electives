@@ -1,4 +1,4 @@
-import { AdminService_SubjectElectiveIds } from '@bodin2/electives-common/proto/api'
+import { AdminService_SubjectEnrollmentIds } from '@bodin2/electives-common/proto/api'
 import { Subject, type User } from '../structures'
 import { AdminSubjectPatch, ListSubjectMembersResponse, ListSubjectsResponse, RawSubject } from '../types'
 import type { Cache } from '../cache'
@@ -12,11 +12,12 @@ export interface SubjectMembersResult {
 }
 
 export interface SubjectFetchAllOptions extends FetchOptions {
-    electiveId: number
+    enrollmentId: number
+    withEnrolledCounts?: boolean
 }
 
 export interface SubjectFetchOptions extends FetchOptions {
-    electiveId: number
+    enrollmentId: number
     subjectId: number
     /**
      * Whether to ensure the subject has a description (fetches if cached subject lacks it)
@@ -26,7 +27,7 @@ export interface SubjectFetchOptions extends FetchOptions {
 }
 
 export interface SubjectMembersFetchOptions extends FetchOptions {
-    electiveId: number
+    enrollmentId: number
     subjectId: number
     /**
      * Whether to include students (requires authentication)
@@ -36,19 +37,19 @@ export interface SubjectMembersFetchOptions extends FetchOptions {
 }
 
 export interface EnrolledCountFetchOptions extends FetchOptions {
-    electiveId: number
+    enrollmentId: number
     subjectId: number
 }
 
 export class SubjectManager implements CacheableManager {
     readonly cache: Cache<number, Subject>
-    // Key: "electiveId:subjectId"
+    // Key: "enrollmentId:subjectId"
     readonly enrolledCountCache: Cache<string, number>
-    // Key: "electiveId:subjectId"
+    // Key: "enrollmentId:subjectId"
     readonly teachersCache: Cache<string, User[]>
     readonly admin: SubjectAdminActions
 
-    private readonly electiveSubjectIds = new Map<number, Set<number>>()
+    private readonly enrollmentSubjectIds = new Map<number, Set<number>>()
 
     constructor(
         private readonly client: Client<unknown>,
@@ -67,16 +68,16 @@ export class SubjectManager implements CacheableManager {
         this.cache.clear()
         this.enrolledCountCache.clear()
         this.teachersCache.clear()
-        this.electiveSubjectIds.clear()
+        this.enrollmentSubjectIds.clear()
         this.admin.clearCache()
     }
 
     /**
-     * Clear the cached subject-to-elective mapping for a specific elective,
+     * Clear the cached subject-to-enrollment mapping for a specific enrollment,
      * forcing the next fetch to hit the API.
      */
-    clearElectiveMapping(electiveId: number): void {
-        this.electiveSubjectIds.delete(electiveId)
+    clearEnrollmentMapping(enrollmentId: number): void {
+        this.enrollmentSubjectIds.delete(enrollmentId)
     }
 
     /**
@@ -96,24 +97,24 @@ export class SubjectManager implements CacheableManager {
     /**
      * Get the cache key for an enrolled count entry
      */
-    getEnrolledCountKey(electiveId: number, subjectId: number): string {
-        return `${electiveId}:${subjectId}`
+    getEnrolledCountKey(enrollmentId: number, subjectId: number): string {
+        return `${enrollmentId}:${subjectId}`
     }
 
     /**
-     * Fetch all subjects for an elective
+     * Fetch all subjects for an enrollment
      *
-     * @param options Fetch options including electiveId
+     * @param options Fetch options including enrollmentId
      */
     async fetchAll(options: SubjectFetchAllOptions): Promise<Subject[]> {
-        const { electiveId, force = false, cache = true } = options
+        const { enrollmentId, force = false, cache = true } = options
 
         if (!force) {
-            const cached = this.resolveAll(electiveId)
+            const cached = this.resolveAll(enrollmentId)
             if (cached) return cached
         }
 
-        const data = await this.rest.get<ListSubjectsResponse>(`/electives/${electiveId}/subjects`, {
+        const data = await this.rest.get<ListSubjectsResponse>(`/enrollments/${enrollmentId}/subjects`, {
             decoder: ListSubjectsResponse,
         })
         const subjects = data.subjects.map(s => this._getOrCreate(s, cache))
@@ -126,18 +127,18 @@ export class SubjectManager implements CacheableManager {
                 subjectIds.add(subject.id)
                 if (rawSubject.enrolledCount !== undefined) {
                     this.enrolledCountCache.set(
-                        this.getEnrolledCountKey(electiveId, subject.id),
+                        this.getEnrolledCountKey(enrollmentId, subject.id),
                         rawSubject.enrolledCount,
                     )
                 }
                 if (rawSubject.teachers.length > 0) {
                     this.teachersCache.set(
-                        this.getEnrolledCountKey(electiveId, subject.id),
+                        this.getEnrolledCountKey(enrollmentId, subject.id),
                         rawSubject.teachers.map(t => this.client.users._getOrCreate(t)),
                     )
                 }
             }
-            this.electiveSubjectIds.set(electiveId, subjectIds)
+            this.enrollmentSubjectIds.set(enrollmentId, subjectIds)
         }
 
         return subjects
@@ -146,10 +147,10 @@ export class SubjectManager implements CacheableManager {
     /**
      * Fetch a single subject
      *
-     * @param options Fetch options including electiveId and subjectId
+     * @param options Fetch options including enrollmentId and subjectId
      */
     async fetch(options: SubjectFetchOptions): Promise<Subject> {
-        const { electiveId, subjectId, force = false, cache = true, withDescription = false } = options
+        const { enrollmentId, subjectId, force = false, cache = true, withDescription = false } = options
 
         if (!force) {
             const cached = this.cache.get(subjectId)
@@ -160,7 +161,7 @@ export class SubjectManager implements CacheableManager {
             }
         }
 
-        const data = await this.rest.get<RawSubject>(`/electives/${electiveId}/subjects/${subjectId}`, {
+        const data = await this.rest.get<RawSubject>(`/enrollments/${enrollmentId}/subjects/${subjectId}`, {
             decoder: RawSubject,
         })
 
@@ -168,11 +169,11 @@ export class SubjectManager implements CacheableManager {
 
         if (cache) {
             if (data.enrolledCount !== undefined) {
-                this.enrolledCountCache.set(this.getEnrolledCountKey(electiveId, subject.id), data.enrolledCount)
+                this.enrolledCountCache.set(this.getEnrolledCountKey(enrollmentId, subject.id), data.enrolledCount)
             }
             if (data.teachers.length > 0) {
                 this.teachersCache.set(
-                    this.getEnrolledCountKey(electiveId, subject.id),
+                    this.getEnrolledCountKey(enrollmentId, subject.id),
                     data.teachers.map(t => this.client.users._getOrCreate(t)),
                 )
             }
@@ -182,8 +183,8 @@ export class SubjectManager implements CacheableManager {
     }
 
     async fetchEnrolledCount(options: EnrolledCountFetchOptions): Promise<number> {
-        const { electiveId, subjectId, force = false } = options
-        const key = this.getEnrolledCountKey(electiveId, subjectId)
+        const { enrollmentId, subjectId, force = false } = options
+        const key = this.getEnrolledCountKey(enrollmentId, subjectId)
 
         if (!force) {
             const cached = this.enrolledCountCache.get(key)
@@ -191,7 +192,7 @@ export class SubjectManager implements CacheableManager {
         }
 
         // The enrolled count is included in the subject data
-        await this.fetch({ electiveId, subjectId, force })
+        await this.fetch({ enrollmentId, subjectId, force })
 
         return this.enrolledCountCache.get(key) ?? 0
     }
@@ -202,9 +203,9 @@ export class SubjectManager implements CacheableManager {
      * @param options Fetch options
      */
     async fetchMembers(options: SubjectMembersFetchOptions): Promise<SubjectMembersResult> {
-        const { electiveId, subjectId, withStudents = false, cache = true } = options
+        const { enrollmentId, subjectId, withStudents = false, cache = true } = options
 
-        const key = `${electiveId}:${subjectId}`
+        const key = `${enrollmentId}:${subjectId}`
         const teachersCache = this.teachersCache.get(key)
 
         if (!options.force && !options.withStudents && teachersCache) {
@@ -215,7 +216,7 @@ export class SubjectManager implements CacheableManager {
         }
 
         const data = await this.rest.get<ListSubjectMembersResponse>(
-            `/electives/${electiveId}/subjects/${subjectId}/members`,
+            `/enrollments/${enrollmentId}/subjects/${subjectId}/members`,
             {
                 query: { with_students: withStudents },
                 decoder: ListSubjectMembersResponse,
@@ -243,12 +244,12 @@ export class SubjectManager implements CacheableManager {
     }
 
     /**
-     * Get all subjects for an elective from cache without fetching
+     * Get all subjects for an enrollment from cache without fetching
      *
-     * @param electiveId The elective's ID
+     * @param enrollmentId The enrollment's ID
      */
-    resolveAll(electiveId: number): Subject[] | undefined {
-        const subjectIds = this.electiveSubjectIds.get(electiveId)
+    resolveAll(enrollmentId: number): Subject[] | undefined {
+        const subjectIds = this.enrollmentSubjectIds.get(enrollmentId)
         if (!subjectIds) return undefined
 
         const subjects: Subject[] = []
@@ -261,27 +262,27 @@ export class SubjectManager implements CacheableManager {
 
     /**
      * Get enrolled count from cache without fetching
-     * @param electiveId The elective's ID
+     * @param enrollmentId The enrollment's ID
      * @param subjectId The subject's ID
      */
-    resolveEnrolledCount(electiveId: number, subjectId: number): number | undefined {
-        return this.enrolledCountCache.get(this.getEnrolledCountKey(electiveId, subjectId))
+    resolveEnrolledCount(enrollmentId: number, subjectId: number): number | undefined {
+        return this.enrolledCountCache.get(this.getEnrolledCountKey(enrollmentId, subjectId))
     }
 
     /**
      * Get teachers from cache without fetching
-     * @param electiveId The elective's ID
+     * @param enrollmentId The enrollment's ID
      * @param subjectId The subject's ID
      */
-    resolveTeachers(electiveId: number, subjectId: number): User[] | undefined {
-        return this.teachersCache.get(this.getEnrolledCountKey(electiveId, subjectId))
+    resolveTeachers(enrollmentId: number, subjectId: number): User[] | undefined {
+        return this.teachersCache.get(this.getEnrolledCountKey(enrollmentId, subjectId))
     }
 
     /**
      * Update enrolled count for a subject (used by real-time updates)
      */
-    _updateEnrolledCount(electiveId: number, subjectId: number, count: number): void {
-        this.enrolledCountCache.set(this.getEnrolledCountKey(electiveId, subjectId), count)
+    _updateEnrolledCount(enrollmentId: number, subjectId: number, count: number): void {
+        this.enrolledCountCache.set(this.getEnrolledCountKey(enrollmentId, subjectId), count)
     }
 }
 
@@ -370,8 +371,8 @@ export class SubjectAdminActions {
             encoder: AdminSubjectPatch,
             decoder: RawSubject,
         })
-        if (patch.patchTeachers && patch.electiveId) {
-            this.manager.teachersCache.delete(this.manager.getEnrolledCountKey(patch.electiveId, id))
+        if (patch.patchTeachers && patch.enrollmentId) {
+            this.manager.teachersCache.delete(this.manager.getEnrolledCountKey(patch.enrollmentId, id))
         }
         return this.manager._getOrCreate(data)
     }
@@ -384,7 +385,7 @@ export class SubjectAdminActions {
     async delete(id: number): Promise<void> {
         await this.rest.delete(`/admin/subjects/${id}`)
         this.manager.cache.delete(id)
-        // Clear all elective-specific caches for this subject
+        // Clear all enrollment-specific caches for this subject
         for (const key of this.manager.teachersCache.keys()) {
             if (key.endsWith(`:${id}`)) this.manager.teachersCache.delete(key)
         }
@@ -394,14 +395,14 @@ export class SubjectAdminActions {
     }
 
     /**
-     * Get elective IDs that a subject belongs to
+     * Get enrollment IDs that a subject belongs to
      *
      * @param id The subject's ID
      */
-    async fetchElectiveIds(id: number): Promise<number[]> {
-        const data = await this.rest.get<AdminService_SubjectElectiveIds>(`/admin/subjects/${id}/elective-ids`, {
-            decoder: AdminService_SubjectElectiveIds,
+    async fetchEnrollmentIds(id: number): Promise<number[]> {
+        const data = await this.rest.get<AdminService_SubjectEnrollmentIds>(`/admin/subjects/${id}/enrollment-ids`, {
+            decoder: AdminService_SubjectEnrollmentIds,
         })
-        return data.electiveIds
+        return data.enrollmentIds
     }
 }

@@ -139,7 +139,10 @@ class AdminAuthServiceImpl(
                 if (isAdminResetEnabled()) {
                     logger.warn("Resetting admin user with ID ${config.defaultUserId}")
                     usersService.deleteUser(config.defaultUserId)
-                    throw EntityNotFoundException(ExceptionEntity.USER, "Admin reset, user ${config.defaultUserId} deleted")
+                    throw EntityNotFoundException(
+                        ExceptionEntity.USER,
+                        "Admin reset, user ${config.defaultUserId} deleted"
+                    )
                 }
             } catch (_: EntityNotFoundException) {
                 if (config.defaultUserPublicKey == null) {

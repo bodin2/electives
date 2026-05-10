@@ -8,7 +8,7 @@ import { Portal } from 'solid-js/web'
 import { ConflictError, NotFoundError, type User } from '../../../../api'
 import PaginatedUserList, { type PaginatedUserListHandle } from '../../../../components/admin/PaginatedUserList'
 import { Button } from '../../../../components/Button'
-import AddStudentToTeamDialog from '../../../../components/dialogs/AddStudentToTeamDialog'
+import AddStudentToGroupDialog from '../../../../components/dialogs/AddStudentToGroupDialog'
 import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
 import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
@@ -17,7 +17,7 @@ import StickyTabs from '../../../../components/StickyTabs'
 import { useTabPersistence } from '../../../../hooks/useTabPersistence'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
-import { teamMembersQueryOptions, teamQueryOptions } from '../../../../queries/teams'
+import { groupMembersQueryOptions, groupQueryOptions } from '../../../../queries/groups'
 import { debounce } from '../../../../utils'
 import { catchErrors } from '../../../../utils/error-component'
 import { simpleXXHash31 } from '../../../../utils/xxhash'
@@ -34,8 +34,8 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/groups/$groupI
 
         const groupIdNum = Number(groupId)
         await Promise.all([
-            queryClient.ensureQueryData(teamQueryOptions(client, groupIdNum)),
-            queryClient.prefetchQuery(teamMembersQueryOptions(client, groupIdNum, page)),
+            queryClient.ensureQueryData(groupQueryOptions(client, groupIdNum)),
+            queryClient.prefetchQuery(groupMembersQueryOptions(client, groupIdNum, page)),
         ])
     },
     component: RouteComponent,
@@ -52,8 +52,8 @@ function RouteComponent() {
 
     const isNew = () => isNewRoute(params().groupId)
 
-    const teamQuery = createQuery(() => ({
-        ...teamQueryOptions(client, Number(params().groupId)),
+    const groupQuery = createQuery(() => ({
+        ...groupQueryOptions(client, Number(params().groupId)),
         enabled: !isNew(),
     }))
 
@@ -63,9 +63,9 @@ function RouteComponent() {
 
     const [name, setName] = createSignal('')
 
-    // Reset local signals when team data changes
+    // Reset local signals when group data changes
     createEffect(() => {
-        const t = teamQuery.data
+        const t = groupQuery.data
         if (t) {
             setName(t.name)
         } else if (isNew()) {
@@ -81,15 +81,15 @@ function RouteComponent() {
             try {
                 if (isNew()) {
                     const id = simpleXXHash31(`${trimmed}:${performance.now()}`, Math.floor(Math.random() * 0x7fffffff))
-                    await client.teams.admin.put(id, { id, name: trimmed })
+                    await client.groups.admin.put(id, { id, name: trimmed })
                     // After creating, we should probably navigate to the new ID
                     navigate({ params: { groupId: id.toString() }, search: { page: 1 }, replace: true })
                 } else {
-                    await client.teams.admin.patch(Number(params().groupId), { name: trimmed })
+                    await client.groups.admin.patch(Number(params().groupId), { name: trimmed })
                 }
 
-                await client.teams.fetchAll({ force: true })
-                await qc.invalidateQueries({ queryKey: ['teams'] })
+                await client.groups.fetchAll({ force: true })
+                await qc.invalidateQueries({ queryKey: ['groups'] })
 
                 break
             } catch (e) {
@@ -104,19 +104,19 @@ function RouteComponent() {
     }
 
     const handleDelete = () => {
-        if (!teamQuery.data) return
+        if (!groupQuery.data) return
         setConfirmDeleteOpen(true)
     }
 
     const doDelete = async () => {
-        const team = teamQuery.data
-        if (!team) return
+        const group = groupQuery.data
+        if (!group) return
 
         try {
-            await client.teams.admin.delete(team.id)
-            await client.teams.fetchAll({ force: true })
-            await qc.removeQueries({ queryKey: ['teams', team.id] })
-            await qc.invalidateQueries({ queryKey: ['teams'] })
+            await client.groups.admin.delete(group.id)
+            await client.groups.fetchAll({ force: true })
+            await qc.removeQueries({ queryKey: ['groups', group.id] })
+            await qc.invalidateQueries({ queryKey: ['groups'] })
             navigate({ to: '..', replace: true })
         } catch (e) {
             console.error(e)
@@ -127,7 +127,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={isNew() ? string.CREATE_TEAM() : name()} allowBacking leading={null} trailing={null}>
+        <Page name={isNew() ? string.CREATE_GROUP() : name()} allowBacking leading={null} trailing={null}>
             <Portal>
                 <ConfirmDialog
                     open={confirmDeleteOpen()}
@@ -135,10 +135,10 @@ function RouteComponent() {
                     closedBy="any"
                     onCancel={() => setConfirmDeleteOpen(false)}
                     onConfirm={doDelete}
-                    confirmText={string.DELETE_TEAM()}
-                    headline={string.DELETE_TEAM()}
+                    confirmText={string.DELETE_GROUP()}
+                    headline={string.DELETE_GROUP()}
                 >
-                    <p>{string.CONFIRM_DELETE_TEAM({ name: <strong>{teamQuery.data?.name ?? ''}</strong> })}</p>
+                    <p>{string.CONFIRM_DELETE_GROUP({ name: <strong>{groupQuery.data?.name ?? ''}</strong> })}</p>
                 </ConfirmDialog>
             </Portal>
 
@@ -147,7 +147,7 @@ function RouteComponent() {
                     value={tab()}
                     onChange={setTab}
                     tabs={[
-                        { label: string.TEAM(), value: 'info' },
+                        { label: string.GROUP(), value: 'info' },
                         { label: string.MEMBERS_LIST(), value: 'members' },
                     ]}
                 />
@@ -162,20 +162,20 @@ function RouteComponent() {
                         </Button>
                         <Show when={!isNew()}>
                             <Button variant="tonal-error" onClick={handleDelete}>
-                                {string.DELETE_TEAM()}
+                                {string.DELETE_GROUP()}
                             </Button>
                         </Show>
                     </VStack>
                 </Match>
                 <Match when={tab() === 'members' && !isNew()}>
-                    <TeamMembers />
+                    <GroupMembers />
                 </Match>
             </Switch>
         </Page>
     )
 }
 
-function TeamMembers() {
+function GroupMembers() {
     const search = Route.useSearch()
     const navigate = Route.useNavigate()
     const params = Route.useParams()
@@ -183,43 +183,43 @@ function TeamMembers() {
     const { string } = useI18n()
     const qc = useQueryClient()
 
-    const teamId = () => Number(params().groupId)
+    const groupId = () => Number(params().groupId)
 
     const [query, setQuery] = createSignal<string | undefined>(undefined)
     const [addDialogOpen, setAddDialogOpen] = createSignal(false)
     let listHandle: PaginatedUserListHandle | undefined
 
     const membersQuery = createQuery(() => ({
-        ...teamMembersQueryOptions(client, teamId(), search().page, query()),
+        ...groupMembersQueryOptions(client, groupId(), search().page, query()),
         placeholderData: keepPreviousData,
     }))
     const debouncedSetQuery = createMemo(() => debounce(setQuery, 350))
 
-    const removeUserFromTeam = async (user: User) => {
+    const removeUserFromGroup = async (user: User) => {
         try {
             await client.users.admin.patch(user.id, {
                 patchLastName: false,
                 patchAvatarUrl: false,
                 patchMiddleName: false,
                 patchPrefix: false,
-                patchTeams: true,
-                teams: user.teams.filter(t => t.id !== teamId()).map(t => t.id),
+                patchGroups: true,
+                groups: user.groups.filter(g => g.id !== groupId()).map(g => g.id),
             })
             listHandle?.onUserRemove(user.id)
         } catch (e) {
             console.error(e)
-            alert(`Failed to remove user from team: ${e}`)
+            alert(`Failed to remove user from group: ${e}`)
         }
     }
 
     return (
         <div style={{ '--sticky-offset': '48px' }}>
             <Portal>
-                <AddStudentToTeamDialog
+                <AddStudentToGroupDialog
                     open={addDialogOpen()}
                     onClose={() => setAddDialogOpen(false)}
                     onSuccess={u => listHandle?.onUserAdd(u)}
-                    teamId={teamId()}
+                    groupId={groupId()}
                 />
             </Portal>
             <PaginatedUserList
@@ -230,8 +230,8 @@ function TeamMembers() {
                 data={membersQuery.data}
                 onClick={user => navigate({ to: '/manage/users/$userId', params: { userId: String(user.id) } })}
                 onPageChange={page => navigate({ search: { ...search(), page } })}
-                onPagePreload={page => qc.prefetchQuery(teamMembersQueryOptions(client, teamId(), page))}
-                onRefresh={() => qc.invalidateQueries({ queryKey: ['teams', teamId(), 'members'] })}
+                onPagePreload={page => qc.prefetchQuery(groupMembersQueryOptions(client, groupId(), page))}
+                onRefresh={() => qc.invalidateQueries({ queryKey: ['groups', groupId(), 'members'] })}
                 headerRight={() => (
                     <Button onClick={() => setAddDialogOpen(true)} size="xs" icon={PlusIcon}>
                         {string.ADD_STUDENT()}
@@ -244,7 +244,7 @@ function TeamMembers() {
                         variant="tonal-error"
                         onClick={e => {
                             e.stopPropagation()
-                            return removeUserFromTeam(props.user)
+                            return removeUserFromGroup(props.user)
                         }}
                         icon={CloseIcon}
                         iconType="only"

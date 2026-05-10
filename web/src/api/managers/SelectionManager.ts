@@ -1,4 +1,4 @@
-import { AdminSetStudentSelectionsRequest, SetStudentElectiveSelectionRequest, StudentSelections } from '../types'
+import { AdminSetStudentSelectionsRequest, SetStudentEnrollmentSelectionRequest, StudentSelections } from '../types'
 import type { Cache } from '../cache'
 import type { Client } from '../client'
 import type { RESTClient } from '../rest'
@@ -6,7 +6,7 @@ import type { Subject } from '../structures'
 import type { CacheableManager, FetchOptions } from '.'
 
 export class SelectionManager implements CacheableManager {
-    // Map<UserID, Map<ElectiveID, Subject>>
+    // Map<UserID, Map<EnrollmentID, Subject>>
     readonly cache: Cache<number, Map<number, Subject>>
     readonly admin: SelectionAdminActions
 
@@ -43,9 +43,9 @@ export class SelectionManager implements CacheableManager {
         })
 
         const selections = new Map<number, Subject>()
-        for (const [electiveIdStr, rawSubject] of Object.entries(data.subjects)) {
-            const electiveId = Number.parseInt(electiveIdStr, 10)
-            selections.set(electiveId, this.client.subjects._getOrCreate(rawSubject))
+        for (const [enrollmentIdStr, rawSubject] of Object.entries(data.subjects)) {
+            const enrollmentId = Number.parseInt(enrollmentIdStr, 10)
+            selections.set(enrollmentId, this.client.subjects._getOrCreate(rawSubject))
         }
 
         if (cache) {
@@ -67,29 +67,29 @@ export class SelectionManager implements CacheableManager {
     }
 
     /**
-     * Set a selection for a student in an elective
+     * Set a selection for a student in an enrollment
      *
      * @param userId The user's ID, or "@me" for the authenticated user
-     * @param electiveId The elective ID
+     * @param enrollmentId The enrollment ID
      * @param subjectId The subject ID to select
      */
-    async set(userId: number | '@me', electiveId: number, subjectId: number): Promise<void> {
-        const body: SetStudentElectiveSelectionRequest = { subjectId }
-        await this.rest.put<void>(`/users/${userId}/selections/${electiveId}`, body, {
-            encoder: SetStudentElectiveSelectionRequest,
+    async set(userId: number | '@me', enrollmentId: number, subjectId: number): Promise<void> {
+        const body: SetStudentEnrollmentSelectionRequest = { subjectId }
+        await this.rest.put<void>(`/users/${userId}/selections/${enrollmentId}`, body, {
+            encoder: SetStudentEnrollmentSelectionRequest,
         })
 
         this.cache.delete(this.resolveUserId(userId))
     }
 
     /**
-     * Delete a selection for a student in an elective
+     * Delete a selection for a student in an enrollment
      *
      * @param userId The user's ID, or "@me" for the authenticated user
-     * @param electiveId The elective ID
+     * @param enrollmentId The enrollment ID
      */
-    async delete(userId: number | '@me', electiveId: number): Promise<void> {
-        await this.rest.delete<void>(`/users/${userId}/selections/${electiveId}`)
+    async delete(userId: number | '@me', enrollmentId: number): Promise<void> {
+        await this.rest.delete<void>(`/users/${userId}/selections/${enrollmentId}`)
         this.cache.delete(this.resolveUserId(userId))
     }
 
@@ -108,11 +108,11 @@ export class SelectionManager implements CacheableManager {
     /**
      * Get a specific selection from cache without fetching
      * @param userId The user's ID
-     * @param electiveId The elective ID
+     * @param enrollmentId The enrollment ID
      */
-    resolveSelection(userId: number, electiveId: number): Subject | undefined {
+    resolveSelection(userId: number, enrollmentId: number): Subject | undefined {
         const selections = this.cache.get(userId)
-        return selections?.get(electiveId)
+        return selections?.get(enrollmentId)
     }
 }
 
@@ -126,7 +126,7 @@ export class SelectionAdminActions {
      * Set all selections for a student
      *
      * @param studentId The student's ID
-     * @param selections Map of Elective ID -> Subject ID
+     * @param selections Map of Enrollment ID -> Subject ID
      */
     async setAll(studentId: number, selections: Record<number, number>): Promise<void> {
         const body: AdminSetStudentSelectionsRequest = { selections }

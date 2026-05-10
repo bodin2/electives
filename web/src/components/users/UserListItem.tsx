@@ -45,7 +45,7 @@ export function UserListItem(props: UserListItemProps) {
                 <HStack alignVertical="center">
                     {props.user.displayName}
                     <HStack gap={4}>
-                        <For each={props.user.teams}>{team => <Badge variant="tonal">{team.name}</Badge>}</For>
+                        <For each={props.user.groups}>{group => <Badge variant="tonal">{group.name}</Badge>}</For>
                         <Show when={props.user.id === props.currentUser?.id}>
                             <Badge variant="tertiary">{string.YOU()}</Badge>
                         </Show>

@@ -6,7 +6,7 @@ import { createEffect, createMemo, createSignal, Show } from 'solid-js'
 import {
     type AdminSubjectPatch,
     ConflictError,
-    type Elective,
+    type Enrollment,
     NotFoundError,
     type RawSubject,
     Subject,
@@ -24,9 +24,9 @@ import useSubjectFull from '../../../../hooks/useSubjectFull'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
-import { electivesQueryOptions } from '../../../../queries/electives'
+import { enrollmentsQueryOptions } from '../../../../queries/enrollments'
 import {
-    adminSubjectElectiveIdsQueryOptions,
+    adminSubjectEnrollmentIdsQueryOptions,
     subjectEnrolledCountQueryOptions,
     subjectMembersQueryOptions,
     subjectQueryOptions,
@@ -49,30 +49,32 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subj
         enrollment_id: search?.enrollment_id != null ? Number(search?.enrollment_id) : undefined,
         tab: (search.tab as string) || undefined,
     }),
-    loaderDeps: ({ search: { enrollment_id } }) => ({ electiveId: enrollment_id }),
-    loader: async ({ params: { subjectId }, context: { client, queryClient }, deps: { electiveId } }) => {
-        await queryClient.ensureQueryData(electivesQueryOptions(client))
+    loaderDeps: ({ search: { enrollment_id } }) => ({ enrollmentId: enrollment_id }),
+    loader: async ({ params: { subjectId }, context: { client, queryClient }, deps: { enrollmentId } }) => {
+        await queryClient.ensureQueryData(enrollmentsQueryOptions(client))
 
         if (isNewRoute(subjectId)) return
 
         const subjectIdNum = Number(subjectId)
-        const electiveIds = await queryClient.ensureQueryData(adminSubjectElectiveIdsQueryOptions(client, subjectIdNum))
+        const enrollmentIds = await queryClient.ensureQueryData(
+            adminSubjectEnrollmentIdsQueryOptions(client, subjectIdNum),
+        )
 
         // Speculative loading
-        electiveId = (electiveId ?? electiveIds.length === 1) ? electiveIds[0] : undefined
+        enrollmentId = (enrollmentId ?? enrollmentIds.length === 1) ? enrollmentIds[0] : undefined
 
         const promises: Promise<unknown>[] = []
 
-        if (electiveId !== undefined) {
+        if (enrollmentId !== undefined) {
             promises.push(
                 queryClient.ensureQueryData(
-                    subjectQueryOptions(client, { electiveId, subjectId: subjectIdNum, withDescription: true }),
+                    subjectQueryOptions(client, { enrollmentId, subjectId: subjectIdNum, withDescription: true }),
                 ),
                 queryClient.ensureQueryData(
-                    subjectMembersQueryOptions(client, { electiveId, subjectId: subjectIdNum }),
+                    subjectMembersQueryOptions(client, { enrollmentId, subjectId: subjectIdNum }),
                 ),
                 queryClient.ensureQueryData(
-                    subjectEnrolledCountQueryOptions(client, { electiveId, subjectId: subjectIdNum }),
+                    subjectEnrolledCountQueryOptions(client, { enrollmentId, subjectId: subjectIdNum }),
                 ),
             )
         } else {
@@ -102,26 +104,26 @@ function RouteComponent() {
     const enrollment = useEnrollmentCounts()
 
     const isNew = () => isNewRoute(params().subjectId)
-    const electiveId = () => search().enrollment_id
+    const enrollmentId = () => search().enrollment_id
     const subjectIdNum = () => (isNew() ? undefined : Number(params().subjectId))
 
-    const electivesQuery = createQuery(() => electivesQueryOptions(client))
-    const allElectives = () => electivesQuery.data ?? []
+    const enrollmentsQuery = createQuery(() => enrollmentsQueryOptions(client))
+    const allEnrollments = () => enrollmentsQuery.data ?? []
 
-    const electiveIdsQuery = createQuery(() => {
+    const enrollmentIdsQuery = createQuery(() => {
         const id = subjectIdNum()
         return {
-            ...adminSubjectElectiveIdsQueryOptions(client, id ?? -1),
+            ...adminSubjectEnrollmentIdsQueryOptions(client, id ?? -1),
             enabled: !isNew() && id !== undefined,
         }
     })
 
-    const subjectByElectiveQuery = createQuery(() => {
-        const eid = electiveId()
+    const subjectByEnrollmentQuery = createQuery(() => {
+        const eid = enrollmentId()
         const sid = subjectIdNum()
         return {
             ...subjectQueryOptions(client, {
-                electiveId: eid ?? -1,
+                enrollmentId: eid ?? -1,
                 subjectId: sid ?? -1,
                 withDescription: true,
             }),
@@ -134,16 +136,16 @@ function RouteComponent() {
         return {
             queryKey: ['admin', 'subjects', sid ?? -1] as const,
             queryFn: () => client.subjects.admin.fetch(nonNull(sid, 'Subject ID not available')),
-            enabled: !isNew() && electiveId() === undefined && sid !== undefined,
+            enabled: !isNew() && enrollmentId() === undefined && sid !== undefined,
         }
     })
 
     const membersQuery = createQuery(() => {
-        const eid = electiveId()
+        const eid = enrollmentId()
         const sid = subjectIdNum()
         return {
             ...subjectMembersQueryOptions(client, {
-                electiveId: eid ?? -1,
+                enrollmentId: eid ?? -1,
                 subjectId: sid ?? -1,
             }),
             enabled: !isNew() && eid !== undefined && sid !== undefined,
@@ -151,21 +153,21 @@ function RouteComponent() {
     })
 
     const loadedSubject = () => {
-        if (electiveId() !== undefined) return subjectByElectiveQuery.data
+        if (enrollmentId() !== undefined) return subjectByEnrollmentQuery.data
         return adminSubjectQuery.data
     }
 
-    const electives = () => {
-        const ids = electiveIdsQuery.data ?? []
-        return allElectives().filter(e => ids.includes(e.id))
+    const enrollments = () => {
+        const ids = enrollmentIdsQuery.data ?? []
+        return allEnrollments().filter(e => ids.includes(e.id))
     }
 
     const teachers = () => membersQuery.data?.teachers ?? []
 
     createEffect(() => {
-        const eid = electiveId()
+        const eid = enrollmentId()
         if (eid !== undefined) {
-            enrollment.initializeCounts(eid, client.electives.resolveAllEnrolledCounts(eid))
+            enrollment.initializeCounts(eid, client.enrollments.resolveAllEnrolledCounts(eid))
         }
     })
 
@@ -183,26 +185,26 @@ function RouteComponent() {
     )
 
     const subject = createMemo(() => new Subject(client, subjectData()))
-    const elective = createMemo(() => {
-        const eid = electiveId()
+    const enrollment_ = createMemo(() => {
+        const eid = enrollmentId()
         if (eid === undefined) return undefined
-        return allElectives().find(e => e.id === eid)
+        return allEnrollments().find(e => e.id === eid)
     })
 
     // WebSocket subscription for real-time updates
     useRetryableSubscription(
         () => {
-            const eid = electiveId()
+            const eid = enrollmentId()
             if (eid === undefined) return
 
-            client.gateway.subscribeToElective(eid, [subject().id].filter(Boolean) as number[])
+            client.gateway.subscribeToEnrollment(eid, [subject().id].filter(Boolean) as number[])
         },
         () => {
-            const eid = electiveId()
+            const eid = enrollmentId()
             if (eid === undefined) return
 
             if (client.isGatewayConnected()) {
-                client.gateway.subscribeToElective(eid, [])
+                client.gateway.subscribeToEnrollment(eid, [])
             } else log.warn('WebSocket not connected, skipping unsubscription')
         },
     )
@@ -220,7 +222,7 @@ function RouteComponent() {
         Promise.all([
             qc.invalidateQueries({ queryKey: ['admin', 'subjects'] }),
             qc.invalidateQueries({ queryKey: ['subjects'] }),
-            qc.invalidateQueries({ queryKey: ['electives'] }),
+            qc.invalidateQueries({ queryKey: ['enrollments'] }),
         ])
 
     const handleEdit = async (key: string, val: unknown, patchKey?: PatchSetterKey) => {
@@ -233,7 +235,7 @@ function RouteComponent() {
                 patchDescription: false,
                 patchCode: false,
                 patchLocation: false,
-                patchTeamId: false,
+                patchGroupId: false,
                 patchTeachers: false,
                 patchThumbnailUrl: false,
                 patchImageUrl: false,
@@ -304,30 +306,30 @@ function RouteComponent() {
         ])
 
     const handleStudentRemove = async (stud: User) => {
-        const el = nonNull(elective())
+        const en = nonNull(enrollment_())
 
-        await client.selections.delete(stud.id, el.id)
-        enrollment.setCount(el.id, subject().id, current => current - 1)
+        await client.selections.delete(stud.id, en.id)
+        enrollment.setCount(en.id, subject().id, current => current - 1)
 
         await invalidateUser(stud.type)
     }
 
     const handleTeacherRemove = async (teach: User) => {
-        const el = nonNull(elective())
+        const en = nonNull(enrollment_())
 
         await client.subjects.admin.patch(subject().id, {
             teachers: currentTeacherIds().filter(id => id !== teach.id),
-            electiveId: el.id,
+            enrollmentId: en.id,
             patchTeachers: true,
             patchCode: false,
             patchDescription: false,
             patchImageUrl: false,
             patchLocation: false,
-            patchTeamId: false,
+            patchGroupId: false,
             patchThumbnailUrl: false,
         })
 
-        enrollment.bumpVersion(el.id)
+        enrollment.bumpVersion(en.id)
 
         await invalidateUser(teach.type)
         await qc.invalidateQueries({ queryKey: ['subjects'] })
@@ -337,7 +339,7 @@ function RouteComponent() {
         <Page name={isNew() ? string.CREATE_SUBJECT() : subject().name} allowBacking leading={null} trailing={null}>
             <SubjectInfo
                 subject={subject()}
-                elective={elective()}
+                enrollment={enrollment_()}
                 teachers={teachers()}
                 user={client.user ?? undefined}
                 editable
@@ -349,10 +351,10 @@ function RouteComponent() {
                 extraActions={props => (
                     <ExtraActions
                         subject={props.subject}
-                        elective={props.elective}
+                        enrollment={props.enrollment}
                         isNew={isNew()}
-                        electives={electives()}
-                        allElectives={allElectives()}
+                        enrollments={enrollments()}
+                        allEnrollments={allEnrollments()}
                         onInvalidate={invalidate}
                     />
                 )}
@@ -363,17 +365,17 @@ function RouteComponent() {
 
 function ExtraActions(props: {
     subject: Subject
-    elective?: Elective
+    enrollment?: Enrollment
     isNew: boolean
-    electives: Elective[]
-    allElectives: Elective[]
+    enrollments: Enrollment[]
+    allEnrollments: Enrollment[]
     onInvalidate: () => unknown
 }) {
     const navigate = Route.useNavigate()
 
     const isFull = useSubjectFull(
         () => props.subject,
-        () => nonNull(props.elective),
+        () => nonNull(props.enrollment),
     )
 
     return (
@@ -381,10 +383,10 @@ function ExtraActions(props: {
             <VStack>
                 <SubjectAdminEnrollmentActions
                     subject={props.subject}
-                    elective={props.elective}
-                    allElectives={props.allElectives}
-                    addedElectives={props.electives}
-                    setElectiveId={id =>
+                    enrollment={props.enrollment}
+                    allEnrollments={props.allEnrollments}
+                    addedEnrollments={props.enrollments}
+                    setEnrollmentId={id =>
                         navigate({
                             search: prev => ({ ...prev, enrollment_id: id }),
                             replace: true,
@@ -396,16 +398,16 @@ function ExtraActions(props: {
                     <AddStudentToSubjectButton
                         variant="tonal"
                         class={styles.subActionButton}
-                        electiveId={props.elective?.id}
+                        enrollmentId={props.enrollment?.id}
                         subjectId={props.subject.id}
-                        disabled={!props.elective || isFull()}
+                        disabled={!props.enrollment || isFull()}
                     />
                     <AddTeacherToSubjectButton
                         variant="tonal"
                         class={styles.subActionButton}
                         subjectId={props.subject.id}
-                        electiveId={props.elective?.id}
-                        disabled={!props.elective}
+                        enrollmentId={props.enrollment?.id}
+                        disabled={!props.enrollment}
                         onInvalidate={props.onInvalidate}
                     />
                 </HStack>

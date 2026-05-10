@@ -5,23 +5,23 @@ import { createFileRoute, useNavigate } from '@tanstack/solid-router'
 import { TextField } from 'm3-solid'
 import { createSignal, For, Show } from 'solid-js'
 import { Button } from '../../../../components/Button'
-import AdminElectiveCard from '../../../../components/electives/AdminElectiveCard'
+import AdminEnrollmentCard from '../../../../components/electives/AdminEnrollmentCard'
 import Page from '../../../../components/Page'
 import { SuspenseLoadingPage } from '../../../../components/pages/LoadingPage'
 import { HStack, VStack } from '../../../../components/Stack'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
-import { electivesQueryOptions } from '../../../../queries/electives'
-import { teamsQueryOptions } from '../../../../queries/teams'
-import { electiveSorter } from '../../../../utils'
+import { enrollmentsQueryOptions } from '../../../../queries/enrollments'
+import { groupsQueryOptions } from '../../../../queries/groups'
+import { enrollmentSorter } from '../../../../utils'
 import styles from './index.module.css'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/enrollments/')({
     component: RouteComponent,
     loader: async ({ context: { client, queryClient } }) => {
         await Promise.all([
-            queryClient.ensureQueryData(electivesQueryOptions(client)),
-            queryClient.ensureQueryData(teamsQueryOptions(client)),
+            queryClient.ensureQueryData(enrollmentsQueryOptions(client)),
+            queryClient.ensureQueryData(groupsQueryOptions(client)),
         ])
     },
 })
@@ -32,17 +32,17 @@ function RouteComponent() {
     const navigate = useNavigate()
     const [search, setSearch] = createSignal('')
 
-    const electivesQuery = createQuery(() => ({
-        ...electivesQueryOptions(client),
-        select: data => data.sort(electiveSorter),
+    const enrollmentsQuery = createQuery(() => ({
+        ...enrollmentsQueryOptions(client),
+        select: data => data.sort(enrollmentSorter),
         notifyOnChangeProps: ['data'],
     }))
 
-    const electives = () => electivesQuery.data ?? []
+    const enrollments = () => enrollmentsQuery.data ?? []
 
-    const filteredElectives = () => {
+    const filteredEnrollments = () => {
         const query = search().toLowerCase()
-        return electives().filter(e => e.name.toLowerCase().includes(query))
+        return enrollments().filter(e => e.name.toLowerCase().includes(query))
     }
 
     const handleCreate = () => {
@@ -70,7 +70,7 @@ function RouteComponent() {
                 </HStack>
                 <SuspenseLoadingPage debugName="AdminEnrollmentsList">
                     <Show
-                        when={electives().length > 0}
+                        when={enrollments().length > 0}
                         fallback={
                             <VStack grow alignHorizontal="center" alignVertical="center" gap={16}>
                                 <VStack alignHorizontal="center">
@@ -86,13 +86,13 @@ function RouteComponent() {
                         }
                     >
                         <Show
-                            when={filteredElectives().length > 0}
+                            when={filteredEnrollments().length > 0}
                             fallback={<p class="text-surface-variant">{string.NO_RESULTS_FOUND()}</p>}
                         >
-                            <For each={filteredElectives()}>
-                                {elective => (
-                                    <AdminElectiveCard
-                                        elective={elective}
+                            <For each={filteredEnrollments()}>
+                                {enrollment => (
+                                    <AdminEnrollmentCard
+                                        enrollment={enrollment}
                                         onClick={id =>
                                             navigate({
                                                 to: '/manage/enrollments/$enrollmentId',

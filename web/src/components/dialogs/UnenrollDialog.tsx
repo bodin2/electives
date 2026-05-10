@@ -10,7 +10,7 @@ import type { Subject } from '../../api'
 export default function UnenrollDialog(props: {
     open: boolean
     onClose: (removed?: boolean) => unknown
-    electiveId: number
+    enrollmentId: number
     selectedSubject?: Subject
 }) {
     const api = useAPI()
@@ -29,7 +29,7 @@ export default function UnenrollDialog(props: {
             closedBy="any"
             onCancel={() => props.onClose(false)}
             onConfirm={async () => {
-                await api.client.selections.delete('@me', props.electiveId)
+                await api.client.selections.delete('@me', props.enrollmentId)
                 props.onClose(true)
             }}
             confirmText={string.UNENROLL()}

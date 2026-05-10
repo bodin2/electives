@@ -29,7 +29,7 @@ function AdminDashboard() {
                     <VStack gap={8} class={styles.cardGrid}>
                         <GridCard icon={PeopleIcon} title={string.STUDENTS()} to="/manage/students" />
                         <GridCard icon={TeacherIcon} title={string.TEACHERS()} to="/manage/teachers" />
-                        <GridCard icon={TeamIcon} title={string.TEAMS()} to="/manage/groups" />
+                        <GridCard icon={TeamIcon} title={string.GROUPS()} to="/manage/groups" />
                     </VStack>
                 </VStack>
                 <VStack gap={8}>

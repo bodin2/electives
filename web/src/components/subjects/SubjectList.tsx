@@ -7,12 +7,12 @@ import SectionedList from '../SectionedList'
 import SubjectCategorySection from './SubjectCategorySection'
 import type { SubjectTag } from '@bodin2/electives-common/proto/api'
 import type { LinkProps } from '@tanstack/solid-router'
-import type { Elective, Subject, User } from '../../api'
+import type { Enrollment, Subject, User } from '../../api'
 
 export interface SubjectListProps {
     subjects: Subject[]
     user?: User
-    elective?: Elective
+    enrollment?: Enrollment
     editable?: boolean
     noRandom?: boolean
     headerActions?: JSX.Element
@@ -31,14 +31,17 @@ export default function SubjectList(props: SubjectListProps) {
     const [query, setQuery] = createSignal('')
 
     createEffect(() => {
-        if (props.elective) {
-            enrollment.initializeCounts(props.elective.id, client.electives.resolveAllEnrolledCounts(props.elective.id))
+        if (props.enrollment) {
+            enrollment.initializeCounts(
+                props.enrollment.id,
+                client.enrollments.resolveAllEnrolledCounts(props.enrollment.id),
+            )
         }
     })
 
-    const teachersOf = (elective: Elective | undefined, subject: Subject) => {
-        if (!elective) return []
-        return client.subjects.resolveTeachers(elective.id, subject.id)
+    const teachersOf = (en: Enrollment | undefined, subject: Subject) => {
+        if (!en) return []
+        return client.subjects.resolveTeachers(en.id, subject.id)
     }
 
     const subjects = () => {
@@ -47,7 +50,7 @@ export default function SubjectList(props: SubjectListProps) {
                 props.subjects.filter(subject => {
                     if (props.editable || !props.user) return true
                     if (props.user.isTeacher()) return true
-                    if (subject.teamId !== undefined) return subject.canUserEnroll(props.user)
+                    if (subject.groupId !== undefined) return subject.canUserEnroll(props.user)
                     return true
                 }),
                 s => s.tag,
@@ -60,8 +63,10 @@ export default function SubjectList(props: SubjectListProps) {
         })
 
         const u = props.user
-        if (u?.isTeacher() && props.elective) {
-            const teacherSubjects = props.subjects.filter(s => teachersOf(props.elective, s)?.some(t => t.id === u.id))
+        if (u?.isTeacher() && props.enrollment) {
+            const teacherSubjects = props.subjects.filter(s =>
+                teachersOf(props.enrollment, s)?.some(t => t.id === u.id),
+            )
             grouped.unshift([string.MY_SUBJECTS(), teacherSubjects])
         }
 
@@ -76,7 +81,7 @@ export default function SubjectList(props: SubjectListProps) {
 
         const filterSubjects = (subject: Subject) =>
             subject.name.toLowerCase().includes(q) ||
-            teachersOf(props.elective, subject)?.some(teacher => teacher.displayName.toLowerCase().includes(q)) ||
+            teachersOf(props.enrollment, subject)?.some(teacher => teacher.displayName.toLowerCase().includes(q)) ||
             subject.location.toLowerCase().includes(q)
 
         return subjectsList
@@ -108,7 +113,7 @@ export default function SubjectList(props: SubjectListProps) {
                         category={category as keyof typeof SubjectTag}
                         subjects={nonNull(categorySubjects)}
                         editable={props.editable}
-                        elective={props.elective}
+                        enrollment={props.enrollment}
                         itemActions={props.itemActions}
                         viewLinkProps={props.viewLinkProps}
                         selectedIds={props.selectedIds}

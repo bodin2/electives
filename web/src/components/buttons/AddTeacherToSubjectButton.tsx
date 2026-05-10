@@ -11,7 +11,7 @@ export default function AddTeacherToSubjectButton(props: {
     class?: string
     style?: string | JSX.CSSProperties
     subjectId: number
-    electiveId?: number
+    enrollmentId?: number
     variant?: ButtonVariant
     disabled?: boolean
     onInvalidate?: () => Promise<unknown> | unknown
@@ -39,13 +39,13 @@ export default function AddTeacherToSubjectButton(props: {
             >
                 {string.ADD_TEACHER_TO_SUBJECT()}
             </Button>
-            <Show when={props.electiveId}>
+            <Show when={props.enrollmentId}>
                 <Portal>
                     <AddTeacherToSubjectDialog
                         open={open()}
                         onClose={() => setOpen(false)}
                         subjectId={props.subjectId}
-                        electiveId={nonNull(props.electiveId)}
+                        enrollmentId={nonNull(props.enrollmentId)}
                         currentTeacherIds={currentTeacherIds()}
                         onInvalidate={props.onInvalidate}
                     />

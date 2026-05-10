@@ -100,12 +100,12 @@ private fun Application.configureRateLimits() {
             requestKey { it.request.origin.remoteAddress }
         }
 
-        register(RATE_LIMIT_ELECTIVES) {
+        register(RATE_LIMIT_ENROLLMENTS) {
             rateLimiter(limit = 60, refillPeriod = 1.minutes)
             requestKey { it.userId() ?: it.request.origin.remoteAddress }
         }
 
-        register(RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS) {
+        register(RATE_LIMIT_ENROLLMENTS_SUBJECT_MEMBERS) {
             // Somewhat an expensive operation
             rateLimiter(limit = 30, refillPeriod = 1.minutes)
             requestKey(authenticated)
@@ -127,7 +127,7 @@ private fun Application.configureRateLimits() {
             rateLimiter(limit = 15, refillPeriod = 1.minutes)
             requestKey(authenticated)
             requestWeight { _, key ->
-                // Teachers and admins are not affected by elective selection limits
+                // Teachers and admins are not affected by enrollment selection limits
                 if (key is UsersService.SessionUser && (key.type == UserType.TEACHER || key.type == UserType.ADMIN)) {
                     return@requestWeight 0
                 }
@@ -141,8 +141,8 @@ private fun Application.configureRateLimits() {
 val RATE_LIMIT_ADMIN = RateLimitName("admin")
 val RATE_LIMIT_ADMIN_AUTH = RateLimitName("admin.auth")
 val RATE_LIMIT_AUTH = RateLimitName("auth")
-val RATE_LIMIT_ELECTIVES = RateLimitName("electives")
-val RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS = RateLimitName("electives.subject.members")
+val RATE_LIMIT_ENROLLMENTS = RateLimitName("enrollments")
+val RATE_LIMIT_ENROLLMENTS_SUBJECT_MEMBERS = RateLimitName("enrollments.subject.members")
 val RATE_LIMIT_NOTIFICATIONS = RateLimitName("notifications")
 val RATE_LIMIT_USERS = RateLimitName("users")
 val RATE_LIMIT_USERS_SELECTIONS = RateLimitName("users.selections")

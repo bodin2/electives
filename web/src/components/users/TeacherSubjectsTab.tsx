@@ -3,13 +3,13 @@ import { createEffect, createMemo, For, Show } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import { electivesQueryOptions } from '../../queries/electives'
+import { enrollmentsQueryOptions } from '../../queries/enrollments'
 import { teacherSubjectsQueryOptions } from '../../queries/users'
-import { electiveSorter } from '../../utils'
+import { enrollmentSorter } from '../../utils'
 import SectionedList from '../SectionedList'
 import { useSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
 import SubjectListItem from '../subjects/SubjectListItem'
-import type { Elective, Subject } from '../../api'
+import type { Enrollment, Subject } from '../../api'
 
 export interface TeacherSubjectsTabProps {
     userId: number
@@ -25,32 +25,32 @@ export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
         ...teacherSubjectsQueryOptions(client, props.userId),
         notifyOnChangeProps: ['data'],
     }))
-    const electivesQuery = createQuery(() => ({ ...electivesQueryOptions(client), notifyOnChangeProps: ['data'] }))
+    const enrollmentsQuery = createQuery(() => ({ ...enrollmentsQueryOptions(client), notifyOnChangeProps: ['data'] }))
 
     const data = () => {
-        if (!subjectsQuery.data || !electivesQuery.data) return undefined
-        return { subjects: subjectsQuery.data, electives: electivesQuery.data }
+        if (!subjectsQuery.data || !enrollmentsQuery.data) return undefined
+        return { subjects: subjectsQuery.data, enrollments: enrollmentsQuery.data }
     }
 
     const groupedSubjects = createMemo(() => {
         const d = data()
         if (!d) return []
 
-        const result: Record<string, { elective: Elective; subject: Subject }[]> = {}
+        const result: Record<string, { enrollment: Enrollment; subject: Subject }[]> = {}
 
-        for (const [electiveId, subject] of d.subjects) {
-            const elective = d.electives.find(e => e.id === electiveId)
-            if (!elective) continue
+        for (const [enrollmentId, subject] of d.subjects) {
+            const enrollment_ = d.enrollments.find(e => e.id === enrollmentId)
+            if (!enrollment_) continue
 
-            if (!result[elective.name]) {
-                result[elective.name] = []
+            if (!result[enrollment_.name]) {
+                result[enrollment_.name] = []
             }
 
-            result[elective.name].push({ elective, subject })
+            result[enrollment_.name].push({ enrollment: enrollment_, subject })
         }
 
-        return Object.entries(result).sort(([_, [{ elective: elA }]], [__, [{ elective: elB }]]) =>
-            electiveSorter(elA, elB),
+        return Object.entries(result).sort(([_, [{ enrollment: enA }]], [__, [{ enrollment: enB }]]) =>
+            enrollmentSorter(enA, enB),
         )
     })
 
@@ -58,8 +58,8 @@ export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
         const d = data()
         if (!d) return
 
-        for (const [electiveId] of d.subjects) {
-            enrollment.initializeCounts(electiveId, client.electives.resolveAllEnrolledCounts(electiveId))
+        for (const [enrollmentId] of d.subjects) {
+            enrollment.initializeCounts(enrollmentId, client.enrollments.resolveAllEnrolledCounts(enrollmentId))
         }
     })
 
@@ -73,20 +73,16 @@ export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
                         {string.NO_X_YET({ object: string.SUBJECTS().toLowerCase() })}
                     </p>
                 }
-                renderSection={(electiveName, items) => (
+                renderSection={(enrollmentName, items) => (
                     <section>
-                        <h1 class="m3-title-large padded">{electiveName}</h1>
+                        <h1 class="m3-title-large padded">{enrollmentName}</h1>
                         <ul>
                             <For each={items}>
-                                {({ elective, subject }) => (
+                                {({ enrollment: en, subject }) => (
                                     <SubjectListItem
                                         subject={subject}
-                                        electiveId={elective.id}
-                                        linkProps={subjectDisplayContext.viewLinkProps(
-                                            elective.id,
-                                            subject.id,
-                                            'members',
-                                        )}
+                                        enrollmentId={en.id}
+                                        linkProps={subjectDisplayContext.viewLinkProps(en.id, subject.id, 'members')}
                                     />
                                 )}
                             </For>

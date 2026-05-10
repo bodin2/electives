@@ -12,9 +12,9 @@ import { SubjectTag } from '../../api'
 import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
-import { teamsQueryOptions } from '../../queries/teams'
+import { groupsQueryOptions } from '../../queries/groups'
 import { nonNull } from '../../utils'
-import { SelectTeamDialog } from '../dialogs/SelectTeamDialog'
+import { SelectGroupDialog } from '../dialogs/SelectGroupDialog'
 import SetSubjectTagDialog from '../dialogs/SetSubjectTagDialog'
 import IconLabel from '../IconLabel'
 import { HStack, VStack } from '../Stack'
@@ -31,17 +31,17 @@ export default function SubjectDetailsTab() {
     const { EditButton, startEditing, FieldEditorDialog } = useFieldEditor()
 
     const enrolledCount = () => {
-        if (ctx.elective) return enrollment.getCount(ctx.elective.id, ctx.subject.id)
+        if (ctx.enrollment) return enrollment.getCount(ctx.enrollment.id, ctx.subject.id)
     }
 
     const [tagDialogOpen, setTagDialogOpen] = createSignal(false)
-    const [teamDialogOpen, setTeamDialogOpen] = createSignal(false)
+    const [groupDialogOpen, setGroupDialogOpen] = createSignal(false)
 
-    const teamsQuery = createQuery(() => ({
-        ...teamsQueryOptions(client),
+    const groupsQuery = createQuery(() => ({
+        ...groupsQueryOptions(client),
         enabled: client.user?.isAdmin() ?? false,
     }))
-    const teams = () => teamsQuery.data
+    const groups = () => groupsQuery.data
 
     const descriptionInnerHtml = () => marked(ctx.subject.description ?? '') as string
 
@@ -53,10 +53,10 @@ export default function SubjectDetailsTab() {
         return string[`SUBJECT_CATEGORY_${key}`]()
     }
 
-    const teamName = () => {
-        const t = teams()
-        if (ctx.subject.teamId === undefined || ctx.subject.teamId === null || !t) return undefined
-        return t.find(team => team.id === ctx.subject.teamId)?.name
+    const groupName = () => {
+        const g = groups()
+        if (ctx.subject.groupId === undefined || ctx.subject.groupId === null || !g) return undefined
+        return g.find(group => group.id === ctx.subject.groupId)?.name
     }
 
     return (
@@ -122,17 +122,17 @@ export default function SubjectDetailsTab() {
                                     icon={PeopleIcon}
                                     text={
                                         <>
-                                            {string.TEAM()}:{' '}
+                                            {string.GROUP()}:{' '}
                                             <Suspense fallback={string.LOADING()}>
-                                                <span class={mergeClasses(!teamName() && 'text-italic')}>
-                                                    {teamName() ?? string.NOT_SET()}
+                                                <span class={mergeClasses(!groupName() && 'text-italic')}>
+                                                    {groupName() ?? string.NOT_SET()}
                                                 </span>
                                             </Suspense>
                                         </>
                                     }
                                     class={mergeClasses(styles.labelSubText)}
                                 />
-                                <EditButton onClick={() => setTeamDialogOpen(true)} />
+                                <EditButton onClick={() => setGroupDialogOpen(true)} />
                             </Show>
                         </HStack>
                     </HStack>
@@ -155,13 +155,13 @@ export default function SubjectDetailsTab() {
             </Portal>
 
             <Suspense>
-                <Show when={teams()}>
-                    <SelectTeamDialog
-                        open={teamDialogOpen()}
-                        onClose={() => setTeamDialogOpen(false)}
-                        onSave={v => ctx.onEdit?.('teamId', v, 'patchTeamId')}
-                        teams={nonNull(teams())}
-                        value={ctx.subject.teamId ?? null}
+                <Show when={groups()}>
+                    <SelectGroupDialog
+                        open={groupDialogOpen()}
+                        onClose={() => setGroupDialogOpen(false)}
+                        onSave={v => ctx.onEdit?.('groupId', v, 'patchGroupId')}
+                        groups={nonNull(groups())}
+                        value={ctx.subject.groupId ?? null}
                     />
                 </Show>
             </Suspense>

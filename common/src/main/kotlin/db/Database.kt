@@ -17,15 +17,15 @@ object Database {
     }
 
     val tables = listOf(
-        Electives,
-        ElectiveSubjects,
-        StudentElectives,
+        Enrollments,
+        EnrollmentSubjects,
+        StudentClasses,
         Students,
-        StudentTeams,
+        StudentGroups,
         Subjects,
         Teachers,
         TeacherSubjects,
-        Teams,
+        Groups,
         Users,
         Admins,
     )

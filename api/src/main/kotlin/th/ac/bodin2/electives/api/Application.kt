@@ -73,7 +73,7 @@ suspend fun Application.module() {
 
     val controllers = mutableListOf(
         authController,
-        electivesController,
+        enrollmentsController,
         miscController,
         notificationsController,
         usersController,
@@ -113,10 +113,10 @@ fun Application.provideDependencies() = dependencies {
         provideNotificationsService()
     }
 
-    provide<ElectiveService> { ElectiveServiceImpl() }
+    provide<EnrollmentService> { EnrollmentServiceImpl() }
     provide<SubjectService> { SubjectServiceImpl() }
-    provide<TeamService> { TeamServiceImpl() }
-    provide<ElectiveSelectionService> { ElectiveSelectionServiceImpl(resolve<NotificationsService>()) }
+    provide<GroupService> { GroupServiceImpl() }
+    provide<EnrollmentSelectionService> { EnrollmentSelectionServiceImpl(resolve<NotificationsService>()) }
 
     if (isAdminEnabled) {
         provideAdminAuthService()

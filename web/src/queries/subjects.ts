@@ -11,7 +11,7 @@ export const subjectQueryOptions = (client: Client<unknown>, opts: Omit<SubjectF
         queryKey: [
             'subjects',
             opts.subjectId,
-            { electiveId: opts.electiveId, withDescription: opts.withDescription },
+            { enrollmentId: opts.enrollmentId, withDescription: opts.withDescription },
         ] as const,
         queryFn: () => client.subjects.fetch(opts),
     })
@@ -25,7 +25,7 @@ export const subjectMembersQueryOptions = (
             'subjects',
             opts.subjectId,
             'members',
-            { electiveId: opts.electiveId, withStudents: opts.withStudents },
+            { enrollmentId: opts.enrollmentId, withStudents: opts.withStudents },
         ] as const,
         queryFn: () => client.subjects.fetchMembers(opts),
     })
@@ -35,7 +35,7 @@ export const subjectEnrolledCountQueryOptions = (
     opts: Omit<EnrolledCountFetchOptions, 'force' | 'cache'>,
 ) =>
     queryOptions({
-        queryKey: ['subjects', opts.subjectId, 'enrolledCount', opts.electiveId] as const,
+        queryKey: ['subjects', opts.subjectId, 'enrolledCount', opts.enrollmentId] as const,
         queryFn: () => client.subjects.fetchEnrolledCount(opts),
     })
 
@@ -51,8 +51,8 @@ export const adminSubjectQueryOptions = (client: Client<unknown>, subjectId: num
         queryFn: () => client.subjects.admin.fetch(subjectId),
     })
 
-export const adminSubjectElectiveIdsQueryOptions = (client: Client<unknown>, subjectId: number) =>
+export const adminSubjectEnrollmentIdsQueryOptions = (client: Client<unknown>, subjectId: number) =>
     queryOptions({
-        queryKey: ['admin', 'subjects', subjectId, 'electiveIds'] as const,
-        queryFn: () => client.subjects.admin.fetchElectiveIds(subjectId),
+        queryKey: ['admin', 'subjects', subjectId, 'enrollmentIds'] as const,
+        queryFn: () => client.subjects.admin.fetchEnrollmentIds(subjectId),
     })

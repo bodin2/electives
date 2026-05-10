@@ -14,7 +14,7 @@ import {
 import UserInfo from '../../../../components/users/UserInfo'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
-import { teamsQueryOptions } from '../../../../queries/teams'
+import { groupsQueryOptions } from '../../../../queries/groups'
 import { userQueryOptions } from '../../../../queries/users'
 import { catchErrors } from '../../../../utils/error-component'
 
@@ -36,7 +36,7 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/users/$userId'
     component: RouteComponent,
     errorComponent: catchErrors([NotFoundError, NotFoundPage]),
     loader: async ({ params: { userId }, context: { client, queryClient } }) => {
-        const promises: Promise<unknown>[] = [queryClient.ensureQueryData(teamsQueryOptions(client)).catch(() => [])]
+        const promises: Promise<unknown>[] = [queryClient.ensureQueryData(groupsQueryOptions(client)).catch(() => [])]
 
         if (!isNewRoute(userId)) {
             const userIdNum = Number(userId)
@@ -63,7 +63,7 @@ function RouteComponent() {
 
     const [confirmDeleteOpen, setConfirmDeleteOpen] = createSignal(false)
 
-    const teamsQuery = createQuery(() => teamsQueryOptions(client))
+    const groupsQuery = createQuery(() => groupsQueryOptions(client))
     const userQuery = createQuery(() => {
         const id = Number(params().userId)
         return {
@@ -72,7 +72,7 @@ function RouteComponent() {
         }
     })
 
-    const teams = () => teamsQuery.data ?? []
+    const groups = () => groupsQuery.data ?? []
     const loadedUser = () => userQuery.data ?? null
 
     const initialType = () => {
@@ -85,7 +85,7 @@ function RouteComponent() {
             id: -1,
             firstName: string.NEW_USER_FIRST_NAME(),
             type: initialType(),
-            teams: [],
+            groups: [],
         },
     )
 
@@ -112,7 +112,7 @@ function RouteComponent() {
                             id: -1,
                             firstName: string.NEW_USER_FIRST_NAME(),
                             type: initialType(),
-                            teams: [],
+                            groups: [],
                         })
                         setModifiedFields(new Set<string>())
                     })
@@ -164,7 +164,7 @@ function RouteComponent() {
                 await client.users.admin.put(u.id, {
                     user: u,
                     password: u.newPassword,
-                    teamIds: u.teams?.map(t => t.id) ?? [],
+                    groupIds: u.groups?.map(g => g.id) ?? [],
                 })
 
                 displayContext.setUserData({ ...userData(), newPassword: '' })
@@ -182,8 +182,8 @@ function RouteComponent() {
         } else {
             const modified = modifiedFields()
             const patch: AdminUserPatch = {
-                teams: u.teams?.map(t => t.id) ?? [],
-                patchTeams: modified.has('teams') || modified.has('patchTeams'),
+                groups: u.groups?.map(g => g.id) ?? [],
+                patchGroups: modified.has('groups') || modified.has('patchGroups'),
                 patchPrefix: modified.has('prefix') || modified.has('patchPrefix'),
                 patchMiddleName: modified.has('middleName') || modified.has('patchMiddleName'),
                 patchAvatarUrl: modified.has('avatarUrl') || modified.has('patchAvatarUrl'),
@@ -283,7 +283,7 @@ function RouteComponent() {
                     <p>{string.CONFIRM_DELETE_USER({ name: <strong>{user().displayName}</strong> })}</p>
                 </ConfirmDialog>
             </Portal>
-            <UserInfo initialType={initialType()} teams={teams()} />
+            <UserInfo initialType={initialType()} groups={groups()} />
         </Page>
     )
 }

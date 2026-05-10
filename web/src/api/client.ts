@@ -1,10 +1,10 @@
 import mitt from 'mitt'
 import { Cache } from './cache'
 import { type Gateway, type GatewayEventMap, GatewayStatus } from './gateway'
-import { ElectiveManager } from './managers/ElectiveManager'
+import { EnrollmentManager } from './managers/EnrollmentManager'
+import { GroupManager } from './managers/GroupManager'
 import { SelectionManager } from './managers/SelectionManager'
 import { SubjectManager } from './managers/SubjectManager'
-import { TeamManager } from './managers/TeamManager'
 import { UserManager } from './managers/UserManager'
 import { NetworkError, UnauthorizedError } from './types'
 import type { Emitter, Handler } from 'mitt'
@@ -55,7 +55,7 @@ export interface ClientOptions<TCredentials> {
 }
 
 /**
- * The main client for interacting with the Electives API
+ * The main client for interacting with the Enrollments API
  *
  * @example
  * ```ts
@@ -67,13 +67,13 @@ export interface ClientOptions<TCredentials> {
  *
  * await client.login({ id: 12345, password: 'secret' })
  *
- * // Fetch electives
- * const electives = await client.electives.fetchAll()
+ * // Fetch enrollments
+ * const enrollments = await client.enrollments.fetchAll()
  *
  * // Subscribe to real-time updates
- * client.gateway.subscribeToElective(1, [1, 2, 3])
+ * client.gateway.subscribeToEnrollment(1, [1, 2, 3])
  *
- * client.on('subjectEnrollmentUpdate', ({ electiveId, subjectId, enrolledCount }) => {
+ * client.on('subjectEnrollmentUpdate', ({ enrollmentId, subjectId, enrolledCount }) => {
  *   console.log(`Subject ${subjectId} now has ${enrolledCount} enrollments`)
  * })
  * ```
@@ -88,8 +88,8 @@ export class Client<TCredentials> {
     /** Manager for users */
     readonly users: UserManager
 
-    /** Manager for electives */
-    readonly electives: ElectiveManager
+    /** Manager for enrollments */
+    readonly enrollments: EnrollmentManager
 
     /** Manager for subjects */
     readonly subjects: SubjectManager
@@ -97,8 +97,8 @@ export class Client<TCredentials> {
     /** Manager for student selections */
     readonly selections: SelectionManager
 
-    /** Manager for teams */
-    readonly teams: TeamManager
+    /** Manager for groups */
+    readonly groups: GroupManager
 
     /** Whether to auto-connect to the gateway on login */
     readonly autoConnect: boolean
@@ -128,12 +128,12 @@ export class Client<TCredentials> {
             new Cache(cacheOpts),
             new Cache(cacheOpts),
         )
-        this.electives = new ElectiveManager(this, this.rest, new Cache(infiniteCacheOpts), this.subjects)
+        this.enrollments = new EnrollmentManager(this, this.rest, new Cache(infiniteCacheOpts), this.subjects)
         this.selections = new SelectionManager(this, this.rest, new Cache(cacheOpts), () => {
             if (!this.user) throw new Error('Not logged in')
             return this.user.id
         })
-        this.teams = new TeamManager(this, this.rest, new Cache(infiniteCacheOpts))
+        this.groups = new GroupManager(this, this.rest, new Cache(infiniteCacheOpts))
 
         this.rest.onError = err => this.handleError(err)
         this.setupGatewayListeners()
@@ -253,9 +253,9 @@ export class Client<TCredentials> {
     clearCaches(): void {
         this.users.clearCache()
         this.subjects.clearCache()
-        this.electives.clearCache()
+        this.enrollments.clearCache()
         this.selections.clearCache()
-        this.teams.clearCache()
+        this.groups.clearCache()
     }
 
     on<K extends ClientEventNames>(event: K, handler: ClientEventHandler<K>): this {
@@ -314,9 +314,9 @@ export class Client<TCredentials> {
         })
 
         this.gateway.on('subjectEnrollmentUpdate', update => {
-            this.subjects._updateEnrolledCount(update.electiveId, update.subjectId, update.enrolledCount)
+            this.subjects._updateEnrolledCount(update.enrollmentId, update.subjectId, update.enrolledCount)
             this.emitter.emit('subjectEnrollmentUpdate', {
-                electiveId: update.electiveId,
+                enrollmentId: update.enrollmentId,
                 subjectId: update.subjectId,
                 enrolledCount: update.enrolledCount,
             })
@@ -324,10 +324,10 @@ export class Client<TCredentials> {
 
         this.gateway.on('bulkSubjectEnrollmentUpdate', update => {
             for (const [subjectId, count] of Object.entries(update.subjectEnrolledCounts)) {
-                this.subjects._updateEnrolledCount(update.electiveId, Number(subjectId), count)
+                this.subjects._updateEnrolledCount(update.enrollmentId, Number(subjectId), count)
             }
             this.emitter.emit('bulkSubjectEnrollmentUpdate', {
-                electiveId: update.electiveId,
+                enrollmentId: update.enrollmentId,
                 subjectEnrolledCounts: update.subjectEnrolledCounts,
             })
         })

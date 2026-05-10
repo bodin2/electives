@@ -10,12 +10,12 @@ import UserBottomActions from './UserBottomActions'
 import UserDetailsTab from './UserDetailsTab'
 import { useUserDisplayContext } from './UserDisplayContext'
 import styles from './UserInfo.module.css'
-import type { Team, UserType } from '../../api'
+import type { Group, UserType } from '../../api'
 
 export interface UserInfoProps {
     extraActions?: Component
     initialType?: UserType
-    teams?: Team[]
+    groups?: Group[]
     persistTab?: boolean
 }
 
@@ -57,7 +57,7 @@ export default function UserInfo(props: UserInfoProps) {
                                 descriptionClass={`${styles.description} m3-body-large`}
                                 labelClass={styles.labelSubText}
                                 initialType={props.initialType}
-                                teams={props.teams}
+                                groups={props.groups}
                             />
                         </Match>
                         <Match when={tab() === 'selections' && ctx.user}>

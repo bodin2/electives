@@ -16,7 +16,7 @@ fun Student.toProto(): th.ac.bodin2.electives.proto.api.User {
 
         user.avatarUrl?.let { avatarUrl = it }
 
-        teams.addAll(this@toProto.teams.map { it.toProto() })
+        groups.addAll(this@toProto.groups.map { it.toProto() })
     }
 }
 
@@ -51,15 +51,15 @@ fun Admin.toProto(): th.ac.bodin2.electives.proto.api.User {
 /**
  * Convert Subject DAO to Proto representation.
  *
- * **A transaction must be active when calling this function with `electiveId`, or `withDescription = true`**
+ * **A transaction must be active when calling this function with `enrollmentId`, or `withDescription = true`**
  *
- * @param electiveId Optional elective ID to include enrolled count and teachers.
- * @param withTeachers Whether to include the teachers field (requires `electiveId`).
+ * @param enrollmentId Optional enrollment ID to include enrolled count and teachers.
+ * @param withTeachers Whether to include the teachers field (requires `enrollmentId`).
  * @param withDescription Whether to include the description field.
  * @param withEnrolledCounts Whether to include the enrolled count field.
  */
 fun Subject.toProto(
-    electiveId: Int? = null,
+    enrollmentId: Int? = null,
     withTeachers: Boolean = false,
     withDescription: Boolean = false,
     withEnrolledCounts: Boolean = false
@@ -82,38 +82,38 @@ fun Subject.toProto(
             subject.description?.let { description = it }
         }
 
-        if (withTeachers && electiveId != null) {
-            subject.getTeachers(electiveId).forEach { teachers += it.toProto() }
+        if (withTeachers && enrollmentId != null) {
+            subject.getTeachers(enrollmentId).forEach { teachers += it.toProto() }
         }
 
-        this@toProto.teamId?.let { teamId = it.value }
+        this@toProto.groupId?.let { groupId = it.value }
 
-        if (withEnrolledCounts && electiveId != null) {
-            Elective.assertExists(electiveId)
-            enrolledCount = getEnrolledCount(electiveId)
+        if (withEnrolledCounts && enrollmentId != null) {
+            Enrollment.assertExists(enrollmentId)
+            enrolledCount = getEnrolledCount(enrollmentId)
         }
     }
 }
 
-fun Team.toProto(): th.ac.bodin2.electives.proto.api.Team {
-    val team = this
+fun Group.toProto(): th.ac.bodin2.electives.proto.api.Group {
+    val group = this
 
-    return team {
-        id = team.id.value
-        name = team.name
+    return group {
+        id = group.id.value
+        name = group.name
     }
 }
 
-fun Elective.toProto(): th.ac.bodin2.electives.proto.api.Elective {
-    val elective = this
+fun Enrollment.toProto(): th.ac.bodin2.electives.proto.api.Enrollment {
+    val enrollment = this
 
-    return elective {
-        id = elective.id.value
-        name = elective.name
+    return enrollment {
+        id = enrollment.id.value
+        name = enrollment.name
 
-        elective.teamId?.let { teamId = it.value }
-        elective.startDate?.toUnixTimestamp()?.let { startDate = it }
-        elective.endDate?.toUnixTimestamp()?.let { endDate = it }
+        enrollment.groupId?.let { groupId = it.value }
+        enrollment.startDate?.toUnixTimestamp()?.let { startDate = it }
+        enrollment.endDate?.toUnixTimestamp()?.let { endDate = it }
     }
 }
 

@@ -30,14 +30,14 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
 
     const membersQuery = createQuery(() => {
         const baseOptions = subjectMembersQueryOptions(client, {
-            electiveId: ctx.elective?.id ?? -1,
+            enrollmentId: ctx.enrollment?.id ?? -1,
             subjectId: ctx.subject.id,
             withStudents: true,
         })
 
         return {
             ...baseOptions,
-            enabled: !!ctx.elective,
+            enabled: !!ctx.enrollment,
             placeholderData: keepPreviousData,
             select: (data: { students: User[]; teachers: User[] }) => {
                 setOutdatedMembers(false)
@@ -50,11 +50,11 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
     })
 
     createEffect(() => {
-        if (!ctx.elective) return
+        if (!ctx.enrollment) return
 
         const intervalId = setInterval(
             () => {
-                if (membersQuery.isFetching || !ctx.elective || !outdatedMembers()) return
+                if (membersQuery.isFetching || !ctx.enrollment || !outdatedMembers()) return
                 membersQuery.refetch()
             },
             ctx.editable ? 500 : 1500,
@@ -64,9 +64,9 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
     })
 
     createEffect(prev => {
-        if (ctx.elective) {
+        if (ctx.enrollment) {
             // Subscribe to version changes
-            const v = counts.getVersion(ctx.elective.id)
+            const v = counts.getVersion(ctx.enrollment.id)
             if (prev !== undefined && v !== prev) {
                 setOutdatedMembers(true)
             }
@@ -83,7 +83,7 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
 
     return (
         <Show
-            when={ctx.elective}
+            when={ctx.enrollment}
             fallback={
                 <VStack grow alignHorizontal="center" alignVertical="center">
                     <h1 class="m3-headline-medium text-balance">{string.SUBJECT_MEMBERS_PICK_ENROLLMENT_HINT()}</h1>

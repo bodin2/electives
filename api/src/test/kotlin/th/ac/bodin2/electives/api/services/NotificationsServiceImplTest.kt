@@ -16,16 +16,16 @@ import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.SessionUserMocks.janeSessionUser
 import th.ac.bodin2.electives.api.SessionUserMocks.johnSessionUser
-import th.ac.bodin2.electives.api.TestConstants.Electives
+import th.ac.bodin2.electives.api.TestConstants.Enrollments
+import th.ac.bodin2.electives.api.TestConstants.Groups
 import th.ac.bodin2.electives.api.TestConstants.Students
 import th.ac.bodin2.electives.api.TestConstants.Subjects
-import th.ac.bodin2.electives.api.TestConstants.Teams
 import th.ac.bodin2.electives.api.TestConstants.TestData.CLIENT_NAME
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.utils.send
-import th.ac.bodin2.electives.db.Elective
-import th.ac.bodin2.electives.db.models.StudentTeams
+import th.ac.bodin2.electives.db.Enrollment
+import th.ac.bodin2.electives.db.models.StudentGroups
 import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.envelope
 import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.identify
@@ -45,9 +45,9 @@ class NotificationsServiceImplTest : ApplicationTest() {
             return service
         }
 
-    private val ApplicationTestBuilder.electiveSelectionService: ElectiveSelectionService
+    private val ApplicationTestBuilder.enrollmentSelectionService: EnrollmentSelectionService
         get() {
-            val service: ElectiveSelectionService by application.dependencies
+            val service: EnrollmentSelectionService by application.dependencies
             return service
         }
 
@@ -122,7 +122,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 subjectIds.add(Subjects.PHYSICS_ID)
                             }
@@ -152,7 +152,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 subjectIds.add(Subjects.PHYSICS_ID)
                                 subjectIds.add(Subjects.CHEMISTRY_ID)
@@ -183,7 +183,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 repeat(10) { subjectIds.add(it) }
                             }
@@ -206,7 +206,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {}
                         )
                     }
@@ -251,7 +251,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
         webSocket {
             val envelope = envelope {
                 subjectEnrollmentUpdate = subjectEnrollmentUpdate {
-                    electiveId = Electives.SCIENCE_ID
+                    enrollmentId = Enrollments.SCIENCE_ID
                     subjectId = Subjects.PHYSICS_ID
                     enrolledCount = 10
                 }
@@ -265,7 +265,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `websocket subscription to nonexistent elective`() = runTest {
+    fun `websocket subscription to nonexistent enrollment`() = runTest {
         webSocket {
             val envelope = envelope {
                 messageId = 5
@@ -333,7 +333,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                     subjectEnrollmentUpdateSubscriptionRequest =
                         subjectEnrollmentUpdateSubscriptionRequest {
                             subscriptions.put(
-                                Electives.SCIENCE_ID,
+                                Enrollments.SCIENCE_ID,
                                 subjectEnrollmentUpdateSubscription {
                                     subjectIds.add(Subjects.PHYSICS_ID)
                                 }
@@ -363,7 +363,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 subjectIds.add(Subjects.PHYSICS_ID)
                             }
@@ -392,7 +392,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 repeat(5) { subjectIds.add(it) }
                             }
@@ -454,47 +454,51 @@ class NotificationsServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `websocket receives bulk enrollment updates for all electives`() = runTest {
+    fun `websocket receives bulk enrollment updates for all enrollments`() = runTest {
         webSocket {
             serviceConfig.bulkUpdatesEnabled = true
 
-            val electives = transaction { Elective.getAllActiveIds() }
-            assertTrue(electives.isNotEmpty(), "Test requires at least one elective")
+            val enrollments = transaction { Enrollment.getAllActiveIds() }
+            assertTrue(enrollments.isNotEmpty(), "Test requires at least one enrollment")
 
             val received = mutableMapOf<Int, Envelope>()
 
             // Trigger a selection
-            electiveSelectionService.setStudentSelection(
+            enrollmentSelectionService.setStudentSelection(
                 johnSessionUser,
                 Students.JOHN_ID,
-                Electives.SCIENCE_ID,
+                Enrollments.SCIENCE_ID,
                 Subjects.PHYSICS_ID,
             )
 
             withTimeout(15.seconds) {
-                while (received.size < electives.size || received.values.all { 
-                        it.bulkSubjectEnrollmentUpdate.subjectEnrolledCountsMap.values.all { count -> count == 0 } 
+                while (received.size < enrollments.size || received.values.all {
+                        it.bulkSubjectEnrollmentUpdate.subjectEnrolledCountsMap.values.all { count -> count == 0 }
                     }) {
                     val frame = incoming.receive() as Frame.Binary
                     val envelope = Envelope.parseFrom(frame.readBytes())
 
                     if (envelope.hasBulkSubjectEnrollmentUpdate()) {
                         val bulk = envelope.bulkSubjectEnrollmentUpdate
-                        received[bulk.electiveId] = envelope
+                        received[bulk.enrollmentId] = envelope
                     }
                 }
             }
 
-            // Received exactly one bulk update per elective (eventually with data)
+            // Received exactly one bulk update per enrollment (eventually with data)
             assertEquals(
-                electives.toSet(),
+                enrollments.toSet(),
                 received.keys,
-                "Did not receive bulk updates for all electives"
+                "Did not receive bulk updates for all enrollments"
             )
 
             // Is the payload correct?
-            val scienceUpdate = received[Electives.SCIENCE_ID]!!.bulkSubjectEnrollmentUpdate
-            assertEquals(1, scienceUpdate.subjectEnrolledCountsMap[Subjects.PHYSICS_ID], "Expected 1 student in Physics")
+            val scienceUpdate = received[Enrollments.SCIENCE_ID]!!.bulkSubjectEnrollmentUpdate
+            assertEquals(
+                1,
+                scienceUpdate.subjectEnrolledCountsMap[Subjects.PHYSICS_ID],
+                "Expected 1 student in Physics"
+            )
 
             serviceConfig.bulkUpdatesEnabled = false
 
@@ -503,12 +507,12 @@ class NotificationsServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `bulk update flow is removed when elective becomes inactive`() = runTest {
+    fun `bulk update flow is removed when enrollment becomes inactive`() = runTest {
         webSocket {
             serviceConfig.bulkUpdatesEnabled = true
 
-            val electives = transaction { Elective.getAllActiveIds() }
-            assertTrue(electives.contains(Electives.SCIENCE_ID), "Science elective should be active")
+            val enrollments = transaction { Enrollment.getAllActiveIds() }
+            assertTrue(enrollments.contains(Enrollments.SCIENCE_ID), "Science enrollment should be active")
 
             // Wait for at least one bulk update to arrive so the flow is created
             withTimeout(15.seconds) {
@@ -516,35 +520,35 @@ class NotificationsServiceImplTest : ApplicationTest() {
                     val frame = incoming.receive() as Frame.Binary
                     val envelope = Envelope.parseFrom(frame.readBytes())
                     if (envelope.hasBulkSubjectEnrollmentUpdate() &&
-                        envelope.bulkSubjectEnrollmentUpdate.electiveId == Electives.SCIENCE_ID
+                        envelope.bulkSubjectEnrollmentUpdate.enrollmentId == Enrollments.SCIENCE_ID
                     ) break
                 }
             }
 
             assertTrue(
-                notificationsService.bulkUpdateFlows.value.containsKey(Electives.SCIENCE_ID),
-                "Expected bulk update flow to exist for science elective"
+                notificationsService.bulkUpdateFlows.value.containsKey(Enrollments.SCIENCE_ID),
+                "Expected bulk update flow to exist for science enrollment"
             )
 
-            // Make the elective inactive by setting its end date to the past
+            // Make the enrollment inactive by setting its end date to the past
             transaction {
-                th.ac.bodin2.electives.db.models.Electives.update(
-                    { th.ac.bodin2.electives.db.models.Electives.id eq Electives.SCIENCE_ID }
+                th.ac.bodin2.electives.db.models.Enrollments.update(
+                    { th.ac.bodin2.electives.db.models.Enrollments.id eq Enrollments.SCIENCE_ID }
                 ) {
                     it[endDate] = LocalDateTime.now().minusDays(1)
                 }
             }
 
-            // Wait for the bulk update loop to clear the inactive elective's flow
+            // Wait for the bulk update loop to clear the inactive enrollment's flow
             withTimeout(15.seconds) {
-                while (notificationsService.bulkUpdateFlows.value.containsKey(Electives.SCIENCE_ID)) {
+                while (notificationsService.bulkUpdateFlows.value.containsKey(Enrollments.SCIENCE_ID)) {
                     delay(100.milliseconds)
                 }
             }
 
             assertFalse(
-                notificationsService.bulkUpdateFlows.value.containsKey(Electives.SCIENCE_ID),
-                "Expected bulk update flow to be removed for inactive elective"
+                notificationsService.bulkUpdateFlows.value.containsKey(Enrollments.SCIENCE_ID),
+                "Expected bulk update flow to be removed for inactive enrollment"
             )
 
             serviceConfig.bulkUpdatesEnabled = false
@@ -573,7 +577,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 subjectIds.add(Subjects.PHYSICS_ID)
                             }
@@ -592,18 +596,18 @@ class NotificationsServiceImplTest : ApplicationTest() {
 
             // Trigger a selection that affects the subscribed subject
             transaction {
-                // Add Jane to Team 1 so they can enroll in Physics
-                StudentTeams.insert {
+                // Add Jane to Group 1 so they can enroll in Physics
+                StudentGroups.insert {
                     it[student] = Students.JANE_ID
-                    it[team] = Teams.TEAM_1_ID
+                    it[group] = Groups.GROUP_1_ID
                 }
             }
 
-            assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
-                electiveSelectionService.setStudentSelection(
+            assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(
+                enrollmentSelectionService.setStudentSelection(
                     janeSessionUser,
                     Students.JANE_ID,
-                    Electives.SCIENCE_ID,
+                    Enrollments.SCIENCE_ID,
                     Subjects.PHYSICS_ID
                 )
             )
@@ -619,7 +623,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
             )
 
             val update = updateEnvelope.subjectEnrollmentUpdate
-            assertEquals(Electives.SCIENCE_ID, update.electiveId)
+            assertEquals(Enrollments.SCIENCE_ID, update.enrollmentId)
             assertEquals(Subjects.PHYSICS_ID, update.subjectId)
             assertTrue(update.enrolledCount > 0, "Enrolled count should be greater than 0")
 
@@ -636,7 +640,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 subjectIds.add(Subjects.PHYSICS_ID)
                                 subjectIds.add(Subjects.CHEMISTRY_ID)
@@ -655,11 +659,11 @@ class NotificationsServiceImplTest : ApplicationTest() {
             assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
 
             // Enroll John in Physics
-            assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
-                electiveSelectionService.setStudentSelection(
+            assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(
+                enrollmentSelectionService.setStudentSelection(
                     johnSessionUser,
                     Students.JOHN_ID,
-                    Electives.SCIENCE_ID,
+                    Enrollments.SCIENCE_ID,
                     Subjects.PHYSICS_ID
                 )
             )
@@ -685,7 +689,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 subjectIds.add(Subjects.PHYSICS_ID)
                             }
@@ -706,7 +710,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 subjectIds.add(Subjects.CHEMISTRY_ID)
                             }
@@ -722,11 +726,11 @@ class NotificationsServiceImplTest : ApplicationTest() {
             assertTrue(Envelope.parseFrom(ack2.readBytes()).hasAcknowledged())
 
             // Trigger update for chemistry
-            assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
-                electiveSelectionService.setStudentSelection(
+            assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(
+                enrollmentSelectionService.setStudentSelection(
                     johnSessionUser,
                     Students.JOHN_ID,
-                    Electives.SCIENCE_ID,
+                    Enrollments.SCIENCE_ID,
                     Subjects.CHEMISTRY_ID,
                 )
             )
@@ -752,7 +756,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
                 subjectEnrollmentUpdateSubscriptionRequest =
                     subjectEnrollmentUpdateSubscriptionRequest {
                         subscriptions.put(
-                            Electives.SCIENCE_ID,
+                            Enrollments.SCIENCE_ID,
                             subjectEnrollmentUpdateSubscription {
                                 subjectIds.add(Subjects.PHYSICS_ID)
                             }

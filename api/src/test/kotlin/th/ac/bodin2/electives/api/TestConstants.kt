@@ -37,15 +37,15 @@ object TestConstants {
         const val CHARLIE_PASSWORD = "adminpass123"
     }
 
-    object Teams {
-        const val TEAM_1_ID = 1
-        const val TEAM_1_NAME = "Team 1"
+    object Groups {
+        const val GROUP_1_ID = 1
+        const val GROUP_1_NAME = "Team 1"
 
-        const val TEAM_2_ID = 2
-        const val TEAM_2_NAME = "Team 2"
+        const val GROUP_2_ID = 2
+        const val GROUP_2_NAME = "Team 2"
     }
 
-    object Electives {
+    object Enrollments {
         const val SCIENCE_ID = 1
         const val SCIENCE_NAME = "Science Elective"
 

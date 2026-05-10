@@ -131,7 +131,7 @@ function RouteComponent() {
                         <Separator />
                         <LinkNavigationRailItem icon={PeopleIcon} label={string.STUDENTS()} to="/manage/students" />
                         <LinkNavigationRailItem icon={TeacherIcon} label={string.TEACHERS()} to="/manage/teachers" />
-                        <LinkNavigationRailItem icon={TeamIcon} label={string.TEAMS()} to="/manage/groups" />
+                        <LinkNavigationRailItem icon={TeamIcon} label={string.GROUPS()} to="/manage/groups" />
                         <Separator />
                         <LinkNavigationRailItem
                             icon={TicketIcon}
@@ -154,10 +154,10 @@ function RouteComponent() {
                                 editable: true,
                                 createLinkProps: BaseSubjectDisplayContext.createLinkProps,
                                 editLinkProps: BaseSubjectDisplayContext.editLinkProps,
-                                viewLinkProps: (electiveId, subjectId, tab) => ({
+                                viewLinkProps: (enrollmentId, subjectId, tab) => ({
                                     to: '/manage/subjects/$subjectId',
                                     params: { subjectId },
-                                    search: { enrollment_id: electiveId, tab },
+                                    search: { enrollment_id: enrollmentId, tab },
                                 }),
                             }}
                         >

@@ -7,38 +7,43 @@ object Subjects : IdTable<Int>("subjects") {
     override val id = integer("id").entityId()
 
     /**
-     * The team that this subject belongs to. A subject does not need to be associated with a team.
+     * The group that this subject belongs to. A subject does not need to be associated with a group.
      *
-     * If a team is specified, only students in that team can enroll in this subject.
-     * Useful for special subjects that are only available to certain teams.
+     * If a group is specified, only students in that group can enroll in this subject.
+     * Useful for special subjects that are only available to certain groups.
      *
-     * Subject team restrictions are applied in addition to elective team restrictions.
-     * A student must satisfy both the elective's team and the subject's team restrictions to enroll in the subject.
+     * Subject group restrictions are applied in addition to enrollment group restrictions.
+     * A student must satisfy both the enrollment's group and the subject's group restrictions to enroll in the subject.
      *
-     * A student can enroll multiple times in the same subject if the subject belongs to multiple electives.
+     * A student can enroll multiple times in the same subject if the subject belongs to multiple enrollments.
      *
      * ### Limitations
      *
-     * A subject cannot have multiple teams.
-     * To achieve similar functionality, assign the same team to the students who can pick this subject.
+     * A subject cannot have multiple groups.
+     * To achieve similar functionality, assign the same group to the students who can pick this subject.
      *
-     * A subject cannot have different details per elective.
+     * A subject cannot have different details per enrollment.
      * To achieve similar functionality, simply create another subject with similar details.
      *
-     * A subject cannot have different teachers per elective.
+     * A subject cannot have different teachers per enrollment.
      * To achieve similar functionality, simply create another subject with same details and assign different teachers.
      *
      * ### Example use case
      *
-     * - You have an elective for the team `A`. This subject belongs to this elective.
-     * - You want to restrict the subject, only to those who belong to the `A` and `B` team.
+     * - You have an enrollment for the group `A`. This subject belongs to this enrollment.
+     * - You want to restrict the subject, only to those who belong to the `A` and `B` group.
      *
      * In this case:
      *
-     * - You set the subject's elective's team to `A`.
-     * - You set the subject's team to `B`.
+     * - You set the subject's enrollment's group to `A`.
+     * - You set the subject's group to `B`.
      */
-    val team = reference("team_id", Teams, onDelete = ReferenceOption.RESTRICT, onUpdate = ReferenceOption.CASCADE).nullable().index()
+    val group = reference(
+        "group_id",
+        Groups,
+        onDelete = ReferenceOption.RESTRICT,
+        onUpdate = ReferenceOption.CASCADE
+    ).nullable().index()
 
     val name = varchar("name", 255)
     val description = varchar("description", 10000).nullable()
