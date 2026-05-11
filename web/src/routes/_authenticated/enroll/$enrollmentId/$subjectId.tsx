@@ -128,10 +128,10 @@ function RouteComponent() {
 
     const invalidate = () =>
         Promise.all([
-            qc.invalidateQueries({ queryKey: ['subjects', subjectId(), 'enrolledCount'] }),
-            qc.invalidateQueries({ queryKey: ['subjects', subjectId(), 'members'] }),
-            qc.invalidateQueries({ queryKey: ['selections'] }),
-            qc.invalidateQueries({ queryKey: ['enrollments', enrollmentId(), 'subjects'] }),
+            qc.removeQueries({ queryKey: ['subjects', subjectId(), 'enrolledCount'] }),
+            qc.removeQueries({ queryKey: ['subjects', subjectId(), 'members'] }),
+            qc.invalidateQueries({ queryKey: ['selections', '@me'] }),
+            qc.invalidateQueries({ queryKey: ['selections', user.id] }),
         ])
 
     const handleStudentRemove = async (stud: User) => {

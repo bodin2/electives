@@ -48,7 +48,6 @@ function RouteComponent() {
     const { client } = useAPI()
     const { string } = useI18n()
     const navigate = Route.useNavigate()
-    const qc = useQueryClient()
 
     const isNew = () => isNewRoute(params().groupId)
 
@@ -87,11 +86,8 @@ function RouteComponent() {
                     // After creating, we should probably navigate to the new ID
                     navigate({ params: { groupId: id.toString() }, search: { page: 1 }, replace: true })
                 } else {
-                    // The server disallows changing a group's type; only patch the name.
                     await client.groups.admin.patch(Number(params().groupId), { name: trimmed })
                 }
-
-                await qc.invalidateQueries({ queryKey: ['groups'] })
 
                 break
             } catch (e) {

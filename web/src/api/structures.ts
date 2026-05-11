@@ -140,11 +140,11 @@ export class User {
      */
     update(data: Partial<RawUser>): void {
         if (data.firstName !== undefined) this.firstName = data.firstName
-        if (data.prefix !== undefined) this.prefix = data.prefix
-        if (data.middleName !== undefined) this.middleName = data.middleName
-        if (data.lastName !== undefined) this.lastName = data.lastName
+        if ('prefix' in data) this.prefix = data.prefix
+        if ('middleName' in data) this.middleName = data.middleName
+        if ('lastName' in data) this.lastName = data.lastName
         if (data.type !== undefined) this.type = data.type
-        if (data.avatarUrl !== undefined) this.avatarUrl = data.avatarUrl
+        if ('avatarUrl' in data) this.avatarUrl = data.avatarUrl
         if (data.groups !== undefined)
             this.groups = data.groups.map(g => this.client.groups._getOrCreate(g)).sort((a, b) => a.id - b.id)
     }
@@ -168,9 +168,7 @@ export class Enrollment {
     name: string
     startDate?: Date
     endDate?: Date
-    readonly groupId: number | null
-    /** Subjects within this enrollment. `null` if not fetched. */
-    subjects: Subject[] | null = null
+    groupId: number | null
 
     readonly client: Client<unknown>
 
@@ -183,10 +181,16 @@ export class Enrollment {
         this.groupId = data.groupId ?? null
     }
 
+    /** Subjects within this enrollment. `null` if not fetched. */
+    get subjects(): Subject[] | null {
+        return this.client.subjects.resolveAll(this.id) ?? null
+    }
+
     update(data: Partial<RawEnrollment>): void {
         if (data.name !== undefined) this.name = data.name
-        if (data.startDate !== undefined) this.startDate = data.startDate ? new Date(data.startDate * 1000) : undefined
-        if (data.endDate !== undefined) this.endDate = data.endDate ? new Date(data.endDate * 1000) : undefined
+        if ('startDate' in data) this.startDate = data.startDate ? new Date(data.startDate * 1000) : undefined
+        if ('endDate' in data) this.endDate = data.endDate ? new Date(data.endDate * 1000) : undefined
+        if ('groupId' in data) this.groupId = data.groupId ?? null
     }
 
     /**
@@ -276,14 +280,14 @@ export class Subject {
      */
     update(data: Partial<RawSubject>): void {
         if (data.name !== undefined) this.name = data.name
-        if (data.description !== undefined) this.description = data.description
+        if ('description' in data) this.description = data.description
         if (data.code !== undefined) this.code = data.code
         if (data.tag !== undefined) this.tag = data.tag
         if (data.location !== undefined) this.location = data.location
         if (data.capacity !== undefined) this.capacity = data.capacity
-        if (data.groupId !== undefined) this.groupId = data.groupId
-        if (data.thumbnailUrl !== undefined) this.thumbnailUrl = data.thumbnailUrl
-        if (data.imageUrl !== undefined) this.imageUrl = data.imageUrl
+        if ('groupId' in data) this.groupId = data.groupId
+        if ('thumbnailUrl' in data) this.thumbnailUrl = data.thumbnailUrl
+        if ('imageUrl' in data) this.imageUrl = data.imageUrl
     }
 
     canUserEnroll(user: User): boolean {

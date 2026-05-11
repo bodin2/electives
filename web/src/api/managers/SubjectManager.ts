@@ -95,9 +95,9 @@ export class SubjectManager implements CacheableManager {
     }
 
     /**
-     * Get the cache key for an enrolled count entry
+     * Get the cache key for a class (enrollment + subject)
      */
-    getEnrolledCountKey(enrollmentId: number, subjectId: number): string {
+    getClassKey(enrollmentId: number, subjectId: number): string {
         return `${enrollmentId}:${subjectId}`
     }
 
@@ -121,23 +121,22 @@ export class SubjectManager implements CacheableManager {
 
         if (cache) {
             const subjectIds = new Set<number>()
-            for (let i = 0; i < subjects.length; i++) {
-                const subject = subjects[i]
-                const rawSubject = data.subjects[i]
-                subjectIds.add(subject.id)
+
+            for (const rawSubject of data.subjects) {
+                subjectIds.add(rawSubject.id)
+
                 if (rawSubject.enrolledCount !== undefined) {
-                    this.enrolledCountCache.set(
-                        this.getEnrolledCountKey(enrollmentId, subject.id),
-                        rawSubject.enrolledCount,
-                    )
+                    this._updateEnrolledCount(enrollmentId, rawSubject.id, rawSubject.enrolledCount)
                 }
+
                 if (rawSubject.teachers.length > 0) {
                     this.teachersCache.set(
-                        this.getEnrolledCountKey(enrollmentId, subject.id),
+                        this.getClassKey(enrollmentId, rawSubject.id),
                         rawSubject.teachers.map(t => this.client.users._getOrCreate(t)),
                     )
                 }
             }
+
             this.enrollmentSubjectIds.set(enrollmentId, subjectIds)
         }
 
@@ -169,11 +168,11 @@ export class SubjectManager implements CacheableManager {
 
         if (cache) {
             if (data.enrolledCount !== undefined) {
-                this.enrolledCountCache.set(this.getEnrolledCountKey(enrollmentId, subject.id), data.enrolledCount)
+                this.enrolledCountCache.set(this.getClassKey(enrollmentId, subject.id), data.enrolledCount)
             }
             if (data.teachers.length > 0) {
                 this.teachersCache.set(
-                    this.getEnrolledCountKey(enrollmentId, subject.id),
+                    this.getClassKey(enrollmentId, subject.id),
                     data.teachers.map(t => this.client.users._getOrCreate(t)),
                 )
             }
@@ -184,7 +183,7 @@ export class SubjectManager implements CacheableManager {
 
     async fetchEnrolledCount(options: EnrolledCountFetchOptions): Promise<number> {
         const { enrollmentId, subjectId, force = false } = options
-        const key = this.getEnrolledCountKey(enrollmentId, subjectId)
+        const key = this.getClassKey(enrollmentId, subjectId)
 
         if (!force) {
             const cached = this.enrolledCountCache.get(key)
@@ -266,7 +265,7 @@ export class SubjectManager implements CacheableManager {
      * @param subjectId The subject's ID
      */
     resolveEnrolledCount(enrollmentId: number, subjectId: number): number | undefined {
-        return this.enrolledCountCache.get(this.getEnrolledCountKey(enrollmentId, subjectId))
+        return this.enrolledCountCache.get(this.getClassKey(enrollmentId, subjectId))
     }
 
     /**
@@ -275,14 +274,14 @@ export class SubjectManager implements CacheableManager {
      * @param subjectId The subject's ID
      */
     resolveTeachers(enrollmentId: number, subjectId: number): User[] | undefined {
-        return this.teachersCache.get(this.getEnrolledCountKey(enrollmentId, subjectId))
+        return this.teachersCache.get(this.getClassKey(enrollmentId, subjectId))
     }
 
     /**
      * Update enrolled count for a subject (used by real-time updates)
      */
     _updateEnrolledCount(enrollmentId: number, subjectId: number, count: number): void {
-        this.enrolledCountCache.set(this.getEnrolledCountKey(enrollmentId, subjectId), count)
+        this.enrolledCountCache.set(this.getClassKey(enrollmentId, subjectId), count)
     }
 }
 
@@ -372,7 +371,7 @@ export class SubjectAdminActions {
             decoder: RawSubject,
         })
         if (patch.patchTeachers && patch.enrollmentId) {
-            this.manager.teachersCache.delete(this.manager.getEnrolledCountKey(patch.enrollmentId, id))
+            this.manager.teachersCache.delete(this.manager.getClassKey(patch.enrollmentId, id))
         }
         return this.manager._getOrCreate(data)
     }

@@ -149,6 +149,7 @@ function RouteComponent() {
         Promise.all([
             qc.invalidateQueries({
                 queryKey: ['admin', type === UserType.STUDENT ? 'students' : 'teachers'],
+                exact: true,
             }),
             userId !== undefined ? qc.invalidateQueries({ queryKey: ['users', userId] }) : undefined,
         ])
@@ -241,9 +242,7 @@ function RouteComponent() {
             // Remove, not invalidate
             qc.removeQueries({ queryKey: ['users', deletedUserId] })
 
-            await qc.invalidateQueries({
-                queryKey: ['admin', deletedUserType === UserType.STUDENT ? 'students' : 'teachers'],
-            })
+            await invalidate(deletedUserType)
 
             switch (deletedUserType) {
                 case UserType.TEACHER:

@@ -58,7 +58,6 @@ export default function AddSubjectToEnrollmentDialog(props: {
                                     ...subjects.map(it => it.id),
                                     props.subjectId,
                                 ])
-                                await api.client.subjects.admin.fetch(props.subjectId, { force: true })
                                 await Promise.all([
                                     qc.invalidateQueries({ queryKey: ['enrollments', en.id, 'subjects'] }),
                                     qc.invalidateQueries({

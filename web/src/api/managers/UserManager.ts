@@ -1,3 +1,4 @@
+import { UsersService_TeacherSubjects } from '@bodin2/electives-common/proto/api'
 import { type Subject, User } from '../structures'
 import {
     AdminAddUserRequest,
@@ -6,7 +7,6 @@ import {
     AdminListUsersResponse,
     AdminUserPatch,
     RawUser,
-    StudentSelections,
     UnauthorizedError,
 } from '../types'
 import type { Cache } from '../cache'
@@ -103,9 +103,8 @@ export class UserManager implements CacheableManager {
      * @param userId The user's ID, or "@me" for the authenticated user
      */
     async fetchTeacherSubjects(userId: number | '@me'): Promise<Map<number, Subject>> {
-        // TeacherSubjects has the same wire format as StudentSelections
-        const data = await this.rest.get<StudentSelections>(`/users/${userId}/subjects`, {
-            decoder: StudentSelections,
+        const data = await this.rest.get<UsersService_TeacherSubjects>(`/users/${userId}/subjects`, {
+            decoder: UsersService_TeacherSubjects,
         })
 
         const subjects = new Map<number, Subject>()

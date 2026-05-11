@@ -1,4 +1,4 @@
-import { createQuery, useQueryClient } from '@tanstack/solid-query'
+import { createQuery } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { createMemo, createSignal } from 'solid-js'
 import { Portal } from 'solid-js/web'
@@ -10,6 +10,7 @@ import NotFoundPage from '../../../../components/pages/NotFoundPage'
 import { useAPI } from '../../../../providers/APIProvider'
 import { useI18n } from '../../../../providers/I18nProvider'
 import { enrollmentQueryOptions, enrollmentSubjectsQueryOptions } from '../../../../queries/enrollments'
+import { queryClient } from '../../../../queries/queryClient'
 import { catchErrors } from '../../../../utils/error-component'
 import { simpleXXHash31 } from '../../../../utils/xxhash'
 import type { AdminEnrollmentPatch } from '../../../../api/types'
@@ -46,7 +47,6 @@ function RouteComponent() {
 
     const { client } = useAPI()
     const { string } = useI18n()
-    const qc = useQueryClient()
 
     const enrollmentQuery = createQuery(() => ({
         ...enrollmentQueryOptions(client, Number(params().enrollmentId)),
@@ -64,8 +64,6 @@ function RouteComponent() {
     const enrollment = createMemo(() => new Enrollment(client, enrollmentData()))
 
     const [confirmDeleteOpen, setConfirmDeleteOpen] = createSignal(false)
-
-    const invalidate = () => qc.invalidateQueries({ queryKey: ['enrollments'] })
 
     const handleEdit = async (key: string, val: unknown, patchKey?: string) => {
         if (isNew()) {
@@ -87,7 +85,6 @@ function RouteComponent() {
             try {
                 await client.enrollments.admin.patch(enrollment().id, patch)
                 setEnrollmentData({ ...enrollmentData(), [key]: val })
-                await invalidate()
             } catch (e) {
                 console.error(e)
                 alert(string.ERROR_SAVE_FAILED({ error: String(e) }))
@@ -104,8 +101,6 @@ function RouteComponent() {
 
             try {
                 await client.enrollments.admin.put(s.id, s)
-                await client.enrollments.fetchAll({ force: true })
-                await invalidate()
 
                 navigate({
                     params: { enrollmentId: s.id },
@@ -125,8 +120,7 @@ function RouteComponent() {
 
     const doDelete = async () => {
         await client.enrollments.admin.delete(enrollment().id)
-        await qc.removeQueries({ queryKey: ['enrollments', enrollment().id] })
-        await invalidate()
+        await queryClient.removeQueries({ queryKey: ['enrollments', enrollment().id] })
         await navigate({ to: '..' })
     }
 

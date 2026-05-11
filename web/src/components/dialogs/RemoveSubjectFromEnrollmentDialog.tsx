@@ -34,7 +34,6 @@ export default function RemoveSubjectFromEnrollmentDialog(props: {
                         ...subjects.map(it => it.id).filter(id => id !== props.subject.id),
                     ])
 
-                    await api.client.subjects.admin.fetch(props.subject.id, { force: true })
                     await Promise.all([
                         qc.invalidateQueries({ queryKey: ['enrollments', props.enrollment.id, 'subjects'] }),
                         qc.invalidateQueries({ queryKey: ['admin', 'subjects', props.subject.id, 'enrollmentIds'] }),

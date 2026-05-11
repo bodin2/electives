@@ -1,5 +1,5 @@
 import Logger from '@bodin2/electives-common/Logger'
-import { SubjectTag, type UserType } from '@bodin2/electives-common/proto/api'
+import { SubjectTag } from '@bodin2/electives-common/proto/api'
 import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { createEffect, createMemo, createSignal, Show } from 'solid-js'
@@ -249,7 +249,6 @@ function RouteComponent() {
                 await client.subjects.admin.patch(subject().id, patch)
                 // Update the cached instance directly for immediate feedback
                 setSubjectData({ ...subjectData(), [key]: val })
-                await invalidate()
             } catch (e) {
                 console.error(e)
                 alert(string.ERROR_SAVE_FAILED({ error: String(e) }))
@@ -275,8 +274,6 @@ function RouteComponent() {
 
             try {
                 await client.subjects.admin.put(s.id, s)
-                await client.subjects.admin.fetchAll({ force: true })
-                await invalidate()
 
                 navigate({
                     params: { subjectId: s.id },
@@ -297,21 +294,14 @@ function RouteComponent() {
         }
     }
 
-    const invalidateUser = (_type: UserType) =>
-        Promise.all([
-            qc.invalidateQueries({ queryKey: ['subjects'] }),
-            qc.invalidateQueries({ queryKey: ['users'] }),
-            qc.invalidateQueries({ queryKey: ['admin', 'students'] }),
-            qc.invalidateQueries({ queryKey: ['admin', 'teachers'] }),
-        ])
-
     const handleStudentRemove = async (stud: User) => {
         const en = nonNull(enrollment_())
 
         await client.selections.delete(stud.id, en.id)
         enrollment.setCount(en.id, subject().id, current => current - 1)
 
-        await invalidateUser(stud.type)
+        qc.removeQueries({ queryKey: ['subjects', subject().id, 'members'] })
+        await qc.invalidateQueries({ queryKey: ['selections', stud.id] })
     }
 
     const handleTeacherRemove = async (teach: User) => {
@@ -331,8 +321,8 @@ function RouteComponent() {
 
         enrollment.bumpVersion(en.id)
 
-        await invalidateUser(teach.type)
-        await qc.invalidateQueries({ queryKey: ['subjects'] })
+        qc.removeQueries({ queryKey: ['subjects', subject().id, 'members'] })
+        await qc.invalidateQueries({ queryKey: ['teacherSubjects', teach.id] })
     }
 
     return (
