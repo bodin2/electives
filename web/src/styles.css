@@ -15,6 +15,7 @@
 
 *::selection {
   background-color: var(--m3c-primary-fixed-dim);
+  color: var(--m3c-on-primary-fixed);
 }
 
 :root, body, #app {

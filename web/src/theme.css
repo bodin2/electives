@@ -42,6 +42,20 @@
     --m3c-on-tertiary-container-subtle: light-dark(#762f7b, #e08ee1);
     --m3c-error-container-subtle: light-dark(#ffcfca, #5c181b);
     --m3c-on-error-container-subtle: light-dark(#6e1813, #ff897f);
+	--m3c-primary-fixed: #1c75d4;
+    --m3c-primary-fixed-dim: #0068c4;
+    --m3c-on-primary-fixed: #fff;
+    --m3c-on-primary-fixed-variant: #fefcff;
+    --m3c-secondary-fixed: #b2caf5;
+    --m3c-secondary-fixed-dim: #a5bde7;
+    --m3c-on-secondary-fixed: #142f51;
+    --m3c-on-secondary-fixed-variant: #344c70;
+    --m3c-tertiary-fixed: #ffcfee;
+    --m3c-tertiary-fixed-dim: #f0c1e0;
+    --m3c-primary-dim: light-dark(#005fb4, #589fff);
+    --m3c-secondary-dim: light-dark(#486085, #879fc8);
+    --m3c-tertiary-dim: light-dark(#79536e, #ffe4f3);
+    --m3c-error-dim: light-dark(#a73a34, #ff7b71);
 }
 
 :root.legacy-theme {
