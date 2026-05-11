@@ -16,6 +16,7 @@ import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.getParser
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.db.models.*
+import th.ac.bodin2.electives.proto.api.GroupType
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -63,10 +64,27 @@ object TestDatabase {
         Groups.insert {
             it[id] = TestConstants.Groups.GROUP_1_ID
             it[name] = TestConstants.Groups.GROUP_1_NAME
+            it[type] = GroupType.CUSTOM.number
         }
         Groups.insert {
             it[id] = TestConstants.Groups.GROUP_2_ID
             it[name] = TestConstants.Groups.GROUP_2_NAME
+            it[type] = GroupType.CUSTOM.number
+        }
+        Groups.insert {
+            it[id] = TestConstants.Groups.GRADE_ID
+            it[name] = TestConstants.Groups.GRADE_NAME
+            it[type] = GroupType.GRADE.number
+        }
+        Groups.insert {
+            it[id] = TestConstants.Groups.ROOM_ID
+            it[name] = TestConstants.Groups.ROOM_NAME
+            it[type] = GroupType.ROOM.number
+        }
+        Groups.insert {
+            it[id] = TestConstants.Groups.PROGRAM_ID
+            it[name] = TestConstants.Groups.PROGRAM_NAME
+            it[type] = GroupType.PROGRAM.number
         }
 
         usersService.createStudent(
@@ -74,13 +92,19 @@ object TestDatabase {
             firstName = TestConstants.Students.JOHN_FIRST_NAME,
             middleName = TestConstants.Students.JOHN_MIDDLE_NAME,
             lastName = TestConstants.Students.JOHN_LAST_NAME,
-            password = TestConstants.Students.JOHN_PASSWORD
+            password = TestConstants.Students.JOHN_PASSWORD,
+            gradeId = TestConstants.Groups.GRADE_ID,
+            roomId = TestConstants.Groups.ROOM_ID,
+            programId = TestConstants.Groups.PROGRAM_ID,
         )
         usersService.createStudent(
             id = TestConstants.Students.JANE_ID,
             firstName = TestConstants.Students.JANE_FIRST_NAME,
             lastName = TestConstants.Students.JANE_LAST_NAME,
-            password = TestConstants.Students.JANE_PASSWORD
+            password = TestConstants.Students.JANE_PASSWORD,
+            gradeId = TestConstants.Groups.GRADE_ID,
+            roomId = TestConstants.Groups.ROOM_ID,
+            programId = TestConstants.Groups.PROGRAM_ID,
         )
 
         StudentGroups.insert {

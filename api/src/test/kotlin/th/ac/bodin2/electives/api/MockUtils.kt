@@ -94,7 +94,7 @@ object MockUtils {
         every { mock.groups } returns SizedCollection(
             listOf(
                 mockGroup(ENROLLMENT_GROUP_ID),
-                mockGroup(SUBJECT_GROUP_ID)
+                mockGroup(SUBJECT_GROUP_ID),
             )
         )
 

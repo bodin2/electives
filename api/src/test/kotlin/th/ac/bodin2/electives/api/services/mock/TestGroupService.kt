@@ -9,6 +9,7 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_GROUP_ID
 import th.ac.bodin2.electives.db.Group
 import th.ac.bodin2.electives.db.Student
+import th.ac.bodin2.electives.proto.api.GroupType
 
 class TestGroupService : GroupService {
     companion object {
@@ -16,7 +17,7 @@ class TestGroupService : GroupService {
     }
 
     @Transactional
-    override fun create(id: Int, name: String): Group = error("Not testable")
+    override fun create(id: Int, name: String, type: GroupType): Group = error("Not testable")
 
     @Transactional
     override fun delete(id: Int) = error("Not testable")

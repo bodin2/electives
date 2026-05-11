@@ -19,6 +19,7 @@ import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersServiceImpl.Config
 import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.*
+import th.ac.bodin2.electives.proto.api.GroupType
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.env
@@ -95,63 +96,134 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     override fun createStudent(
         id: Int,
         firstName: String,
+        gradeId: Int,
+        roomId: Int,
+        programId: Int?,
         prefix: String?,
         middleName: String?,
         lastName: String?,
         password: String,
         avatarUrl: String?,
-        groups: List<Int>?,
+        groupIds: List<Int>?,
     ): Student {
+        assertGroupHasType(gradeId, GroupType.GRADE)
+        assertGroupHasType(roomId, GroupType.ROOM)
+        programId?.let { assertGroupHasType(it, GroupType.PROGRAM) }
+        assertGroupsHaveType(groupIds.orEmpty(), GroupType.CUSTOM)
+
         val user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
         val studentRow = Students
-            .insert {
-                it[Students.id] = user.id
-            }
+            .insert { it[Students.id] = user.id }
             .resultedValues!!
             .first()
 
-        StudentGroups.batchInsert(groups ?: emptyList()) {
-            Group.assertExists(it)
-
+        // All memberships go into the join table: GRADE + ROOM (always) + PROGRAM (optional) + any CUSTOMs
+        val allGroupIds = (listOfNotNull(gradeId, roomId, programId) + groupIds.orEmpty()).distinct()
+        StudentGroups.batchInsert(allGroupIds) {
             this[StudentGroups.student] = id
             this[StudentGroups.group] = it
         }
 
-        return Student.wrapRow(studentRow).load(Student::groups)
+        return Student.wrapRow(studentRow).load(Student::user, Student::groups)
+    }
+
+    /**
+     * Asserts that the given group exists and has the expected [GroupType].
+     *
+     * @throws EntityNotFoundException if the group does not exist.
+     * @throws IllegalArgumentException if the group has a different type.
+     */
+    private fun assertGroupHasType(groupId: Int, expected: GroupType) {
+        val type = Group.getType(groupId)
+            ?: throw EntityNotFoundException(ExceptionEntity.GROUP, "Group does not exist: $groupId")
+
+        require(type == expected.number) {
+            "Group $groupId has type: ${GroupType.forNumber(type)?.name ?: type}, expected: ${expected.name}"
+        }
+    }
+
+    /**
+     * Asserts that every given group exists and has the expected [GroupType].
+     * @throws UsersService.BatchOperationException.MissingGroups if any group does not exist.
+     * @throws IllegalArgumentException if any group has a different type.
+     */
+    private fun assertGroupsHaveType(groupIds: Collection<Int>, expected: GroupType) {
+        if (groupIds.isEmpty()) return
+
+        val distinct = groupIds.toSet()
+        val rows = Groups.select(Groups.id, Groups.type)
+            .where { Groups.id inList distinct }
+            .associate { it[Groups.id].value to it[Groups.type] }
+
+        val missing = distinct.filter { it !in rows }
+        if (missing.isNotEmpty()) {
+            throw UsersService.BatchOperationException.MissingGroups(missing)
+        }
+
+        val mismatched = rows.filter { it.value != expected.number }.keys
+        require(mismatched.isEmpty()) {
+            "Groups $mismatched don't have the expected type: ${expected.name}"
+        }
     }
 
     @Transactional
     override fun createStudents(inserts: List<UsersService.StudentInsert>) = transaction {
         if (inserts.isEmpty()) return@transaction emptyList()
 
-        val requestedGroupIds = inserts
-            .flatMap { it.groups }
-            .toSet()
+        // Collect every referenced group ID and type so we can validate in one query
+        val expectedTypes = mutableMapOf<Int, GroupType>()
+        for (insert in inserts) {
+            fun add(id: Int, type: GroupType) {
+                val prev = expectedTypes[id]
+                if (prev != null && prev != type) {
+                    throw UsersService.BatchOperationException.InvalidUserData(
+                        insert.user.id,
+                        IllegalArgumentException("Group $id is referenced as both ${prev.name} and ${type.name}")
+                    )
+                }
+                expectedTypes[id] = type
+            }
+            add(insert.gradeId, GroupType.GRADE)
+            add(insert.roomId, GroupType.ROOM)
+            insert.programId?.let { add(it, GroupType.PROGRAM) }
+            insert.groups.forEach { add(it, GroupType.CUSTOM) }
+        }
 
-        val existingGroupIds = Groups
-            .select(Groups.id)
-            .where { Groups.id inList requestedGroupIds.toList() }
-            .map { it[Groups.id].value }
-            .toSet()
+        val existing = Groups.select(Groups.id, Groups.type)
+            .where { Groups.id inList expectedTypes.keys.toList() }
+            .associate { it[Groups.id].value to it[Groups.type] }
 
-        val missingGroupIds = requestedGroupIds.filter { it !in existingGroupIds }
-        if (!missingGroupIds.isEmpty()) throw UsersService.BatchOperationException.MissingGroups(missingGroupIds)
+        val missing = expectedTypes.keys.filter { it !in existing }
+        if (missing.isNotEmpty()) throw UsersService.BatchOperationException.MissingGroups(missing)
+
+        val mismatched = expectedTypes.filter { (id, type) -> existing[id] != type.number }
+        if (mismatched.isNotEmpty()) {
+            // Attribute the error to the first student that referenced any mismatched group.
+            val badId = mismatched.keys.first()
+            val owner = inserts.first { insert ->
+                badId == insert.gradeId || badId == insert.roomId || badId == insert.programId ||
+                        badId in insert.groups
+            }
+
+            throw UsersService.BatchOperationException.InvalidUserData(
+                owner.user.id,
+                IllegalArgumentException("Group $badId has wrong type for its slot")
+            )
+        }
 
         val prepared = insertUserBatch(inserts)
 
         Students.batchInsert(prepared) { item ->
-            val uid = item.request.user.id
-
-            this[Students.id] = uid
+            this[Students.id] = item.request.user.id
         }
 
-        val studentGroups = prepared.flatMap { item ->
-            item.request.groups
-                .distinct()
-                .map { groupId -> item.request.user.id to groupId }
+        val memberships = prepared.flatMap { item ->
+            val insert = item.request
+            val ids = (listOfNotNull(insert.gradeId, insert.roomId, insert.programId) + insert.groups).distinct()
+            ids.map { groupId -> insert.user.id to groupId }
         }
 
-        StudentGroups.batchInsert(studentGroups) { (studentId, groupId) ->
+        StudentGroups.batchInsert(memberships) { (studentId, groupId) ->
             this[StudentGroups.student] = studentId
             this[StudentGroups.group] = groupId
         }
@@ -290,17 +362,66 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = transaction {
         Student.assertExists(id)
 
+        // Validate group types up-front so we never partially update on failure
+        update.gradeId?.let { assertGroupHasType(it, GroupType.GRADE) }
+        update.roomId?.let { assertGroupHasType(it, GroupType.ROOM) }
+        if (update.setProgramId) update.programId?.let { assertGroupHasType(it, GroupType.PROGRAM) }
+        update.groups?.let { assertGroupsHaveType(it, GroupType.CUSTOM) }
+
+        val hasFixedGroupUpdate = update.gradeId != null || update.roomId != null || update.setProgramId
+
         try {
             updateUser(id, update.user)
         } catch (e: NothingToUpdateException) {
-            update.groups ?: throw e
+            if (update.groups == null && !hasFixedGroupUpdate) throw e
         }
 
-        update.groups?.let { groups ->
-            StudentGroups.deleteWhere { StudentGroups.student eq id }
-            StudentGroups.batchInsert(groups) {
-                Group.assertExists(it)
+        // Removes the student's current membership in the fixed slot of [type], if any
+        fun clearFixedSlot(type: GroupType) {
+            val currentOfType =
+                (StudentGroups innerJoin Groups)
+                    .select(StudentGroups.group)
+                    .where { (StudentGroups.student eq id) and (Groups.type eq type.number) }
+                    .map { it[StudentGroups.group].value }
 
+            if (currentOfType.isNotEmpty()) {
+                StudentGroups.deleteWhere {
+                    (StudentGroups.student eq id) and (StudentGroups.group inList currentOfType)
+                }
+            }
+        }
+
+        // For each slotted group being updated, swap the existing membership of that type for the new one
+        fun swapFixedSlot(newGroupId: Int, type: GroupType) {
+            clearFixedSlot(type)
+            StudentGroups.insert {
+                it[StudentGroups.student] = id
+                it[StudentGroups.group] = newGroupId
+            }
+        }
+
+        update.gradeId?.let { swapFixedSlot(it, GroupType.GRADE) }
+        update.roomId?.let { swapFixedSlot(it, GroupType.ROOM) }
+        if (update.setProgramId) {
+            // Either swap to the new program or clear the existing one (programId == null).
+            update.programId?.let { swapFixedSlot(it, GroupType.PROGRAM) } ?: clearFixedSlot(GroupType.PROGRAM)
+        }
+
+        // Replace all CUSTOM memberships for this student with the provided list
+        update.groups?.let { newCustoms ->
+            val currentCustoms =
+                (StudentGroups innerJoin Groups)
+                    .select(StudentGroups.group)
+                    .where { (StudentGroups.student eq id) and (Groups.type eq GroupType.CUSTOM.number) }
+                    .map { it[StudentGroups.group].value }
+
+            if (currentCustoms.isNotEmpty()) {
+                StudentGroups.deleteWhere {
+                    (StudentGroups.student eq id) and (StudentGroups.group inList currentCustoms)
+                }
+            }
+
+            StudentGroups.batchInsert(newCustoms.distinct()) {
                 this[StudentGroups.student] = id
                 this[StudentGroups.group] = it
             }

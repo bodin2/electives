@@ -2,7 +2,7 @@ import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { batch, createEffect, createMemo, createRenderEffect, createSignal, on, onCleanup, onMount } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { type AdminUserPatch, NotFoundError, User, UserType } from '../../../../api'
+import { type AdminUserPatch, GroupType, NotFoundError, User, UserType } from '../../../../api'
 import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
 import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
@@ -156,15 +156,28 @@ function RouteComponent() {
     const handleSave = async () => {
         const u = userData()
 
+        const gradeId = u.groups.find(g => g.type === GroupType.GRADE)?.id
+        const roomId = u.groups.find(g => g.type === GroupType.ROOM)?.id
+        const programId = u.groups.find(g => g.type === GroupType.PROGRAM)?.id
+        const customGroupIds = u.groups.filter(g => g.type === GroupType.CUSTOM).map(g => g.id)
+
         if (isNew()) {
             if (u.id < 0) return
             if (!u.newPassword) return
+
+            if (u.type === UserType.STUDENT && (gradeId === undefined || roomId === undefined)) {
+                alert(string.ERROR_SAVE_FAILED({ error: 'Students require both a grade and a room.' }))
+                return
+            }
 
             try {
                 await client.users.admin.put(u.id, {
                     user: u,
                     password: u.newPassword,
-                    groupIds: u.groups?.map(g => g.id) ?? [],
+                    groupIds: customGroupIds,
+                    gradeId,
+                    roomId,
+                    programId,
                 })
 
                 displayContext.setUserData({ ...userData(), newPassword: '' })
@@ -181,9 +194,15 @@ function RouteComponent() {
             }
         } else {
             const modified = modifiedFields()
+            const groupsTouched = modified.has('groups') || modified.has('patchGroups')
+
             const patch: AdminUserPatch = {
-                groups: u.groups?.map(g => g.id) ?? [],
-                patchGroups: modified.has('groups') || modified.has('patchGroups'),
+                groups: customGroupIds,
+                patchGroups: groupsTouched,
+                gradeId: groupsTouched ? gradeId : undefined,
+                roomId: groupsTouched ? roomId : undefined,
+                programId: groupsTouched ? programId : undefined,
+                patchProgramId: groupsTouched,
                 patchPrefix: modified.has('prefix') || modified.has('patchPrefix'),
                 patchMiddleName: modified.has('middleName') || modified.has('patchMiddleName'),
                 patchAvatarUrl: modified.has('avatarUrl') || modified.has('patchAvatarUrl'),

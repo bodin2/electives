@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.services
 
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
@@ -17,6 +18,7 @@ import th.ac.bodin2.electives.db.models.Groups
 import th.ac.bodin2.electives.db.models.StudentGroups
 import th.ac.bodin2.electives.db.models.Students
 import th.ac.bodin2.electives.db.models.Users
+import th.ac.bodin2.electives.proto.api.GroupType
 
 class GroupServiceImpl : GroupService {
     companion object {
@@ -27,10 +29,12 @@ class GroupServiceImpl : GroupService {
     override fun create(
         id: Int,
         name: String,
+        type: GroupType,
     ) = transaction {
         val stmt = Groups.insertIgnore {
             it[this.id] = id
             it[this.name] = name
+            it[this.type] = type.number
         }
 
         if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.GROUP)
@@ -40,6 +44,16 @@ class GroupServiceImpl : GroupService {
     @Transactional
     override fun delete(id: Int) {
         transaction {
+            val type = Group.getType(id) ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
+            // GRADE/CLASS groups must never lose members silently
+            // Refuse to delete a non-CUSTOM/PROGRAM group that still has members
+            if (type != GroupType.CUSTOM.number && type != GroupType.PROGRAM.number) {
+                val hasMembers = StudentGroups.selectAll()
+                    .where { StudentGroups.group eq id }
+                    .empty().not()
+                if (hasMembers) throw ConflictException(ExceptionEntity.GROUP)
+            }
+
             val rows = Groups.deleteWhere { Groups.id eq id }
             if (rows == 0) {
                 throw EntityNotFoundException(ExceptionEntity.GROUP)
@@ -64,24 +78,22 @@ class GroupServiceImpl : GroupService {
 
     @Transactional
     override fun getMembers(groupId: Int, page: Int, query: String?): Pair<List<Student>, Long> = transaction {
-        Group.findById(groupId) ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
+        Group.assertExists(groupId)
 
         val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
-        val groupCondition = StudentGroups.group eq groupId
 
-        val countQuery = if (searchCondition != null) {
-            (StudentGroups innerJoin Students innerJoin Users)
-                .selectAll().where { groupCondition and searchCondition }
-        } else {
-            StudentGroups.selectAll().where { groupCondition }
-        }
-        val count = countQuery.count()
+        val baseJoin = (StudentGroups innerJoin Students innerJoin Users)
+        val groupFilter: Op<Boolean> = StudentGroups.group eq groupId
+        val whereFilter: Op<Boolean> =
+            if (searchCondition != null) groupFilter and searchCondition else groupFilter
+
+        val count = baseJoin.selectAll().where { whereFilter }.count()
 
         val offset = ((page - 1) * PAGE_SIZE).toLong()
-        val dataQuery = (StudentGroups innerJoin Students innerJoin Users)
-            .selectAll().where {
-                if (searchCondition != null) groupCondition and searchCondition else groupCondition
-            }
+        val dataQuery = baseJoin
+            .select(Students.columns)
+            .where { whereFilter }
+            .orderBy(Students.id)
             .limit(PAGE_SIZE)
             .offset(offset)
 

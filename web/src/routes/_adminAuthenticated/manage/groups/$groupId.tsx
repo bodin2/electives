@@ -3,15 +3,15 @@ import PlusIcon from '@iconify-icons/mdi/plus'
 import { createQuery, keepPreviousData, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { TextField } from 'm3-solid'
-import { createEffect, createMemo, createSignal, Match, Show, Switch } from 'solid-js'
+import { createEffect, createMemo, createSignal, For, Match, Show, Switch } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { ConflictError, NotFoundError, type User } from '../../../../api'
+import { ConflictError, GroupType, NotFoundError, type User } from '../../../../api'
 import PaginatedUserList, { type PaginatedUserListHandle } from '../../../../components/admin/PaginatedUserList'
 import { Button } from '../../../../components/Button'
 import AddStudentToGroupDialog from '../../../../components/dialogs/AddStudentToGroupDialog'
-import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
 import Page from '../../../../components/Page'
 import NotFoundPage from '../../../../components/pages/NotFoundPage'
+import { Option, Select } from '../../../../components/Select'
 import { VStack } from '../../../../components/Stack'
 import StickyTabs from '../../../../components/StickyTabs'
 import { useTabPersistence } from '../../../../hooks/useTabPersistence'
@@ -57,19 +57,21 @@ function RouteComponent() {
         enabled: !isNew(),
     }))
 
-    const [confirmDeleteOpen, setConfirmDeleteOpen] = createSignal(false)
     const [tab, setTab] = createSignal<'info' | 'members'>('info')
     useTabPersistence(tab, setTab)
 
     const [name, setName] = createSignal('')
+    const [type, setType] = createSignal<GroupType>(GroupType.CUSTOM)
 
     // Reset local signals when group data changes
     createEffect(() => {
         const t = groupQuery.data
         if (t) {
             setName(t.name)
+            setType(t.type)
         } else if (isNew()) {
             setName('')
+            setType(GroupType.CUSTOM)
         }
     })
 
@@ -81,14 +83,14 @@ function RouteComponent() {
             try {
                 if (isNew()) {
                     const id = simpleXXHash31(`${trimmed}:${performance.now()}`, Math.floor(Math.random() * 0x7fffffff))
-                    await client.groups.admin.put(id, { id, name: trimmed })
+                    await client.groups.admin.put(id, { id, name: trimmed, type: type() })
                     // After creating, we should probably navigate to the new ID
                     navigate({ params: { groupId: id.toString() }, search: { page: 1 }, replace: true })
                 } else {
+                    // The server disallows changing a group's type; only patch the name.
                     await client.groups.admin.patch(Number(params().groupId), { name: trimmed })
                 }
 
-                await client.groups.fetchAll({ force: true })
                 await qc.invalidateQueries({ queryKey: ['groups'] })
 
                 break
@@ -103,45 +105,8 @@ function RouteComponent() {
         }
     }
 
-    const handleDelete = () => {
-        if (!groupQuery.data) return
-        setConfirmDeleteOpen(true)
-    }
-
-    const doDelete = async () => {
-        const group = groupQuery.data
-        if (!group) return
-
-        try {
-            await client.groups.admin.delete(group.id)
-            await client.groups.fetchAll({ force: true })
-            await qc.removeQueries({ queryKey: ['groups', group.id] })
-            await qc.invalidateQueries({ queryKey: ['groups'] })
-            navigate({ to: '..', replace: true })
-        } catch (e) {
-            console.error(e)
-            alert(string.ERROR_DELETE_FAILED({ error: String(e) }))
-        } finally {
-            setConfirmDeleteOpen(false)
-        }
-    }
-
     return (
         <Page name={isNew() ? string.CREATE_GROUP() : name()} allowBacking leading={null} trailing={null}>
-            <Portal>
-                <ConfirmDialog
-                    open={confirmDeleteOpen()}
-                    variant="danger"
-                    closedBy="any"
-                    onCancel={() => setConfirmDeleteOpen(false)}
-                    onConfirm={doDelete}
-                    confirmText={string.DELETE_GROUP()}
-                    headline={string.DELETE_GROUP()}
-                >
-                    <p>{string.CONFIRM_DELETE_GROUP({ name: <strong>{groupQuery.data?.name ?? ''}</strong> })}</p>
-                </ConfirmDialog>
-            </Portal>
-
             <Show when={!isNew()}>
                 <StickyTabs
                     value={tab()}
@@ -157,14 +122,43 @@ function RouteComponent() {
                 <Match when={tab() === 'info' || isNew()}>
                     <VStack gap={16} style={{ padding: '16px' }}>
                         <TextField label={string.NAME()} value={name()} onInput={e => setName(e.currentTarget.value)} />
+                        <Show
+                            when={isNew()}
+                            fallback={
+                                <Show when={groupQuery.data}>
+                                    {g => (
+                                        <TextField
+                                            readOnly
+                                            label={string.GROUP_TYPE()}
+                                            // @ts-expect-error: Dynamic keys
+                                            value={string[`GROUP_TYPE_${GroupType[g().type]}`]()}
+                                            supportingText={string.GROUP_TYPE_CANNOT_CHANGE_HINT()}
+                                        />
+                                    )}
+                                </Show>
+                            }
+                        >
+                            <Select
+                                label={string.GROUP_TYPE()}
+                                value={String(type())}
+                                onChange={e => setType(Number(e.currentTarget.value) as GroupType)}
+                            >
+                                <For
+                                    each={(
+                                        [GroupType.CUSTOM, GroupType.GRADE, GroupType.ROOM, GroupType.PROGRAM] as const
+                                    ).map(t => [GroupType[t] as 'CUSTOM' | 'GRADE' | 'ROOM' | 'PROGRAM', t] as const)}
+                                >
+                                    {([key, t]) => (
+                                        <Option value={t} selected={type() === t}>
+                                            {string[`GROUP_TYPE_${key}`]()}
+                                        </Option>
+                                    )}
+                                </For>
+                            </Select>
+                        </Show>
                         <Button variant="filled" onClick={handleSave} disabled={!name().trim()}>
                             {string.SAVE()}
                         </Button>
-                        <Show when={!isNew()}>
-                            <Button variant="tonal-error" onClick={handleDelete}>
-                                {string.DELETE_GROUP()}
-                            </Button>
-                        </Show>
                     </VStack>
                 </Match>
                 <Match when={tab() === 'members' && !isNew()}>
@@ -189,6 +183,13 @@ function GroupMembers() {
     const [addDialogOpen, setAddDialogOpen] = createSignal(false)
     let listHandle: PaginatedUserListHandle | undefined
 
+    const groupQuery = createQuery(() => ({
+        ...groupQueryOptions(client, groupId()),
+    }))
+
+    // @ts-expect-error: TypeScript moment
+    const isFixedGroup = () => [GroupType.PROGRAM, GroupType.CUSTOM].includes(groupQuery.data?.type)
+
     const membersQuery = createQuery(() => ({
         ...groupMembersQueryOptions(client, groupId(), search().page, query()),
         placeholderData: keepPreviousData,
@@ -197,13 +198,24 @@ function GroupMembers() {
 
     const removeUserFromGroup = async (user: User) => {
         try {
+            if (!isFixedGroup()) {
+                // Fixed slotted (GRADE/ROOM) memberships can't be removed directly
+                // The student must be reassigned to a different group of the same type via the user details page
+                // The remove button is hidden for those groups (see below), so this is just a defensive guard
+                throw new Error(
+                    'Cannot remove a member from a non-CUSTOM group; migrate all members to a different group of the same type first.',
+                )
+            }
+
             await client.users.admin.patch(user.id, {
                 patchLastName: false,
                 patchAvatarUrl: false,
                 patchMiddleName: false,
                 patchPrefix: false,
+                patchProgramId: false,
                 patchGroups: true,
-                groups: user.groups.filter(g => g.id !== groupId()).map(g => g.id),
+                // `groups` on UserPatch is the replacement list of CUSTOM-typed memberships.
+                groups: user.customGroups.filter(g => g.id !== groupId()).map(g => g.id),
             })
             listHandle?.onUserRemove(user.id)
         } catch (e) {
@@ -220,6 +232,7 @@ function GroupMembers() {
                     onClose={() => setAddDialogOpen(false)}
                     onSuccess={u => listHandle?.onUserAdd(u)}
                     groupId={groupId()}
+                    groupType={groupQuery.data?.type ?? GroupType.CUSTOM}
                 />
             </Portal>
             <PaginatedUserList
@@ -239,6 +252,7 @@ function GroupMembers() {
                 )}
                 trailing={props => (
                     <Button
+                        disabled={!isFixedGroup()}
                         aria-label={string.REMOVE()}
                         size="xs"
                         variant="tonal-error"

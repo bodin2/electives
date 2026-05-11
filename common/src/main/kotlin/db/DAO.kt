@@ -26,6 +26,10 @@ class User(id: EntityID<Int>) : Entity<Int>(id) {
 
 class Student(id: EntityID<Int>) : Entity<Int>(id) {
     val user by User referencedOn Students.id
+
+    /**
+     * All groups (of any [th.ac.bodin2.electives.proto.api.GroupType]) this student belongs to.
+     */
     var groups by Group via StudentGroups
 
     companion object : EntityClass<Int, Student>(Students) {
@@ -33,6 +37,9 @@ class Student(id: EntityID<Int>) : Entity<Int>(id) {
             if (!exists(studentId)) throw EntityNotFoundException(ExceptionEntity.STUDENT)
         }
 
+        /**
+         * Returns true if the student belongs to the specified group.
+         */
         fun hasGroup(studentId: Int, groupId: EntityID<Int>) = hasGroup(studentId, groupId.value)
         fun hasGroup(studentId: Int, groupId: Int): Boolean {
             return StudentGroups
@@ -114,9 +121,20 @@ class Group(id: EntityID<Int>) : Entity<Int>(id) {
         fun assertExists(groupId: Int) {
             if (!exists(groupId)) throw EntityNotFoundException(ExceptionEntity.GROUP)
         }
+
+        /**
+         * Reads the [Groups.type] column for the specified group ID, or null if the group does not exist.
+         */
+        fun getType(groupId: Int): Int? {
+            return Groups.select(Groups.type)
+                .where { Groups.id eq groupId }
+                .singleOrNull()
+                ?.get(Groups.type)
+        }
     }
 
-    val name by Groups.name
+    var name by Groups.name
+    var type by Groups.type
 }
 
 open class EnrollmentCompanion : EntityClass<Int, Enrollment>(Enrollments) {

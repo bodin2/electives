@@ -10,6 +10,7 @@ import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.proto.api.GroupType
 import kotlin.test.*
 
 class GroupServiceImplTest : ApplicationTest() {
@@ -22,7 +23,8 @@ class GroupServiceImplTest : ApplicationTest() {
     @Test
     fun `get all groups`() = runTest {
         val groups = transaction { groupService.getAll() }
-        assertEquals(2, groups.size)
+        // 2 custom groups + 3 slotted groups (GRADE, ROOM, PROGRAM)
+        assertEquals(5, groups.size)
     }
 
     @Test
@@ -80,6 +82,78 @@ class GroupServiceImplTest : ApplicationTest() {
             @OptIn(Transactional::class)
             groupService.delete(UNUSED_ID)
         }
+    }
+
+    @Test
+    fun `delete CUSTOM group with members succeeds`() = runTest {
+        // GROUP_2 is CUSTOM and has Jane as a member; CUSTOM groups are freely deletable
+        // (StudentGroups rows cascade). GROUP_2 is not referenced by any Subject/Enrollment.
+        @OptIn(Transactional::class)
+        groupService.delete(TestConstants.Groups.GROUP_2_ID)
+
+        val fetched = transaction { groupService.getById(TestConstants.Groups.GROUP_2_ID) }
+        assertNull(fetched)
+    }
+
+    @Test
+    fun `delete PROGRAM group with members succeeds`() = runTest {
+        // PROGRAM memberships are server-side optional and may be cleared on delete.
+        @OptIn(Transactional::class)
+        groupService.delete(TestConstants.Groups.PROGRAM_ID)
+
+        val fetched = transaction { groupService.getById(TestConstants.Groups.PROGRAM_ID) }
+        assertNull(fetched)
+    }
+
+    @Test
+    fun `delete GRADE group with members throws conflict`() = runTest {
+        // GRADE is a required fixed slot; deleting one with members would leave the
+        // attached students in an invalid state, so the service must refuse.
+        assertFailsWith<ConflictException> {
+            @OptIn(Transactional::class)
+            groupService.delete(TestConstants.Groups.GRADE_ID)
+        }
+
+        // The group is still present.
+        val fetched = transaction { groupService.getById(TestConstants.Groups.GRADE_ID) }
+        assertNotNull(fetched)
+    }
+
+    @Test
+    fun `delete ROOM group with members throws conflict`() = runTest {
+        assertFailsWith<ConflictException> {
+            @OptIn(Transactional::class)
+            groupService.delete(TestConstants.Groups.ROOM_ID)
+        }
+
+        val fetched = transaction { groupService.getById(TestConstants.Groups.ROOM_ID) }
+        assertNotNull(fetched)
+    }
+
+    @Test
+    fun `delete empty GRADE group succeeds`() = runTest {
+        val tempId = 700
+        @OptIn(Transactional::class)
+        groupService.create(tempId, "Grade 8", GroupType.GRADE)
+
+        @OptIn(Transactional::class)
+        groupService.delete(tempId)
+
+        val fetched = transaction { groupService.getById(tempId) }
+        assertNull(fetched)
+    }
+
+    @Test
+    fun `delete empty ROOM group succeeds`() = runTest {
+        val tempId = 701
+        @OptIn(Transactional::class)
+        groupService.create(tempId, "Room 8/1", GroupType.ROOM)
+
+        @OptIn(Transactional::class)
+        groupService.delete(tempId)
+
+        val fetched = transaction { groupService.getById(tempId) }
+        assertNull(fetched)
     }
 
     @Test

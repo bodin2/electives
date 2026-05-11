@@ -1,26 +1,43 @@
-import { type RawEnrollment, type RawGroup, type RawSubject, type RawUser, type SubjectTag, UserType } from './types'
+import {
+    GroupType,
+    type RawEnrollment,
+    type RawGroup,
+    type RawSubject,
+    type RawUser,
+    type SubjectTag,
+    UserType,
+} from './types'
 import type { Client } from './client'
 
 export class Group {
     id: number
     name: string
+    type: GroupType
     readonly client: Client<unknown>
 
     constructor(client: Client<unknown>, data: RawGroup) {
         this.client = client
         this.id = data.id
         this.name = data.name
+        this.type = data.type
     }
 
     update(data: Partial<RawGroup>) {
         if (data.id !== undefined) this.id = data.id
         if (data.name !== undefined) this.name = data.name
+        if (data.type !== undefined) this.type = data.type
+    }
+
+    /** Whether this group is a freeform CUSTOM group (not slotted GRADE/ROOM/PROGRAM) */
+    isCustom(): boolean {
+        return this.type === GroupType.CUSTOM
     }
 
     toJSON(): RawGroup {
         return {
             id: this.id,
             name: this.name,
+            type: this.type,
         }
     }
 }
@@ -93,6 +110,26 @@ export class User {
      */
     hasGroup(groupId: number): boolean {
         return this.groups.some(g => g.id === groupId)
+    }
+
+    /** The student's GRADE group, if any. */
+    get grade(): Group | undefined {
+        return this.groups.find(g => g.type === GroupType.GRADE)
+    }
+
+    /** The student's ROOM group, if any. */
+    get room(): Group | undefined {
+        return this.groups.find(g => g.type === GroupType.ROOM)
+    }
+
+    /** The student's PROGRAM group, if any. */
+    get program(): Group | undefined {
+        return this.groups.find(g => g.type === GroupType.PROGRAM)
+    }
+
+    /** All of the student's CUSTOM groups */
+    get customGroups(): Group[] {
+        return this.groups.filter(g => g.type === GroupType.CUSTOM)
     }
 
     /**

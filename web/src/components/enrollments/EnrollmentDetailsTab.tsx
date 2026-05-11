@@ -1,4 +1,3 @@
-import AddIcon from '@iconify-icons/mdi/add'
 import ArrowRightIcon from '@iconify-icons/mdi/arrow-right'
 import CalendarIcon from '@iconify-icons/mdi/calendar-clock-outline'
 import SaveIcon from '@iconify-icons/mdi/content-save'
@@ -13,7 +12,7 @@ import { type I18nApi, useI18n } from '../../providers/I18nProvider'
 import { groupsQueryOptions } from '../../queries/groups'
 import { nonNull } from '../../utils'
 import { formatDuration } from '../../utils/date'
-import Badge from '../Badge'
+import { GroupBadge } from '../Badges'
 import BottomBar from '../BottomBar'
 import { Button } from '../Button'
 import TextFieldDialog from '../dialogs/base/TextFieldDialog'
@@ -168,24 +167,12 @@ export default function EnrollmentDetailsTab(props: { stickyOffset?: number }) {
                             <EditButton field="name" />
                         </HStack>
                         <HStack alignVertical="center" gap={4}>
-                            <Badge
-                                style={{ cursor: 'pointer' }}
+                            <GroupBadge
+                                group={hasGroup() ? groupsQuery.data?.find(g => g.id === enrollment().groupId) : undefined}
+                                placeholder={string.ADD_GROUP()}
                                 onClick={() => setGroupDialogOpen(true)}
-                                variant="tonal"
-                            >
-                                <HStack gap={4}>
-                                    {hasGroup() && groupsQuery.data
-                                        ? groupsQuery.data.find(g => g.id === enrollment().groupId)?.name
-                                        : string.ADD_GROUP()}
-                                    <Button
-                                        iconType="only"
-                                        variant="text"
-                                        size="xs"
-                                        icon={hasGroup() ? PencilOutlineIcon : AddIcon}
-                                        style={{ width: '20px', height: '20px' }}
-                                    />
-                                </HStack>
-                            </Badge>
+                                onEdit={() => setGroupDialogOpen(true)}
+                            />
                         </HStack>
                     </HStack>
 

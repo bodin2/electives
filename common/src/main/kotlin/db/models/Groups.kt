@@ -7,5 +7,10 @@ object Groups : IdTable<Int>("groups") {
 
     val name = varchar("name", 255)
 
+    /**
+     * See [th.ac.bodin2.electives.proto.api.GroupType]
+     */
+    val type = integer("type")
+
     override val primaryKey = PrimaryKey(id)
 }

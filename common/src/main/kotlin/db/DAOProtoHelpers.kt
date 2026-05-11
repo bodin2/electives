@@ -101,6 +101,7 @@ fun Group.toProto(): th.ac.bodin2.electives.proto.api.Group {
     return group {
         id = group.id.value
         name = group.name
+        type = GroupType.forNumber(group.type)
     }
 }
 

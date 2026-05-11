@@ -1,14 +1,16 @@
 import { useQueryClient } from '@tanstack/solid-query'
+import { GroupType, type User } from '../../api'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import AddUserDialog from './base/AddUserDialog'
-import type { User } from '../../api'
+import type { AdminUserPatch } from '../../api'
 
 export default function AddStudentToGroupDialog(props: {
     open: boolean
     onClose: () => unknown
     onSuccess?: (user: User) => unknown
     groupId: number
+    groupType: GroupType
 }) {
     const api = useAPI()
     const qc = useQueryClient()
@@ -22,24 +24,43 @@ export default function AddStudentToGroupDialog(props: {
             headline={string.ADD_STUDENT_TO_GROUP()}
             type="student"
             onConfirm={async user => {
-                const currentGroups = user.groups.map(g => g.id)
-                if (!currentGroups.includes(props.groupId)) {
-                    await api.client.users.admin.patch(user.id, {
-                        patchLastName: false,
-                        patchAvatarUrl: false,
-                        patchMiddleName: false,
-                        patchPrefix: false,
-                        patchGroups: true,
-                        groups: [...currentGroups, props.groupId],
-                    })
+                // Already a member of this exact group\
+                if (user.hasGroup(props.groupId)) return
 
-                    await api.client.users.fetch(user.id, { force: true })
-
-                    await Promise.all([
-                        qc.invalidateQueries({ queryKey: ['groups', 'memberCounts'] }),
-                        qc.invalidateQueries({ queryKey: ['groups', props.groupId, 'members'] }),
-                    ])
+                const patch: AdminUserPatch = {
+                    patchLastName: false,
+                    patchAvatarUrl: false,
+                    patchMiddleName: false,
+                    patchPrefix: false,
+                    patchGroups: false,
+                    patchProgramId: false,
+                    groups: [],
                 }
+
+                switch (props.groupType) {
+                    case GroupType.CUSTOM:
+                        // CUSTOM-only replacement list: keep existing customs + add this one.
+                        patch.patchGroups = true
+                        patch.groups = [...user.customGroups.map(g => g.id), props.groupId]
+                        break
+                    case GroupType.GRADE:
+                        patch.gradeId = props.groupId
+                        break
+                    case GroupType.ROOM:
+                        patch.roomId = props.groupId
+                        break
+                    case GroupType.PROGRAM:
+                        patch.programId = props.groupId
+                        patch.patchProgramId = true
+                        break
+                }
+
+                await api.client.users.admin.patch(user.id, patch)
+
+                await Promise.all([
+                    qc.invalidateQueries({ queryKey: ['groups', 'memberCounts'] }),
+                    qc.invalidateQueries({ queryKey: ['groups', props.groupId, 'members'] }),
+                ])
             }}
         />
     )

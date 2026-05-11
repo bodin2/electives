@@ -176,16 +176,26 @@ class AdminUsersController(
         try {
             val protoOrNull = transaction {
                 val created = when (user.type) {
-                    UserType.STUDENT -> usersService.createStudent(
-                        id = user.id,
-                        firstName = user.firstName,
-                        prefix = if (user.hasPrefix()) user.prefix else null,
-                        middleName = if (user.hasMiddleName()) user.middleName else null,
-                        lastName = if (user.hasLastName()) user.lastName else null,
-                        password = req.password,
-                        avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,
-                        groups = req.groupIdsList.ifEmpty { null }
-                    )
+                    UserType.STUDENT -> {
+                        // Students require fixed GRADE and ROOM group IDs to be set. PROGRAM is optional
+                        if (!req.hasGradeId() || !req.hasRoomId()) {
+                            return@transaction null
+                        }
+
+                        usersService.createStudent(
+                            id = user.id,
+                            firstName = user.firstName,
+                            prefix = if (user.hasPrefix()) user.prefix else null,
+                            middleName = if (user.hasMiddleName()) user.middleName else null,
+                            lastName = if (user.hasLastName()) user.lastName else null,
+                            password = req.password,
+                            avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,
+                            gradeId = req.gradeId,
+                            roomId = req.roomId,
+                            programId = if (req.hasProgramId()) req.programId else null,
+                            groupIds = req.groupIdsList.ifEmpty { null }
+                        )
+                    }
 
                     UserType.TEACHER -> usersService.createTeacher(
                         id = user.id,
@@ -207,10 +217,11 @@ class AdminUsersController(
                 }
             }
 
-            protoOrNull ?: return badRequest("Unsupported user type")
+            protoOrNull
+                ?: return badRequest("Unsupported user type or missing required group IDs (grade_id, room_id)")
             call.respond(protoOrNull)
-        } catch (_: IllegalArgumentException) {
-            badRequest("Password does not meet the requirements")
+        } catch (e: IllegalArgumentException) {
+            badRequest(e.message ?: "Invalid request")
         } catch (_: EntityNotFoundException) {
             badRequest("One or more specified groups not found")
         } catch (_: ConflictException) {
@@ -246,7 +257,11 @@ class AdminUsersController(
                         id,
                         UsersService.StudentUpdate(
                             update,
-                            groups = if (req.patchGroups) req.groupsList else null
+                            groups = if (req.patchGroups) req.groupsList else null,
+                            gradeId = if (req.hasGradeId()) req.gradeId else null,
+                            roomId = if (req.hasRoomId()) req.roomId else null,
+                            programId = if (req.hasProgramId()) req.programId else null,
+                            setProgramId = req.patchProgramId,
                         )
                     ).toProto()
 
@@ -276,8 +291,8 @@ class AdminUsersController(
             }
         } catch (_: NothingToUpdateException) {
             badRequest("Nothing to update")
-        } catch (_: IllegalArgumentException) {
-            badRequest("New password does not meet the requirements")
+        } catch (e: IllegalArgumentException) {
+            badRequest(e.message ?: "Invalid request")
         }
     }
 
@@ -327,8 +342,15 @@ class AdminUsersController(
         }
 
         val studentInserts = inserts[UserType.STUDENT]?.map {
+            if (!it.hasGradeId() || !it.hasRoomId()) {
+                return badRequest("Student ${it.user.id} is missing one of grade_id, room_id")
+            }
+
             UsersService.StudentInsert(
                 user = it.toUserInsert(),
+                gradeId = it.gradeId,
+                roomId = it.roomId,
+                programId = if (it.hasProgramId()) it.programId else null,
                 groups = it.groupIdsList,
             )
         }
@@ -357,7 +379,9 @@ class AdminUsersController(
         } catch (e: UsersService.BatchOperationException) {
             when (e) {
                 is UsersService.BatchOperationException.InvalidUserData -> when (e.cause) {
-                    is IllegalArgumentException -> badRequest("Password for user ${e.id} does not meet requirements")
+                    is IllegalArgumentException -> badRequest(
+                        "User ${e.id} has invalid data: ${(e.cause as IllegalArgumentException).message ?: "unknown"}"
+                    )
                 }
 
                 is UsersService.BatchOperationException.MissingGroups -> badRequest("One or more specified groups not found")
@@ -756,7 +780,7 @@ class AdminGroupsController(private val groupService: GroupService) : Controller
 
         try {
             @OptIn(Transactional::class)
-            groupService.create(group.id, group.name)
+            groupService.create(group.id, group.name, group.type)
             ok()
         } catch (_: ConflictException) {
             conflict("Group with the same ID already exists")
@@ -772,6 +796,8 @@ class AdminGroupsController(private val groupService: GroupService) : Controller
             ok()
         } catch (_: EntityNotFoundException) {
             notFound("Group not found")
+        } catch (_: ConflictException) {
+            conflict("Group has members; reassign or remove them before deleting")
         } catch (e: ExposedSQLException) {
             badRequest(e.message ?: "SQL exception occurred")
         }

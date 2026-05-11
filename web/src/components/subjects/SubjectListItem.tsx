@@ -6,7 +6,7 @@ import { useAPI } from '../../providers/APIProvider'
 import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { groupQueryOptions } from '../../queries/groups'
-import Badge from '../Badge'
+import { GroupBadge } from '../Badges'
 import LinkListItem from '../LinkListItem'
 import { HStack, VStack } from '../Stack'
 import styles from './SubjectListItem.module.css'
@@ -88,7 +88,7 @@ export default function SubjectListItem(props: SubjectListItemProps) {
             <HStack alignVertical="center">
                 {props.subject.name}
                 <Suspense>
-                    <Show when={groupQuery.data}>{group => <Badge variant="tonal">{group().name}</Badge>}</Show>
+                    <Show when={groupQuery.data}>{group => <GroupBadge group={group()} />}</Show>
                 </Suspense>
             </HStack>
         ),

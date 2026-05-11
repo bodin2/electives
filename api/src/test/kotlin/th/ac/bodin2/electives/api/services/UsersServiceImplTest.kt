@@ -64,7 +64,10 @@ class UsersServiceImplTest : ApplicationTest() {
                 middleName = "Student",
                 lastName = "User",
                 password = "testpass",
-                groups = listOf(TestConstants.Groups.GROUP_1_ID)
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+                groupIds = listOf(TestConstants.Groups.GROUP_1_ID)
             )
 
             assertNotNull(student)
@@ -98,7 +101,10 @@ class UsersServiceImplTest : ApplicationTest() {
                     id = Students.JOHN_ID,
                     firstName = "Duplicate",
                     lastName = "Student",
-                    password = "testpass"
+                    password = "testpass",
+                    gradeId = TestConstants.Groups.GRADE_ID,
+                    roomId = TestConstants.Groups.ROOM_ID,
+                    programId = TestConstants.Groups.PROGRAM_ID,
                 )
             }
         }
@@ -367,7 +373,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `update student nonexistent group`() = runTest {
-        assertFailsWith<EntityNotFoundException> {
+        assertFailsWith<UsersService.BatchOperationException.MissingGroups> {
             usersService.updateStudent(
                 Students.JOHN_ID,
                 UsersService.StudentUpdate(
@@ -378,6 +384,66 @@ class UsersServiceImplTest : ApplicationTest() {
                         avatarUrl = null,
                     ),
                     groups = listOf(UNUSED_ID)
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `update student grade swaps existing grade membership`() = runTest {
+        val newGradeId = 9001
+
+        // Create a second GRADE-typed group to swap into.
+        transaction {
+            val groupService: GroupService by application.dependencies
+            groupService.create(newGradeId, "Grade 8", th.ac.bodin2.electives.proto.api.GroupType.GRADE)
+        }
+
+        val oldGradeId = TestConstants.Groups.GRADE_ID
+
+        transaction {
+            val before = usersService.getStudentById(Students.JOHN_ID)!!.groups.map { it.id.value }.toSet()
+            assertTrue(oldGradeId in before, "Student should start in old GRADE group")
+            assertFalse(newGradeId in before)
+        }
+
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                ),
+                gradeId = newGradeId,
+            )
+        )
+
+        transaction {
+            val after = usersService.getStudentById(Students.JOHN_ID)!!.groups.map { it.id.value }.toSet()
+            assertTrue(newGradeId in after, "Student should now be in the new GRADE group")
+            assertFalse(oldGradeId in after, "Old GRADE group membership should have been removed")
+            // Sanity-check that ROOM/PROGRAM memberships are untouched.
+            assertTrue(TestConstants.Groups.ROOM_ID in after)
+            assertTrue(TestConstants.Groups.PROGRAM_ID in after)
+        }
+    }
+
+    @Test
+    fun `update student rejects wrong-typed group for fixed slot`() = runTest {
+        // Trying to set gradeId to a CUSTOM-typed group must be rejected with IllegalArgumentException.
+        assertFailsWith<IllegalArgumentException> {
+            usersService.updateStudent(
+                Students.JOHN_ID,
+                UsersService.StudentUpdate(
+                    user = UsersService.UserUpdate(
+                        firstName = null,
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    ),
+                    gradeId = TestConstants.Groups.GROUP_1_ID,
                 )
             )
         }
@@ -595,7 +661,10 @@ class UsersServiceImplTest : ApplicationTest() {
                     middleName = null,
                     lastName = "User",
                     password = "abc",
-                    avatarUrl = null
+                    avatarUrl = null,
+                    gradeId = TestConstants.Groups.GRADE_ID,
+                    roomId = TestConstants.Groups.ROOM_ID,
+                    programId = TestConstants.Groups.PROGRAM_ID,
                 )
             }
         }
@@ -611,7 +680,10 @@ class UsersServiceImplTest : ApplicationTest() {
                     middleName = null,
                     lastName = "User",
                     password = "a".repeat(4097),
-                    avatarUrl = null
+                    avatarUrl = null,
+                    gradeId = TestConstants.Groups.GRADE_ID,
+                    roomId = TestConstants.Groups.ROOM_ID,
+                    programId = TestConstants.Groups.PROGRAM_ID,
                 )
             }
         }
@@ -703,10 +775,16 @@ class UsersServiceImplTest : ApplicationTest() {
         val inserts = listOf(
             UsersService.StudentInsert(
                 UsersService.UserData(3001, "Alice", null, "Smith", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
                 groups = listOf(TestConstants.Groups.GROUP_1_ID)
             ),
             UsersService.StudentInsert(
                 UsersService.UserData(3002, "Bob", null, "Jones", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
                 groups = emptyList()
             ),
         )
@@ -735,6 +813,9 @@ class UsersServiceImplTest : ApplicationTest() {
         val inserts = listOf(
             UsersService.StudentInsert(
                 UsersService.UserData(3003, "Charlie", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
                 groups = listOf(UNUSED_ID)
             )
         )
@@ -749,7 +830,10 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create students batch with duplicate id throws`() = runTest {
         val inserts = listOf(
             UsersService.StudentInsert(
-                UsersService.UserData(Students.JOHN_ID, "Duplicate", password = "testpass")
+                UsersService.UserData(Students.JOHN_ID, "Duplicate", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
             )
         )
 
@@ -763,10 +847,16 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create students batch multiple duplicates reports all ids`() = runTest {
         val inserts = listOf(
             UsersService.StudentInsert(
-                UsersService.UserData(Students.JOHN_ID, "Dup1", password = "testpass")
+                UsersService.UserData(Students.JOHN_ID, "Dup1", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
             ),
             UsersService.StudentInsert(
-                UsersService.UserData(Students.JANE_ID, "Dup2", password = "testpass")
+                UsersService.UserData(Students.JANE_ID, "Dup2", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
             ),
         )
 
@@ -781,7 +871,10 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create students batch with short password throws`() = runTest {
         val inserts = listOf(
             UsersService.StudentInsert(
-                UsersService.UserData(3004, "Short", password = "abc")
+                UsersService.UserData(3004, "Short", password = "abc"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
             )
         )
 
@@ -796,7 +889,10 @@ class UsersServiceImplTest : ApplicationTest() {
     fun `create students batch with long password throws`() = runTest {
         val inserts = listOf(
             UsersService.StudentInsert(
-                UsersService.UserData(3005, "Long", password = "a".repeat(4097))
+                UsersService.UserData(3005, "Long", password = "a".repeat(4097)),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
             )
         )
 
@@ -924,7 +1020,10 @@ class UsersServiceImplTest : ApplicationTest() {
                 firstName = "Maria",
                 prefix = "Dr.",
                 lastName = "Santos",
-                password = "testpass"
+                password = "testpass",
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
             )
 
             assertNotNull(student)
@@ -955,7 +1054,10 @@ class UsersServiceImplTest : ApplicationTest() {
                 id = 5003,
                 firstName = "Alice",
                 lastName = "Wonder",
-                password = "testpass"
+                password = "testpass",
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
             )
 
             assertNotNull(student)
@@ -1133,7 +1235,10 @@ class UsersServiceImplTest : ApplicationTest() {
                 firstName = "Anna",
                 prefix = "Mrs.",
                 lastName = "Brown",
-                password = "testpass"
+                password = "testpass",
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
             )
         }
 
@@ -1166,7 +1271,10 @@ class UsersServiceImplTest : ApplicationTest() {
                 id = 5006,
                 firstName = "Bob",
                 lastName = "Noprefix",
-                password = "testpass"
+                password = "testpass",
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
             )
         }
 

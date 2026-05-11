@@ -26,18 +26,21 @@ interface UsersService {
      * Creates a new student with the given information.
      *
      * @throws EntityNotFoundException if any of the specified groups do not exist.
+     * @throws IllegalArgumentException if a referenced group does not have the expected type, or if the password does not meet the requirements.
      * @throws ConflictException if a user/student with the same ID already exists.
-     * @throws IllegalArgumentException if the password does not meet the requirements.
      */
     fun createStudent(
         id: Int,
         firstName: String,
+        gradeId: Int,
+        roomId: Int,
+        programId: Int? = null,
         prefix: String? = null,
         middleName: String? = null,
         lastName: String? = null,
         password: String,
         avatarUrl: String? = null,
-        groups: List<Int>? = null,
+        groupIds: List<Int>? = null,
     ): Student
 
     /**
@@ -46,7 +49,7 @@ interface UsersService {
      * @throws BatchOperationException.MissingGroups if any of the specified groups do not exist, with the list of missing group IDs in [UsersService.BatchOperationException.MissingGroups.ids].
      * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [UsersService.BatchOperationException.ConflictingEntities.ids].
      * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
-     *   - [IllegalArgumentException] if the password does not meet the requirements.
+     *   - [IllegalArgumentException] if the password does not meet the requirements, or if any group has the wrong type for its slot.
      */
     @Transactional
     fun createStudents(inserts: List<StudentInsert>): List<Student>
@@ -105,7 +108,8 @@ interface UsersService {
     /**
      * Updates the student's profile information.
      *
-     * @throws EntityNotFoundException if the user or team does not exist.
+     * @throws EntityNotFoundException if the user, student, or any referenced group does not exist.
+     * @throws IllegalArgumentException if a referenced group does not have the expected type.
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
@@ -148,7 +152,21 @@ interface UsersService {
     )
 
     sealed class UserInsert(val user: UserData)
-    class StudentInsert(user: UserData, val groups: List<Int> = emptyList()) : UserInsert(user)
+
+    /**
+     * @param gradeId ID of a GRADE-typed group the student is assigned to (required).
+     * @param roomId ID of a ROOM-typed group the student is assigned to (required).
+     * @param programId Optional ID of a PROGRAM-typed group the student is assigned to.
+     * @param groups Optional list of CUSTOM-typed group IDs to add the student to.
+     */
+    class StudentInsert(
+        user: UserData,
+        val gradeId: Int,
+        val roomId: Int,
+        val programId: Int? = null,
+        val groups: List<Int> = emptyList(),
+    ) : UserInsert(user)
+
     class TeacherInsert(user: UserData) : UserInsert(user)
     class AdminInsert(user: UserData, val publicKey: PublicKey) : UserInsert(user)
 
@@ -180,6 +198,10 @@ interface UsersService {
     data class StudentUpdate(
         val user: UserUpdate,
         val groups: List<Int>? = null,
+        val gradeId: Int? = null,
+        val roomId: Int? = null,
+        val programId: Int? = null,
+        val setProgramId: Boolean = false,
     )
 
     data class TeacherUpdate(

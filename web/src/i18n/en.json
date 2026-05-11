@@ -100,6 +100,12 @@
   "CREATE_GROUP": "Create group",
   "EDIT_GROUP": "Edit group",
   "DELETE_GROUP": "Delete group",
+  "GROUP_TYPE": "Group type",
+  "GROUP_TYPE_CUSTOM": "Custom",
+  "GROUP_TYPE_GRADE": "Grade",
+  "GROUP_TYPE_ROOM": "Room",
+  "GROUP_TYPE_PROGRAM": "Program",
+  "GROUP_TYPE_CANNOT_CHANGE_HINT": "Group type can't be changed after creation",
   "SAVE": "Save",
   "ADD": "Add",
   "SEARCH_GROUPS": "Search groups",
@@ -203,5 +209,9 @@
   "NO_STUDENTS_HINT": "No students yet",
   "NO_STUDENTS_HINT_DESCRIPTION": "Add students to get started.\nYou can also bulk add students by importing a CSV file.",
   "NO_TEACHERS_HINT": "No teachers yet",
-  "NO_TEACHERS_HINT_DESCRIPTION": "Add teachers to get started.\nYou can also bulk add teachers by importing a CSV file."
+  "NO_TEACHERS_HINT_DESCRIPTION": "Add teachers to get started.\nYou can also bulk add teachers by importing a CSV file.",
+  "SELECT_GROUP_TYPE_HINT": "Select a group type",
+  "SELECT_GRADE_HINT": "Select grade",
+  "SELECT_ROOM_HINT": "Select room",
+  "SELECT_PROGRAM_HINT": "Select program"
 }

@@ -1,6 +1,6 @@
 import AccountGroupIcon from '@iconify-icons/mdi/account-group-outline'
 import { Icon } from 'm3-solid'
-import { createSignal, For } from 'solid-js'
+import { createRenderEffect, createSignal, For, Show } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'
 import { Dialog } from '../Dialog'
@@ -13,10 +13,22 @@ export default function AddGroupToStudentDialog(props: {
     onClose: (picked: Group | null) => unknown
     groups: Group[]
     currentGroupIds: number[]
+    headline?: string
+    selectLabel?: string
+    selectPlaceholder?: string
+    /** When provided, a Reset button will be shown */
+    onClear?: () => unknown
+    initialId?: number
 }) {
     const { string } = useI18n()
 
     const [group, setGroup] = createSignal<Group | null>(null)
+
+    createRenderEffect(() => {
+        if (!props.open) return
+        const id = props.initialId
+        setGroup(id != null ? (props.groups.find(g => g.id === id) ?? null) : null)
+    })
 
     let form!: HTMLFormElement
 
@@ -25,11 +37,24 @@ export default function AddGroupToStudentDialog(props: {
             quick
             onClose={() => props.onClose(null)}
             open={props.open}
-            headline={<h1 class="m3-headline-small">{string.ADD_STUDENT_TO_GROUP()}</h1>}
+            headline={<h1 class="m3-headline-small">{props.headline ?? string.ADD_STUDENT_TO_GROUP()}</h1>}
             icon={<Icon fill="var(--m3c-secondary)" icon={AccountGroupIcon} />}
             centerHeadline
             actions={
                 <form method="dialog" style={{ display: 'contents' }} ref={form}>
+                    <Show when={props.onClear}>
+                        <Button
+                            variant="tonal-error"
+                            onClick={async () => {
+                                await props.onClear?.()
+                                setGroup(null)
+                                props.onClose(null)
+                                form.submit()
+                            }}
+                        >
+                            {string.RESET()}
+                        </Button>
+                    </Show>
                     <Button
                         variant="text"
                         onClick={() => {
@@ -64,15 +89,19 @@ export default function AddGroupToStudentDialog(props: {
                 }}
             >
                 <Select
-                    label={string.GROUPS()}
+                    label={props.selectLabel ?? string.GROUPS()}
                     value={group()?.id ?? ''}
                     onInput={e => setGroup(props.groups.find(g => g.id === Number(e.currentTarget.value)) || null)}
                 >
-                    <Option value="" hidden selected>
-                        {string.SELECT_GROUP_HINT()}
+                    <Option value="" hidden selected={group() === null}>
+                        {props.selectPlaceholder ?? string.SELECT_GROUP_HINT()}
                     </Option>
                     <For each={props.groups.filter(g => !props.currentGroupIds.includes(g.id))}>
-                        {group => <Option value={group.id}>{group.name}</Option>}
+                        {g => (
+                            <Option value={g.id} selected={g.id === group()?.id}>
+                                {g.name}
+                            </Option>
+                        )}
                     </For>
                 </Select>
             </VStack>

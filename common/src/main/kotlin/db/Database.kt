@@ -17,6 +17,8 @@ object Database {
     }
 
     val tables = listOf(
+        Groups,
+        Users,
         Enrollments,
         EnrollmentSubjects,
         StudentClasses,
@@ -25,8 +27,6 @@ object Database {
         Subjects,
         Teachers,
         TeacherSubjects,
-        Groups,
-        Users,
         Admins,
     )
 }

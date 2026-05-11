@@ -1,8 +1,7 @@
 import { Card } from 'm3-solid'
-import { For } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
 import { nonNull } from '../../utils'
-import Badge from '../Badge'
+import { Badges } from '../Badges'
 import LogOutButton from '../buttons/LogOutButton'
 import { HStack, VStack } from '../Stack'
 import UserAvatar from './UserAvatar'
@@ -23,13 +22,7 @@ export default function UserInfoCard(props: UserInfoCardProps) {
                     <VStack>
                         <p class="m3-title-large">{user().displayName}</p>
                         <HStack alignVertical="center" gap={4} style={{ 'row-gap': '2px' }} wrap>
-                            <For each={user().groups}>
-                                {group => (
-                                    <>
-                                        <Badge variant="tonal">{group.name}</Badge>{' '}
-                                    </>
-                                )}
-                            </For>
+                            <Badges groups={user().groups} />
                         </HStack>
                     </VStack>
                     <UserAvatar imageUrl={user().avatarUrl} class={styles.avatar} />

@@ -6,6 +6,7 @@ import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Group
 import th.ac.bodin2.electives.db.Student
+import th.ac.bodin2.electives.proto.api.GroupType
 
 interface GroupService {
     /**
@@ -17,6 +18,7 @@ interface GroupService {
     fun create(
         id: Int,
         name: String,
+        type: GroupType = GroupType.CUSTOM,
     ): Group
 
     /**

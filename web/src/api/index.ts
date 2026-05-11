@@ -55,6 +55,7 @@ export {
     type ClientOptions,
     ConflictError,
     ForbiddenError,
+    GroupType,
     type ListEnrollmentsResponse,
     type ListSubjectMembersResponse,
     type ListSubjectsResponse,
