@@ -54,7 +54,7 @@ function RouteComponent() {
         const { string } = useI18n()
         return (
             <HStack>
-                <LogOutButton iconType="only" noText />
+                <LogOutButton iconType={modalNav() ? 'only' : 'left'} noText={modalNav()} />
                 <Button
                     variant="text"
                     aria-label={string.SETTINGS()}
