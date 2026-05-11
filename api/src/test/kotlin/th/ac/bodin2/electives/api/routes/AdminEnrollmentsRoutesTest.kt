@@ -11,7 +11,6 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.AdminService
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.enrollmentPatch
 import th.ac.bodin2.electives.proto.api.Enrollment
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,7 +44,7 @@ class AdminEnrollmentsRoutesTest : ApplicationTest() {
 
         val enrollment = client.patchProtoWithAuth(
             "/admin/enrollments/$ENROLLMENT_ID",
-            enrollmentPatch { name = "New Name" },
+            AdminService.EnrollmentPatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertOK().parse<Enrollment>()
 
@@ -58,7 +57,7 @@ class AdminEnrollmentsRoutesTest : ApplicationTest() {
 
         client.patchProtoWithAuth(
             "/admin/enrollments/$UNUSED_ID",
-            enrollmentPatch { name = "New Name" },
+            AdminService.EnrollmentPatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertNotFound("Enrollment not found")
     }
@@ -71,8 +70,8 @@ class AdminEnrollmentsRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListEnrollmentsEnrolledCounts>()
 
-        assertTrue(response.countsMap.containsKey(ENROLLMENT_ID))
-        assertEquals(0, response.countsMap[ENROLLMENT_ID]!!.selected)
+        assertTrue(response.counts.containsKey(ENROLLMENT_ID))
+        assertEquals(0, response.counts[ENROLLMENT_ID]!!.selected)
     }
 
     @Test
@@ -83,8 +82,8 @@ class AdminEnrollmentsRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListEnrollmentsEnrolledCounts>()
 
-        assertTrue(response.countsMap.containsKey(ENROLLMENT_ID))
-        assertFalse(response.countsMap.containsKey(UNUSED_ID))
+        assertTrue(response.counts.containsKey(ENROLLMENT_ID))
+        assertFalse(response.counts.containsKey(UNUSED_ID))
     }
 
     @Test

@@ -15,10 +15,8 @@ import th.ac.bodin2.electives.api.services.EnrollmentService
 import th.ac.bodin2.electives.api.services.EnrollmentService.QueryResult
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
-import th.ac.bodin2.electives.proto.api.EnrollmentsServiceKt.listResponse
-import th.ac.bodin2.electives.proto.api.EnrollmentsServiceKt.listSubjectMembersResponse
-import th.ac.bodin2.electives.proto.api.EnrollmentsServiceKt.listSubjectsResponse
+import th.ac.bodin2.electives.proto.api.AdminService
+import th.ac.bodin2.electives.proto.api.EnrollmentsService
 
 val enrollmentsController = controller {
     val enrollmentService: EnrollmentService by dependencies
@@ -55,11 +53,8 @@ val enrollmentsController = controller {
 
 context(enrollmentService: EnrollmentService)
 suspend fun RoutingContext.handleGetEnrollments() {
-    call.respond(listResponse {
-        transaction {
-            enrollments += enrollmentService.getAll().map { it.toProto() }
-        }
-    })
+    val enrollments = transaction { enrollmentService.getAll().map { it.toProto() } }
+    call.respond(EnrollmentsService.ListResponse(enrollments = enrollments))
 }
 
 context(enrollmentService: EnrollmentService)
@@ -76,8 +71,8 @@ suspend fun RoutingContext.handleGetEnrollmentSubjects(enrollmentId: Int) {
         return@transaction when (val result = enrollmentService.getSubjects(enrollmentId)) {
             is QueryResult.EnrollmentNotFound -> null
             is QueryResult.Success ->
-                listSubjectsResponse {
-                    subjects += result.value.map {
+                EnrollmentsService.ListSubjectsResponse(
+                    subjects = result.value.map {
                         it.toProto(
                             withDescription = false,
                             withTeachers = true,
@@ -85,7 +80,7 @@ suspend fun RoutingContext.handleGetEnrollmentSubjects(enrollmentId: Int) {
                             withEnrolledCounts = true,
                         )
                     }
-                }
+                )
 
             else -> throw IllegalStateException("Unreachable case: $result")
         }
@@ -131,12 +126,15 @@ suspend fun RoutingContext.handleGetEnrollmentSubjectMembers(
             is QueryResult.SubjectNotFound -> Err(subjectNotFound)
             is QueryResult.SubjectNotPartOfEnrollment -> Err(subjectNotPartOfEnrollment(enrollmentId, subjectId))
 
-            is QueryResult.Success -> Ok(listSubjectMembersResponse {
+            is QueryResult.Success -> {
                 val (teachers, students) = result.value
-
-                this.teachers += teachers.map { it.toProto() }
-                this.students += students.map { it.toProto() }
-            })
+                Ok(
+                    EnrollmentsService.ListSubjectMembersResponse(
+                        teachers = teachers.map { it.toProto() },
+                        students = students.map { it.toProto() },
+                    )
+                )
+            }
         }
     }
 
@@ -158,10 +156,12 @@ suspend fun RoutingContext.handleGetUnenrolledMembers(
                 is QueryResult.EnrollmentNotFound -> Err(enrollmentNotFound)
                 is QueryResult.Success -> {
                     val (students, count) = result.value
-                    Ok(listUsersResponse {
-                        users += students.map { it.toProto() }
-                        total = count.toInt()
-                    })
+                    Ok(
+                        AdminService.ListUsersResponse(
+                            users = students.map { it.toProto() },
+                            total = count.toInt(),
+                        )
+                    )
                 }
 
                 else -> throw IllegalStateException("Unreachable case: $result")

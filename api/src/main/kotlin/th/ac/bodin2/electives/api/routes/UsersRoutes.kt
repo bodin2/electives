@@ -21,8 +21,7 @@ import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentEnrollmentSelectionRequest
-import th.ac.bodin2.electives.proto.api.UsersServiceKt.studentSelections
-import th.ac.bodin2.electives.proto.api.UsersServiceKt.teacherSubjects
+import th.ac.bodin2.electives.proto.api.UsersService as UsersProto
 
 val usersController = controller {
     val usersService: UsersService by dependencies
@@ -80,16 +79,16 @@ suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
         val response = transaction {
             val selections = enrollmentSelectionService.getStudentSelections(userId)
 
-            studentSelections {
-                subjects.putAll(selections.mapValues {
+            UsersProto.StudentSelections(
+                subjects = selections.mapValues {
                     it.value.toProto(
                         enrollmentId = it.key,
                         withDescription = false,
                         withTeachers = true,
                         withEnrolledCounts = true,
                     )
-                })
-            }
+                }
+            )
         }
 
         // @TODO: Return more specific error if user is not a student?
@@ -124,15 +123,15 @@ context(subjectService: SubjectService)
 suspend fun RoutingContext.handleGetTeacherSubjects(userId: Int) {
     try {
         val response = transaction {
-            teacherSubjects {
-                subjects.putAll(subjectService.getTeacherSubjects(userId).mapValues {
+            UsersProto.TeacherSubjects(
+                subjects = subjectService.getTeacherSubjects(userId).mapValues {
                     it.value.toProto(
                         enrollmentId = it.key,
                         withDescription = false,
                         withTeachers = false,
                     )
-                })
-            }
+                }
+            )
         }
 
         call.respond(response)
@@ -151,7 +150,7 @@ private suspend fun RoutingContext.handlePutStudentEnrollmentSelection(
 
     @OptIn(Transactional::class)
     when (val result =
-        enrollmentSelectionService.setStudentSelection(executor, studentId, enrollmentId, req.subjectId)) {
+        enrollmentSelectionService.setStudentSelection(executor, studentId, enrollmentId, req.subject_id)) {
         ModifySelectionResult.Success -> ok()
 
         is ModifySelectionResult.NotFound -> {

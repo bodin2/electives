@@ -13,46 +13,50 @@ import th.ac.bodin2.electives.api.postProto
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants
 import th.ac.bodin2.electives.proto.api.AuthService
-import th.ac.bodin2.electives.proto.api.AuthServiceKt
-import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class AuthRoutesTest : ApplicationTest() {
-    private suspend fun HttpClient.auth(builder: AuthServiceKt.AuthenticateRequestKt.Dsl.() -> Unit) =
-        this.postProto("/auth", authenticateRequest(builder))
+    private suspend fun HttpClient.auth(request: AuthService.AuthenticateRequest) =
+        this.postProto("/auth", request)
 
     @Test
     fun `authenticate success`() = runRouteTest {
-        val response = client.auth {
-            id = TestServiceConstants.STUDENT_ID
-            password = TestServiceConstants.PASSWORD
-            clientName = TestData.CLIENT_NAME
-        }.assertOK().parse<AuthService.AuthenticateResponse>()
+        val response = client.auth(
+            AuthService.AuthenticateRequest(
+                id = TestServiceConstants.STUDENT_ID,
+                password = TestServiceConstants.PASSWORD,
+                client_name = TestData.CLIENT_NAME,
+            )
+        ).assertOK().parse<AuthService.AuthenticateResponse>()
 
         assertTrue(response.token.isNotBlank())
     }
 
     @Test
     fun `authenticate invalid password`() = runRouteTest {
-        val response = client.auth {
-            id = TestServiceConstants.STUDENT_ID
-            password = ""
-            clientName = TestData.CLIENT_NAME
-        }
+        val response = client.auth(
+            AuthService.AuthenticateRequest(
+                id = TestServiceConstants.STUDENT_ID,
+                password = "",
+                client_name = TestData.CLIENT_NAME,
+            )
+        )
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
     @Test
     fun `authenticate user not found`() = runRouteTest {
-        val response = client.auth {
-            id = 0
-            password = ""
-            clientName = TestData.CLIENT_NAME
-        }
+        val response = client.auth(
+            AuthService.AuthenticateRequest(
+                id = 0,
+                password = "",
+                client_name = TestData.CLIENT_NAME,
+            )
+        )
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }

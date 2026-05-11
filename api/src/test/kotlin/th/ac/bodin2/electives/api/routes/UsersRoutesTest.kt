@@ -17,10 +17,10 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.mock.testEnrollmentSelectionServiceResponse
 import th.ac.bodin2.electives.proto.api.User
 import th.ac.bodin2.electives.proto.api.UserType
-import th.ac.bodin2.electives.proto.api.UsersServiceKt.setStudentEnrollmentSelectionRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import th.ac.bodin2.electives.proto.api.UsersService as UsersServiceProto
 
 @OptIn(Transactional::class)
 class UsersRoutesTest : ApplicationTest() {
@@ -102,8 +102,8 @@ class UsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<th.ac.bodin2.electives.proto.api.UsersService.StudentSelections>()
 
-        assertEquals(SUBJECT_ID, selections.subjectsMap[ENROLLMENT_ID]?.id)
-        assertEquals(TEACHER_ID, selections.subjectsMap[ENROLLMENT_ID]?.teachersList?.first()?.id)
+        assertEquals(SUBJECT_ID, selections.subjects[ENROLLMENT_ID]?.id)
+        assertEquals(TEACHER_ID, selections.subjects[ENROLLMENT_ID]?.teachers?.first()?.id)
     }
 
     @Test
@@ -127,9 +127,7 @@ class UsersRoutesTest : ApplicationTest() {
 
         return client.putProtoWithAuth(
             url,
-            setStudentEnrollmentSelectionRequest {
-                subjectId = SUBJECT_ID
-            },
+            UsersServiceProto.SetStudentEnrollmentSelectionRequest(subject_id = SUBJECT_ID),
             token
         )
     }
@@ -220,8 +218,8 @@ class UsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<th.ac.bodin2.electives.proto.api.UsersService.TeacherSubjects>()
 
-        assertTrue(response.subjectsMap.isNotEmpty())
-        assertEquals(SUBJECT_ID, response.subjectsMap.values.first().id)
+        assertTrue(response.subjects.isNotEmpty())
+        assertEquals(SUBJECT_ID, response.subjects.values.first().id)
     }
 
     @Test

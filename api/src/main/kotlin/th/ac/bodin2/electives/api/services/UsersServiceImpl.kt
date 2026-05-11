@@ -137,8 +137,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         val type = Group.getType(groupId)
             ?: throw EntityNotFoundException(ExceptionEntity.GROUP, "Group does not exist: $groupId")
 
-        require(type == expected.number) {
-            "Group $groupId has type: ${GroupType.forNumber(type)?.name ?: type}, expected: ${expected.name}"
+        require(type == expected.value) {
+            "Group $groupId has type: ${GroupType.fromValue(type)?.name ?: type}, expected: ${expected.name}"
         }
     }
 
@@ -160,7 +160,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             throw UsersService.BatchOperationException.MissingGroups(missing)
         }
 
-        val mismatched = rows.filter { it.value != expected.number }.keys
+        val mismatched = rows.filter { it.value != expected.value }.keys
         require(mismatched.isEmpty()) {
             "Groups $mismatched don't have the expected type: ${expected.name}"
         }
@@ -196,7 +196,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         val missing = expectedTypes.keys.filter { it !in existing }
         if (missing.isNotEmpty()) throw UsersService.BatchOperationException.MissingGroups(missing)
 
-        val mismatched = expectedTypes.filter { (id, type) -> existing[id] != type.number }
+        val mismatched = expectedTypes.filter { (id, type) -> existing[id] != type.value }
         if (mismatched.isNotEmpty()) {
             // Attribute the error to the first student that referenced any mismatched group.
             val badId = mismatched.keys.first()
@@ -381,7 +381,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             val currentOfType =
                 (StudentGroups innerJoin Groups)
                     .select(StudentGroups.group)
-                    .where { (StudentGroups.student eq id) and (Groups.type eq type.number) }
+                    .where { (StudentGroups.student eq id) and (Groups.type eq type.value) }
                     .map { it[StudentGroups.group].value }
 
             if (currentOfType.isNotEmpty()) {
@@ -412,7 +412,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             val currentCustoms =
                 (StudentGroups innerJoin Groups)
                     .select(StudentGroups.group)
-                    .where { (StudentGroups.student eq id) and (Groups.type eq GroupType.CUSTOM.number) }
+                    .where { (StudentGroups.student eq id) and (Groups.type eq GroupType.CUSTOM.value) }
                     .map { it[StudentGroups.group].value }
 
             if (currentCustoms.isNotEmpty()) {

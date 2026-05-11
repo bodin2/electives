@@ -12,7 +12,6 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_GROUP_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.AdminService
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.groupPatch
 import th.ac.bodin2.electives.proto.api.Group
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -34,7 +33,7 @@ class AdminGroupsRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListGroupsResponse>()
 
-        assertEquals(TestGroupService.GROUP_IDS.size, response.groupsCount)
+        assertEquals(TestGroupService.GROUP_IDS.size, response.groups.size)
     }
 
     @Test
@@ -73,9 +72,9 @@ class AdminGroupsRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.GroupMemberCounts>()
 
-        assertEquals(TestGroupService.GROUP_IDS.size, response.memberCountsCount)
+        assertEquals(TestGroupService.GROUP_IDS.size, response.member_counts.size)
         TestGroupService.GROUP_IDS.forEach { groupId ->
-            assertEquals(0, response.memberCountsMap[groupId])
+            assertEquals(0, response.member_counts[groupId])
         }
     }
 
@@ -93,7 +92,7 @@ class AdminGroupsRoutesTest : ApplicationTest() {
             .parse<AdminService.ListUsersResponse>()
 
         assertEquals(0, response.total)
-        assertEquals(0, response.usersCount)
+        assertEquals(0, response.users.size)
     }
 
     @Test
@@ -114,7 +113,7 @@ class AdminGroupsRoutesTest : ApplicationTest() {
 
         val group = client.patchProtoWithAuth(
             "/admin/groups/$ENROLLMENT_GROUP_ID",
-            groupPatch { name = "New Name" },
+            AdminService.GroupPatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertOK().parse<Group>()
 
@@ -127,7 +126,7 @@ class AdminGroupsRoutesTest : ApplicationTest() {
 
         client.patchProtoWithAuth(
             "/admin/groups/$UNUSED_ID",
-            groupPatch { name = "New Name" },
+            AdminService.GroupPatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertNotFound("Group not found")
     }

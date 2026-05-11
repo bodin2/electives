@@ -1244,7 +1244,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
         val proto = transaction { student.toProto() }
         assertEquals("Mrs.", proto.prefix)
-        assertEquals("Anna", proto.firstName)
+        assertEquals("Anna", proto.first_name)
     }
 
     @Test
@@ -1261,7 +1261,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
         val proto = transaction { teacher.toProto() }
         assertEquals("Mr.", proto.prefix)
-        assertEquals("Charles", proto.firstName)
+        assertEquals("Charles", proto.first_name)
     }
 
     @Test
@@ -1279,7 +1279,7 @@ class UsersServiceImplTest : ApplicationTest() {
         }
 
         val proto = transaction { student.toProto() }
-        assertFalse(proto.hasPrefix())
+        assertNull(proto.prefix)
     }
 }
 

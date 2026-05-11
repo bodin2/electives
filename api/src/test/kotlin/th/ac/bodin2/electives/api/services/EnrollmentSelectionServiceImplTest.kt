@@ -56,7 +56,7 @@ class EnrollmentSelectionServiceImplTest : ApplicationTest() {
                 it[id] = TestConstants.Subjects.OTHER_ID
                 it[name] = "Other Subject"
                 it[code] = "OTH999"
-                it[tag] = SubjectTag.MATH.number
+                it[tag] = SubjectTag.MATH.value
                 it[location] = "Room B"
                 it[capacity] = 10
                 it[group] = null
@@ -289,7 +289,7 @@ class EnrollmentSelectionServiceImplTest : ApplicationTest() {
                 it[id] = TestConstants.Subjects.OTHER_ID
                 it[name] = "Group Subject"
                 it[code] = "TMS101"
-                it[tag] = SubjectTag.MATH.number
+                it[tag] = SubjectTag.MATH.value
                 it[location] = "Room C"
                 it[capacity] = 10
                 it[group] = TestConstants.Groups.GROUP_2_ID
@@ -319,7 +319,7 @@ class EnrollmentSelectionServiceImplTest : ApplicationTest() {
                 it[id] = TestConstants.Subjects.OTHER_ID
                 it[name] = "Group Subject"
                 it[code] = "TMS101"
-                it[tag] = SubjectTag.MATH.number
+                it[tag] = SubjectTag.MATH.value
                 it[location] = "Room C"
                 it[capacity] = 10
                 it[group] = null
@@ -595,7 +595,7 @@ class EnrollmentSelectionServiceImplTest : ApplicationTest() {
                 it[id] = TestConstants.Subjects.OTHER_ID
                 it[name] = "Other Subject"
                 it[code] = "OTH999"
-                it[tag] = SubjectTag.MATH.number
+                it[tag] = SubjectTag.MATH.value
                 it[location] = "Room B"
                 it[capacity] = 10
                 it[group] = null

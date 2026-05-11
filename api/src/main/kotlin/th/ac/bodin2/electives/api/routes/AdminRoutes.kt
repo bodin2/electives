@@ -34,18 +34,9 @@ import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.models.Students
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.*
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.challengeResponse
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.groupMemberCounts
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.listEnrollmentsEnrolledCounts
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.listGroupsResponse
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.listUsersResponse
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.subjectEnrollmentIds
-import th.ac.bodin2.electives.proto.api.AuthServiceKt.authenticateResponse
-import th.ac.bodin2.electives.proto.api.EnrollmentsServiceKt.listSubjectsResponse
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.ListEnrollmentsEnrolledCountsKt.counts as enrollmentCounts
 
 val adminController = controller {
     val usersService: UsersService by dependencies
@@ -87,9 +78,7 @@ val adminAuthController = controller {
     routing {
         rateLimit(RATE_LIMIT_ADMIN_AUTH) {
             get<Admin.Challenge> {
-                call.respond(challengeResponse {
-                    challenge = adminAuthService.newChallenge()
-                })
+                call.respond(AdminService.ChallengeResponse(challenge = adminAuthService.newChallenge()))
             }
 
             post<Admin.Auth> {
@@ -99,14 +88,10 @@ val adminAuthController = controller {
                     when (val result = adminAuthService.createSession(
                         id = req.id,
                         signature = req.password,
-                        aud = req.clientName,
+                        aud = req.client_name,
                         ip = call.request.origin.remoteAddress,
                     )) {
-                        is CreateSessionResult.Success -> {
-                            call.respond(authenticateResponse {
-                                token = result.token
-                            })
-                        }
+                        is CreateSessionResult.Success -> call.respond(AuthService.AuthenticateResponse(token = result.token))
 
                         is CreateSessionResult.NoChallenge,
                         is CreateSessionResult.IPNotAllowed,
@@ -130,29 +115,27 @@ class AdminUsersController(
     override fun Application.register() {
         adminRoutes {
             get<Admin.Users.Students> { params ->
-                call.respond(listUsersResponse {
-                    transaction {
-                        val (students, count) =
-                            @OptIn(Transactional::class)
-                            usersService.getStudents(params.page, params.query.ifBlank { null })
+                val (users, total) = transaction {
+                    val (students, count) =
+                        @OptIn(Transactional::class)
+                        usersService.getStudents(params.page, params.query.ifBlank { null })
 
-                        users += students.map { it.toProto() }
-                        total = count.toInt()
-                    }
-                })
+                    students.map { it.toProto() } to count.toInt()
+                }
+
+                call.respond(AdminService.ListUsersResponse(users = users, total = total))
             }
 
             get<Admin.Users.Teachers> { params ->
-                call.respond(listUsersResponse {
-                    transaction {
-                        val (teachers, count) =
-                            @OptIn(Transactional::class)
-                            usersService.getTeachers(params.page, params.query.ifBlank { null })
+                val (users, total) = transaction {
+                    val (teachers, count) =
+                        @OptIn(Transactional::class)
+                        usersService.getTeachers(params.page, params.query.ifBlank { null })
 
-                        users += teachers.map { it.toProto() }
-                        total = count.toInt()
-                    }
-                })
+                    teachers.map { it.toProto() } to count.toInt()
+                }
+
+                call.respond(AdminService.ListUsersResponse(users = users, total = total))
             }
 
             put<Admin.Users.Id> { params -> handlePutUser(params.id) }
@@ -170,41 +153,44 @@ class AdminUsersController(
     private suspend fun RoutingContext.handlePutUser(id: Int) {
         val req = call.parseOrNull<AdminService.AddUserRequest>()
             ?: return badRequest()
-        val user = req.user
+        val user = req.user ?: return badRequest("Missing user")
         if (user.id != id) return badRequest("ID in URL does not match body")
 
         try {
             val protoOrNull = transaction {
                 val created = when (user.type) {
                     UserType.STUDENT -> {
+                        val gradeId = req.grade_id
+                        val roomId = req.room_id
+
                         // Students require fixed GRADE and ROOM group IDs to be set. PROGRAM is optional
-                        if (!req.hasGradeId() || !req.hasRoomId()) {
+                        if (gradeId == null || roomId == null) {
                             return@transaction null
                         }
 
                         usersService.createStudent(
                             id = user.id,
-                            firstName = user.firstName,
-                            prefix = if (user.hasPrefix()) user.prefix else null,
-                            middleName = if (user.hasMiddleName()) user.middleName else null,
-                            lastName = if (user.hasLastName()) user.lastName else null,
+                            firstName = user.first_name,
+                            prefix = user.prefix,
+                            middleName = user.middle_name,
+                            lastName = user.last_name,
                             password = req.password,
-                            avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,
-                            gradeId = req.gradeId,
-                            roomId = req.roomId,
-                            programId = if (req.hasProgramId()) req.programId else null,
-                            groupIds = req.groupIdsList.ifEmpty { null }
+                            avatarUrl = user.avatar_url,
+                            gradeId = gradeId,
+                            roomId = roomId,
+                            programId = req.program_id,
+                            groupIds = req.group_ids.ifEmpty { null }
                         )
                     }
 
                     UserType.TEACHER -> usersService.createTeacher(
                         id = user.id,
-                        firstName = user.firstName,
-                        prefix = if (user.hasPrefix()) user.prefix else null,
-                        middleName = if (user.hasMiddleName()) user.middleName else null,
-                        lastName = if (user.hasLastName()) user.lastName else null,
+                        firstName = user.first_name,
+                        prefix = user.prefix,
+                        middleName = user.middle_name,
+                        lastName = user.last_name,
                         password = req.password,
-                        avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null
+                        avatarUrl = user.avatar_url
                     )
 
                     else -> return@transaction null
@@ -240,15 +226,15 @@ class AdminUsersController(
                 val type = usersService.getUserType(id)
 
                 val update = UsersService.UserUpdate(
-                    firstName = if (req.hasFirstName()) req.firstName else null,
-                    prefix = if (req.hasPrefix()) req.prefix else null,
-                    middleName = if (req.hasMiddleName()) req.middleName else null,
-                    lastName = if (req.hasLastName()) req.lastName else null,
-                    avatarUrl = if (req.hasAvatarUrl()) req.avatarUrl else null,
-                    setPrefix = req.patchPrefix,
-                    setMiddleName = req.patchMiddleName,
-                    setLastName = req.patchLastName,
-                    setAvatarUrl = req.patchAvatarUrl,
+                    firstName = req.first_name,
+                    prefix = req.prefix,
+                    middleName = req.middle_name,
+                    lastName = req.last_name,
+                    avatarUrl = req.avatar_url,
+                    setPrefix = req.patch_prefix,
+                    setMiddleName = req.patch_middle_name,
+                    setLastName = req.patch_last_name,
+                    setAvatarUrl = req.patch_avatar_url,
                 )
 
                 @OptIn(Transactional::class)
@@ -257,11 +243,11 @@ class AdminUsersController(
                         id,
                         UsersService.StudentUpdate(
                             update,
-                            groups = if (req.patchGroups) req.groupsList else null,
-                            gradeId = if (req.hasGradeId()) req.gradeId else null,
-                            roomId = if (req.hasRoomId()) req.roomId else null,
-                            programId = if (req.hasProgramId()) req.programId else null,
-                            setProgramId = req.patchProgramId,
+                            groups = if (req.patch_groups) req.groups else null,
+                            gradeId = req.grade_id,
+                            roomId = req.room_id,
+                            programId = req.program_id,
+                            setProgramId = req.patch_program_id,
                         )
                     ).toProto()
 
@@ -270,9 +256,10 @@ class AdminUsersController(
                     else -> throw IllegalStateException("Unreachable case: $type")
                 }
 
-                if (req.hasNewPassword()) {
+
+                req.new_password?.let {
                     @OptIn(Transactional::class)
-                    usersService.setPassword(id, req.newPassword)
+                    usersService.setPassword(id, it)
                 }
 
                 proto
@@ -309,13 +296,14 @@ class AdminUsersController(
     }
 
     private fun AdminService.AddUserRequest.toUserInsert(): UsersService.UserData {
+        val u = user!!
         return UsersService.UserData(
-            id = user.id,
-            firstName = user.firstName,
-            prefix = if (user.hasPrefix()) user.prefix else null,
-            middleName = if (user.hasMiddleName()) user.middleName else null,
-            lastName = if (user.hasLastName()) user.lastName else null,
-            avatarUrl = if (user.hasAvatarUrl()) user.avatarUrl else null,
+            id = u.id,
+            firstName = u.first_name,
+            prefix = u.prefix,
+            middleName = u.middle_name,
+            lastName = u.last_name,
+            avatarUrl = u.avatar_url,
             password = password,
         )
     }
@@ -327,10 +315,12 @@ class AdminUsersController(
         val req = call.parseOrNull<AdminService.BulkAddUsersRequest>()
             ?: return badRequest()
 
-        val inserts = req.valuesList.groupBy { it.user.type }
+        if (req.values.any { it.user == null }) return badRequest("Missing user in one or more entries")
+
+        val inserts = req.values.groupBy { it.user!!.type }
 
         if (inserts.keys.minus(supportedBulkAddTypes).any { key ->
-                (inserts[key]?.let { it.isNotEmpty() }) ?: false
+                (inserts[key]?.isNotEmpty()) ?: false
             }) {
             return badRequest("Unsupported user types")
         }
@@ -342,16 +332,19 @@ class AdminUsersController(
         }
 
         val studentInserts = inserts[UserType.STUDENT]?.map {
-            if (!it.hasGradeId() || !it.hasRoomId()) {
-                return badRequest("Student ${it.user.id} is missing one of grade_id, room_id")
+            val gradeId = it.grade_id
+            val roomId = it.room_id
+
+            if (gradeId == null || roomId == null) {
+                return badRequest("Student ${it.user!!.id} is missing one of grade_id, room_id")
             }
 
             UsersService.StudentInsert(
                 user = it.toUserInsert(),
-                gradeId = it.gradeId,
-                roomId = it.roomId,
-                programId = if (it.hasProgramId()) it.programId else null,
-                groups = it.groupIdsList,
+                gradeId,
+                roomId,
+                programId = it.program_id,
+                groups = it.group_ids,
             )
         }
 
@@ -371,10 +364,7 @@ class AdminUsersController(
             }
 
             call.respond(
-                listUsersResponse {
-                    users += created
-                    total = created.size
-                }
+                AdminService.ListUsersResponse(users = created, total = created.size)
             )
         } catch (e: UsersService.BatchOperationException) {
             when (e) {
@@ -399,7 +389,7 @@ class AdminUsersController(
 
         try {
             @OptIn(Transactional::class)
-            usersService.deleteUsers(req.userIdsList)
+            usersService.deleteUsers(req.user_ids)
             ok()
         } catch (e: UsersService.BatchOperationException.NotFoundEntities) {
             return badRequest("Users not found: ${e.ids.joinToString(", ")}")
@@ -422,7 +412,7 @@ class AdminUsersSelectionsController(
 
         try {
             @OptIn(Transactional::class)
-            enrollmentSelectionService.forceSetAllStudentSelections(id, req.selectionsMap)
+            enrollmentSelectionService.forceSetAllStudentSelections(id, req.selections)
 
             ok()
         } catch (e: EntityNotFoundException) {
@@ -468,9 +458,9 @@ class AdminEnrollmentsController(
             enrollmentService.create(
                 id = enrollment.id,
                 name = enrollment.name,
-                group = if (enrollment.hasGroupId()) enrollment.groupId else null,
-                startDate = if (enrollment.hasStartDate()) enrollment.startDate.secondsToUTCDateTime else null,
-                endDate = if (enrollment.hasEndDate()) enrollment.endDate.secondsToUTCDateTime else null
+                group = enrollment.group_id,
+                startDate = enrollment.start_date?.secondsToUTCDateTime,
+                endDate = enrollment.end_date?.secondsToUTCDateTime
             )
 
             ok()
@@ -499,10 +489,9 @@ class AdminEnrollmentsController(
         val ids = idsParam.split(",").mapNotNull { it.trim().toIntOrNull() }
         if (ids.isEmpty()) return badRequest()
 
-        call.respond(listEnrollmentsEnrolledCounts {
-            transaction {
-                val totalStudents by lazy { Students.selectAll().count().toInt() }
-
+        val counts = transaction {
+            val totalStudents by lazy { Students.selectAll().count().toInt() }
+            buildMap {
                 for (enrollmentId in ids) {
                     val enrollment = enrollmentService.getById(enrollmentId) ?: continue
                     val enrolledCount = enrollmentService.getEnrolledCount(enrollmentId)
@@ -513,13 +502,18 @@ class AdminEnrollmentsController(
                         totalStudents
                     }
 
-                    counts[enrollmentId] = enrollmentCounts {
-                        this.selected = enrolledCount
-                        this.total = total
-                    }
+                    put(
+                        enrollmentId,
+                        AdminService.ListEnrollmentsEnrolledCounts.Counts(
+                            selected = enrolledCount,
+                            total = total,
+                        )
+                    )
                 }
             }
-        })
+        }
+
+        call.respond(AdminService.ListEnrollmentsEnrolledCounts(counts = counts))
     }
 
     private suspend fun RoutingContext.handlePatchEnrollment(id: Int) {
@@ -527,13 +521,13 @@ class AdminEnrollmentsController(
             ?: return badRequest()
 
         val update = EnrollmentService.EnrollmentUpdate(
-            name = if (req.hasName()) req.name else null,
-            group = if (req.hasGroupId()) req.groupId else null,
-            startDate = if (req.hasStartDate()) req.startDate.secondsToUTCDateTime else null,
-            endDate = if (req.hasEndDate()) req.endDate.secondsToUTCDateTime else null,
-            setGroup = req.patchGroupId,
-            setStartDate = req.patchStartDate,
-            setEndDate = req.patchEndDate,
+            name = req.name,
+            group = req.group_id,
+            startDate = req.start_date?.secondsToUTCDateTime,
+            endDate = req.end_date?.secondsToUTCDateTime,
+            setGroup = req.patch_group_id,
+            setStartDate = req.patch_start_date,
+            setEndDate = req.patch_end_date,
         )
 
         try {
@@ -570,7 +564,7 @@ class AdminEnrollmentsSubjectsController(private val enrollmentService: Enrollme
 
         try {
             @OptIn(Transactional::class)
-            enrollmentService.setSubjects(enrollmentId, req.subjectIdsList)
+            enrollmentService.setSubjects(enrollmentId, req.subject_ids)
 
             ok()
         } catch (e: EntityNotFoundException) {
@@ -602,11 +596,10 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
     }
 
     private suspend fun RoutingContext.handleGetSubjects() {
-        call.respond(listSubjectsResponse {
-            transaction {
-                subjects += subjectService.getAll().map { it.toProto(withDescription = false, withTeachers = true) }
-            }
-        })
+        val subjects = transaction {
+            subjectService.getAll().map { it.toProto(withDescription = false, withTeachers = true) }
+        }
+        call.respond(EnrollmentsService.ListSubjectsResponse(subjects = subjects))
     }
 
     private suspend fun RoutingContext.handleGetSubject(id: Int) {
@@ -621,21 +614,21 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             ?: return badRequest()
 
         if (subject.id != id) return badRequest("ID in URL does not match body")
-        if (subject.teachersCount > 0) return badRequest("Can't add teachers into a subject immediately")
+        if (subject.teachers.isNotEmpty()) return badRequest("Can't add teachers into a subject immediately")
 
         try {
             @OptIn(Transactional::class)
             subjectService.create(
                 id = subject.id,
                 name = subject.name,
-                description = if (subject.hasDescription()) subject.description else null,
+                description = subject.description,
                 code = subject.code,
                 tag = subject.tag,
                 location = subject.location,
                 capacity = subject.capacity,
-                group = if (subject.hasGroupId()) subject.groupId else null,
-                thumbnailUrl = if (subject.hasThumbnailUrl()) subject.thumbnailUrl else null,
-                imageUrl = if (subject.hasImageUrl()) subject.imageUrl else null,
+                group = subject.group_id,
+                thumbnailUrl = subject.thumbnail_url,
+                imageUrl = subject.image_url,
             )
 
             ok()
@@ -670,23 +663,23 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             ?: return badRequest()
 
         val update = SubjectService.SubjectUpdate(
-            name = if (req.hasName()) req.name else null,
-            tag = if (req.hasTag()) req.tag else null,
-            capacity = if (req.hasCapacity()) req.capacity else null,
-            teacherIds = if (req.patchTeachers) req.teachersList else null,
-            enrollmentId = if (req.hasEnrollmentId()) req.enrollmentId else null,
-            description = if (req.hasDescription()) req.description else null,
-            code = if (req.hasCode()) req.code else null,
-            location = if (req.hasLocation()) req.location else null,
-            group = if (req.hasGroupId()) req.groupId else null,
-            thumbnailUrl = if (req.hasThumbnailUrl()) req.thumbnailUrl else null,
-            imageUrl = if (req.hasImageUrl()) req.imageUrl else null,
-            setCode = req.patchCode,
-            setGroup = req.patchGroupId,
-            setLocation = req.patchLocation,
-            setImageUrl = req.patchImageUrl,
-            setDescription = req.patchDescription,
-            setThumbnailUrl = req.patchThumbnailUrl,
+            name = req.name,
+            tag = req.tag,
+            capacity = req.capacity,
+            teacherIds = if (req.patch_teachers) req.teachers else null,
+            enrollmentId = req.enrollment_id,
+            description = req.description,
+            code = req.code,
+            location = req.location,
+            group = req.group_id,
+            thumbnailUrl = req.thumbnail_url,
+            imageUrl = req.image_url,
+            setCode = req.patch_code,
+            setGroup = req.patch_group_id,
+            setLocation = req.patch_location,
+            setImageUrl = req.patch_image_url,
+            setDescription = req.patch_description,
+            setThumbnailUrl = req.patch_thumbnail_url,
         )
 
         try {
@@ -712,9 +705,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
         val ids = transaction { subjectService.getEnrollmentIds(id) }
             ?: return notFound()
 
-        call.respond(subjectEnrollmentIds {
-            enrollmentIds.addAll(ids)
-        })
+        call.respond(AdminService.SubjectEnrollmentIds(enrollment_ids = ids))
     }
 }
 
@@ -744,25 +735,23 @@ class AdminGroupsController(private val groupService: GroupService) : Controller
 
     private suspend fun RoutingContext.handleGetGroupMembers(groupId: Int, page: Int, query: String?) {
         try {
-            call.respond(transaction {
+            val response = transaction {
                 val (members, count) = @OptIn(Transactional::class) groupService.getMembers(groupId, page, query)
 
-                listUsersResponse {
-                    users += members.map { it.toProto() }
-                    total = count.toInt()
-                }
-            })
+                AdminService.ListUsersResponse(
+                    users = members.map { it.toProto() },
+                    total = count.toInt(),
+                )
+            }
+            call.respond(response)
         } catch (_: EntityNotFoundException) {
             notFound("Group not found")
         }
     }
 
     private suspend fun RoutingContext.handleGetGroups() {
-        call.respond(listGroupsResponse {
-            transaction {
-                groups += groupService.getAll().map { it.toProto() }
-            }
-        })
+        val groups = transaction { groupService.getAll().map { it.toProto() } }
+        call.respond(AdminService.ListGroupsResponse(groups = groups))
     }
 
     private suspend fun RoutingContext.handleGetGroup(id: Int) {
@@ -808,7 +797,7 @@ class AdminGroupsController(private val groupService: GroupService) : Controller
             ?: return badRequest()
 
         val update = GroupService.GroupUpdate(
-            name = if (req.hasName()) req.name else null,
+            name = req.name,
         )
 
         try {
@@ -829,10 +818,8 @@ class AdminGroupsController(private val groupService: GroupService) : Controller
     }
 
     private suspend fun RoutingContext.handleGetGroupMemberCounts() {
-        call.respond(groupMemberCounts {
-            val counts = transaction { groupService.getMemberCounts() }
-            memberCounts.putAll(counts)
-        })
+        val counts = transaction { groupService.getMemberCounts() }
+        call.respond(AdminService.GroupMemberCounts(member_counts = counts))
     }
 }
 

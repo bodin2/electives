@@ -34,7 +34,7 @@ class GroupServiceImpl : GroupService {
         val stmt = Groups.insertIgnore {
             it[this.id] = id
             it[this.name] = name
-            it[this.type] = type.number
+            it[this.type] = type.value
         }
 
         if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.GROUP)
@@ -47,7 +47,7 @@ class GroupServiceImpl : GroupService {
             val type = Group.getType(id) ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
             // GRADE/CLASS groups must never lose members silently
             // Refuse to delete a non-CUSTOM/PROGRAM group that still has members
-            if (type != GroupType.CUSTOM.number && type != GroupType.PROGRAM.number) {
+            if (type != GroupType.CUSTOM.value && type != GroupType.PROGRAM.value) {
                 val hasMembers = StudentGroups.selectAll()
                     .where { StudentGroups.group eq id }
                     .empty().not()

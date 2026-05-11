@@ -1,6 +1,6 @@
 package th.ac.bodin2.electives.api
 
-import com.google.protobuf.MessageLite
+import com.squareup.wire.Message
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.client.*
@@ -13,7 +13,7 @@ import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.utils.getParser
+import th.ac.bodin2.electives.api.utils.getAdapter
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.db.models.*
 import th.ac.bodin2.electives.proto.api.GroupType
@@ -64,27 +64,27 @@ object TestDatabase {
         Groups.insert {
             it[id] = TestConstants.Groups.GROUP_1_ID
             it[name] = TestConstants.Groups.GROUP_1_NAME
-            it[type] = GroupType.CUSTOM.number
+            it[type] = GroupType.CUSTOM.value
         }
         Groups.insert {
             it[id] = TestConstants.Groups.GROUP_2_ID
             it[name] = TestConstants.Groups.GROUP_2_NAME
-            it[type] = GroupType.CUSTOM.number
+            it[type] = GroupType.CUSTOM.value
         }
         Groups.insert {
             it[id] = TestConstants.Groups.GRADE_ID
             it[name] = TestConstants.Groups.GRADE_NAME
-            it[type] = GroupType.GRADE.number
+            it[type] = GroupType.GRADE.value
         }
         Groups.insert {
             it[id] = TestConstants.Groups.ROOM_ID
             it[name] = TestConstants.Groups.ROOM_NAME
-            it[type] = GroupType.ROOM.number
+            it[type] = GroupType.ROOM.value
         }
         Groups.insert {
             it[id] = TestConstants.Groups.PROGRAM_ID
             it[name] = TestConstants.Groups.PROGRAM_NAME
-            it[type] = GroupType.PROGRAM.number
+            it[type] = GroupType.PROGRAM.value
         }
 
         usersService.createStudent(
@@ -143,7 +143,7 @@ object TestDatabase {
             it[name] = TestConstants.Subjects.PHYSICS_NAME
             it[description] = TestConstants.Subjects.PHYSICS_DESCRIPTION
             it[code] = TestConstants.Subjects.PHYSICS_CODE
-            it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.number
+            it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.value
             it[location] = TestConstants.Subjects.PHYSICS_LOCATION
             it[capacity] = TestConstants.Subjects.PHYSICS_CAPACITY
             it[group] = TestConstants.Groups.GROUP_1_ID
@@ -154,7 +154,7 @@ object TestDatabase {
             it[name] = TestConstants.Subjects.CHEMISTRY_NAME
             it[description] = TestConstants.Subjects.CHEMISTRY_DESCRIPTION
             it[code] = TestConstants.Subjects.CHEMISTRY_CODE
-            it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.number
+            it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.value
             it[location] = TestConstants.Subjects.CHEMISTRY_LOCATION
             it[capacity] = TestConstants.Subjects.CHEMISTRY_CAPACITY
             it[group] = TestConstants.Groups.GROUP_1_ID
@@ -182,18 +182,17 @@ object TestDatabase {
     }
 }
 
-
-suspend fun HttpClient.postProto(url: String, message: MessageLite): HttpResponse {
+suspend fun HttpClient.postProto(url: String, message: Message<*, *>): HttpResponse {
     return post(url) {
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
-suspend fun HttpClient.putProto(url: String, message: MessageLite): HttpResponse {
+suspend fun HttpClient.putProto(url: String, message: Message<*, *>): HttpResponse {
     return put(url) {
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
@@ -203,19 +202,19 @@ suspend fun HttpClient.getWithAuth(url: String, token: String): HttpResponse {
     }
 }
 
-suspend fun HttpClient.postProtoWithAuth(url: String, message: MessageLite, token: String): HttpResponse {
+suspend fun HttpClient.postProtoWithAuth(url: String, message: Message<*, *>, token: String): HttpResponse {
     return post(url) {
         bearerAuth(token)
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
-suspend fun HttpClient.putProtoWithAuth(url: String, message: MessageLite, token: String): HttpResponse {
+suspend fun HttpClient.putProtoWithAuth(url: String, message: Message<*, *>, token: String): HttpResponse {
     return put(url) {
         bearerAuth(token)
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
@@ -225,15 +224,15 @@ suspend fun HttpClient.deleteWithAuth(url: String, token: String): HttpResponse 
     }
 }
 
-suspend fun HttpClient.patchProtoWithAuth(url: String, message: MessageLite, token: String): HttpResponse {
+suspend fun HttpClient.patchProtoWithAuth(url: String, message: Message<*, *>, token: String): HttpResponse {
     return patch(url) {
         bearerAuth(token)
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
-suspend inline fun <reified T : MessageLite> HttpResponse.parse(): T {
-    val parser = getParser(T::class.java)
-    return parser.parseFrom(bodyAsBytes())
+suspend inline fun <reified T : Message<T, *>> HttpResponse.parse(): T {
+    val adapter = getAdapter(T::class.java)
+    return adapter.decode(bodyAsBytes())
 }

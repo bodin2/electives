@@ -9,7 +9,6 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.AdminService
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.userPatch
 import th.ac.bodin2.electives.proto.api.User
 import th.ac.bodin2.electives.proto.api.UserType
 import kotlin.test.Test
@@ -38,7 +37,7 @@ class AdminUsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListUsersResponse>()
 
-        assertTrue(response.usersCount >= 0)
+        assertTrue(response.users.size >= 0)
     }
 
     @Test
@@ -49,7 +48,7 @@ class AdminUsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListUsersResponse>()
 
-        assertTrue(response.usersCount >= 0)
+        assertTrue(response.users.size >= 0)
     }
 
     @Test
@@ -60,7 +59,7 @@ class AdminUsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListUsersResponse>()
 
-        assertTrue(response.usersCount >= 0)
+        assertTrue(response.users.size >= 0)
     }
 
     @Test
@@ -71,7 +70,7 @@ class AdminUsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<AdminService.ListUsersResponse>()
 
-        assertTrue(response.usersCount >= 0)
+        assertTrue(response.users.size >= 0)
     }
 
     @Test
@@ -90,7 +89,7 @@ class AdminUsersRoutesTest : ApplicationTest() {
 
         val user = client.patchProtoWithAuth(
             "/admin/users/$STUDENT_ID",
-            userPatch { firstName = "New Name" },
+            AdminService.UserPatch(first_name = "New Name"),
             ADMIN_TOKEN
         ).assertOK().parse<User>()
 
@@ -104,7 +103,7 @@ class AdminUsersRoutesTest : ApplicationTest() {
 
         val user = client.patchProtoWithAuth(
             "/admin/users/$TEACHER_ID",
-            userPatch { firstName = "New Name" },
+            AdminService.UserPatch(first_name = "New Name"),
             ADMIN_TOKEN
         ).assertOK().parse<User>()
 
@@ -118,7 +117,7 @@ class AdminUsersRoutesTest : ApplicationTest() {
 
         client.patchProtoWithAuth(
             "/admin/users/$UNUSED_ID",
-            userPatch { firstName = "New Name" },
+            AdminService.UserPatch(first_name = "New Name"),
             ADMIN_TOKEN
         ).assertNotFound("User not found")
     }
@@ -129,10 +128,10 @@ class AdminUsersRoutesTest : ApplicationTest() {
 
         val user = client.patchProtoWithAuth(
             "/admin/users/$STUDENT_ID",
-            userPatch {
-                prefix = "Dr."
-                patchPrefix = true
-            },
+            AdminService.UserPatch(
+                prefix = "Dr.",
+                patch_prefix = true,
+            ),
             ADMIN_TOKEN
         ).assertOK().parse<User>()
 
@@ -146,10 +145,10 @@ class AdminUsersRoutesTest : ApplicationTest() {
 
         val user = client.patchProtoWithAuth(
             "/admin/users/$TEACHER_ID",
-            userPatch {
-                prefix = "Prof."
-                patchPrefix = true
-            },
+            AdminService.UserPatch(
+                prefix = "Prof.",
+                patch_prefix = true,
+            ),
             ADMIN_TOKEN
         ).assertOK().parse<User>()
 
@@ -163,10 +162,10 @@ class AdminUsersRoutesTest : ApplicationTest() {
 
         val user = client.patchProtoWithAuth(
             "/admin/users/$STUDENT_ID",
-            userPatch {
-                firstName = "Updated"
-                // patchPrefix = false (default), prefix not set
-            },
+            AdminService.UserPatch(
+                first_name = "Updated",
+                // patch_prefix = false (default), prefix not set
+            ),
             ADMIN_TOKEN
         ).assertOK().parse<User>()
 

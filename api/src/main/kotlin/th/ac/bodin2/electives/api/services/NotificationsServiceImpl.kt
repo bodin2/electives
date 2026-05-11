@@ -20,12 +20,7 @@ import th.ac.bodin2.electives.api.utils.parseOrNull
 import th.ac.bodin2.electives.api.utils.send
 import th.ac.bodin2.electives.api.utils.unauthorized
 import th.ac.bodin2.electives.db.Enrollment
-import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope
-import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope.PayloadCase
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.acknowledged
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.bulkSubjectEnrollmentUpdate
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.envelope
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
+import th.ac.bodin2.electives.proto.api.NotificationsService.*
 import th.ac.bodin2.electives.utils.env
 import th.ac.bodin2.electives.utils.setInterval
 import java.util.concurrent.ConcurrentHashMap
@@ -139,12 +134,12 @@ class NotificationsServiceImpl(
                 Enrollment.getAllActiveIds().map { enrollmentId ->
                     val enrolledCounts = Enrollment.getSubjectsEnrolledCounts(enrollmentId)
 
-                    enrollmentId to envelope {
-                        bulkSubjectEnrollmentUpdate = bulkSubjectEnrollmentUpdate {
-                            this.enrollmentId = enrollmentId
-                            subjectEnrolledCounts.putAll(enrolledCounts)
-                        }
-                    }
+                    enrollmentId to Envelope(
+                        bulk_subject_enrollment_update = BulkSubjectEnrollmentUpdate(
+                            enrollment_id = enrollmentId,
+                            subject_enrolled_counts = enrolledCounts,
+                        )
+                    )
                 }
             }
 
@@ -228,21 +223,21 @@ class NotificationsServiceImpl(
 
             val envelope = frame.parseOrNull<Envelope>() ?: return badFrame()
 
-            when (envelope.payloadCase) {
-                PayloadCase.SUBJECT_ENROLLMENT_UPDATE_SUBSCRIPTION_REQUEST -> {
+            when {
+                envelope.subject_enrollment_update_subscription_request != null -> {
                     val subscriptions = envelope
-                        .subjectEnrollmentUpdateSubscriptionRequest
-                        .subscriptionsMap
+                        .subject_enrollment_update_subscription_request!!
+                        .subscriptions
 
                     if (subscriptions
-                            .map { (_, subscription) -> subscription.subjectIdsCount }
+                            .map { (_, subscription) -> subscription.subject_ids.size }
                             .sum() > config.maxSubjectSubscriptionsPerClient
                     )
                         return badFrame("Exceeded maximum subject subscriptions per client: ${config.maxSubjectSubscriptionsPerClient}")
 
-                    subscriptions.forEach { (enrollmentId, subjectIds) ->
+                    subscriptions.forEach { (enrollmentId, subscription) ->
                         this@handleFrame.subscriptions
-                            .getOrPut(enrollmentId) { ConcurrentHashMap.newKeySet() } += subjectIds.subjectIdsList
+                            .getOrPut(enrollmentId) { ConcurrentHashMap.newKeySet() } += subscription.subject_ids
                     }
 
                     acknowledge(envelope)
@@ -261,27 +256,23 @@ class NotificationsServiceImpl(
                     cleanups += sendEnrollmentUpdates()
                 }
 
-                // Server payloads
-                PayloadCase.SUBJECT_ENROLLMENT_UPDATE,
-                PayloadCase.BULK_SUBJECT_ENROLLMENT_UPDATE,
-                PayloadCase.ACKNOWLEDGED -> return badFrame()
-
-                // Invalid payload
-                PayloadCase.PAYLOAD_NOT_SET,
-                PayloadCase.IDENTIFY -> return badFrame()
+                // Server payloads or invalid
+                else -> return badFrame()
             }
         }
     }
 
     private fun ClientConnection.sendEnrollmentUpdates(): () -> Unit {
         val listener: SubjectSelectionUpdateListener = { enrollmentId, subjectId, enrolledCount ->
-            trySend(envelope {
-                subjectEnrollmentUpdate = subjectEnrollmentUpdate {
-                    this.enrollmentId = enrollmentId
-                    this.subjectId = subjectId
-                    this.enrolledCount = enrolledCount
-                }
-            })
+            trySend(
+                Envelope(
+                    subject_enrollment_update = SubjectEnrollmentUpdate(
+                        enrollment_id = enrollmentId,
+                        subject_id = subjectId,
+                        enrolled_count = enrolledCount,
+                    )
+                )
+            )
         }
 
         for ((enrollmentId, subjectIds) in subscriptions) {
@@ -302,10 +293,10 @@ class NotificationsServiceImpl(
     }
 
     private suspend fun ClientConnection.acknowledge(envelope: Envelope) {
-        send(envelope {
-            messageId = envelope.messageId
-            acknowledged = acknowledged {}
-        })
+        send(Envelope(
+            message_id = envelope.message_id,
+            acknowledged = Acknowledged(),
+        ))
     }
 }
 

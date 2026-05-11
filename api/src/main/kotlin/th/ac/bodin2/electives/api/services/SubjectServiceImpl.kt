@@ -36,7 +36,7 @@ class SubjectServiceImpl : SubjectService {
             it[this.id] = id
             it[this.name] = name
             it[this.capacity] = capacity
-            it[this.tag] = tag.number
+            it[this.tag] = tag.value
             if (description != null) it[this.description] = description
             if (code != null) it[this.code] = code
             if (location != null) it[this.location] = location
@@ -77,7 +77,7 @@ class SubjectServiceImpl : SubjectService {
                 }
 
                 update.name?.let { name -> it[this.name] = name }
-                update.tag?.let { tag -> it[this.tag] = tag.number }
+                update.tag?.let { tag -> it[this.tag] = tag.value }
                 update.capacity?.let { capacity -> it[this.capacity] = capacity }
 
                 if (update.setDescription) it[description] = update.description
