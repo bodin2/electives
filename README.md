@@ -20,7 +20,7 @@ There are also other issues, such as students not being to view details of subje
 
 - Using [Ktor](https://ktor.io) allows us to ergonomically create a server that can handle high loads of traffic in a short amount of time.
 - [Protocol Buffers](https://protobuf.dev) provide a compact binary format for data exchange, making it efficient to send and receive data between the server and clients.
-- [PostgreSQL](https://www.postgresql.org) allows us to easily store data without needing to set up a separate database server.
+- [PostgreSQL](https://www.postgresql.org) is a performant and reliable relational database.
   We are using [PostgreSQL JDBC](https://github.com/pgjdbc/pgjdbc) with [JetBrains Exposed](https://www.jetbrains.com/exposed).
 - WebSockets allow students and teachers to get up-to-date information without needing to refresh.
 
