@@ -39,18 +39,17 @@ export function UserListItem(props: UserListItemProps) {
         <ListItem
             class={mergeClasses(props.selected && styles.selected, props.disabled && styles.disabled)}
             onClick={props.disabled ? undefined : props.onClick}
+            lines={4}
             leading={
                 <img class={styles.avatar} src={props.user.avatarUrl || AvatarPlaceholder} alt={string.AVATAR()} />
             }
             headline={
-                <HStack alignVertical="center">
+                <HStack alignVertical="center" wrap style={{ 'row-gap': '4px' }}>
                     {props.user.displayName}
-                    <HStack gap={4}>
-                        <Badges groups={props.user.groups} />
-                        <Show when={props.user.id === props.currentUser?.id}>
-                            <Badge variant="tertiary">{string.YOU()}</Badge>
-                        </Show>
-                    </HStack>
+                    <Badges groups={props.user.groups} />
+                    <Show when={props.user.id === props.currentUser?.id}>
+                        <Badge variant="tertiary">{string.YOU()}</Badge>
+                    </Show>
                 </HStack>
             }
             supporting={props.showId && props.user.id}
