@@ -53,7 +53,7 @@ function Login() {
         <Page>
             <Dialog
                 closedBy="none"
-                aria-label={string.LOGIN}
+                aria-label={string.LOGIN()}
                 centerHeadline
                 headline={
                     <VStack gap={16}>
@@ -62,7 +62,7 @@ function Login() {
                             imageProps={{ fetchpriority: 'high' }}
                         />
                         <VStack gap={8} alignHorizontal="center" style={{ 'margin-bottom': '16px' }}>
-                            {string.ELECTIVES_SYSTEM()}
+                            <span aria-hidden="true">{string.ELECTIVES_SYSTEM()}</span>
                             <p class="m3-body-medium text-surface-variant">{string.LOGIN_HINT()}</p>
                         </VStack>
                     </VStack>

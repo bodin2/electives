@@ -58,7 +58,7 @@ function AdminLogin() {
         <Page>
             <Dialog
                 closedBy="none"
-                aria-label={string.ADMIN_LOGIN}
+                aria-label={string.ADMIN_LOGIN()}
                 centerHeadline
                 headline={
                     <VStack gap={16}>
@@ -67,7 +67,7 @@ function AdminLogin() {
                             imageProps={{ fetchpriority: 'high' }}
                         />
                         <VStack gap={8} alignHorizontal="center">
-                            {string.ADMIN_LOGIN()}
+                            <span aria-hidden="true">{string.ADMIN_LOGIN()}</span>
                             <p class="m3-body-medium text-surface-variant">{string.ADMIN_LOGIN_HINT()}</p>
                         </VStack>
                     </VStack>

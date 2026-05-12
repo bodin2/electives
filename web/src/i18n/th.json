@@ -69,6 +69,7 @@
   "AVATAR": "รูปประจำตัว",
   "SUBJECT_CODE": "รหัสวิชา",
   "SUBJECT_MEMBERS_COUNT": "นักเรียน: {{ count }}/{{ total }} คน",
+  "SUBJECT_MEMBERS_COUNT_ARIA": "นักเรียน {{ count }} จาก {{ total }} คนลงทะเบียนแล้ว",
   "SUBJECT_CAPACITY_COUNT": "ความจุ: {{ count }} คน",
   "SETTINGS": "การตั้งค่า",
   "ADD_STUDENT": "เพิ่มนักเรียน",
@@ -229,5 +230,6 @@
   "NO_STUDENTS_HINT": "ยังไม่มีนักเรียน",
   "NO_STUDENTS_HINT_DESCRIPTION": "เพิ่มนักเรียนเพื่อเริ่มต้นใช้งาน\nคุณยังสามารถเพิ่มนักเรียนจำนวนมากได้โดยการนำเข้าไฟล์ CSV",
   "NO_TEACHERS_HINT": "ยังไม่มีครู",
-  "NO_TEACHERS_HINT_DESCRIPTION": "เพิ่มครูเพื่อเริ่มต้นใช้งาน\nคุณยังสามารถเพิ่มครูจำนวนมากได้โดยการนำเข้าไฟล์ CSV"
+  "NO_TEACHERS_HINT_DESCRIPTION": "เพิ่มครูเพื่อเริ่มต้นใช้งาน\nคุณยังสามารถเพิ่มครูจำนวนมากได้โดยการนำเข้าไฟล์ CSV",
+  "ACCOUNT_AND_SETTINGS": "บัญชีและการตั้งค่า"
 }

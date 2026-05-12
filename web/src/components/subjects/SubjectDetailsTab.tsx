@@ -71,6 +71,7 @@ export default function SubjectDetailsTab() {
                     <HStack class={styles.infoRow}>
                         <HStack alignVertical="center" gap={4}>
                             <IconLabel
+                                aria-label={`${string.CATEGORY()}: ${categoryName()}`}
                                 icon={LabelOutlineIcon}
                                 text={categoryName()}
                                 class={mergeClasses(
@@ -83,13 +84,19 @@ export default function SubjectDetailsTab() {
                         <HStack alignVertical="center" gap={4}>
                             <IconLabel
                                 icon={HashTagBoxOutlineIcon}
+                                aria-label={`${string.CODE()}: ${ctx.subject.code}`}
                                 text={ctx.subject.code}
                                 class={styles.labelSubText}
                             />
                             <EditButton field="code" />
                         </HStack>
                         <HStack alignVertical="center" gap={4}>
-                            <IconLabel icon={LocationIcon} text={ctx.subject.location} class={styles.labelSubText} />
+                            <IconLabel
+                                icon={LocationIcon}
+                                aria-label={`${string.LOCATION()}: ${ctx.subject.location}`}
+                                text={ctx.subject.location}
+                                class={styles.labelSubText}
+                            />
                             <EditButton field="location" />
                         </HStack>
                     </HStack>
@@ -109,6 +116,10 @@ export default function SubjectDetailsTab() {
                             >
                                 <IconLabel
                                     icon={AccountCircleIcon}
+                                    aria-label={string.SUBJECT_MEMBERS_COUNT_ARIA({
+                                        count: nonNull(enrolledCount()),
+                                        total: ctx.subject.capacity,
+                                    })}
                                     text={string.SUBJECT_MEMBERS_COUNT({
                                         count: nonNull(enrolledCount()),
                                         total: ctx.subject.capacity,

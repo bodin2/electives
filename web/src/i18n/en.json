@@ -69,6 +69,7 @@
   "SUBJECT_CODE": "Subject code",
   "SUBJECT_MEMBERS_COUNT": "Students: {{ count }}/{{ total }}",
   "SUBJECT_CAPACITY_COUNT": "Capacity: {{ count }} students",
+  "SUBJECT_MEMBERS_COUNT_ARIA": "{{ count }} of {{ total }} students enrolled",
   "SETTINGS": "Settings",
   "ADD_STUDENT": "Add student",
   "ADD_STUDENT_TO_GROUP": "Add student to group",
@@ -213,5 +214,6 @@
   "SELECT_GROUP_TYPE_HINT": "Select a group type",
   "SELECT_GRADE_HINT": "Select grade",
   "SELECT_ROOM_HINT": "Select room",
-  "SELECT_PROGRAM_HINT": "Select program"
+  "SELECT_PROGRAM_HINT": "Select program",
+  "ACCOUNT_AND_SETTINGS": "Account and settings"
 }

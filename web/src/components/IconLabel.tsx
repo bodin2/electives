@@ -8,14 +8,17 @@ interface IconLabelProps {
     text: JSXElement
     class?: string
     iconSize?: number
+    'aria-label'?: string
 }
 
 export default function IconLabel(props: IconLabelProps) {
     const size = () => props.iconSize ?? 20
     return (
-        <HStack alignVertical="center" gap={4} class={props.class}>
+        <HStack alignVertical="center" gap={4} class={props.class} aria-label={props['aria-label']} role="paragraph">
             <Icon icon={props.icon} width={size()} height={size()} />
-            <span style="color: inherit; font: inherit">{props.text}</span>
+            <span style="color: inherit; font: inherit" aria-hidden={Boolean(props['aria-label'])}>
+                {props.text}
+            </span>
         </HStack>
     )
 }

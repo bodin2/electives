@@ -97,12 +97,23 @@ export default function SubjectListItem(props: SubjectListItemProps) {
         supporting,
     }))
 
+    const ariaLabel = () =>
+        [
+            `${props.subject.name} (${props.subject.code})`,
+            `${string.CLASS()}: ${props.subject.location}`,
+            teacherNames() && `${string.TEACHERS()}: ${teacherNames()}`,
+        ]
+            .filter(Boolean)
+            .join(', ')
+
     return (
         <Show
             when={props.onClick}
-            fallback={<LinkListItem {...props.linkProps} {...commonProps()} preloadDelay={500} />}
+            fallback={
+                <LinkListItem aria-label={ariaLabel()} {...props.linkProps} {...commonProps()} preloadDelay={500} />
+            }
         >
-            {onClick => <ListItem onClick={onClick()} {...commonProps()} />}
+            {onClick => <ListItem aria-label={ariaLabel()} onClick={onClick()} {...commonProps()} />}
         </Show>
     )
 }

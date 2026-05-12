@@ -65,7 +65,7 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
                 alignHorizontal={expandable() ? 'space-between' : 'start'}
                 class={styles.header}
             >
-                <h1 class="m3-title-large">
+                <h1 class="m3-title-large" aria-label={`${tagName()} (${props.subjects.length} ${string.SUBJECTS()})`}>
                     {tagName()} ({props.subjects.length})
                 </h1>
                 <Show when={expandable()}>
