@@ -12,7 +12,7 @@ import {
     NavigationRailItem,
     type NavigationRailItemProps,
     NavigationRailToggle,
-} from 'm3-solid'
+} from 'm3-solid/src'
 import { createEffect, createRenderEffect, createSignal, on, onCleanup, onMount, splitProps } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { UserType } from '../../api'

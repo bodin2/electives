@@ -1,5 +1,5 @@
 import AccountGroupIcon from '@iconify-icons/mdi/account-group-outline'
-import { Icon } from 'm3-solid'
+import { Icon } from 'm3-solid/src'
 import { createRenderEffect, createSignal, For, Show } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
 import { Button } from '../Button'

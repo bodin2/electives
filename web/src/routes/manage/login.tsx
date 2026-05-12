@@ -1,6 +1,6 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { createFileRoute } from '@tanstack/solid-router'
-import { Dialog } from 'm3-solid'
+import { Dialog } from 'm3-solid/src'
 import { createSignal } from 'solid-js'
 import { importPrivateKey } from '../../api/ssh'
 import { Button } from '../../components/Button'

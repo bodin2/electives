@@ -1,5 +1,5 @@
 import PlusIcon from '@iconify-icons/mdi/plus-circle'
-import { Button, type ButtonVariant } from 'm3-solid'
+import { Button, type ButtonVariant } from 'm3-solid/src'
 import { createSignal, type JSX, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'

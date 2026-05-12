@@ -1,6 +1,6 @@
 import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import { useQueryClient } from '@tanstack/solid-query'
-import { Icon } from 'm3-solid'
+import { Icon } from 'm3-solid/src'
 import { createSignal, For, Show } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'

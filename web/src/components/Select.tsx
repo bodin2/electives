@@ -1,4 +1,4 @@
-import { mergeClasses } from 'm3-solid'
+import { mergeClasses } from 'm3-solid/src'
 import { type JSX, splitProps } from 'solid-js'
 import styles from './Select.module.css'
 

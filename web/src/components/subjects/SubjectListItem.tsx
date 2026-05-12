@@ -1,5 +1,5 @@
 import { createQuery, skipToken } from '@tanstack/solid-query'
-import { ListItem, mergeClasses } from 'm3-solid'
+import { ListItem, mergeClasses } from 'm3-solid/src'
 import { createMemo, type JSX, Show, Suspense } from 'solid-js'
 import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placeholder.webp'
 import { useAPI } from '../../providers/APIProvider'

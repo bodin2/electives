@@ -1,6 +1,6 @@
 import MagnifyIcon from '@iconify-icons/mdi/magnify'
 import PlusIcon from '@iconify-icons/mdi/plus'
-import { TextField } from 'm3-solid'
+import { TextField } from 'm3-solid/src'
 import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { GroupType } from '../../api'

@@ -1,5 +1,5 @@
 import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
-import { Icon } from 'm3-solid'
+import { Icon } from 'm3-solid/src'
 import { createEffect } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'

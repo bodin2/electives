@@ -1,5 +1,5 @@
 import MagnifyingIcon from '@iconify-icons/mdi/magnify'
-import { ListItem, mergeClasses, TextField } from 'm3-solid'
+import { ListItem, mergeClasses, TextField } from 'm3-solid/src'
 import { type Component, createEffect, For, type JSXElement, Show, Suspense } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useI18n } from '../../providers/I18nProvider'

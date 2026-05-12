@@ -1,5 +1,5 @@
 import { useRouter } from '@tanstack/solid-router'
-import { mergeClasses } from 'm3-solid'
+import { mergeClasses } from 'm3-solid/src'
 import { createRenderEffect, Show } from 'solid-js'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'

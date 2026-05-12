@@ -1,5 +1,5 @@
 import PeopleIcon from '@iconify-icons/mdi/people-outline'
-import { Icon } from 'm3-solid'
+import { Icon } from 'm3-solid/src'
 import { createSignal, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'

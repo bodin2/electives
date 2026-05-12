@@ -1,4 +1,4 @@
-import { ListItem, Switch } from 'm3-solid'
+import { ListItem, Switch } from 'm3-solid/src'
 import { createEffect, createSignal } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
 import { Dialog } from '../Dialog'

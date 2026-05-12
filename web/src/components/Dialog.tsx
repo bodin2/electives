@@ -1,4 +1,4 @@
-import { Dialog as M3Dialog, type DialogProps as M3DialogProps } from 'm3-solid'
+import { Dialog as M3Dialog, type DialogProps as M3DialogProps } from 'm3-solid/src'
 import { createEffect, createSignal, type ParentComponent, Show, splitProps } from 'solid-js'
 import styles from './Dialog.module.css'
 

@@ -1,4 +1,4 @@
-import { Icon } from 'm3-solid'
+import { Icon } from 'm3-solid/src'
 import { HStack } from './Stack'
 import type { IconifyIcon } from '@iconify/types'
 import type { JSXElement } from 'solid-js'

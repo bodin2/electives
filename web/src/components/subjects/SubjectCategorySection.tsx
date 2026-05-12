@@ -1,7 +1,7 @@
 import { SubjectTag } from '@bodin2/electives-common/proto/api'
 import KBArrowDownIcon from '@iconify-icons/mdi/keyboard-arrow-down'
 import KBArrowUpIcon from '@iconify-icons/mdi/keyboard-arrow-up'
-import { Button } from 'm3-solid'
+import { Button } from 'm3-solid/src'
 import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
 import { useI18n } from '../../providers/I18nProvider'
 import { nonNull } from '../../utils'

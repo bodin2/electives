@@ -1,7 +1,7 @@
 import AddIcon from '@iconify-icons/mdi/add'
 import CloseIcon from '@iconify-icons/mdi/close'
 import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
-import { Icon } from 'm3-solid'
+import { Icon } from 'm3-solid/src'
 import { For, type JSX, Show } from 'solid-js'
 import { type Group, GroupType } from '../api'
 import { nonNull } from '../utils'

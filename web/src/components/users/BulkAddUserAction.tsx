@@ -1,5 +1,5 @@
 import AccountMultipleAddIcon from '@iconify-icons/mdi/account-multiple-add'
-import { ListItem } from 'm3-solid'
+import { ListItem } from 'm3-solid/src'
 import { createSignal, For, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { User } from '../../api/structures'

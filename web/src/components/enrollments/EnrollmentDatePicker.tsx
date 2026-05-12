@@ -1,6 +1,6 @@
 import ArrowDownIcon from '@iconify-icons/mdi/arrow-down'
 import { mergeRefs } from '@solid-primitives/refs'
-import { Icon, TextField } from 'm3-solid'
+import { Icon, TextField } from 'm3-solid/src'
 import { createSignal, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '../../providers/I18nProvider'

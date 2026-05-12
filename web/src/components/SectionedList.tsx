@@ -1,5 +1,5 @@
 import MagnifyIcon from '@iconify-icons/mdi/magnify'
-import { mergeClasses, TextField } from 'm3-solid'
+import { mergeClasses, TextField } from 'm3-solid/src'
 import { createEffect, createSignal, For, type JSX, on, onCleanup, Show } from 'solid-js'
 import styles from './SectionedList.module.css'
 import { HStack, VStack } from './Stack'

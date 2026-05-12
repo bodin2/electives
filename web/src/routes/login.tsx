@@ -1,6 +1,6 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { createFileRoute, useSearch } from '@tanstack/solid-router'
-import { Dialog, TextField, type TextFieldProps } from 'm3-solid'
+import { Dialog, TextField, type TextFieldProps } from 'm3-solid/src'
 import { createSignal, Show } from 'solid-js'
 import { UnauthorizedError } from '../api'
 import { Button } from '../components/Button'

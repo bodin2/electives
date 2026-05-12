@@ -1,5 +1,5 @@
 import LabelOutlineIcon from '@iconify-icons/mdi/label-outline'
-import { Icon } from 'm3-solid'
+import { Icon } from 'm3-solid/src'
 import { createSignal, For } from 'solid-js'
 import { SubjectTag } from '../../api'
 import { useI18n } from '../../providers/I18nProvider'

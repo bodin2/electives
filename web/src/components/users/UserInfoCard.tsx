@@ -1,4 +1,4 @@
-import { Card } from 'm3-solid'
+import { Card } from 'm3-solid/src'
 import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { nonNull } from '../../utils'

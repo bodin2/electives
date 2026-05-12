@@ -4,7 +4,7 @@ import SaveIcon from '@iconify-icons/mdi/content-save'
 import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
 import { createQuery } from '@tanstack/solid-query'
-import { Icon } from 'm3-solid'
+import { Icon } from 'm3-solid/src'
 import { createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useAPI } from '../../providers/APIProvider'
@@ -168,7 +168,9 @@ export default function EnrollmentDetailsTab(props: { stickyOffset?: number }) {
                         </HStack>
                         <HStack alignVertical="center" gap={4}>
                             <GroupBadge
-                                group={hasGroup() ? groupsQuery.data?.find(g => g.id === enrollment().groupId) : undefined}
+                                group={
+                                    hasGroup() ? groupsQuery.data?.find(g => g.id === enrollment().groupId) : undefined
+                                }
                                 placeholder={string.ADD_GROUP()}
                                 onClick={() => setGroupDialogOpen(true)}
                                 onEdit={() => setGroupDialogOpen(true)}

@@ -1,5 +1,5 @@
 import CloseIcon from '@iconify-icons/mdi/close'
-import { ListItem, mergeClasses } from 'm3-solid'
+import { ListItem, mergeClasses } from 'm3-solid/src'
 import { type Component, Show } from 'solid-js'
 import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
 import { useI18n } from '../../providers/I18nProvider'

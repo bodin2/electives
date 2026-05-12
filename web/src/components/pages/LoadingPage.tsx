@@ -1,5 +1,5 @@
 import Logger from '@bodin2/electives-common/Logger'
-import { LoadingIndicator } from 'm3-solid'
+import { LoadingIndicator } from 'm3-solid/src'
 import { onCleanup, onMount, type ParentComponent, Show, Suspense } from 'solid-js'
 import { DEV } from '../../constants'
 import { useI18n } from '../../providers/I18nProvider'
