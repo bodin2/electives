@@ -5,7 +5,7 @@ import PeopleIcon from '@iconify-icons/mdi/people'
 import TeamIcon from '@iconify-icons/mdi/people-group'
 import TeacherIcon from '@iconify-icons/mdi/teacher'
 import TicketIcon from '@iconify-icons/mdi/ticket'
-import { createFileRoute, Link, Outlet } from '@tanstack/solid-router'
+import { createFileRoute, Link, Outlet, useMatchRoute } from '@tanstack/solid-router'
 import {
     mergeClasses,
     NavigationRail,
@@ -15,6 +15,7 @@ import {
 } from 'm3-solid'
 import { createEffect, createRenderEffect, createSignal, on, onCleanup, onMount, splitProps } from 'solid-js'
 import { Portal } from 'solid-js/web'
+import { UserType } from '../../api'
 import { Button } from '../../components/Button'
 import LogOutButton from '../../components/buttons/LogOutButton'
 import SettingsDialog from '../../components/dialogs/SettingsDialog'
@@ -25,6 +26,7 @@ import {
     SubjectDisplayContextProvider,
 } from '../../components/subjects/SubjectDisplayContext'
 import { UserDisplayContextProvider, useUserDisplayContext } from '../../components/users/UserDisplayContext'
+import { useAPI } from '../../providers/APIProvider'
 import { useI18n } from '../../providers/I18nProvider'
 import { usePageData } from '../../providers/PageProvider'
 import ScrollDataProvider from '../../providers/ScrollDataProvider'
@@ -37,12 +39,14 @@ export const Route = createFileRoute('/_adminAuthenticated/manage')({
 
 function RouteComponent() {
     const { string } = useI18n()
+    const { client } = useAPI()
     const [navOpen, setNavOpen] = createSignal(true)
     const [settingsOpen, setSettingsOpen] = createSignal(false)
     const pageData = usePageData()
     const [containerRef, setContainerRef] = createSignal<HTMLDivElement | undefined>()
     const userDisplayContext = useUserDisplayContext()
     const [modalNav, setModalNav] = createSignal(false)
+    const matchRoute = useMatchRoute()
 
     const NavMenuToggle = () => (
         <div class={mergeClasses(styles.toggleContainer, navOpen() && styles.open, modalNav() && styles.modalNav)}>
@@ -113,6 +117,14 @@ function RouteComponent() {
         setNavOpen(!modalNav())
     })
 
+    const userIdRouteMatch = matchRoute({ to: '/manage/users/$userId' })
+    const isOnUserRouteForType = (type: UserType) => {
+        const match = userIdRouteMatch()
+        if (!match) return false
+        const userId = match.userId
+        return client.users.resolve(Number(userId))?.type === type
+    }
+
     return (
         <ScrollDataProvider container={containerRef()}>
             <PageTopAppBar elevated={pageData.topAppBarElevated} />
@@ -129,8 +141,18 @@ function RouteComponent() {
                     >
                         <LinkNavigationRailItem icon={AdminIcon} label={string.ADMIN_DASHBOARD()} to="/manage" exact />
                         <Separator />
-                        <LinkNavigationRailItem icon={PeopleIcon} label={string.STUDENTS()} to="/manage/students" />
-                        <LinkNavigationRailItem icon={TeacherIcon} label={string.TEACHERS()} to="/manage/teachers" />
+                        <LinkNavigationRailItem
+                            icon={PeopleIcon}
+                            label={string.STUDENTS()}
+                            to="/manage/students"
+                            isActive={() => isOnUserRouteForType(UserType.STUDENT)}
+                        />
+                        <LinkNavigationRailItem
+                            icon={TeacherIcon}
+                            label={string.TEACHERS()}
+                            to="/manage/teachers"
+                            isActive={() => isOnUserRouteForType(UserType.TEACHER)}
+                        />
                         <LinkNavigationRailItem icon={TeamIcon} label={string.GROUPS()} to="/manage/groups" />
                         <Separator />
                         <LinkNavigationRailItem
@@ -197,12 +219,14 @@ function Separator() {
     return <hr class={styles.sep} />
 }
 
-function LinkNavigationRailItem(props: NavigationRailItemProps & { to: RoutePath; exact?: boolean }) {
+function LinkNavigationRailItem(
+    props: NavigationRailItemProps & { to: RoutePath; exact?: boolean; isActive?: () => boolean },
+) {
     const [local, others] = splitProps(props, ['to', 'exact'])
 
     return (
         <Link to={local.to} style={{ display: 'contents' }} activeOptions={{ exact: local.exact }}>
-            {state => <NavigationRailItem {...others} active={state.isActive} />}
+            {state => <NavigationRailItem {...others} active={state.isActive || props.isActive?.()} />}
         </Link>
     )
 }
