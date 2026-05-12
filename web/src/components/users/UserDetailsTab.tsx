@@ -264,7 +264,7 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                             name="newPassword"
                             variant="outlined"
                             autocomplete={ctx.creating ? 'new-password' : 'current-password'}
-                            type="password"
+                            type="text"
                             label={ctx.creating ? string.PASSWORD() : string.NEW_PASSWORD()}
                             value={ctx.userData?.newPassword ?? ''}
                             onInput={e => {
