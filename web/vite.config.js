@@ -2,7 +2,6 @@ import { execSync } from 'node:child_process'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import devtools from 'solid-devtools/vite'
 import { defineConfig } from 'vite'
-import { ViteImageOptimizer as imageOptimizer } from 'vite-plugin-image-optimizer'
 import solid from 'vite-plugin-solid'
 import pkg from '../package.json'
 
@@ -17,11 +16,6 @@ export default defineConfig({
         }),
         tanstackRouter({ target: 'solid', autoCodeSplitting: process.env.NODE_ENV === 'production' }),
         solid(),
-        imageOptimizer({
-            webp: {
-                quality: 75,
-            },
-        }),
     ],
     define: {
         'process.env.APP_VERSION': JSON.stringify(pkg.version),
