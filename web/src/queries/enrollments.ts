@@ -1,5 +1,5 @@
 import { queryOptions, skipToken } from '@tanstack/solid-query'
-import type { Client, EnrollmentManager } from '../api'
+import type { Client, EnrollmentManager } from '~/api'
 
 /**
  * @cache update-in-place

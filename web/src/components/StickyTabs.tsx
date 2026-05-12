@@ -1,5 +1,5 @@
 import { Tabs } from 'm3-solid/src'
-import { useScrollData } from '../providers/ScrollDataProvider'
+import { useScrollData } from '~/providers/ScrollDataProvider'
 import styles from './StickyTabs.module.css'
 import type { ComponentProps } from 'solid-js'
 

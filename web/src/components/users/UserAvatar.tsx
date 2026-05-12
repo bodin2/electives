@@ -1,7 +1,7 @@
 import { mergeClasses } from 'm3-solid/src'
 import { Show } from 'solid-js'
-import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
-import { useI18n } from '../../providers/I18nProvider'
+import AvatarPlaceholder from '~/images/avatar-placeholder.webp'
+import { useI18n } from '~/providers/I18nProvider'
 
 interface UserAvatarProps {
     imageUrl?: string

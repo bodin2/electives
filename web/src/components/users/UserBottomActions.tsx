@@ -1,6 +1,6 @@
 import SaveIcon from '@iconify-icons/mdi/content-save'
 import { Show } from 'solid-js'
-import { useI18n } from '../../providers/I18nProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import BottomBar, { bottomBarStyles } from '../BottomBar'
 import { Button } from '../Button'
 import { useUserDisplayContext } from './UserDisplayContext'

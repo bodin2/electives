@@ -1,7 +1,7 @@
 import { mergeRefs } from '@solid-primitives/refs'
 import { type ButtonProps, LoadingIndicator, Button as M3Button, mergeClasses } from 'm3-solid/src'
 import { createEffect, createSignal, type JSX, Show, splitProps } from 'solid-js'
-import { useI18n } from '../providers/I18nProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import styles from './Button.module.css'
 
 export function Button(

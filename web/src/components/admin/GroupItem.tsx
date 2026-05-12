@@ -6,13 +6,13 @@ import DeleteOutlineIcon from '@iconify-icons/mdi/delete-outline'
 import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
 import { ListItem } from 'm3-solid/src'
 import { Show } from 'solid-js'
-import { GroupType } from '../../api'
-import { useI18n } from '../../providers/I18nProvider'
+import { GroupType } from '~/api'
+import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import { ContainedIcon } from '../ContainedIcon'
 import { HStack } from '../Stack'
 import type { IconifyIcon } from '@iconify/types'
-import type { Group } from '../../api/structures'
+import type { Group } from '~/api/structures'
 
 interface GroupItemProps {
     group: Group

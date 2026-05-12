@@ -1,13 +1,13 @@
 import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import { createEffect, createSignal, For, on, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { useI18n } from '../../providers/I18nProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import AddSubjectToEnrollmentDialog from '../dialogs/AddSubjectToEnrollmentDialog'
 import RemoveSubjectFromEnrollmentDialog from '../dialogs/RemoveSubjectFromEnrollmentDialog'
 import { Option, Select } from '../Select'
 import { HStack } from '../Stack'
-import type { Enrollment, Subject } from '../../api'
+import type { Enrollment, Subject } from '~/api'
 
 export default function SubjectAdminEnrollmentActions(props: {
     subject: Subject

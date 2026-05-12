@@ -1,14 +1,14 @@
 import { createContext, createRenderEffect, createSignal, Match, Show, Switch, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
-import { useTabPersistence } from '../../hooks/useTabPersistence'
-import { useI18n } from '../../providers/I18nProvider'
-import { nonNull } from '../../utils'
+import { useTabPersistence } from '~/hooks/useTabPersistence'
+import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
 import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { VStack } from '../Stack'
 import StickyTabs from '../StickyTabs'
 import EnrollmentDetailsTab from './EnrollmentDetailsTab'
 import EnrollmentUnenrolledTab from './EnrollmentUnenrolledTab'
-import type { Enrollment } from '../../api'
+import type { Enrollment } from '~/api'
 
 export interface EnrollmentInfoProps {
     enrollment: Enrollment

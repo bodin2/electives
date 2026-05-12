@@ -1,4 +1,4 @@
-import { API_CLIENT_NAME } from '../constants'
+import { API_CLIENT_NAME } from '~/constants'
 import { signChallenge } from './ssh'
 import {
     AdminChallengeResponse,

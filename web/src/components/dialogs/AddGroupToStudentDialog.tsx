@@ -1,12 +1,12 @@
 import AccountGroupIcon from '@iconify-icons/mdi/account-group-outline'
 import { Icon } from 'm3-solid/src'
 import { createRenderEffect, createSignal, For, Show } from 'solid-js'
-import { useI18n } from '../../providers/I18nProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import { Dialog } from '../Dialog'
 import { Option, Select } from '../Select'
 import { VStack } from '../Stack'
-import type { Group } from '../../api'
+import type { Group } from '~/api'
 
 export default function AddGroupToStudentDialog(props: {
     open: boolean

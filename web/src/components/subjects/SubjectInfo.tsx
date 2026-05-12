@@ -9,9 +9,9 @@ import {
     useContext,
 } from 'solid-js'
 import { createStore } from 'solid-js/store'
-import { useTabPersistence } from '../../hooks/useTabPersistence'
-import { useI18n } from '../../providers/I18nProvider'
-import { nonNull } from '../../utils'
+import { useTabPersistence } from '~/hooks/useTabPersistence'
+import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
 import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { VStack } from '../Stack'
 import StickyTabs from '../StickyTabs'
@@ -19,7 +19,7 @@ import SubjectBottomActions from './SubjectBottomActions'
 import SubjectDetailsTab from './SubjectDetailsTab'
 import styles from './SubjectInfo.module.css'
 import SubjectMembersTab from './SubjectMembersTab'
-import type { Enrollment, Subject, User } from '../../api'
+import type { Enrollment, Subject, User } from '~/api'
 import type { PatchSetterKey } from './SubjectDisplayContext'
 
 export interface SubjectInfoProps {

@@ -1,7 +1,7 @@
 import HomeIcon from '@iconify-icons/mdi/home'
 import { mergeClasses } from 'm3-solid/src'
 import { createSignal, onMount, Show } from 'solid-js'
-import { useI18n } from '../../providers/I18nProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import { Dialog } from '../Dialog'
 import NotFoundIllustration, { NotFoundEEIllustration } from '../images/NotFoundIllustration'

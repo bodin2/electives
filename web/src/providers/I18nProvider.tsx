@@ -12,9 +12,9 @@ import {
     useContext,
 } from 'solid-js'
 import { createStore } from 'solid-js/store'
-import { nonNull } from '../utils'
+import { nonNull } from '~/utils'
 import type { BaseRecordDict, Resolved } from '@solid-primitives/i18n'
-import type Lang from '../i18n/th.json'
+import type Lang from '~/i18n/th.json'
 
 const log = new Logger('I18nProvider')
 

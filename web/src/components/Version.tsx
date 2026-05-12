@@ -1,6 +1,6 @@
 import { createSignal } from 'solid-js'
-import { APP_COMMIT, APP_VERSION } from '../constants'
-import { useI18n } from '../providers/I18nProvider'
+import { APP_COMMIT, APP_VERSION } from '~/constants'
+import { useI18n } from '~/providers/I18nProvider'
 
 const VERSION = `v${APP_VERSION}-${APP_COMMIT}`
 

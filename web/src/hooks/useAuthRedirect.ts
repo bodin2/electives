@@ -1,8 +1,8 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { type Register, type ToPathOption, useRouter } from '@tanstack/solid-router'
 import { type Accessor, createEffect, on, untrack } from 'solid-js'
-import { AuthenticationState, type TokenType, useAPI } from '../providers/APIProvider'
-import type { RoutePath } from '../main'
+import { AuthenticationState, type TokenType, useAPI } from '~/providers/APIProvider'
+import type { RoutePath } from '~/main'
 
 const log = new Logger('hooks/useLoginRedirect')
 

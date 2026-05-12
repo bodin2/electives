@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/solid-query'
-import type { Client } from '../api'
+import type { Client } from '~/api'
 
 /**
  * @cache refetch (warning: may need to refetch `@me` and `student.id`)

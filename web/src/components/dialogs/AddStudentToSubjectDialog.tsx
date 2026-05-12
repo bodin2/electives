@@ -1,6 +1,6 @@
-import { useAPI } from '../../providers/APIProvider'
-import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
-import { useI18n } from '../../providers/I18nProvider'
+import { useAPI } from '~/providers/APIProvider'
+import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import AddUserDialog from './base/AddUserDialog'
 
 export default function AddStudentToSubjectDialog(props: {

@@ -1,15 +1,15 @@
 import PlusIcon from '@iconify-icons/mdi/plus'
 import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createSignal, Match, Show, Switch } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
-import { enrollmentSubjectsQueryOptions } from '../../queries/enrollments'
-import { adminSubjectsQueryOptions } from '../../queries/subjects'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { enrollmentSubjectsQueryOptions } from '~/queries/enrollments'
+import { adminSubjectsQueryOptions } from '~/queries/subjects'
 import { Button } from '../Button'
 import { HStack, VStack } from '../Stack'
 import SubjectList from '../subjects/SubjectList'
 import { useEnrollmentInfoContext } from './EnrollmentInfo'
-import type { Subject } from '../../api'
+import type { Subject } from '~/api'
 
 export default function EnrollmentSubjectsTab(props: { stickyOffset?: number }) {
     const ctx = useEnrollmentInfoContext()

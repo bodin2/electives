@@ -1,10 +1,10 @@
 import { queryOptions } from '@tanstack/solid-query'
-import type { Client } from '../api'
+import type { Client } from '~/api'
 import type {
     EnrolledCountFetchOptions,
     SubjectFetchOptions,
     SubjectMembersFetchOptions,
-} from '../api/managers/SubjectManager'
+} from '~/api/managers/SubjectManager'
 
 /**
  * @cache update-in-place

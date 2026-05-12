@@ -1,5 +1,5 @@
 import { createSignal, onCleanup, onMount } from 'solid-js'
-import type { Enrollment } from '../api'
+import type { Enrollment } from '~/api'
 
 const MAX_TIMEOUT = 2147483647
 const FIVE_MINUTES = 5 * 60 * 1000

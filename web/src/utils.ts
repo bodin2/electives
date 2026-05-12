@@ -37,9 +37,9 @@ export function nonNull<T>(value: T | null | undefined, msg = 'Value must not be
     return value
 }
 
-export { sleep } from './api/utils'
-export { enrollmentSorter } from './utils/enrollments'
-export { createHashFromString, seededRandom, seededShuffle } from './utils/random'
+export { sleep } from '~/api/utils'
+export { enrollmentSorter } from '~/utils/enrollments'
+export { createHashFromString, seededRandom, seededShuffle } from '~/utils/random'
 
 // biome-ignore lint/suspicious/noExplicitAny: For inferred types in debounce
 export function debounce<F extends (...args: any[]) => any>(

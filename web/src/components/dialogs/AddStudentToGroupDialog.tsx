@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/solid-query'
-import { GroupType, type User } from '../../api'
-import { useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
+import { GroupType, type User } from '~/api'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import AddUserDialog from './base/AddUserDialog'
-import type { AdminUserPatch } from '../../api'
+import type { AdminUserPatch } from '~/api'
 
 export default function AddStudentToGroupDialog(props: {
     open: boolean

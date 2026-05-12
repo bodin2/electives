@@ -1,7 +1,7 @@
 import { Group as GroupProto, User } from '@bodin2/electives-common/proto/api'
 import { inferSchema, initParser } from 'udsv'
-import { AdminAddUserRequest, type UserType } from '../api/types'
-import type { Group } from '../api'
+import { AdminAddUserRequest, type UserType } from '~/api/types'
+import type { Group } from '~/api'
 
 /**
  * Parse a CSV file into AdminAddUserRequest objects.

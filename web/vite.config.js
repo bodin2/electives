@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import devtools from 'solid-devtools/vite'
 import { defineConfig } from 'vite'
@@ -46,6 +47,9 @@ export default defineConfig(({ mode }) => {
             // My setup includes linking m3-solid from source
             // which causes multiple copies of solid-js to be included
             dedupe: ['solid-js'],
+            alias: {
+                '~': fileURLToPath(new URL('./src', import.meta.url)),
+            },
         },
     }
 })

@@ -1,15 +1,15 @@
 import { createQuery } from '@tanstack/solid-query'
 import { createEffect, createMemo, For, Show } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
-import { useI18n } from '../../providers/I18nProvider'
-import { enrollmentsQueryOptions } from '../../queries/enrollments'
-import { teacherSubjectsQueryOptions } from '../../queries/users'
-import { enrollmentSorter } from '../../utils'
+import { useAPI } from '~/providers/APIProvider'
+import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { enrollmentsQueryOptions } from '~/queries/enrollments'
+import { teacherSubjectsQueryOptions } from '~/queries/users'
+import { enrollmentSorter } from '~/utils'
 import SectionedList from '../SectionedList'
 import { useSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
 import SubjectListItem from '../subjects/SubjectListItem'
-import type { Enrollment, Subject } from '../../api'
+import type { Enrollment, Subject } from '~/api'
 
 export interface TeacherSubjectsTabProps {
     userId: number

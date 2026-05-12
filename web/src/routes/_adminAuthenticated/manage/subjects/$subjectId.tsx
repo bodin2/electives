@@ -11,31 +11,31 @@ import {
     type RawSubject,
     Subject,
     type User,
-} from '../../../../api'
-import AddStudentToSubjectButton from '../../../../components/buttons/AddStudentToSubjectButton'
-import AddTeacherToSubjectButton from '../../../../components/buttons/AddTeacherToSubjectButton'
-import Page from '../../../../components/Page'
-import NotFoundPage from '../../../../components/pages/NotFoundPage'
-import { HStack, VStack } from '../../../../components/Stack'
-import SubjectAdminEnrollmentActions from '../../../../components/subjects/SubjectAdminEnrollmentActions'
-import SubjectInfo from '../../../../components/subjects/SubjectInfo'
-import { useRetryableSubscription } from '../../../../hooks/useRetryableSubscription'
-import useSubjectFull from '../../../../hooks/useSubjectFull'
-import { useAPI } from '../../../../providers/APIProvider'
-import { useEnrollmentCounts } from '../../../../providers/EnrollmentCountsProvider'
-import { useI18n } from '../../../../providers/I18nProvider'
-import { enrollmentsQueryOptions } from '../../../../queries/enrollments'
+} from '~/api'
+import AddStudentToSubjectButton from '~/components/buttons/AddStudentToSubjectButton'
+import AddTeacherToSubjectButton from '~/components/buttons/AddTeacherToSubjectButton'
+import Page from '~/components/Page'
+import NotFoundPage from '~/components/pages/NotFoundPage'
+import { HStack, VStack } from '~/components/Stack'
+import SubjectAdminEnrollmentActions from '~/components/subjects/SubjectAdminEnrollmentActions'
+import SubjectInfo from '~/components/subjects/SubjectInfo'
+import { useRetryableSubscription } from '~/hooks/useRetryableSubscription'
+import useSubjectFull from '~/hooks/useSubjectFull'
+import { useAPI } from '~/providers/APIProvider'
+import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { enrollmentsQueryOptions } from '~/queries/enrollments'
 import {
     adminSubjectEnrollmentIdsQueryOptions,
     subjectEnrolledCountQueryOptions,
     subjectMembersQueryOptions,
     subjectQueryOptions,
-} from '../../../../queries/subjects'
-import { nonNull } from '../../../../utils'
-import { catchErrors } from '../../../../utils/error-component'
-import { simpleXXHash31 } from '../../../../utils/xxhash'
+} from '~/queries/subjects'
+import { nonNull } from '~/utils'
+import { catchErrors } from '~/utils/error-component'
+import { simpleXXHash31 } from '~/utils/xxhash'
 import styles from './$subjectId.module.css'
-import type { PatchSetterKey } from '../../../../components/subjects/SubjectDisplayContext'
+import type { PatchSetterKey } from '~/components/subjects/SubjectDisplayContext'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subjectId')({
     component: RouteComponent,

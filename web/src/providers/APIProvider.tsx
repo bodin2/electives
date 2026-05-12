@@ -22,11 +22,11 @@ import {
     RESTClient,
     UserAuthenticator,
     UserType,
-} from '../api'
-import { GatewayEndpoints } from '../api/gateway'
-import { NetworkError } from '../api/types'
-import { API_BASE_URL, API_CLIENT_NAME } from '../constants'
-import { nonNull } from '../utils'
+} from '~/api'
+import { GatewayEndpoints } from '~/api/gateway'
+import { NetworkError } from '~/api/types'
+import { API_BASE_URL, API_CLIENT_NAME } from '~/constants'
+import { nonNull } from '~/utils'
 
 export enum AuthenticationState {
     Loading = 0,

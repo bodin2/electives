@@ -2,21 +2,21 @@ import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { batch, createEffect, createMemo, createRenderEffect, createSignal, on, onCleanup, onMount } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { type AdminUserPatch, GroupType, NotFoundError, User, UserType } from '../../../../api'
-import { ConfirmDialog } from '../../../../components/dialogs/base/ConfirmDialog'
-import Page from '../../../../components/Page'
-import NotFoundPage from '../../../../components/pages/NotFoundPage'
+import { type AdminUserPatch, GroupType, NotFoundError, User, UserType } from '~/api'
+import { ConfirmDialog } from '~/components/dialogs/base/ConfirmDialog'
+import Page from '~/components/Page'
+import NotFoundPage from '~/components/pages/NotFoundPage'
 import {
     type UserData,
     type UserPatchSetterKey,
     useUserDisplayContext,
-} from '../../../../components/users/UserDisplayContext'
-import UserInfo from '../../../../components/users/UserInfo'
-import { useAPI } from '../../../../providers/APIProvider'
-import { useI18n } from '../../../../providers/I18nProvider'
-import { groupsQueryOptions } from '../../../../queries/groups'
-import { userQueryOptions } from '../../../../queries/users'
-import { catchErrors } from '../../../../utils/error-component'
+} from '~/components/users/UserDisplayContext'
+import UserInfo from '~/components/users/UserInfo'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { groupsQueryOptions } from '~/queries/groups'
+import { userQueryOptions } from '~/queries/users'
+import { catchErrors } from '~/utils/error-component'
 
 type UserSearch = {
     type?: 'student' | 'teacher'

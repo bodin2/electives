@@ -1,13 +1,13 @@
 import { createEffect, createMemo, createSignal, type JSX, Show } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
-import { useI18n } from '../../providers/I18nProvider'
-import { groupMapItems, nonNull } from '../../utils'
+import { useAPI } from '~/providers/APIProvider'
+import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { groupMapItems, nonNull } from '~/utils'
 import SectionedList from '../SectionedList'
 import SubjectCategorySection from './SubjectCategorySection'
 import type { SubjectTag } from '@bodin2/electives-common/proto/api'
 import type { LinkProps } from '@tanstack/solid-router'
-import type { Enrollment, Subject, User } from '../../api'
+import type { Enrollment, Subject, User } from '~/api'
 
 export interface SubjectListProps {
     subjects: Subject[]

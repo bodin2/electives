@@ -3,14 +3,14 @@ import PlusIcon from '@iconify-icons/mdi/plus'
 import { TextField } from 'm3-solid/src'
 import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { GroupType } from '../../api'
-import { useI18n } from '../../providers/I18nProvider'
+import { GroupType } from '~/api'
+import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import { ConfirmDialog } from '../dialogs/base/ConfirmDialog'
 import { HStack, VStack } from '../Stack'
 import GroupItem from './GroupItem'
 import styles from './GroupList.module.css'
-import type { Group } from '../../api/structures'
+import type { Group } from '~/api/structures'
 
 interface GroupListProps {
     groups: Group[]

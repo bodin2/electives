@@ -1,7 +1,7 @@
 import { type ComponentProps, type JSX, type JSXElement, splitProps } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
 import styles from './Stack.module.css'
-import type { StyleRecordOnly } from '../global'
+import type { StyleRecordOnly } from '~/global'
 
 export function VStack<const As extends keyof JSX.HTMLElementTags>(props: StackProps<As>) {
     const [local, others] = splitProps(props, [

@@ -1,4 +1,4 @@
-import { useScrollData } from '../providers/ScrollDataProvider'
+import { useScrollData } from '~/providers/ScrollDataProvider'
 import styles from './BottomBar.module.css'
 import { VStack } from './Stack'
 import type { ParentProps } from 'solid-js'

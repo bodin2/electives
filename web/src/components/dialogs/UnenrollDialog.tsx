@@ -1,11 +1,11 @@
 import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
 import { Icon } from 'm3-solid/src'
 import { createEffect } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import { VStack } from '../Stack'
 import { ConfirmDialog } from './base/ConfirmDialog'
-import type { Subject } from '../../api'
+import type { Subject } from '~/api'
 
 export default function UnenrollDialog(props: {
     open: boolean

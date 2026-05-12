@@ -2,14 +2,14 @@ import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import { useQueryClient } from '@tanstack/solid-query'
 import { Icon } from 'm3-solid/src'
 import { createSignal, For, Show } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
-import { nonNull } from '../../utils'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
 import { Button } from '../Button'
 import { Dialog } from '../Dialog'
 import { Option, Select } from '../Select'
 import { VStack } from '../Stack'
-import type { Enrollment } from '../../api'
+import type { Enrollment } from '~/api'
 
 export default function AddSubjectToEnrollmentDialog(props: {
     open: boolean

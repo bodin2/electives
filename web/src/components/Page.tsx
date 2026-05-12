@@ -1,5 +1,5 @@
 import { createEffect, type JSX, type JSXElement, onCleanup, onMount, splitProps } from 'solid-js'
-import { usePageData } from '../providers/PageProvider'
+import { usePageData } from '~/providers/PageProvider'
 import { SuspenseLoadingPage } from './pages/LoadingPage'
 import { VStack } from './Stack'
 

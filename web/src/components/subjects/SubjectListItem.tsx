@@ -1,17 +1,17 @@
 import { createQuery, skipToken } from '@tanstack/solid-query'
 import { ListItem, mergeClasses } from 'm3-solid/src'
 import { createMemo, type JSX, Show, Suspense } from 'solid-js'
-import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placeholder.webp'
-import { useAPI } from '../../providers/APIProvider'
-import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
-import { useI18n } from '../../providers/I18nProvider'
-import { groupQueryOptions } from '../../queries/groups'
+import SubjectThumbnailPlaceholder from '~/images/subject-thumbnail-placeholder.webp'
+import { useAPI } from '~/providers/APIProvider'
+import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { groupQueryOptions } from '~/queries/groups'
 import { GroupBadge } from '../Badges'
 import LinkListItem from '../LinkListItem'
 import { HStack, VStack } from '../Stack'
 import styles from './SubjectListItem.module.css'
 import type { LinkProps } from '@tanstack/solid-router'
-import type { Subject } from '../../api'
+import type { Subject } from '~/api'
 
 interface SubjectListItemProps {
     subject: Subject

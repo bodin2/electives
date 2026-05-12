@@ -3,14 +3,14 @@ import KBArrowDownIcon from '@iconify-icons/mdi/keyboard-arrow-down'
 import KBArrowUpIcon from '@iconify-icons/mdi/keyboard-arrow-up'
 import { Button } from 'm3-solid/src'
 import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
-import { useI18n } from '../../providers/I18nProvider'
-import { nonNull } from '../../utils'
-import { createHashFromString, seededShuffle } from '../../utils/random'
+import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
+import { createHashFromString, seededShuffle } from '~/utils/random'
 import { HStack, VStack } from '../Stack'
 import styles from './SubjectCategorySection.module.css'
 import SubjectListItem from './SubjectListItem'
 import type { LinkProps } from '@tanstack/solid-router'
-import type { Enrollment, Subject } from '../../api'
+import type { Enrollment, Subject } from '~/api'
 
 const randomSeed = Math.floor(Math.random() * 2147483647)
 

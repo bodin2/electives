@@ -1,15 +1,15 @@
 import CloseIcon from '@iconify-icons/mdi/close'
 import { ListItem, mergeClasses } from 'm3-solid/src'
 import { type Component, Show } from 'solid-js'
-import AvatarPlaceholder from '../../images/avatar-placeholder.webp'
-import { useI18n } from '../../providers/I18nProvider'
-import { nonNull } from '../../utils'
+import AvatarPlaceholder from '~/images/avatar-placeholder.webp'
+import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
 import Badge from '../Badge'
 import { Badges } from '../Badges'
 import { Button } from '../Button'
 import { HStack } from '../Stack'
 import styles from './UserListItem.module.css'
-import type { User } from '../../api'
+import type { User } from '~/api'
 
 export interface UserListItemProps {
     user: User

@@ -1,10 +1,10 @@
 import { For, Show } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { groupItems } from '../../utils'
+import { useAPI } from '~/providers/APIProvider'
+import { groupItems } from '~/utils'
 import { HStack } from '../Stack'
 import EnrollmentCard from './EnrollmentCard'
 import styles from './EnrollmentList.module.css'
-import type { Enrollment, User } from '../../api'
+import type { Enrollment, User } from '~/api'
 
 export interface EnrollmentListProps {
     enrollments: Enrollment[]

@@ -2,11 +2,11 @@ import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import { useQueryClient } from '@tanstack/solid-query'
 import { Icon } from 'm3-solid/src'
 import { createSignal, Show } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import { VStack } from '../Stack'
 import { ConfirmDialog } from './base/ConfirmDialog'
-import type { Enrollment, Subject } from '../../api'
+import type { Enrollment, Subject } from '~/api'
 
 export default function RemoveSubjectFromEnrollmentDialog(props: {
     open: boolean

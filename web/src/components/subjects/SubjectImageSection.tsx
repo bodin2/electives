@@ -1,6 +1,6 @@
 import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
 import { Show } from 'solid-js'
-import { useI18n } from '../../providers/I18nProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import { HStack } from '../Stack'
 import styles from './SubjectDetailsTab.module.css'

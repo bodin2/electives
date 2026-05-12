@@ -15,23 +15,23 @@ import {
 } from 'm3-solid/src'
 import { createEffect, createRenderEffect, createSignal, on, onCleanup, onMount, splitProps } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { UserType } from '../../api'
-import { Button } from '../../components/Button'
-import LogOutButton from '../../components/buttons/LogOutButton'
-import SettingsDialog from '../../components/dialogs/SettingsDialog'
-import { PageTopAppBar } from '../../components/PageTopAppBar'
-import { HStack, VStack } from '../../components/Stack'
+import { UserType } from '~/api'
+import { Button } from '~/components/Button'
+import LogOutButton from '~/components/buttons/LogOutButton'
+import SettingsDialog from '~/components/dialogs/SettingsDialog'
+import { PageTopAppBar } from '~/components/PageTopAppBar'
+import { HStack, VStack } from '~/components/Stack'
 import {
     BaseSubjectDisplayContext,
     SubjectDisplayContextProvider,
-} from '../../components/subjects/SubjectDisplayContext'
-import { UserDisplayContextProvider, useUserDisplayContext } from '../../components/users/UserDisplayContext'
-import { useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
-import { usePageData } from '../../providers/PageProvider'
-import ScrollDataProvider from '../../providers/ScrollDataProvider'
+} from '~/components/subjects/SubjectDisplayContext'
+import { UserDisplayContextProvider, useUserDisplayContext } from '~/components/users/UserDisplayContext'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { usePageData } from '~/providers/PageProvider'
+import ScrollDataProvider from '~/providers/ScrollDataProvider'
 import styles from './manage.module.css'
-import type { RoutePath } from '../../main'
+import type { RoutePath } from '~/main'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage')({
     component: RouteComponent,

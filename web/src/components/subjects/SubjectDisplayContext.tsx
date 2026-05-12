@@ -1,6 +1,6 @@
 import { createContext, type ParentProps, useContext } from 'solid-js'
 import type { LinkProps } from '@tanstack/solid-router'
-import type { AdminSubjectPatch } from '../../api'
+import type { AdminSubjectPatch } from '~/api'
 
 export type PatchSetterKey = {
     [K in keyof AdminSubjectPatch]: AdminSubjectPatch[K] extends boolean | undefined ? K : never

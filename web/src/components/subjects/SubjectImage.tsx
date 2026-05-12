@@ -1,6 +1,6 @@
 import { Show } from 'solid-js'
-import SubjectImagePlaceholder from '../../images/subject-image-placeholder.webp'
-import { useI18n } from '../../providers/I18nProvider'
+import SubjectImagePlaceholder from '~/images/subject-image-placeholder.webp'
+import { useI18n } from '~/providers/I18nProvider'
 import styles from './SubjectImage.module.css'
 
 interface SubjectImageProps {

@@ -1,4 +1,4 @@
-import type { Enrollment } from '../api'
+import type { Enrollment } from '~/api'
 
 export function enrollmentSorter(a: Enrollment, b: Enrollment): number {
     if (a.endDate && b.endDate) {

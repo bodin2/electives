@@ -1,6 +1,6 @@
 import { type Component, createSignal, Match, Show, Switch } from 'solid-js'
-import { useTabPersistence } from '../../hooks/useTabPersistence'
-import { useI18n } from '../../providers/I18nProvider'
+import { useTabPersistence } from '~/hooks/useTabPersistence'
+import { useI18n } from '~/providers/I18nProvider'
 import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { VStack } from '../Stack'
 import StickyTabs from '../StickyTabs'
@@ -10,7 +10,7 @@ import UserBottomActions from './UserBottomActions'
 import UserDetailsTab from './UserDetailsTab'
 import { useUserDisplayContext } from './UserDisplayContext'
 import styles from './UserInfo.module.css'
-import type { Group, UserType } from '../../api'
+import type { Group, UserType } from '~/api'
 
 export interface UserInfoProps {
     extraActions?: Component
