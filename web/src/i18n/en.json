@@ -215,5 +215,21 @@
   "SELECT_GRADE_HINT": "Select grade",
   "SELECT_ROOM_HINT": "Select room",
   "SELECT_PROGRAM_HINT": "Select program",
-  "ACCOUNT_AND_SETTINGS": "Account and settings"
+  "ACCOUNT_AND_SETTINGS": "Account and settings",
+  "BULK_IMPORT_FAILED": "Failed to import users",
+  "BULK_ADD_USERS_ERROR_CANNOT_FIND_GROUP": "Cannot find group {{ groupName }}",
+  "BULK_ADD_USERS_ERROR_AMBIGUOUS_GROUP": "Multiple groups have the name {{ groupName }}. Please specify the group ID from the URL or change the group name to disambiguate.",
+  "BULK_ADD_USERS_ERROR_WRONG_GROUP_TYPE": "Group {{ groupName }} has wrong type. Expected {{ expectedType }}.",
+  "BULK_ADD_USERS_ERROR_INVALID_FIELDS": "Some columns are missing or invalid",
+  "BULK_ADD_USERS_ERROR_SOURCE": "Row #{{ source }}",
+  "EXPORT": "Export",
+  "EXPORT_STUDENTS": "Export students",
+  "SORT_BY": "Sort by",
+  "ROOM": "Room",
+  "BULK_ADD_USERS_PICK_TITLE": "Bulk add users",
+  "BULK_ADD_USERS_PICK_DESCRIPTION": "Download an example to see the expected format, or pick your own file.",
+  "BULK_ADD_USERS_STUDENTS_EXAMPLE": "Download students example",
+  "BULK_ADD_USERS_TEACHERS_EXAMPLE": "Download teachers example",
+  "BULK_ADD_USERS_SELECT_FILE": "Select file",
+  "BULK_ADD_USERS_ERROR_BAD_FORMAT": "CSV format is invalid. Please make sure your file matches the expected format."
 }

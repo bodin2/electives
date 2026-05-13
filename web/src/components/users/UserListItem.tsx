@@ -21,6 +21,7 @@ export interface UserListItemProps {
      */
     onRemove?: () => unknown
     removeDisabled?: boolean
+    class?: string
     /**
      * A custom component to show on the right side of the item.
      * Overrides the remove button if `onRemove` is also provided.
@@ -37,7 +38,7 @@ export function UserListItem(props: UserListItemProps) {
 
     return (
         <ListItem
-            class={mergeClasses(props.selected && styles.selected, props.disabled && styles.disabled)}
+            class={mergeClasses(props.selected && styles.selected, props.disabled && styles.disabled, props.class)}
             onClick={props.disabled ? undefined : props.onClick}
             lines={4}
             leading={

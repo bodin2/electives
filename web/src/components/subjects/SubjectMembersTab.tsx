@@ -1,13 +1,19 @@
+import FileDownloadIcon from '@iconify-icons/mdi/file-download-outline'
 import { createQuery, keepPreviousData } from '@tanstack/solid-query'
 import { useNavigate } from '@tanstack/solid-router'
-import { createEffect, createMemo, createSignal, For, onCleanup, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, For, type JSX, onCleanup, Show } from 'solid-js'
+import { Portal } from 'solid-js/web'
 import { useAPI } from '~/providers/APIProvider'
 import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import { subjectMembersQueryOptions } from '~/queries/subjects'
 import { nonNull } from '~/utils'
+import { type CSVSortKey, exportStudentsCSV } from '~/utils/csv'
+import { Button } from '../Button'
+import { Dialog } from '../Dialog'
 import LoadingPage from '../pages/LoadingPage'
-import { VStack } from '../Stack'
+import { Option, Select } from '../Select'
+import { HStack, VStack } from '../Stack'
 import { useUserDisplayContext } from '../users/UserDisplayContext'
 import { UserListItem } from '../users/UserListItem'
 import { useSubjectInfoContext } from './SubjectInfo'
@@ -81,6 +87,29 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
         membersQuery.data ? { ...membersQuery.data, capacity: ctx.subject.capacity } : undefined,
     )
 
+    const [exporting, setExporting] = createSignal(false)
+    const [sortBy, setSortBy] = createSignal<CSVSortKey>('room')
+
+    const canExport = () => ctx.editable || (client.user?.isTeacher() ?? false)
+
+    const onExportConfirm = () => {
+        const students = members()?.students
+        if (!students) return
+
+        const csv = exportStudentsCSV(students, sortBy())
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+
+        a.href = url
+        a.download = `${ctx.subject.name}-students.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+
+        setExporting(false)
+    }
+
     return (
         <Show
             when={ctx.enrollment}
@@ -110,10 +139,44 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
                             removeDisabled={props.studentRemoveDisabled}
                             maxCapacity={data().capacity}
                             showId
+                            actions={
+                                <Show when={canExport()}>
+                                    <Button icon={FileDownloadIcon} size="xs" onClick={() => setExporting(true)}>
+                                        {string.EXPORT_STUDENTS()}
+                                    </Button>
+                                </Show>
+                            }
                         />
                     </div>
                 )}
             </Show>
+            <Portal>
+                <Dialog
+                    open={exporting()}
+                    onClose={() => setExporting(false)}
+                    headline={string.EXPORT_STUDENTS()}
+                    actions={
+                        <HStack gap={8}>
+                            <Button variant="text" onClick={() => setExporting(false)}>
+                                {string.CANCEL()}
+                            </Button>
+                            <Button onClick={onExportConfirm}>{string.EXPORT()}</Button>
+                        </HStack>
+                    }
+                >
+                    <VStack gap={16}>
+                        <Select
+                            label={string.SORT_BY()}
+                            value={sortBy()}
+                            onInput={e => setSortBy(e.currentTarget.value as CSVSortKey)}
+                        >
+                            <Option value="room">{string.ROOM()}</Option>
+                            <Option value="id">{string.USER_ID()}</Option>
+                            <Option value="firstName">{string.FIRST_NAME()}</Option>
+                        </Select>
+                    </VStack>
+                </Dialog>
+            </Portal>
         </Show>
     )
 }
@@ -125,6 +188,7 @@ interface SubjectMembersSectionProps {
     onRemove?: (user: User) => unknown
     removeDisabled?: boolean
     maxCapacity?: number
+    actions?: JSX.Element
 }
 
 function SubjectMembersSection(props: SubjectMembersSectionProps) {
@@ -135,10 +199,13 @@ function SubjectMembersSection(props: SubjectMembersSectionProps) {
 
     return (
         <section>
-            <h1 class={`m3-label-large text-primary ${styles.header}`}>
-                {props.title} ({props.users.length}
-                {props.maxCapacity ? `/${props.maxCapacity}` : ''})
-            </h1>
+            <HStack class={styles.header} alignVertical="center" alignHorizontal="space-between">
+                <h1 class="m3-label-large text-primary">
+                    {props.title} ({props.users.length}
+                    {props.maxCapacity ? `/${props.maxCapacity}` : ''})
+                </h1>
+                <Show when={props.actions}>{props.actions}</Show>
+            </HStack>
             <ul class={styles.list}>
                 <Show when={props.users.length === 0}>
                     <p class={`m3-body-medium ${styles.noMembers}`}>
