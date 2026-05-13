@@ -1,5 +1,5 @@
 import AccountGraduationOutlineIcon from '@iconify-icons/mdi/account-graduation-outline'
-import AccountGroupIcon from '@iconify-icons/mdi/account-group'
+import AccountGroupOutlineIcon from '@iconify-icons/mdi/account-group-outline'
 import BookEducationOutlineIcon from '@iconify-icons/mdi/book-education-outline'
 import BuildingIcon from '@iconify-icons/mdi/building'
 import DeleteOutlineIcon from '@iconify-icons/mdi/delete-outline'
@@ -22,7 +22,7 @@ interface GroupItemProps {
 }
 
 export const GROUP_TYPE_ICONS: Record<GroupType, IconifyIcon | undefined> = {
-    [GroupType.CUSTOM]: AccountGroupIcon,
+    [GroupType.CUSTOM]: AccountGroupOutlineIcon,
     [GroupType.GRADE]: AccountGraduationOutlineIcon,
     [GroupType.ROOM]: BuildingIcon,
     [GroupType.PROGRAM]: BookEducationOutlineIcon,
