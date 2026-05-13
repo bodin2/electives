@@ -3,7 +3,7 @@ import PlusIcon from '@iconify-icons/mdi/plus'
 import { TextField } from 'm3-solid/src'
 import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { GroupType } from '~/api'
+import { User } from '~/api'
 import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import { ConfirmDialog } from '../dialogs/base/ConfirmDialog'
@@ -21,14 +21,6 @@ interface GroupListProps {
     emptyElement?: JSX.Element
 }
 
-const TYPE_SORT_ORDER: Record<GroupType, number> = {
-    [GroupType.GRADE]: 0,
-    [GroupType.ROOM]: 1,
-    [GroupType.PROGRAM]: 2,
-    [GroupType.CUSTOM]: 3,
-    [GroupType.UNRECOGNIZED]: 4,
-}
-
 export default function GroupList(props: GroupListProps) {
     const { string } = useI18n()
     const [search, setSearch] = createSignal('')
@@ -40,7 +32,11 @@ export default function GroupList(props: GroupListProps) {
         const query = search().toLowerCase()
         return props.groups
             .filter(g => g.name.toLowerCase().includes(query))
-            .sort((a, b) => TYPE_SORT_ORDER[a.type] - TYPE_SORT_ORDER[b.type] || a.name.localeCompare(b.name))
+            .sort(
+                (a, b) =>
+                    User.GROUP_TYPE_SORT_ORDER[a.type] - User.GROUP_TYPE_SORT_ORDER[b.type] ||
+                    a.name.localeCompare(b.name),
+            )
     })
 
     const setGroupToDelete = (group: Group | undefined) => {

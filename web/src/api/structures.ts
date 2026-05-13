@@ -43,6 +43,14 @@ export class Group {
 }
 
 export class User {
+    static GROUP_TYPE_SORT_ORDER: Record<GroupType, number> = {
+        [GroupType.GRADE]: 0,
+        [GroupType.ROOM]: 1,
+        [GroupType.PROGRAM]: 2,
+        [GroupType.CUSTOM]: 3,
+        [GroupType.UNRECOGNIZED]: 4,
+    }
+
     id: number
     firstName: string
     prefix?: string
@@ -65,7 +73,13 @@ export class User {
         this.lastName = data.lastName
         this.type = data.type
         this.avatarUrl = data.avatarUrl
-        this.groups = (data.groups ?? []).map(g => client.groups._getOrCreate(g)).sort((a, b) => a.id - b.id)
+        this.groups = (data.groups ?? [])
+            .map(g => client.groups._getOrCreate(g))
+            .sort(
+                (a, b) =>
+                    User.GROUP_TYPE_SORT_ORDER[a.type] - User.GROUP_TYPE_SORT_ORDER[b.type] ||
+                    a.name.localeCompare(b.name),
+            )
     }
 
     /**
