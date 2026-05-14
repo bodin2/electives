@@ -49,9 +49,16 @@ export interface ClientOptions<TCredentials> {
     autoConnect?: boolean
     /**
      * Cache TTL in milliseconds
-     * @default 300000 // 5 minutes
+     * @default 60000 // 1 minute
      */
     cacheTTL?: number
+    /**
+     * Short cache TTL for rapidly changing data like enrollment counts or inexpensively fetched data.
+     * Should be less than `cacheTTL`.
+     *
+     * @default 30000 // 30 seconds
+     */
+    shortCacheTTL?: number
 }
 
 /**
@@ -110,7 +117,14 @@ export class Client<TCredentials> {
     private readonly emitter: Emitter<ClientEventMap> = mitt<ClientEventMap>()
 
     constructor(options: ClientOptions<TCredentials>) {
-        const { rest, gateway, authenticator, autoConnect = true, cacheTTL = 5 * 60 * 1000 } = options
+        const {
+            rest,
+            gateway,
+            authenticator,
+            autoConnect = true,
+            cacheTTL = 60 * 1000,
+            shortCacheTTL = 30 * 1000,
+        } = options
 
         this.rest = rest
         this.gateway = gateway
@@ -118,6 +132,7 @@ export class Client<TCredentials> {
         this.autoConnect = autoConnect
 
         const cacheOpts = { ttl: cacheTTL }
+        const shortCacheOpts = { ttl: shortCacheTTL }
         const infiniteCacheOpts = { ttl: Number.POSITIVE_INFINITY }
 
         this.users = new UserManager(this, this.rest, new Cache(infiniteCacheOpts))
@@ -125,10 +140,10 @@ export class Client<TCredentials> {
             this,
             this.rest,
             new Cache(infiniteCacheOpts),
+            new Cache(shortCacheOpts),
             new Cache(cacheOpts),
-            new Cache(cacheOpts),
-            new Cache(cacheOpts),
-            new Cache(cacheOpts),
+            new Cache(shortCacheOpts),
+            new Cache(shortCacheOpts),
         )
         this.enrollments = new EnrollmentManager(this, this.rest, new Cache(infiniteCacheOpts), this.subjects)
         this.selections = new SelectionManager(this, this.rest, new Cache(cacheOpts), () => {
