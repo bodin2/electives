@@ -1,3 +1,4 @@
+import { nonNull } from '~/utils'
 import { AdminSetStudentSelectionsRequest, SetStudentEnrollmentSelectionRequest, StudentSelections } from '../types'
 import type { Cache } from '../cache'
 import type { Client } from '../client'
@@ -14,7 +15,6 @@ export class SelectionManager implements CacheableManager {
         private readonly client: Client<unknown>,
         private readonly rest: RESTClient,
         cache: Cache<number, Map<number, Subject>>,
-        private readonly resolveCurrentUserId: () => number,
     ) {
         this.cache = cache
         this.admin = new SelectionAdminActions(rest, this)
@@ -94,7 +94,7 @@ export class SelectionManager implements CacheableManager {
     }
 
     private resolveUserId(userId: number | '@me') {
-        return userId === '@me' ? this.resolveCurrentUserId() : userId
+        return userId === '@me' ? nonNull(this.client.user, 'Must be logged in to do this action').id : userId
     }
 
     /**

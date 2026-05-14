@@ -146,10 +146,7 @@ export class Client<TCredentials> {
             new Cache(shortCacheOpts),
         )
         this.enrollments = new EnrollmentManager(this, this.rest, new Cache(infiniteCacheOpts), this.subjects)
-        this.selections = new SelectionManager(this, this.rest, new Cache(cacheOpts), () => {
-            if (!this.user) throw new Error('Not logged in')
-            return this.user.id
-        })
+        this.selections = new SelectionManager(this, this.rest, new Cache(cacheOpts))
         this.groups = new GroupManager(this, this.rest, new Cache(infiniteCacheOpts))
 
         this.rest.onError = err => this.handleError(err)
