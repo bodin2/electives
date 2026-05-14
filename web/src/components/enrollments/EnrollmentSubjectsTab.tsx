@@ -96,7 +96,7 @@ export default function EnrollmentSubjectsTab(props: { stickyOffset?: number }) 
                             fallback={
                                 <VStack grow class="padded" style={{ 'padding-top': '8px' }}>
                                     <Button size="m" icon={PlusIcon} onClick={enterEditMode}>
-                                        {string.ADD_SUBJECTS()}
+                                        {string.ADD_SUBJECTS_TO_ENROLLMENT()}
                                     </Button>
                                 </VStack>
                             }

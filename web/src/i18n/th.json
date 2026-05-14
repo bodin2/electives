@@ -206,7 +206,7 @@
   "CREATE_ELECTIVE": "สร้างวิชาเพิ่มเติม",
   "MY_SUBJECTS": "วิชาของฉัน",
   "DISCARD": "ยกเลิก",
-  "ADD_SUBJECTS": "เพิ่มวิชา",
+  "ADD_SUBJECTS_TO_ENROLLMENT": "เพิ่มวิชาเข้าการลงทะเบียน",
   "NO_SUBJECTS_HINT": "ยังไม่มีรายวิชา",
   "NO_SUBJECTS_HINT_DESCRIPTION": "สร้างรายวิชาเพื่อเริ่มต้นใช้งาน",
   "NO_GROUPS_HINT": "ยังไม่มีกลุ่ม",
