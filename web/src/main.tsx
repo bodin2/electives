@@ -5,7 +5,7 @@ import { QueryClientProvider } from '@tanstack/solid-query'
 import { createRouter, type Register, type RoutePaths, RouterProvider, type ToPathOption } from '@tanstack/solid-router'
 import { routeTree } from '~/routeTree.gen'
 
-import 'm3-solid/styles.css'
+import 'm3-solid/src/styles.css'
 import './theme.css'
 import './styles.css'
 
