@@ -187,7 +187,7 @@ export class EnrollmentAdminActions {
         await this.rest.put(`/admin/enrollments/${id}`, enrollment, {
             encoder: RawEnrollment,
         })
-        return await this.manager.fetch(id, { force: true })
+        return this.manager._getOrCreate(enrollment)
     }
 
     /**
@@ -226,6 +226,6 @@ export class EnrollmentAdminActions {
             encoder: AdminSetEnrollmentSubjectsRequest,
         })
         // Clear stale cache so re-fetch returns fresh data
-        this.subjects.clearEnrollmentMapping(enrollmentId)
+        this.subjects.enrollmentSubjectIds.set(enrollmentId, new Set(subjectIds))
     }
 }

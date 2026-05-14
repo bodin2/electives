@@ -1,7 +1,7 @@
 import DeleteOutlineIcon from '@iconify-icons/mdi/delete-outline'
 import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
 import PlusIcon from '@iconify-icons/mdi/plus'
-import { createQuery } from '@tanstack/solid-query'
+import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { createSignal } from 'solid-js'
 import { Portal } from 'solid-js/web'
@@ -28,6 +28,7 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/')({
 function RouteComponent() {
     const { string } = useI18n()
     const { client } = useAPI()
+    const qc = useQueryClient()
     const [deletingSubject, setDeletingSubject] = createSignal<Subject | undefined>(undefined)
     const subjectDisplayContext = useSubjectDisplayContext()
 
@@ -87,13 +88,18 @@ function RouteComponent() {
                 )}
             />
             <Portal>
-                <SubjectDeletionDialog deletingSubject={deletingSubject()} setDeletingSubject={setDeletingSubject} />
+                <SubjectDeletionDialog
+                    deletingSubject={deletingSubject()}
+                    setDeletingSubject={setDeletingSubject}
+                    onInvalidate={() => qc.invalidateQueries({ queryKey: ['admin', 'subjects'] })}
+                />
             </Portal>
         </Page>
     )
 }
 
 function SubjectDeletionDialog(props: {
+    onInvalidate?: () => unknown
     deletingSubject: Subject | undefined
     setDeletingSubject: (s: Subject | undefined) => void
 }) {
@@ -106,6 +112,7 @@ function SubjectDeletionDialog(props: {
 
         try {
             await client.subjects.admin.delete(subject.id)
+            await props.onInvalidate?.()
         } catch (e) {
             console.error(e)
             alert(string.ERROR_DELETE_SUBJECT_FAILED())

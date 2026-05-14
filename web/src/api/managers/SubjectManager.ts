@@ -43,13 +43,15 @@ export interface EnrolledCountFetchOptions extends FetchOptions {
 
 export class SubjectManager implements CacheableManager {
     readonly cache: Cache<number, Subject>
+    // Key: subjectId
+    readonly enrollmentIdsCache: Cache<number, number[]>
     // Key: "enrollmentId:subjectId"
     readonly enrolledCountCache: Cache<string, number>
     // Key: "enrollmentId:subjectId"
     readonly teachersCache: Cache<string, User[]>
     readonly admin: SubjectAdminActions
 
-    private readonly enrollmentSubjectIds = new Map<number, Set<number>>()
+    readonly enrollmentSubjectIds = new Map<number, Set<number>>()
 
     constructor(
         private readonly client: Client<unknown>,
@@ -57,10 +59,12 @@ export class SubjectManager implements CacheableManager {
         cache: Cache<number, Subject>,
         enrolledCountCache: Cache<string, number>,
         teachersCache: Cache<string, User[]>,
+        enrollmentIdsCache: Cache<number, number[]>,
     ) {
         this.cache = cache
         this.enrolledCountCache = enrolledCountCache
         this.teachersCache = teachersCache
+        this.enrollmentIdsCache = enrollmentIdsCache
         this.admin = new SubjectAdminActions(client, rest, this)
     }
 
@@ -355,8 +359,10 @@ export class SubjectAdminActions {
     async put(id: number, subject: RawSubject): Promise<Subject> {
         await this.rest.put(`/admin/subjects/${id}`, subject, {
             encoder: RawSubject,
+            decoder: RawSubject,
         })
-        return await this.fetch(id, { force: true })
+        this.manager.enrollmentIdsCache.set(id, [])
+        return this.manager._getOrCreate(subject)
     }
 
     /**
@@ -391,6 +397,7 @@ export class SubjectAdminActions {
         for (const key of this.manager.enrolledCountCache.keys()) {
             if (key.endsWith(`:${id}`)) this.manager.enrolledCountCache.delete(key)
         }
+        this.manager.enrollmentIdsCache.delete(id)
     }
 
     /**
@@ -398,10 +405,22 @@ export class SubjectAdminActions {
      *
      * @param id The subject's ID
      */
-    async fetchEnrollmentIds(id: number): Promise<number[]> {
+    async fetchEnrollmentIds(id: number, options: FetchOptions = {}): Promise<number[]> {
+        const { force = false, cache = true } = options
+
+        if (!force) {
+            const cached = this.manager.enrollmentIdsCache.get(id)
+            if (cached) return cached
+        }
+
         const data = await this.rest.get<AdminService_SubjectEnrollmentIds>(`/admin/subjects/${id}/enrollment-ids`, {
             decoder: AdminService_SubjectEnrollmentIds,
         })
+
+        if (cache) {
+            this.manager.enrollmentIdsCache.set(id, data.enrollmentIds)
+        }
+
         return data.enrollmentIds
     }
 }

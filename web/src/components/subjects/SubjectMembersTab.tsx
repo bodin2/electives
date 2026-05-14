@@ -141,7 +141,12 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
                             showId
                             actions={
                                 <Show when={canExport()}>
-                                    <Button icon={FileDownloadIcon} size="xs" onClick={() => setExporting(true)}>
+                                    <Button
+                                        disabled={data().students.length === 0}
+                                        icon={FileDownloadIcon}
+                                        size="xs"
+                                        onClick={() => setExporting(true)}
+                                    >
                                         {string.EXPORT_STUDENTS()}
                                     </Button>
                                 </Show>

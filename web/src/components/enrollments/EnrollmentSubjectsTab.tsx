@@ -42,6 +42,7 @@ export default function EnrollmentSubjectsTab(props: { stickyOffset?: number }) 
         try {
             await client.enrollments.admin.setSubjects(ctx.enrollment.id, localSelectedIds())
             await Promise.all([
+                qc.invalidateQueries({ queryKey: ['enrollments', ctx.enrollment.id, 'subjects'] }),
                 qc.invalidateQueries({
                     predicate: ({ queryKey: [first, second, _, fourth] }) =>
                         first === 'admin' && second === 'subjects' && fourth === 'enrollmentIds',

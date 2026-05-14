@@ -112,7 +112,7 @@ export class GroupAdminActions {
         await this.rest.put(`/admin/groups/${id}`, group, {
             encoder: RawGroup,
         })
-        return await this.manager.fetch(id, { force: true })
+        return this.manager._getOrCreate(group)
     }
 
     /**

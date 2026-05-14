@@ -6,11 +6,7 @@ import { type AdminUserPatch, GroupType, NotFoundError, User, UserType } from '~
 import { ConfirmDialog } from '~/components/dialogs/base/ConfirmDialog'
 import Page from '~/components/Page'
 import NotFoundPage from '~/components/pages/NotFoundPage'
-import {
-    type UserData,
-    type UserPatchSetterKey,
-    useUserDisplayContext,
-} from '~/components/users/UserDisplayContext'
+import { type UserData, type UserPatchSetterKey, useUserDisplayContext } from '~/components/users/UserDisplayContext'
 import UserInfo from '~/components/users/UserInfo'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
@@ -149,7 +145,6 @@ function RouteComponent() {
         Promise.all([
             qc.invalidateQueries({
                 queryKey: ['admin', type === UserType.STUDENT ? 'students' : 'teachers'],
-                exact: true,
             }),
             userId !== undefined ? qc.invalidateQueries({ queryKey: ['users', userId] }) : undefined,
         ])
@@ -235,14 +230,14 @@ function RouteComponent() {
     const doDelete = async () => {
         try {
             const deletedUserId = user().id
-            const deletedUserType = userData().type
+            const deletedUserType = user().type
 
             await client.users.admin.delete(deletedUserId)
 
             // Remove, not invalidate
             qc.removeQueries({ queryKey: ['users', deletedUserId] })
 
-            await invalidate(deletedUserType)
+            await invalidate(deletedUserType, deletedUserId)
 
             switch (deletedUserType) {
                 case UserType.TEACHER:

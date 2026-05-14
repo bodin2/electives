@@ -20,7 +20,7 @@ export const enrollmentQueryOptions = (client: Client<unknown>, enrollmentId: nu
     })
 
 /**
- * @cache update-in-place
+ * @cache refetch-cached
  */
 export const enrollmentSubjectsQueryOptions = (
     client: Client<unknown>,
