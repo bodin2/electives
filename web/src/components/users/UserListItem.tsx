@@ -1,6 +1,7 @@
 import CloseIcon from '@iconify-icons/mdi/close'
 import { ListItem, mergeClasses } from 'm3-solid/src'
 import { type Component, Show } from 'solid-js'
+import { GroupType, type User } from '~/api'
 import AvatarPlaceholder from '~/images/avatar-placeholder.webp'
 import { useI18n } from '~/providers/I18nProvider'
 import { nonNull } from '~/utils'
@@ -9,7 +10,6 @@ import { Badges } from '../Badges'
 import { Button } from '../Button'
 import { HStack } from '../Stack'
 import styles from './UserListItem.module.css'
-import type { User } from '~/api'
 
 export interface UserListItemProps {
     user: User
@@ -31,10 +31,15 @@ export interface UserListItemProps {
     selected?: boolean
     /** Whether this item is disabled (non-interactive). */
     disabled?: boolean
+    /** If true, show the grade group badge. */
+    showGradeGroup?: boolean
 }
 
 export function UserListItem(props: UserListItemProps) {
     const { string } = useI18n()
+
+    const groups = () =>
+        props.showGradeGroup ? props.user.groups : props.user.groups.filter(g => g.type !== GroupType.GRADE)
 
     return (
         <ListItem
@@ -47,7 +52,7 @@ export function UserListItem(props: UserListItemProps) {
             headline={
                 <HStack alignVertical="center" wrap style={{ 'row-gap': '4px' }}>
                     {props.user.displayName}
-                    <Badges groups={props.user.groups} />
+                    <Badges groups={groups()} />
                     <Show when={props.user.id === props.currentUser?.id}>
                         <Badge variant="tertiary">{string.YOU()}</Badge>
                     </Show>

@@ -173,6 +173,7 @@ export function BulkAddUserAction(props: BulkAddUserActionProps) {
                                         class="no-side-padding"
                                         user={new User(client, nonNull(req.user))}
                                         showId
+                                        showGradeGroup
                                     />
                                 )}
                             </For>
