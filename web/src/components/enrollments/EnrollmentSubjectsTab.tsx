@@ -1,3 +1,4 @@
+import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
 import PlusIcon from '@iconify-icons/mdi/plus'
 import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createSignal, Match, Show, Switch } from 'solid-js'
@@ -104,8 +105,8 @@ export default function EnrollmentSubjectsTab(props: { stickyOffset?: number }) 
                                 <SubjectList
                                     noRandom
                                     headerActions={
-                                        <Button icon={PlusIcon} onClick={enterEditMode}>
-                                            {string.ADD_SUBJECTS()}
+                                        <Button icon={PencilOutlineIcon} onClick={enterEditMode}>
+                                            {string.ADD_OR_REMOVE_SUBJECTS()}
                                         </Button>
                                     }
                                     subjects={data()}

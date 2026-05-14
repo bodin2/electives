@@ -231,5 +231,6 @@
   "BULK_ADD_USERS_STUDENTS_EXAMPLE": "Download students example",
   "BULK_ADD_USERS_TEACHERS_EXAMPLE": "Download teachers example",
   "BULK_ADD_USERS_SELECT_FILE": "Select file",
-  "BULK_ADD_USERS_ERROR_BAD_FORMAT": "CSV format is invalid. Please make sure your file matches the expected format."
+  "BULK_ADD_USERS_ERROR_BAD_FORMAT": "CSV format is invalid. Please make sure your file matches the expected format.",
+  "ADD_OR_REMOVE_SUBJECTS": "Add/remove subjects"
 }
