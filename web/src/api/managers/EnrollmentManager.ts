@@ -225,7 +225,20 @@ export class EnrollmentAdminActions {
         await this.rest.put(`/admin/enrollments/${enrollmentId}/subjects`, body, {
             encoder: AdminSetEnrollmentSubjectsRequest,
         })
-        // Clear stale cache so re-fetch returns fresh data
-        this.subjects.enrollmentSubjectIds.set(enrollmentId, new Set(subjectIds))
+        // Optimistically update caches
+        this.subjects.enrollmentSubjectIdsCache.set(enrollmentId, subjectIds)
+        this.subjects.clearEnrollmentMapping(enrollmentId)
+        for (const id of subjectIds) {
+            const prev = this.subjects.enrollmentIdsCache.get(id) ?? []
+            if (!prev.includes(enrollmentId)) {
+                this.subjects.enrollmentIdsCache.set(id, [...prev, enrollmentId])
+            }
+        }
+        for (const [key, value] of this.subjects.enrollmentIdsCache.entries()) {
+            if (subjectIds.includes(key)) continue
+            if (value.includes(enrollmentId)) {
+                this.subjects.enrollmentIdsCache.delete(key)
+            }
+        }
     }
 }

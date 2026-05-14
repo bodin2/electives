@@ -1,5 +1,5 @@
 import { AdminService_SubjectEnrollmentIds } from '@bodin2/electives-common/proto/api'
-import { Subject, type User } from '../structures'
+import { type Enrollment, Subject, type User } from '../structures'
 import { AdminSubjectPatch, ListSubjectMembersResponse, ListSubjectsResponse, RawSubject } from '../types'
 import type { Cache } from '../cache'
 import type { Client } from '../client'
@@ -43,15 +43,14 @@ export interface EnrolledCountFetchOptions extends FetchOptions {
 
 export class SubjectManager implements CacheableManager {
     readonly cache: Cache<number, Subject>
-    // Key: subjectId
-    readonly enrollmentIdsCache: Cache<number, number[]>
     // Key: "enrollmentId:subjectId"
     readonly enrolledCountCache: Cache<string, number>
     // Key: "enrollmentId:subjectId"
     readonly teachersCache: Cache<string, User[]>
-    readonly admin: SubjectAdminActions
+    readonly enrollmentIdsCache: Cache<Subject['id'], Enrollment['id'][]>
+    readonly enrollmentSubjectIdsCache: Cache<Enrollment['id'], Subject['id'][]>
 
-    readonly enrollmentSubjectIds = new Map<number, Set<number>>()
+    readonly admin: SubjectAdminActions
 
     constructor(
         private readonly client: Client<unknown>,
@@ -59,11 +58,13 @@ export class SubjectManager implements CacheableManager {
         cache: Cache<number, Subject>,
         enrolledCountCache: Cache<string, number>,
         teachersCache: Cache<string, User[]>,
-        enrollmentIdsCache: Cache<number, number[]>,
+        enrollmentSubjectIdsCache: Cache<Enrollment['id'], Subject['id'][]>,
+        enrollmentIdsCache: Cache<Subject['id'], Enrollment['id'][]>,
     ) {
         this.cache = cache
         this.enrolledCountCache = enrolledCountCache
         this.teachersCache = teachersCache
+        this.enrollmentSubjectIdsCache = enrollmentSubjectIdsCache
         this.enrollmentIdsCache = enrollmentIdsCache
         this.admin = new SubjectAdminActions(client, rest, this)
     }
@@ -72,7 +73,7 @@ export class SubjectManager implements CacheableManager {
         this.cache.clear()
         this.enrolledCountCache.clear()
         this.teachersCache.clear()
-        this.enrollmentSubjectIds.clear()
+        this.enrollmentSubjectIdsCache.clear()
         this.admin.clearCache()
     }
 
@@ -81,7 +82,7 @@ export class SubjectManager implements CacheableManager {
      * forcing the next fetch to hit the API.
      */
     clearEnrollmentMapping(enrollmentId: number): void {
-        this.enrollmentSubjectIds.delete(enrollmentId)
+        this.enrollmentSubjectIdsCache.delete(enrollmentId)
     }
 
     /**
@@ -124,10 +125,10 @@ export class SubjectManager implements CacheableManager {
         const subjects = data.subjects.map(s => this._getOrCreate(s, cache))
 
         if (cache) {
-            const subjectIds = new Set<number>()
+            const subjectIds: Subject['id'][] = []
 
             for (const rawSubject of data.subjects) {
-                subjectIds.add(rawSubject.id)
+                subjectIds.push(rawSubject.id)
 
                 if (rawSubject.enrolledCount !== undefined) {
                     this._updateEnrolledCount(enrollmentId, rawSubject.id, rawSubject.enrolledCount)
@@ -141,7 +142,7 @@ export class SubjectManager implements CacheableManager {
                 }
             }
 
-            this.enrollmentSubjectIds.set(enrollmentId, subjectIds)
+            this.enrollmentSubjectIdsCache.set(enrollmentId, subjectIds)
         }
 
         return subjects
@@ -252,7 +253,7 @@ export class SubjectManager implements CacheableManager {
      * @param enrollmentId The enrollment's ID
      */
     resolveAll(enrollmentId: number): Subject[] | undefined {
-        const subjectIds = this.enrollmentSubjectIds.get(enrollmentId)
+        const subjectIds = this.enrollmentSubjectIdsCache.get(enrollmentId)
         if (!subjectIds) return undefined
 
         const subjects: Subject[] = []
@@ -361,7 +362,6 @@ export class SubjectAdminActions {
             encoder: RawSubject,
             decoder: RawSubject,
         })
-        this.manager.enrollmentIdsCache.set(id, [])
         return this.manager._getOrCreate(subject)
     }
 

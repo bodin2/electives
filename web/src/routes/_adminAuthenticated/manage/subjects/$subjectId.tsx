@@ -157,10 +157,12 @@ function RouteComponent() {
         return adminSubjectQuery.data
     }
 
-    const enrollments = () => {
-        const ids = enrollmentIdsQuery.data ?? []
+    const enrollments = createMemo(() => {
+        if (!enrollmentIdsQuery.isSuccess) return []
+
+        const ids = enrollmentIdsQuery.data
         return allEnrollments().filter(e => ids.includes(e.id))
-    }
+    })
 
     const teachers = () => membersQuery.data?.teachers ?? []
 

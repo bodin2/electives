@@ -128,6 +128,7 @@ export class Client<TCredentials> {
             new Cache(cacheOpts),
             new Cache(cacheOpts),
             new Cache(cacheOpts),
+            new Cache(cacheOpts),
         )
         this.enrollments = new EnrollmentManager(this, this.rest, new Cache(infiniteCacheOpts), this.subjects)
         this.selections = new SelectionManager(this, this.rest, new Cache(cacheOpts), () => {

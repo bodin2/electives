@@ -96,7 +96,7 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
     return (
         <Show when={ctx.user}>
             <VStack gap={32}>
-                <HStack gap={32} alignVertical="center" wrap>
+                <HStack gap={32} alignVertical="center">
                     {/** biome-ignore lint/a11y/noStaticElementInteractions: Intentional */}
                     {/** biome-ignore lint/a11y/useKeyWithClickEvents: Intentional */}
                     <div
@@ -126,24 +126,36 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                     </div>
 
                     <VStack gap={4} grow>
-                        <HStack alignVertical="center" gap={8} wrap>
+                        <HStack alignVertical="center" wrap>
                             <h1 class="m3-headline-medium">{user().displayName}</h1>
-                            <Show when={user().isStudent()}>
-                                <FixedSlotBadge user={user()} slot={GroupType.GRADE} onEdit={setEditingSlot} required />
-                                <FixedSlotBadge user={user()} slot={GroupType.ROOM} onEdit={setEditingSlot} required />
-                                <FixedSlotBadge user={user()} slot={GroupType.PROGRAM} onEdit={setEditingSlot} />
-                                <BadgeListEditor user={user()} />
-                                <HStack gap={4} alignVertical="center" wrap>
-                                    <Button
-                                        size="xs"
-                                        variant="tonal"
-                                        icon={PlusIcon}
-                                        onClick={() => setAddGroupOpen(true)}
-                                    >
-                                        {string.ADD_GROUP()}
-                                    </Button>
-                                </HStack>
-                            </Show>
+                            <HStack wrap>
+                                <Show when={user().isStudent()}>
+                                    <FixedSlotBadge
+                                        user={user()}
+                                        slot={GroupType.GRADE}
+                                        onEdit={setEditingSlot}
+                                        required
+                                    />
+                                    <FixedSlotBadge
+                                        user={user()}
+                                        slot={GroupType.ROOM}
+                                        onEdit={setEditingSlot}
+                                        required
+                                    />
+                                    <FixedSlotBadge user={user()} slot={GroupType.PROGRAM} onEdit={setEditingSlot} />
+                                    <BadgeListEditor user={user()} />
+                                    <HStack gap={4} alignVertical="center" wrap>
+                                        <Button
+                                            size="xs"
+                                            variant="tonal"
+                                            icon={PlusIcon}
+                                            onClick={() => setAddGroupOpen(true)}
+                                        >
+                                            {string.ADD_GROUP()}
+                                        </Button>
+                                    </HStack>
+                                </Show>
+                            </HStack>
                         </HStack>
 
                         <HStack class={styles.infoRow}>

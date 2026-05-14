@@ -120,6 +120,7 @@ function RouteComponent() {
 
     const doDelete = async () => {
         await client.enrollments.admin.delete(enrollment().id)
+        await queryClient.removeQueries({ queryKey: ['enrollments'], exact: true })
         await queryClient.removeQueries({ queryKey: ['enrollments', enrollment().id] })
         await navigate({ to: '..' })
     }
