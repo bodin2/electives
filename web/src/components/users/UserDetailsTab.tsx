@@ -125,10 +125,10 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                         </Show>
                     </div>
 
-                    <VStack gap={4} grow>
+                    <VStack grow>
                         <HStack alignVertical="center" wrap>
                             <h1 class="m3-headline-medium">{user().displayName}</h1>
-                            <HStack wrap>
+                            <HStack wrap style={{ 'row-gap': '4px' }}>
                                 <Show when={user().isStudent()}>
                                     <FixedSlotBadge
                                         user={user()}
