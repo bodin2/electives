@@ -151,7 +151,7 @@ private suspend fun RoutingContext.handlePutStudentEnrollmentSelection(
     @OptIn(Transactional::class)
     when (val result =
         enrollmentSelectionService.setStudentSelection(executor, studentId, enrollmentId, req.subject_id)) {
-        ModifySelectionResult.Success -> ok()
+        ModifySelectionResult.Success -> noContent()
 
         is ModifySelectionResult.NotFound -> {
             /**
@@ -204,7 +204,7 @@ private suspend fun RoutingContext.handleDeleteStudentEnrollmentSelection(
 ) {
     @OptIn(Transactional::class)
     when (val result = enrollmentSelectionService.deleteStudentSelection(executor, studentId, enrollmentId)) {
-        ModifySelectionResult.Success -> ok()
+        ModifySelectionResult.Success -> noContent()
 
         is ModifySelectionResult.CannotModify -> {
             return when (result.status) {

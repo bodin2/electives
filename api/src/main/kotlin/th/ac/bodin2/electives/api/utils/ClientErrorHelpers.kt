@@ -7,9 +7,12 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 
-@Suppress("NOTHING_TO_INLINE")
 suspend inline fun RoutingContext.ok() {
     call.respond(HttpStatusCode.OK)
+}
+
+suspend inline fun RoutingContext.noContent() {
+    call.respond(HttpStatusCode.NoContent)
 }
 
 suspend inline fun RoutingContext.badRequest(message: String? = null) {
@@ -34,6 +37,10 @@ data class Ok(val response: Message<*, *>) : RouteResponse()
 suspend inline fun RoutingContext.error(response: ErrorResponse) {
     call.response.status(response.status)
     response.message?.let { call.respondText(it) }
+}
+
+suspend inline fun RoutingContext.created(proto: Message<*, *>) {
+    call.respond(proto, HttpStatusCode.Created)
 }
 
 suspend inline fun RoutingContext.notFound(message: String? = null) {

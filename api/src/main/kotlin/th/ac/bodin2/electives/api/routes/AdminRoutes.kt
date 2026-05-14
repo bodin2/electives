@@ -205,7 +205,8 @@ class AdminUsersController(
 
             protoOrNull
                 ?: return badRequest("Unsupported user type or missing required group IDs (grade_id, room_id)")
-            call.respond(protoOrNull)
+
+            created(protoOrNull)
         } catch (e: IllegalArgumentException) {
             badRequest(e.message ?: "Invalid request")
         } catch (_: EntityNotFoundException) {
@@ -287,7 +288,7 @@ class AdminUsersController(
         try {
             @OptIn(Transactional::class)
             usersService.deleteUser(id)
-            ok()
+            noContent()
         } catch (_: EntityNotFoundException) {
             return notFound("User not found")
         } catch (e: ExposedSQLException) {
@@ -363,9 +364,7 @@ class AdminUsersController(
                 }
             }
 
-            call.respond(
-                AdminService.ListUsersResponse(users = created, total = created.size)
-            )
+            created(AdminService.ListUsersResponse(users = created, total = created.size))
         } catch (e: UsersService.BatchOperationException) {
             when (e) {
                 is UsersService.BatchOperationException.InvalidUserData -> when (e.cause) {
@@ -390,7 +389,7 @@ class AdminUsersController(
         try {
             @OptIn(Transactional::class)
             usersService.deleteUsers(req.user_ids)
-            ok()
+            noContent()
         } catch (e: UsersService.BatchOperationException.NotFoundEntities) {
             return badRequest("Users not found: ${e.ids.joinToString(", ")}")
         }
@@ -414,7 +413,7 @@ class AdminUsersSelectionsController(
             @OptIn(Transactional::class)
             enrollmentSelectionService.forceSetAllStudentSelections(id, req.selections)
 
-            ok()
+            noContent()
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.STUDENT -> notFound("Student not found")
@@ -463,7 +462,7 @@ class AdminEnrollmentsController(
                 endDate = enrollment.end_date?.secondsToUTCDateTime
             )
 
-            ok()
+            noContent()
         } catch (_: EntityNotFoundException) {
             badRequest("Group not found")
         } catch (_: ConflictException) {
@@ -477,7 +476,7 @@ class AdminEnrollmentsController(
         try {
             @OptIn(Transactional::class)
             enrollmentService.delete(id)
-            ok()
+            noContent()
         } catch (_: EntityNotFoundException) {
             notFound("Enrollment not found")
         } catch (e: ExposedSQLException) {
@@ -566,7 +565,7 @@ class AdminEnrollmentsSubjectsController(private val enrollmentService: Enrollme
             @OptIn(Transactional::class)
             enrollmentService.setSubjects(enrollmentId, req.subject_ids)
 
-            ok()
+            noContent()
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.ENROLLMENT -> notFound("Enrollment not found")
@@ -631,7 +630,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
                 imageUrl = subject.image_url,
             )
 
-            ok()
+            noContent()
         } catch (e: EntityNotFoundException) {
             return when (e.entity) {
                 ExceptionEntity.GROUP -> badRequest("Group not found")
@@ -650,7 +649,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
         try {
             @OptIn(Transactional::class)
             subjectService.delete(id)
-            ok()
+            noContent()
         } catch (_: EntityNotFoundException) {
             notFound("Subject not found")
         } catch (e: ExposedSQLException) {
@@ -770,7 +769,7 @@ class AdminGroupsController(private val groupService: GroupService) : Controller
         try {
             @OptIn(Transactional::class)
             groupService.create(group.id, group.name, group.type)
-            ok()
+            noContent()
         } catch (_: ConflictException) {
             conflict("Group with the same ID already exists")
         } catch (e: ExposedSQLException) {
@@ -782,7 +781,7 @@ class AdminGroupsController(private val groupService: GroupService) : Controller
         try {
             @OptIn(Transactional::class)
             groupService.delete(id)
-            ok()
+            noContent()
         } catch (_: EntityNotFoundException) {
             notFound("Group not found")
         } catch (_: ConflictException) {
