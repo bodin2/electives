@@ -13,6 +13,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
+import kotlinx.serialization.SerialName
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -729,6 +730,42 @@ class AdminGroupsController(private val groupService: GroupService) : Controller
                     params.page,
                     params.query.ifBlank { null })
             }
+
+            delete<Admin.Groups.Id.Members> { params ->
+                handleDeleteGroupMembers(params.parent.id)
+            }
+
+            post<Admin.Groups.Id.Members.Migrate> { params ->
+                handleMigrateGroupMembers(params.parent.parent.id, params.targetGroupId)
+            }
+        }
+    }
+
+    private suspend fun RoutingContext.handleDeleteGroupMembers(groupId: Int) {
+        try {
+            @OptIn(Transactional::class)
+            transaction {
+                groupService.deleteMembers(groupId)
+            }
+
+            noContent()
+        } catch (_: EntityNotFoundException) {
+            notFound("Group not found")
+        }
+    }
+
+    private suspend fun RoutingContext.handleMigrateGroupMembers(groupId: Int, targetGroupId: Int) {
+        try {
+            @OptIn(Transactional::class)
+            transaction {
+                groupService.migrateMembers(groupId, targetGroupId)
+            }
+
+            ok()
+        } catch (_: EntityNotFoundException) {
+            notFound("Group not found")
+        } catch (_: ConflictException) {
+            conflict("Target group must be a different group of the same type")
         }
     }
 
@@ -892,9 +929,13 @@ private class Admin {
         // PUT: Group, GET: Group, DELETE, PATCH: GroupPatch
         @Resource("{id}")
         class Id(val parent: Groups, val id: Int) {
-            // GET: ListUsersResponse
+            // GET: ListUsersResponse, DELETE
             @Resource("members")
-            class Members(val parent: Id, val page: Int = 1, val query: String = "")
+            class Members(val parent: Id, val page: Int = 1, val query: String = "") {
+                // POST
+                @Resource("migrate")
+                class Migrate(val parent: Members, @SerialName("target_group_id") val targetGroupId: Int)
+            }
         }
 
         // GET: GroupMemberCounts

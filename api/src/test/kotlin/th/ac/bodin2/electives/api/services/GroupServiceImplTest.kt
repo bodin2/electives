@@ -258,4 +258,122 @@ class GroupServiceImplTest : ApplicationTest() {
         assertTrue(count > 0)
         assertTrue(members.any { it.id.value == TestConstants.Students.JOHN_ID })
     }
+
+    @Test
+    fun `delete group members removes users`() = runTest {
+        val usersService: UsersService by application.dependencies
+
+        @OptIn(Transactional::class)
+        groupService.deleteMembers(TestConstants.Groups.GROUP_1_ID)
+
+        val count = transaction { groupService.getMemberCount(TestConstants.Groups.GROUP_1_ID) }
+        assertEquals(0, count)
+
+        val john = transaction { usersService.getStudentById(TestConstants.Students.JOHN_ID) }
+        assertNull(john)
+
+        // The group itself is preserved.
+        val group = transaction { groupService.getById(TestConstants.Groups.GROUP_1_ID) }
+        assertNotNull(group)
+
+        // Members of unrelated groups are untouched.
+        val jane = transaction { usersService.getStudentById(TestConstants.Students.JANE_ID) }
+        assertNotNull(jane)
+    }
+
+    @Test
+    fun `delete group members on empty group succeeds`() = runTest {
+        val tempId = 800
+        @OptIn(Transactional::class)
+        groupService.create(tempId, "Empty Group")
+
+        @OptIn(Transactional::class)
+        groupService.deleteMembers(tempId)
+
+        val group = transaction { groupService.getById(tempId) }
+        assertNotNull(group)
+    }
+
+    @Test
+    fun `delete group members not found`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            @OptIn(Transactional::class)
+            groupService.deleteMembers(UNUSED_ID)
+        }
+    }
+
+    @Test
+    fun `migrate group members moves memberships`() = runTest {
+        // John is in GROUP_1 (CUSTOM). Migrate him into GROUP_2 (also CUSTOM).
+        @OptIn(Transactional::class)
+        groupService.migrateMembers(TestConstants.Groups.GROUP_1_ID, TestConstants.Groups.GROUP_2_ID)
+
+        val sourceCount = transaction { groupService.getMemberCount(TestConstants.Groups.GROUP_1_ID) }
+        assertEquals(0, sourceCount)
+
+        val (targetMembers, _) = @OptIn(Transactional::class)
+        groupService.getMembers(TestConstants.Groups.GROUP_2_ID)
+        assertTrue(targetMembers.any { it.id.value == TestConstants.Students.JOHN_ID })
+        assertTrue(targetMembers.any { it.id.value == TestConstants.Students.JANE_ID })
+    }
+
+    @Test
+    fun `migrate group members preserves existing memberships in target`() = runTest {
+        // GRADE_ID has both John and Jane. Create another empty GRADE group and migrate into it.
+        val newGradeId = 801
+        @OptIn(Transactional::class)
+        groupService.create(newGradeId, "Grade 8", GroupType.GRADE)
+
+        @OptIn(Transactional::class)
+        groupService.migrateMembers(TestConstants.Groups.GRADE_ID, newGradeId)
+
+        assertEquals(0, transaction { groupService.getMemberCount(TestConstants.Groups.GRADE_ID) })
+        assertEquals(2, transaction { groupService.getMemberCount(newGradeId) })
+    }
+
+    @Test
+    fun `migrate group members source not found`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            @OptIn(Transactional::class)
+            groupService.migrateMembers(UNUSED_ID, TestConstants.Groups.GROUP_2_ID)
+        }
+    }
+
+    @Test
+    fun `migrate group members target not found`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            @OptIn(Transactional::class)
+            groupService.migrateMembers(TestConstants.Groups.GROUP_1_ID, UNUSED_ID)
+        }
+    }
+
+    @Test
+    fun `migrate group members to same group throws conflict`() = runTest {
+        assertFailsWith<ConflictException> {
+            @OptIn(Transactional::class)
+            groupService.migrateMembers(TestConstants.Groups.GROUP_1_ID, TestConstants.Groups.GROUP_1_ID)
+        }
+    }
+
+    @Test
+    fun `migrate group members across different types throws conflict`() = runTest {
+        // GROUP_1 is CUSTOM, GRADE_ID is GRADE.
+        assertFailsWith<ConflictException> {
+            @OptIn(Transactional::class)
+            groupService.migrateMembers(TestConstants.Groups.GROUP_1_ID, TestConstants.Groups.GRADE_ID)
+        }
+    }
+
+    @Test
+    fun `migrate group members from empty group succeeds`() = runTest {
+        val tempId = 802
+        @OptIn(Transactional::class)
+        groupService.create(tempId, "Empty Source")
+
+        @OptIn(Transactional::class)
+        groupService.migrateMembers(tempId, TestConstants.Groups.GROUP_2_ID)
+
+        // Jane was the only existing member of GROUP_2.
+        assertEquals(1, transaction { groupService.getMemberCount(TestConstants.Groups.GROUP_2_ID) })
+    }
 }

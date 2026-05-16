@@ -43,4 +43,10 @@ class TestGroupService : GroupService {
     override fun getMemberCounts() = GROUP_IDS.associateWith { 0 }
 
     override fun getMemberCount(groupId: Int): Int = 0
+
+    @Transactional
+    override fun deleteMembers(groupId: Int) = error("Not testable")
+
+    @Transactional
+    override fun migrateMembers(groupId: Int, targetGroupId: Int) = error("Not testable")
 }

@@ -60,4 +60,26 @@ interface GroupService {
     fun getMemberCounts(): Map<Int, Int>
 
     fun getMemberCount(groupId: Int): Int
+
+    /**
+     * Deletes all members of the specified group by removing the underlying
+     * [th.ac.bodin2.electives.db.User] rows. Cascading deletes also remove the
+     * associated [th.ac.bodin2.electives.db.Student] rows and their group
+     * memberships. The group itself is left in place.
+     *
+     * @throws EntityNotFoundException if the group does not exist.
+     */
+    @Transactional
+    fun deleteMembers(groupId: Int)
+
+    /**
+     * Moves all members of [groupId] into [targetGroupId]. The target group must
+     * exist, be different from the source, and have the same [GroupType] as the
+     * source. Memberships already present in the target are preserved.
+     *
+     * @throws EntityNotFoundException if either group does not exist.
+     * @throws ConflictException if the groups are the same or have different types.
+     */
+    @Transactional
+    fun migrateMembers(groupId: Int, targetGroupId: Int)
 }

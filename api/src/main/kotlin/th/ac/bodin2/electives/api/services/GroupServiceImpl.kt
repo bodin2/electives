@@ -4,6 +4,7 @@ import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.dao.with
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -112,4 +113,48 @@ class GroupServiceImpl : GroupService {
         StudentGroups.selectAll()
             .where { StudentGroups.group eq groupId }
             .count().toInt()
+
+    @Transactional
+    override fun deleteMembers(groupId: Int) {
+        transaction {
+            Group.assertExists(groupId)
+
+            val studentIds = StudentGroups
+                .select(StudentGroups.student)
+                .where { StudentGroups.group eq groupId }
+                .map { it[StudentGroups.student].value }
+
+            if (studentIds.isEmpty()) return@transaction
+
+            Users.deleteWhere { Users.id inList studentIds }
+        }
+    }
+
+    @Transactional
+    override fun migrateMembers(groupId: Int, targetGroupId: Int) {
+        transaction {
+            if (groupId == targetGroupId) throw ConflictException(ExceptionEntity.GROUP)
+
+            val sourceType = Group.getType(groupId)
+                ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
+            val targetType = Group.getType(targetGroupId)
+                ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
+
+            if (sourceType != targetType) throw ConflictException(ExceptionEntity.GROUP)
+
+            val studentIds = StudentGroups
+                .select(StudentGroups.student)
+                .where { StudentGroups.group eq groupId }
+                .map { it[StudentGroups.student].value }
+
+            if (studentIds.isEmpty()) return@transaction
+
+            StudentGroups.batchInsert(studentIds, ignore = true) {
+                this[StudentGroups.student] = it
+                this[StudentGroups.group] = targetGroupId
+            }
+
+            StudentGroups.deleteWhere { StudentGroups.group eq groupId }
+        }
+    }
 }
