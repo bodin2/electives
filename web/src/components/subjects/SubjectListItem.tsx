@@ -34,12 +34,13 @@ export default function SubjectListItem(props: SubjectListItemProps) {
     }))
 
     const enrolledCount = () => {
-        return props.enrollmentId !== undefined ? (enrollment.getCount(props.enrollmentId, props.subject.id) ?? 0) : 0
+        return props.enrollmentId !== undefined ? enrollment.getCount(props.enrollmentId, props.subject.id) : undefined
     }
 
     const isNearCapacity = () => {
-        if (props.enrollmentId === undefined) return false
-        return enrolledCount() / props.subject.capacity > 0.8 || props.subject.capacity - enrolledCount() < 5
+        const count = enrolledCount()
+        if (props.enrollmentId === undefined || count === undefined) return false
+        return count / props.subject.capacity > 0.8 || props.subject.capacity - count < 5
     }
 
     const teacherNames = () => {
@@ -59,7 +60,7 @@ export default function SubjectListItem(props: SubjectListItemProps) {
     const Trailing = (
         <VStack alignHorizontal="end">
             <Show when={props.actions}>{props.actions}</Show>
-            <Show when={props.enrollmentId !== undefined}>
+            <Show when={enrolledCount() !== undefined}>
                 <p
                     class="m3-body-medium"
                     classList={{

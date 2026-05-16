@@ -10,6 +10,10 @@ export default function useSubjectFull(subject: Accessor<Subject>, enrollment: A
         const e = enrollment()
 
         const count = counts.getCount(e.id, s.id)
+
+        // If count is not available, assume not full to avoid blocking users
+        if (count === undefined) return false
+
         return count >= s.capacity
     }
 

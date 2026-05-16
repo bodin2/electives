@@ -79,6 +79,7 @@ export default function EnrollmentSubjectsTab(props: { stickyOffset?: number }) 
                                     </HStack>
                                 }
                                 subjects={allSubjects()}
+                                enrollment={ctx.enrollment}
                                 noRandom
                                 editable
                                 selectedIds={localSelectedIds()}

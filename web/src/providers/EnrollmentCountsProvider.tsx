@@ -1,6 +1,6 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { createContext, onCleanup, type ParentProps, useContext } from 'solid-js'
-import { createStore, reconcile } from 'solid-js/store'
+import { createStore, produce, reconcile } from 'solid-js/store'
 import { nonNull } from '~/utils'
 import type { Client } from '~/api'
 
@@ -15,7 +15,7 @@ type EnrollmentStore = {
 
 type EnrollmentContextValue = {
     /** Get the enrolled count for a specific subject */
-    getCount: (enrollmentId: number, subjectId: number) => number
+    getCount: (enrollmentId: number, subjectId: number) => number | undefined
     /** Get all counts for an enrollment */
     getEnrollmentCounts: (enrollmentId: number) => Record<number, number>
     /** Initialize counts for an enrollment (e.g., from loader data) */
@@ -47,8 +47,10 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
         log.info('Received bulk subject enrollment update:', event)
 
         let changed = false
+        const updatedSubjectIds = new Set<number>()
         for (const [subjectId, count] of Object.entries(event.subjectEnrolledCounts)) {
             const sid = Number(subjectId)
+            updatedSubjectIds.add(sid)
 
             if (!store.counts[event.enrollmentId]) {
                 setStore('counts', event.enrollmentId, { [sid]: count })
@@ -58,6 +60,26 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
 
             if (store.counts[event.enrollmentId]?.[sid] !== count) {
                 setStore('counts', event.enrollmentId, sid, count)
+                changed = true
+            }
+        }
+
+        // The bulk update is authoritative for this enrollment — drop any subject the server
+        // didn't include this time so stale counts don't linger.
+        const existing = store.counts[event.enrollmentId]
+        if (existing) {
+            const stale = Object.keys(existing)
+                .map(Number)
+                .filter(sid => !updatedSubjectIds.has(sid))
+            if (stale.length > 0) {
+                log.info('Dropping subjects missing from bulk update:', stale)
+                setStore(
+                    'counts',
+                    event.enrollmentId,
+                    produce(counts => {
+                        for (const sid of stale) delete counts[sid]
+                    }),
+                )
                 changed = true
             }
         }
@@ -82,7 +104,7 @@ export function EnrollmentCountsProvider(props: ParentProps<{ client: Client<unk
     }
 
     const value: EnrollmentContextValue = {
-        getCount: (enrollmentId, subjectId) => store.counts[enrollmentId]?.[subjectId] ?? 0,
+        getCount: (enrollmentId, subjectId) => store.counts[enrollmentId]?.[subjectId],
         getEnrollmentCounts: enrollmentId => store.counts[enrollmentId] ?? {},
         getVersion: enrollmentId => store.versions[enrollmentId] ?? 0,
         bumpVersion: enrollmentId => {
