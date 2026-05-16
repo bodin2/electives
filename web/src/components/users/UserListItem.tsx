@@ -43,7 +43,12 @@ export function UserListItem(props: UserListItemProps) {
 
     return (
         <ListItem
-            class={mergeClasses(props.selected && styles.selected, props.disabled && styles.disabled, props.class)}
+            class={mergeClasses(
+                props.selected && styles.selected,
+                props.disabled && styles.disabled,
+                !props.showId && styles.centerChildrenVertically,
+                props.class,
+            )}
             onClick={props.disabled ? undefined : props.onClick}
             lines={4}
             leading={
