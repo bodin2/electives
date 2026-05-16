@@ -45,7 +45,7 @@ export class SelectionManager implements CacheableManager {
         const selections = new Map<number, Subject>()
         for (const [enrollmentIdStr, rawSubject] of Object.entries(data.subjects)) {
             const enrollmentId = Number.parseInt(enrollmentIdStr, 10)
-            selections.set(enrollmentId, this.client.subjects._getOrCreate(rawSubject))
+            selections.set(enrollmentId, this.client.subjects._getOrCreate(rawSubject, enrollmentId, cache))
         }
 
         if (cache) {

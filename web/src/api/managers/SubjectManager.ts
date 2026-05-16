@@ -88,14 +88,30 @@ export class SubjectManager implements CacheableManager {
     /**
      * Get or create a subject instance and update it with new data.
      */
-    _getOrCreate(data: RawSubject, cache = true): Subject {
+    _getOrCreate(data: RawSubject, enrollmentId: number | undefined = undefined, cache = true): Subject {
         let subject = this.cache.get(data.id)
+        const cacheTeachers = (enrollmentId?: number) => {
+            if (enrollmentId === undefined) return
+
+            this.teachersCache.set(
+                this.getClassKey(enrollmentId, data.id),
+                data.teachers.map(t => this.client.users._getOrCreate(t)),
+            )
+        }
+
         if (subject) {
             subject.update(data)
+            if (cache) {
+                cacheTeachers(enrollmentId)
+            }
         } else {
             subject = new Subject(this.client, data)
-            if (cache) this.cache.set(subject.id, subject)
+            if (cache) {
+                this.cache.set(subject.id, subject)
+                cacheTeachers(enrollmentId)
+            }
         }
+
         return subject
     }
 
@@ -122,7 +138,7 @@ export class SubjectManager implements CacheableManager {
         const data = await this.rest.get<ListSubjectsResponse>(`/enrollments/${enrollmentId}/subjects`, {
             decoder: ListSubjectsResponse,
         })
-        const subjects = data.subjects.map(s => this._getOrCreate(s, cache))
+        const subjects = data.subjects.map(s => this._getOrCreate(s, enrollmentId, cache))
 
         if (cache) {
             const subjectIds: Subject['id'][] = []
@@ -169,7 +185,7 @@ export class SubjectManager implements CacheableManager {
             decoder: RawSubject,
         })
 
-        const subject = this._getOrCreate(data, cache)
+        const subject = this._getOrCreate(data, enrollmentId, cache)
 
         if (cache) {
             if (data.enrolledCount !== undefined) {
@@ -320,7 +336,7 @@ export class SubjectAdminActions {
         const data = await this.rest.get<ListSubjectsResponse>('/admin/subjects', {
             decoder: ListSubjectsResponse,
         })
-        const subjects = data.subjects.map(s => this.manager._getOrCreate(s, cache))
+        const subjects = data.subjects.map(s => this.manager._getOrCreate(s, undefined, cache))
 
         if (cache) {
             this.cachedAll = true
@@ -348,7 +364,7 @@ export class SubjectAdminActions {
         const data = await this.rest.get<RawSubject>(`/admin/subjects/${id}`, {
             decoder: RawSubject,
         })
-        return this.manager._getOrCreate(data, cache)
+        return this.manager._getOrCreate(data, undefined, cache)
     }
 
     /**
@@ -379,7 +395,7 @@ export class SubjectAdminActions {
         if (patch.patchTeachers && patch.enrollmentId) {
             this.manager.teachersCache.delete(this.manager.getClassKey(patch.enrollmentId, id))
         }
-        return this.manager._getOrCreate(data)
+        return this.manager._getOrCreate(data, patch.enrollmentId)
     }
 
     /**
