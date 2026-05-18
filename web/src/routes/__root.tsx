@@ -26,18 +26,20 @@ function RootComponent() {
     const context = useRouteContext({ from: '__root__' })
 
     return (
-        <PageDataProvider>
-            <APIProvider client={context().client}>
-                <EnrollmentCountsProvider client={context().client}>
-                    <SubjectDisplayContextProvider value={BaseSubjectDisplayContext}>
-                        <UserDisplayContextProvider value={BaseUserDisplayContext}>
-                            <ReadyOutlet />
-                            <TanStackRouterDevtools position="bottom-left" />
-                        </UserDisplayContextProvider>
-                    </SubjectDisplayContextProvider>
-                </EnrollmentCountsProvider>
-            </APIProvider>
-        </PageDataProvider>
+        <>
+            <PageDataProvider>
+                <APIProvider client={context().client}>
+                    <EnrollmentCountsProvider client={context().client}>
+                        <SubjectDisplayContextProvider value={BaseSubjectDisplayContext}>
+                            <UserDisplayContextProvider value={BaseUserDisplayContext}>
+                                <ReadyOutlet />
+                            </UserDisplayContextProvider>
+                        </SubjectDisplayContextProvider>
+                    </EnrollmentCountsProvider>
+                </APIProvider>
+            </PageDataProvider>
+            <TanStackRouterDevtools position="bottom-left" />
+        </>
     )
 }
 
