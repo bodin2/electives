@@ -7,6 +7,7 @@ import { Button } from '../Button'
 import { Dialog } from '../Dialog'
 import { Option, Select } from '../Select'
 import { HStack, VStack } from '../Stack'
+import type { IconifyIcon } from '@iconify/types'
 import type { Group } from '~/api'
 
 export interface SelectGroupDialogProps {
@@ -22,6 +23,8 @@ export interface SelectGroupDialogProps {
     /**
      * Optional override for the descriptive paragraph rendered above the selector.
      * Defaults to the enrollment-flavored {@link string.ENROLLMENT_GROUP_HINT}.
+     *
+     * `null` to disable the description entirely.
      */
     description?: JSX.Element
     /**
@@ -29,6 +32,22 @@ export interface SelectGroupDialogProps {
      * Defaults to true.
      */
     showReset?: boolean
+    /**
+     * Optional override for the save button label. Defaults to {@link string.SAVE}.
+     */
+    confirmLabel?: string
+    /**
+     * Optional override for the select component label. Defaults to {@link string.GROUP}.
+     */
+    selectLabel?: string
+    /**
+     * Optional override for the select component placeholder. Defaults to {@link string.SELECT_GROUP_HINT}.
+     */
+    selectPlaceholder?: string
+    /**
+     * Optional override for the dialog icon. Defaults to {@link PeopleIcon}.
+     */
+    icon?: IconifyIcon
 }
 
 export function SelectGroupDialog(props: SelectGroupDialogProps) {
@@ -44,10 +63,8 @@ export function SelectGroupDialog(props: SelectGroupDialogProps) {
                     quick
                     onClose={props.onClose}
                     open
-                    headline={
-                        <h1 class="m3-headline-small">{props.headline ?? string.SELECT_GROUP_HINT()}</h1>
-                    }
-                    icon={<Icon fill="var(--m3c-secondary)" icon={PeopleIcon} />}
+                    headline={<h1 class="m3-headline-small">{props.headline ?? string.SELECT_GROUP_HINT()}</h1>}
+                    icon={<Icon fill="var(--m3c-secondary)" icon={props.icon ?? PeopleIcon} />}
                     centerHeadline
                     actions={
                         <HStack as="form" method="dialog" wrap alignHorizontal="space-between">
@@ -68,45 +85,48 @@ export function SelectGroupDialog(props: SelectGroupDialogProps) {
                                 </Button>
                                 <Button
                                     variant="text"
+                                    disabled={selected() === null}
                                     onClick={async () => {
                                         await props.onSave(selected())
                                         props.onClose()
                                     }}
                                 >
-                                    {string.SAVE()}
+                                    {props.confirmLabel ?? string.SAVE()}
                                 </Button>
                             </HStack>
                         </HStack>
                     }
                 >
                     <VStack gap={16}>
-                        <p class="text-balance text-center">
-                            {props.description ??
-                                string.ENROLLMENT_GROUP_HINT({
-                                    break: (
-                                        <>
-                                            <br />
-                                            <br />
-                                        </>
-                                    ),
-                                })}
-                        </p>
+                        <Show when={props.description !== null}>
+                            <p class="text-balance text-center">
+                                {props.description ??
+                                    string.ENROLLMENT_GROUP_HINT({
+                                        break: (
+                                            <>
+                                                <br />
+                                                <br />
+                                            </>
+                                        ),
+                                    })}
+                            </p>
+                        </Show>
                         <Select
-                            label={string.GROUP()}
-                            value={props.value ?? ''}
+                            label={props.selectLabel ?? string.GROUP()}
+                            value={selected() ?? ''}
                             onInput={async e => {
                                 const val = e.currentTarget.value
                                 const parsed = val ? Number(val) : null
                                 setSelected(parsed)
                             }}
                         >
-                            <Option value="" hidden selected={props.value === null}>
-                                {string.SELECT_GROUP_HINT()}
+                            <Option value="" hidden selected={selected() === null}>
+                                {props.selectPlaceholder ?? string.SELECT_GROUP_HINT()}
                             </Option>
                             <Show when={props.groups}>
                                 {g =>
                                     g().map(group => (
-                                        <Option value={group.id} selected={group.id === props.value}>
+                                        <Option value={group.id} selected={group.id === selected()}>
                                             {group.name}
                                         </Option>
                                     ))
