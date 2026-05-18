@@ -167,4 +167,28 @@ export class GroupAdminActions {
             total: data.total,
         }
     }
+
+    /**
+     * Migrate all members of {@link groupId} into {@link targetGroupId}.
+     * The target group must exist and have the same {@link Group.type} as the source.
+     * Throws on conflicts (same group, different types).
+     *
+     * @param groupId The source group's ID
+     * @param targetGroupId The destination group's ID
+     */
+    async migrateMembers(groupId: number, targetGroupId: number): Promise<void> {
+        await this.rest.post(`/admin/groups/${groupId}/members/migrate`, undefined, {
+            query: { target_group_id: targetGroupId },
+        })
+    }
+
+    /**
+     * Delete all members of {@link groupId}.
+     * This deletes the underlying user records of every member, not just their group memberships.
+     *
+     * @param groupId The group's ID
+     */
+    async deleteMembers(groupId: number): Promise<void> {
+        await this.rest.delete(`/admin/groups/${groupId}/members`)
+    }
 }

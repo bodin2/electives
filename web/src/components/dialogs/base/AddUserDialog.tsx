@@ -1,7 +1,7 @@
 import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import { createQuery, keepPreviousData } from '@tanstack/solid-query'
 import { Icon } from 'm3-solid/src'
-import { createMemo, createSignal, type JSX, Show } from 'solid-js'
+import { createSignal, type JSX, Show } from 'solid-js'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import { studentsQueryOptions, teachersQueryOptions } from '~/queries/users'
@@ -49,7 +49,7 @@ export default function AddUserDialog(props: AddUserDialogProps) {
         }
     })
 
-    const debouncedSetSearch = createMemo(() => debounce(setSearchQuery, 350))
+    const debouncedSetSearch = debounce(setSearchQuery, 350)
 
     return (
         <Dialog
@@ -72,7 +72,7 @@ export default function AddUserDialog(props: AddUserDialogProps) {
         >
             <Show when={error()}>{err => <p class="m3-body-medium text-error">{err()}</p>}</Show>
             <PaginatedUserList
-                onSearch={debouncedSetSearch()}
+                onSearch={debouncedSetSearch}
                 searchLabel={props.type === 'teacher' ? string.SEARCH_TEACHERS() : string.SEARCH_STUDENTS()}
                 page={page()}
                 data={usersQuery.data ?? { users: [], total: 0 }}
