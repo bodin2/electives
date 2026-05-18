@@ -80,9 +80,24 @@ class Student(id: EntityID<Int>) : Entity<Int>(id) {
 class Teacher(id: EntityID<Int>) : Entity<Int>(id) {
     val user by User referencedOn Teachers.id
 
+    /**
+     * All groups (of any [th.ac.bodin2.electives.proto.api.GroupType]) this teacher belongs to.
+     */
+    var groups by Group via TeacherGroups
+
     companion object : EntityClass<Int, Teacher>(Teachers) {
         fun assertExists(teacherId: Int) {
             if (!exists(teacherId)) throw EntityNotFoundException(ExceptionEntity.TEACHER)
+        }
+
+        /**
+         * Returns true if the teacher belongs to the specified group.
+         */
+        fun hasGroup(teacherId: Int, groupId: EntityID<Int>) = hasGroup(teacherId, groupId.value)
+        fun hasGroup(teacherId: Int, groupId: Int): Boolean {
+            return TeacherGroups
+                .selectAll().where { (TeacherGroups.teacher eq teacherId) and (TeacherGroups.group eq groupId) }
+                .empty().not()
         }
 
         fun getSubjects(teacherId: Int, enrollmentId: Int): List<Subject> {
@@ -243,7 +258,7 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
             .select(Teachers.columns)
             .where { (TeacherSubjects.subject eq subjectId) and (TeacherSubjects.enrollment eq enrollmentId) }
 
-        return Teacher.wrapRows(query).with(Teacher::user).toList()
+        return Teacher.wrapRows(query).with(Teacher::user, Teacher::groups).toList()
     }
 
     /**
@@ -270,7 +285,7 @@ open class SubjectCompanion : EntityClass<Int, Subject>(Subjects) {
      * @throws Subject.NotPartOfEnrollmentException if the subject is not part of the specified enrollment.
      */
     fun isPartOfEnrollment(subjectId: Int, enrollmentId: Int): Boolean {
-        return (EnrollmentSubjects innerJoin Subjects)
+        return EnrollmentSubjects
             .selectAll()
             .where { (EnrollmentSubjects.enrollment eq enrollmentId) and (EnrollmentSubjects.subject eq subjectId) }
             .empty().not()

@@ -246,14 +246,53 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
+        groupIds: List<Int>?,
     ): Teacher {
+        // Validate all groups exist. Teachers don't have "slotted" groups (like grade/room),
+        // so we just check for existence.
+        groupIds?.let { ids ->
+            if (ids.isNotEmpty()) {
+                val distinct = ids.toSet()
+                val existing = Groups.select(Groups.id)
+                    .where { Groups.id inList distinct }
+                    .map { it[Groups.id].value }
+                    .toSet()
+
+                val missing = distinct.filter { it !in existing }
+                if (missing.isNotEmpty()) {
+                    throw EntityNotFoundException(ExceptionEntity.GROUP, "Groups do not exist: $missing")
+                }
+            }
+        }
+
         val user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
-        return Teacher.new(user.id.value) {}
+        val teacher = Teacher.new(user.id.value) {}
+
+        groupIds?.let { ids ->
+            TeacherGroups.batchInsert(ids.distinct()) {
+                this[TeacherGroups.teacher] = id
+                this[TeacherGroups.group] = it
+            }
+        }
+
+        return teacher.load(Teacher::user, Teacher::groups)
     }
 
     @Transactional
     override fun createTeachers(inserts: List<UsersService.TeacherInsert>) = transaction {
         if (inserts.isEmpty()) return@transaction emptyList()
+
+        // Validate groups
+        val allGroupIds = inserts.flatMap { it.groups }.distinct()
+        if (allGroupIds.isNotEmpty()) {
+            val existing = Groups.select(Groups.id)
+                .where { Groups.id inList allGroupIds }
+                .map { it[Groups.id].value }
+                .toSet()
+
+            val missing = allGroupIds.filter { it !in existing }
+            if (missing.isNotEmpty()) throw UsersService.BatchOperationException.MissingGroups(missing)
+        }
 
         val prepared = insertUserBatch(inserts)
 
@@ -263,8 +302,17 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             this[Teachers.id] = uid
         }
 
+        val memberships = prepared.flatMap { item ->
+            item.request.groups.distinct().map { groupId -> item.request.user.id to groupId }
+        }
+
+        TeacherGroups.batchInsert(memberships) { (teacherId, groupId) ->
+            this[TeacherGroups.teacher] = teacherId
+            this[TeacherGroups.group] = groupId
+        }
+
         return@transaction Teacher.find { Teachers.id inList prepared.map { it.request.user.id } }
-            .with(Teacher::user)
+            .with(Teacher::user, Teacher::groups)
             .toList()
     }
 
@@ -433,8 +481,39 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     @Transactional
     override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = transaction {
         Teacher.assertExists(id)
-        updateUser(id, update.user)
-        Teacher.findById(id)!!.load(Teacher::user)
+
+        // Validate all referenced groups exist up-front so we never partially update on failure.
+        update.groups?.let { groupIds ->
+            if (groupIds.isNotEmpty()) {
+                val distinct = groupIds.toSet()
+                val existing = Groups.select(Groups.id)
+                    .where { Groups.id inList distinct }
+                    .map { it[Groups.id].value }
+                    .toSet()
+
+                val missing = distinct.filter { it !in existing }
+                if (missing.isNotEmpty()) {
+                    throw UsersService.BatchOperationException.MissingGroups(missing)
+                }
+            }
+        }
+
+        try {
+            updateUser(id, update.user)
+        } catch (e: NothingToUpdateException) {
+            if (update.groups == null) throw e
+        }
+
+        // Replace all of the teacher's group memberships with the provided list.
+        update.groups?.let { newGroups ->
+            TeacherGroups.deleteWhere { TeacherGroups.teacher eq id }
+            TeacherGroups.batchInsert(newGroups.distinct()) {
+                this[TeacherGroups.teacher] = id
+                this[TeacherGroups.group] = it
+            }
+        }
+
+        Teacher.findById(id)!!.load(Teacher::user, Teacher::groups)
     }
 
     private fun updateUser(id: Int, update: UsersService.UserUpdate) {
@@ -464,9 +543,9 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         if (rows == 0) throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
     }
 
-    override fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)
+    override fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)?.load(Teacher::user, Teacher::groups)
 
-    override fun getStudentById(id: Int): Student? = Student.findById(id)
+    override fun getStudentById(id: Int): Student? = Student.findById(id)?.load(Student::user, Student::groups)
 
     override fun getAdminById(id: Int): Admin? = Admin.findById(id)
 
@@ -511,7 +590,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             }.orderBy(Teachers.id).limit(PAGE_SIZE).offset(offset)
 
             val teachers = Teacher.wrapRows(dataQuery)
-                .with(Teacher::user)
+                .with(Teacher::user, Teacher::groups)
                 .toList()
 
             teachers to count

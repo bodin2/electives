@@ -169,6 +169,23 @@ export class GroupAdminActions {
     }
 
     /**
+     * Fetch managers (teachers) for a group (paginated)
+     *
+     * @param groupId The group's ID
+     * @param page The page number (1-based)
+     */
+    async fetchManagers(groupId: number, page = 1, query?: string): Promise<{ users: User[]; total: number }> {
+        const data = await this.rest.get<AdminListUsersResponse>(`/admin/groups/${groupId}/managers`, {
+            query: { page, query },
+            decoder: AdminListUsersResponse,
+        })
+        return {
+            users: data.users.map(u => this.client.users._getOrCreate(u)),
+            total: data.total,
+        }
+    }
+
+    /**
      * Migrate all members of {@link groupId} into {@link targetGroupId}.
      * The target group must exist and have the same {@link Group.type} as the source.
      * Throws on conflicts (same group, different types).

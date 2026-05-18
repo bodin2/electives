@@ -191,7 +191,8 @@ class AdminUsersController(
                         middleName = user.middle_name,
                         lastName = user.last_name,
                         password = req.password,
-                        avatarUrl = user.avatar_url
+                        avatarUrl = user.avatar_url,
+                        groupIds = req.group_ids.ifEmpty { null }
                     )
 
                     else -> return@transaction null
@@ -253,7 +254,13 @@ class AdminUsersController(
                         )
                     ).toProto()
 
-                    UserType.TEACHER -> usersService.updateTeacher(id, UsersService.TeacherUpdate(update)).toProto()
+                    UserType.TEACHER -> usersService.updateTeacher(
+                        id,
+                        UsersService.TeacherUpdate(
+                            update,
+                            groups = if (req.patch_groups) req.groups else null,
+                        )
+                    ).toProto()
 
                     else -> throw IllegalStateException("Unreachable case: $type")
                 }
@@ -330,6 +337,7 @@ class AdminUsersController(
         val teacherInserts = inserts[UserType.TEACHER]?.map {
             UsersService.TeacherInsert(
                 user = it.toUserInsert(),
+                groups = it.group_ids,
             )
         }
 
@@ -709,7 +717,9 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
     }
 }
 
-class AdminGroupsController(private val groupService: GroupService) : Controller {
+class AdminGroupsController(
+    private val groupService: GroupService,
+) : Controller {
     override fun Application.register() {
         adminRoutes {
             get<Admin.Groups> { handleGetGroups() }
@@ -723,6 +733,18 @@ class AdminGroupsController(private val groupService: GroupService) : Controller
             patch<Admin.Groups.Id> { params -> handlePatchGroup(params.id) }
 
             get<Admin.Groups.MemberCounts> { handleGetGroupMemberCounts() }
+
+            get<Admin.Groups.Id.Managers> { params ->
+                val (users, total) = transaction {
+                    val (teachers, count) =
+                        @OptIn(Transactional::class)
+                        groupService.getManagers(params.parent.id, params.page, params.query.ifBlank { null })
+
+                    teachers.map { it.toProto() } to count.toInt()
+                }
+
+                call.respond(AdminService.ListUsersResponse(users = users, total = total))
+            }
 
             get<Admin.Groups.Id.Members> { params ->
                 handleGetGroupMembers(
@@ -929,6 +951,10 @@ private class Admin {
         // PUT: Group, GET: Group, DELETE, PATCH: GroupPatch
         @Resource("{id}")
         class Id(val parent: Groups, val id: Int) {
+            // GET: ListUsersResponse
+            @Resource("managers")
+            class Managers(val parent: Id, val page: Int = 1, val query: String = "")
+
             // GET: ListUsersResponse, DELETE
             @Resource("members")
             class Members(val parent: Id, val page: Int = 1, val query: String = "") {

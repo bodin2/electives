@@ -7,7 +7,7 @@ import { TextField } from 'm3-solid/src'
 import { createSignal, Show } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { Portal } from 'solid-js/web'
-import { type Group, GroupType, type User, UserType } from '~/api'
+import { type Group, GroupType, User, UserType } from '~/api'
 import { useI18n } from '~/providers/I18nProvider'
 import { nonNull } from '~/utils'
 import { Badges, GroupBadge } from '../Badges'
@@ -143,18 +143,18 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                                         required
                                     />
                                     <FixedSlotBadge user={user()} slot={GroupType.PROGRAM} onEdit={setEditingSlot} />
-                                    <BadgeListEditor user={user()} />
-                                    <HStack gap={4} alignVertical="center" wrap>
-                                        <Button
-                                            size="xs"
-                                            variant="tonal"
-                                            icon={PlusIcon}
-                                            onClick={() => setAddGroupOpen(true)}
-                                        >
-                                            {string.ADD_GROUP()}
-                                        </Button>
-                                    </HStack>
                                 </Show>
+                                <BadgeListEditor user={user()} />
+                                <HStack gap={4} alignVertical="center" wrap>
+                                    <Button
+                                        size="xs"
+                                        variant="tonal"
+                                        icon={PlusIcon}
+                                        onClick={() => setAddGroupOpen(true)}
+                                    >
+                                        {string.ADD_GROUP()}
+                                    </Button>
+                                </HStack>
                             </HStack>
                         </HStack>
 
@@ -305,13 +305,14 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                         if (group && ctx.onEdit) {
                             ctx.onEdit(
                                 'groups',
-                                [...user().groups.map(g => g.toJSON()), group.toJSON()].sort((a, b) => a.id - b.id),
+                                [...user().groups, group].sort(User.GROUP_SORTER).map(g => g.toJSON()),
                                 'patchGroups',
                             )
                         }
                     }}
-                    groups={(props.groups || []).filter(g => g.type === GroupType.CUSTOM)}
+                    groups={(props.groups || []).filter(g => user().isTeacher() || g.type === GroupType.CUSTOM)}
                     currentGroupIds={user().groups.map(g => g.id)}
+                    headline={user().isTeacher() ? string.ADD_GROUP() : undefined}
                 />
                 <AddGroupToStudentDialog
                     open={editingSlot() !== null}
@@ -320,12 +321,9 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                         setEditingSlot(null)
                         if (slot === null || !group || !ctx.onEdit) return
                         // Replace the existing same-typed group (if any) with the picked one
-                        const next = [
-                            ...user()
-                                .groups.filter(g => g.type !== slot)
-                                .map(g => g.toJSON()),
-                            group.toJSON(),
-                        ].sort((a, b) => a.id - b.id)
+                        const next = [...user().groups.filter(g => g.type !== slot), group]
+                            .sort(User.GROUP_SORTER)
+                            .map(g => g.toJSON())
                         ctx.onEdit('groups', next, 'patchGroups')
                     }}
                     groups={(props.groups || []).filter(g => g.type === editingSlot())}
@@ -365,7 +363,7 @@ function BadgeListEditor(props: { user: User }) {
     return (
         <Badges
             groups={props.user.groups}
-            types={[GroupType.CUSTOM]}
+            types={props.user.isTeacher() ? undefined : [GroupType.CUSTOM]}
             onRemove={
                 ctx.editable && ctx.onEdit
                     ? group =>

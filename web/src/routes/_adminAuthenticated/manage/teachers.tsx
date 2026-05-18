@@ -48,6 +48,7 @@ function RouteComponent() {
     return (
         <Page name={string.TEACHERS()} leading={null} trailing={null}>
             <PaginatedUserList
+                showGradeGroup
                 onSearch={debouncedSetQuery()}
                 searchLabel={string.SEARCH_TEACHERS()}
                 headerRight={() => (

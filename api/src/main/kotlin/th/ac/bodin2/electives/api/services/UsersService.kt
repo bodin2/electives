@@ -8,6 +8,7 @@ import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Admin
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.proto.api.GroupType
 import th.ac.bodin2.electives.proto.api.UserType
 import java.security.PublicKey
 
@@ -68,6 +69,7 @@ interface UsersService {
         lastName: String? = null,
         password: String,
         avatarUrl: String? = null,
+        groupIds: List<Int>? = null,
     ): Teacher
 
     /**
@@ -76,6 +78,7 @@ interface UsersService {
      * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [BatchOperationException.ConflictingEntities.ids].
      * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
      *   - [IllegalArgumentException] if the password does not meet the requirements.
+     * @throws BatchOperationException.MissingGroups if any of the specified groups do not exist.
      */
     @Transactional
     fun createTeachers(inserts: List<TeacherInsert>): List<Teacher>
@@ -167,7 +170,7 @@ interface UsersService {
         val groups: List<Int> = emptyList(),
     ) : UserInsert(user)
 
-    class TeacherInsert(user: UserData) : UserInsert(user)
+    class TeacherInsert(user: UserData, val groups: List<Int> = emptyList()) : UserInsert(user)
     class AdminInsert(user: UserData, val publicKey: PublicKey) : UserInsert(user)
 
     /**
@@ -206,6 +209,11 @@ interface UsersService {
 
     data class TeacherUpdate(
         val user: UserUpdate,
+        /**
+         * If non-null, replaces the teacher's current group memberships with the provided list of group IDs.
+         * Groups can be of any [GroupType]. All referenced groups must exist.
+         */
+        val groups: List<Int>? = null,
     )
 
     /**

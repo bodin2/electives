@@ -237,5 +237,7 @@
   "BULK_ADD_USERS_TEACHERS_EXAMPLE": "Download teachers example",
   "BULK_ADD_USERS_SELECT_FILE": "Select file",
   "BULK_ADD_USERS_ERROR_BAD_FORMAT": "CSV format is invalid. Please make sure your file matches the expected format.",
-  "ADD_OR_REMOVE_SUBJECTS": "Add/remove subjects"
+  "ADD_OR_REMOVE_SUBJECTS": "Add/remove subjects",
+  "MANAGER_TEACHERS": "Manager teachers",
+  "ADD_TEACHER_TO_GROUP": "Add teacher to group"
 }

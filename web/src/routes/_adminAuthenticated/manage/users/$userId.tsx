@@ -155,7 +155,11 @@ function RouteComponent() {
         const gradeId = u.groups.find(g => g.type === GroupType.GRADE)?.id
         const roomId = u.groups.find(g => g.type === GroupType.ROOM)?.id
         const programId = u.groups.find(g => g.type === GroupType.PROGRAM)?.id
-        const customGroupIds = u.groups.filter(g => g.type === GroupType.CUSTOM).map(g => g.id)
+        // For teachers, include all groups.
+        // For students, only include custom groups (grade/room/program are sent separately).
+        const groupIds = (
+            u.type === UserType.TEACHER ? u.groups : u.groups.filter(g => g.type === GroupType.CUSTOM)
+        ).map(g => g.id)
 
         if (isNew()) {
             if (u.id < 0) return
@@ -170,7 +174,7 @@ function RouteComponent() {
                 await client.users.admin.put(u.id, {
                     user: u,
                     password: u.newPassword,
-                    groupIds: customGroupIds,
+                    groupIds,
                     gradeId,
                     roomId,
                     programId,
@@ -193,7 +197,7 @@ function RouteComponent() {
             const groupsTouched = modified.has('groups') || modified.has('patchGroups')
 
             const patch: AdminUserPatch = {
-                groups: customGroupIds,
+                groups: groupIds,
                 patchGroups: groupsTouched,
                 gradeId: groupsTouched ? gradeId : undefined,
                 roomId: groupsTouched ? roomId : undefined,

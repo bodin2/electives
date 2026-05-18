@@ -34,6 +34,7 @@ interface PaginatedUserListProps {
     onClick?: (user: User) => void
     class?: string
     ref?: (handle: PaginatedUserListHandle) => void
+    showGradeGroup?: boolean
     onRefresh?: () => void
     /** Custom trailing component for each user item. */
     trailing?: Component<{ user: User }>
@@ -180,6 +181,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                                 {user => (
                                     <UserListItem
                                         showId
+                                        showGradeGroup={props.showGradeGroup}
                                         selected={props.selectedIds?.includes(user.id)}
                                         disabled={props.disabledIds?.includes(user.id)}
                                         onClick={props.onClick && (() => nonNull(props.onClick)(user))}

@@ -239,5 +239,7 @@
   "BULK_ADD_USERS_TEACHERS_EXAMPLE": "ดาวน์โหลดไฟล์ตัวอย่างครู",
   "BULK_ADD_USERS_SELECT_FILE": "เลือกไฟล์",
   "BULK_ADD_USERS_ERROR_BAD_FORMAT": "รูปแบบไฟล์ CSV ไม่ถูกต้อง กรุณาตรวจสอบให้แน่ใจว่าไฟล์ของคุณตรงกับรูปแบบ",
-  "ADD_OR_REMOVE_SUBJECTS": "เพิ่ม/ปลดวิชา"
+  "ADD_OR_REMOVE_SUBJECTS": "เพิ่ม/ปลดวิชา",
+  "MANAGER_TEACHERS": "ครูผู้จัดการ",
+  "ADD_TEACHER_TO_GROUP": "เพิ่มครูเข้ากลุ่ม"
 }

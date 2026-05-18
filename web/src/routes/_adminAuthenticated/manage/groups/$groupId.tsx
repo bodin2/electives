@@ -11,6 +11,7 @@ import { ConflictError, GroupType, NotFoundError, type User } from '~/api'
 import PaginatedUserList, { type PaginatedUserListHandle } from '~/components/admin/PaginatedUserList'
 import { Button } from '~/components/Button'
 import AddStudentToGroupDialog from '~/components/dialogs/AddStudentToGroupDialog'
+import AddTeacherToGroupDialog from '~/components/dialogs/AddTeacherToGroupDialog'
 import { ConfirmDialog } from '~/components/dialogs/base/ConfirmDialog'
 import { SelectGroupDialog } from '~/components/dialogs/SelectGroupDialog'
 import Page from '~/components/Page'
@@ -22,16 +23,21 @@ import StickyTabs from '~/components/StickyTabs'
 import { useTabPersistence } from '~/hooks/useTabPersistence'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
-import { groupMembersQueryOptions, groupQueryOptions, groupsQueryOptions } from '~/queries/groups'
+import {
+    groupManagersQueryOptions,
+    groupMembersQueryOptions,
+    groupQueryOptions,
+    groupsQueryOptions,
+} from '~/queries/groups'
 import { debounce } from '~/utils'
 import { catchErrors } from '~/utils/error-component'
 import { simpleXXHash31 } from '~/utils/xxhash'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/groups/$groupId')({
     errorComponent: catchErrors([NotFoundError, NotFoundPage]),
-    validateSearch: (search: Record<string, unknown>): { page: number; tab?: 'info' | 'members' } => ({
+    validateSearch: (search: Record<string, unknown>): { page: number; tab?: 'info' | 'members' | 'managers' } => ({
         page: Math.max(Number(search?.page ?? 1), 1),
-        tab: search?.tab as 'info' | 'members' | undefined,
+        tab: search?.tab as 'info' | 'members' | 'managers' | undefined,
     }),
     loaderDeps: ({ search }) => ({ page: search.page }),
     loader: async ({ params: { groupId }, context: { client, queryClient }, deps: { page } }) => {
@@ -41,6 +47,7 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/groups/$groupI
         await Promise.all([
             queryClient.ensureQueryData(groupQueryOptions(client, groupIdNum)),
             queryClient.prefetchQuery(groupMembersQueryOptions(client, groupIdNum, page)),
+            queryClient.prefetchQuery(groupManagersQueryOptions(client, groupIdNum, page)),
         ])
     },
     component: RouteComponent,
@@ -61,7 +68,7 @@ function RouteComponent() {
         enabled: !isNew(),
     }))
 
-    const [tab, setTab] = createSignal<'info' | 'members'>('info')
+    const [tab, setTab] = createSignal<'info' | 'members' | 'managers'>('info')
     useTabPersistence(tab, setTab)
 
     const [name, setName] = createSignal('')
@@ -115,6 +122,7 @@ function RouteComponent() {
                     tabs={[
                         { label: string.GROUP(), value: 'info' },
                         { label: string.MEMBERS_LIST(), value: 'members' },
+                        { label: string.MANAGER_TEACHERS(), value: 'managers' },
                     ]}
                 />
             </Show>
@@ -165,6 +173,11 @@ function RouteComponent() {
                 <Match when={tab() === 'members' && !isNew()}>
                     <SuspenseLoadingPage debugName="GroupMembers">
                         <GroupMembers />
+                    </SuspenseLoadingPage>
+                </Match>
+                <Match when={tab() === 'managers' && !isNew()}>
+                    <SuspenseLoadingPage debugName="GroupManagers">
+                        <GroupManagers />
                     </SuspenseLoadingPage>
                 </Match>
             </Switch>
@@ -350,6 +363,89 @@ function GroupMembers() {
                 trailing={props => (
                     <Button
                         disabled={!isFixedGroup()}
+                        aria-label={string.REMOVE()}
+                        size="xs"
+                        variant="tonal-error"
+                        onClick={e => {
+                            e.stopPropagation()
+                            return removeUserFromGroup(props.user)
+                        }}
+                        icon={CloseIcon}
+                        iconType="only"
+                    />
+                )}
+            />
+        </div>
+    )
+}
+
+function GroupManagers() {
+    const search = Route.useSearch()
+    const navigate = Route.useNavigate()
+    const params = Route.useParams()
+    const { client } = useAPI()
+    const { string } = useI18n()
+    const qc = useQueryClient()
+
+    const groupId = () => Number(params().groupId)
+
+    const [query, setQuery] = createSignal<string | undefined>(undefined)
+    const [addDialogOpen, setAddDialogOpen] = createSignal(false)
+    let listHandle: PaginatedUserListHandle | undefined
+
+    const managersQuery = createQuery(() => ({
+        ...groupManagersQueryOptions(client, groupId(), search().page, query()),
+        placeholderData: keepPreviousData,
+        notifyOnChangeProps: ['data'],
+    }))
+    const debouncedSetQuery = createMemo(() => debounce(setQuery, 350))
+
+    const removeUserFromGroup = async (user: User) => {
+        try {
+            await client.users.admin.patch(user.id, {
+                patchLastName: false,
+                patchAvatarUrl: false,
+                patchMiddleName: false,
+                patchPrefix: false,
+                patchProgramId: false,
+                patchGroups: true,
+                // Managers (teachers) can be in any group type, so we just filter the group out of their list.
+                groups: user.groups.filter(g => g.id !== groupId()).map(g => g.id),
+            })
+            listHandle?.onUserRemove(user.id)
+        } catch (e) {
+            console.error(e)
+            alert(`Failed to remove teacher from group: ${e}`)
+        }
+    }
+
+    return (
+        <div style={{ '--sticky-offset': '48px' }}>
+            <Portal>
+                <AddTeacherToGroupDialog
+                    open={addDialogOpen()}
+                    onClose={() => setAddDialogOpen(false)}
+                    onSuccess={u => listHandle?.onUserAdd(u)}
+                    groupId={groupId()}
+                />
+            </Portal>
+            <PaginatedUserList
+                searchLabel={string.SEARCH_TEACHERS()}
+                onSearch={debouncedSetQuery()}
+                ref={h => (listHandle = h)}
+                page={search().page}
+                data={managersQuery.data}
+                onClick={user => navigate({ to: '/manage/users/$userId', params: { userId: String(user.id) } })}
+                onPageChange={page => navigate({ search: { ...search(), page } })}
+                onPagePreload={page => qc.prefetchQuery(groupManagersQueryOptions(client, groupId(), page))}
+                onRefresh={() => qc.invalidateQueries({ queryKey: ['groups', groupId(), 'managers'] })}
+                headerRight={() => (
+                    <Button onClick={() => setAddDialogOpen(true)} size="xs" icon={PlusIcon}>
+                        {string.ADD_TEACHER()}
+                    </Button>
+                )}
+                trailing={props => (
+                    <Button
                         aria-label={string.REMOVE()}
                         size="xs"
                         variant="tonal-error"

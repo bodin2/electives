@@ -9,6 +9,7 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_GROUP_ID
 import th.ac.bodin2.electives.db.Group
 import th.ac.bodin2.electives.db.Student
+import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.GroupType
 
 class TestGroupService : GroupService {
@@ -38,6 +39,12 @@ class TestGroupService : GroupService {
     override fun getMembers(groupId: Int, page: Int, query: String?): Pair<List<Student>, Long> {
         if (groupId !in GROUP_IDS) throw EntityNotFoundException(ExceptionEntity.GROUP)
         return emptyList<Student>() to 0L
+    }
+
+    @Transactional
+    override fun getManagers(groupId: Int, page: Int, query: String?): Pair<List<Teacher>, Long> {
+        if (groupId !in GROUP_IDS) throw EntityNotFoundException(ExceptionEntity.GROUP)
+        return emptyList<Teacher>() to 0L
     }
 
     override fun getMemberCounts() = GROUP_IDS.associateWith { 0 }

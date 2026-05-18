@@ -26,6 +26,7 @@ fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
         middle_name = user.middleName,
         last_name = user.lastName,
         avatar_url = user.avatarUrl,
+        groups = this.groups.map { it.toProto() },
     )
 }
 

@@ -49,6 +49,7 @@ class TestUsersService : UsersService {
         lastName: String?,
         password: String,
         avatarUrl: String?,
+        groupIds: List<Int>?,
     ) = error("Not testable")
 
     @Transactional

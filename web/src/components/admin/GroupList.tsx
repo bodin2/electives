@@ -30,13 +30,7 @@ export default function GroupList(props: GroupListProps) {
 
     const filteredGroups = createMemo(() => {
         const query = search().toLowerCase()
-        return props.groups
-            .filter(g => g.name.toLowerCase().includes(query))
-            .sort(
-                (a, b) =>
-                    User.GROUP_TYPE_SORT_ORDER[a.type] - User.GROUP_TYPE_SORT_ORDER[b.type] ||
-                    a.name.localeCompare(b.name),
-            )
+        return props.groups.filter(g => g.name.toLowerCase().includes(query)).sort(User.GROUP_SORTER)
     })
 
     const setGroupToDelete = (group: Group | undefined) => {

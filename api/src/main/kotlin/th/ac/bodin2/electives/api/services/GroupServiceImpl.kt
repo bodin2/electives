@@ -15,10 +15,8 @@ import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Group
 import th.ac.bodin2.electives.db.Student
-import th.ac.bodin2.electives.db.models.Groups
-import th.ac.bodin2.electives.db.models.StudentGroups
-import th.ac.bodin2.electives.db.models.Students
-import th.ac.bodin2.electives.db.models.Users
+import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.db.models.*
 import th.ac.bodin2.electives.proto.api.GroupType
 
 class GroupServiceImpl : GroupService {
@@ -103,6 +101,34 @@ class GroupServiceImpl : GroupService {
             .toList()
 
         members to count
+    }
+
+    @Transactional
+    override fun getManagers(groupId: Int, page: Int, query: String?): Pair<List<Teacher>, Long> = transaction {
+        Group.assertExists(groupId)
+
+        val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
+
+        val baseJoin = (TeacherGroups innerJoin Teachers innerJoin Users)
+        val groupFilter: Op<Boolean> = TeacherGroups.group eq groupId
+        val whereFilter: Op<Boolean> =
+            if (searchCondition != null) groupFilter and searchCondition else groupFilter
+
+        val count = baseJoin.selectAll().where { whereFilter }.count()
+
+        val offset = ((page - 1) * PAGE_SIZE).toLong()
+        val dataQuery = baseJoin
+            .select(Teachers.columns)
+            .where { whereFilter }
+            .orderBy(Teachers.id)
+            .limit(PAGE_SIZE)
+            .offset(offset)
+
+        val managers = Teacher.wrapRows(dataQuery)
+            .with(Teacher::user, Teacher::groups)
+            .toList()
+
+        managers to count
     }
 
     override fun getMemberCounts() = StudentGroups.select(StudentGroups.group, StudentGroups.student.count())

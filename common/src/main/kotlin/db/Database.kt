@@ -27,6 +27,7 @@ object Database {
         Subjects,
         Teachers,
         TeacherSubjects,
+        TeacherGroups,
         Admins,
     )
 }

@@ -16,6 +16,7 @@ export interface SubjectListProps {
     editable?: boolean
     noRandom?: boolean
     headerActions?: JSX.Element
+    elementAboveGrid?: JSX.Element
     searchContainerClass?: string
     itemActions?: (subject: Subject) => JSX.Element
     viewLinkProps?: (subjectId: number) => LinkProps
@@ -102,6 +103,7 @@ export default function SubjectList(props: SubjectListProps) {
                 onSearch={setQuery}
                 searchLabel={string.SEARCH_SUBJECTS()}
                 searchContainerClass={props.searchContainerClass}
+                elementAboveGrid={props.elementAboveGrid}
                 headerActions={props.headerActions}
                 fallback={props.emptyElement}
                 noResultsFallback={<p class="padded text-surface-variant">{string.NO_RESULTS_FOUND()}</p>}
