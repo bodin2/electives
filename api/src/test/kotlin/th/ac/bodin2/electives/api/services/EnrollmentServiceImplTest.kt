@@ -12,6 +12,10 @@ import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.db.models.StudentClasses
+import th.ac.bodin2.electives.db.models.TeacherSubjects
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.batchInsert
 import kotlin.test.*
 
 class EnrollmentServiceImplTest : ApplicationTest() {
@@ -216,6 +220,63 @@ class EnrollmentServiceImplTest : ApplicationTest() {
 
         val subjects = transaction { enrollmentService.getSubjects(TestConstants.Enrollments.SCIENCE_ID) }.getOrThrow()
         assertEquals(0, subjects.size)
+    }
+
+    @Test
+    fun `set subjects unenrolls removed subjects`() = runTest {
+        val enrollmentId = 900
+        val subject1 = TestConstants.Subjects.PHYSICS_ID
+        val subject2 = TestConstants.Subjects.CHEMISTRY_ID
+
+        @OptIn(Transactional::class)
+        enrollmentService.create(enrollmentId, "Test Enrollment")
+
+        // 1. Ensure both subjects are in the enrollment
+        @OptIn(Transactional::class)
+        enrollmentService.setSubjects(enrollmentId, listOf(subject1, subject2))
+
+        transaction {
+            // 2. Enroll a student in subject 1 and another in subject 2
+            StudentClasses.insert {
+                it[student] = TestConstants.Students.JOHN_ID
+                it[enrollment] = enrollmentId
+                it[subject] = subject1
+            }
+            StudentClasses.insert {
+                it[student] = TestConstants.Students.JANE_ID
+                it[enrollment] = enrollmentId
+                it[subject] = subject2
+            }
+
+            // 3. Assign a teacher to subject 1 and another to subject 2
+            TeacherSubjects.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[enrollment] = enrollmentId
+                it[subject] = subject1
+            }
+            TeacherSubjects.insert {
+                it[teacher] = TestConstants.Teachers.ALICE_ID
+                it[enrollment] = enrollmentId
+                it[subject] = subject2
+            }
+        }
+
+        // 4. Update enrollment to only include subject 2 (subject 1 is removed)
+        @OptIn(Transactional::class)
+        enrollmentService.setSubjects(enrollmentId, listOf(subject2))
+
+        transaction {
+            // 5. Verify subject 1 records are gone, but subject 2 records remain
+            val studentClasses = StudentClasses.selectAll().where { StudentClasses.enrollment eq enrollmentId }.toList()
+            assertEquals(1, studentClasses.size)
+            assertEquals(TestConstants.Students.JANE_ID, studentClasses[0][StudentClasses.student].value)
+            assertEquals(subject2, studentClasses[0][StudentClasses.subject].value)
+
+            val teacherSubjects = TeacherSubjects.selectAll().where { TeacherSubjects.enrollment eq enrollmentId }.toList()
+            assertEquals(1, teacherSubjects.size)
+            assertEquals(TestConstants.Teachers.ALICE_ID, teacherSubjects[0][TeacherSubjects.teacher].value)
+            assertEquals(subject2, teacherSubjects[0][TeacherSubjects.subject].value)
+        }
     }
 
     @Test

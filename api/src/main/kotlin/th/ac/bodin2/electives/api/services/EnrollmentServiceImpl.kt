@@ -2,6 +2,7 @@ package th.ac.bodin2.electives.api.services
 
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.notInList
 import org.jetbrains.exposed.v1.core.notInSubQuery
 import org.jetbrains.exposed.v1.dao.with
 import org.jetbrains.exposed.v1.jdbc.*
@@ -87,6 +88,10 @@ class EnrollmentServiceImpl : EnrollmentService {
                 this[EnrollmentSubjects.enrollment] = enrollmentId
                 this[EnrollmentSubjects.subject] = subjectId
             }
+
+            // Unenroll students and remove teachers from the class
+            StudentClasses.deleteWhere { (StudentClasses.enrollment eq enrollmentId) and (StudentClasses.subject notInList subjectIds) }
+            TeacherSubjects.deleteWhere { (TeacherSubjects.enrollment eq enrollmentId) and (TeacherSubjects.subject notInList subjectIds) }
         }
     }
 

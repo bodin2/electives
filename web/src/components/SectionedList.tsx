@@ -5,6 +5,7 @@ import styles from './SectionedList.module.css'
 import { HStack, VStack } from './Stack'
 
 export interface SectionedListProps<T, TSection> {
+    elementAboveGrid?: JSX.Element
     items: [TSection, T[]][]
     renderSection: (section: TSection, items: T[], query: string) => JSX.Element
     searchLabel?: string
@@ -102,6 +103,7 @@ export default function SectionedList<T, TSection>(props: SectionedListProps<T, 
                 </Show>
                 <Show when={props.headerActions}>{props.headerActions}</Show>
             </HStack>
+            <Show when={props.elementAboveGrid}>{props.elementAboveGrid}</Show>
             <Show when={props.items.length > 0} fallback={query() ? props.noResultsFallback : props.fallback}>
                 <div ref={setGridRef} class={styles.grid}>
                     <For each={props.items}>
