@@ -9,3 +9,5 @@ export const queryClient = new QueryClient({
         },
     },
 })
+
+export const i18nQueryClient = new QueryClient()

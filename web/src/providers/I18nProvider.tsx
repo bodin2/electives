@@ -12,6 +12,7 @@ import {
     useContext,
 } from 'solid-js'
 import { createStore } from 'solid-js/store'
+import { i18nQueryClient } from '~/queries/queryClient'
 import { nonNull } from '~/utils'
 import type { BaseRecordDict, Resolved } from '@solid-primitives/i18n'
 import type Lang from '~/i18n/th.json'
@@ -72,14 +73,18 @@ const I18nProvider: ParentComponent = props => {
         { defer: true },
     )
 
-    const dictQuery = createQuery(() => ({
-        queryKey: ['i18n', locale()] as const,
-        queryFn: () => fetchDictionary(locale()),
-        staleTime: Number.POSITIVE_INFINITY,
-        gcTime: Number.POSITIVE_INFINITY,
-        placeholderData: keepPreviousData,
-        retry: 3,
-    }))
+    const dictQuery = createQuery(
+        () => ({
+            queryKey: ['i18n', locale()] as const,
+            queryFn: () => fetchDictionary(locale()),
+            staleTime: Number.POSITIVE_INFINITY,
+            gcTime: Number.POSITIVE_INFINITY,
+            placeholderData: keepPreviousData,
+            retry: 3,
+        }),
+        () => i18nQueryClient,
+    )
+
     const tr = i18n.translator(() => dictQuery.data, resolveTemplateWithJSX) as i18n.Translator<Dict, string>
 
     createEffect(
