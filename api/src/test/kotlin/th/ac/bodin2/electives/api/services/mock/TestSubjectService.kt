@@ -5,7 +5,7 @@ import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.SubjectService
-import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.db.Subject
@@ -25,7 +25,7 @@ class TestSubjectService : SubjectService {
         tag: SubjectTag,
         location: String?,
         capacity: Int,
-        team: Int?,
+        group: Int?,
         thumbnailUrl: String?,
         imageUrl: String?,
     ): Subject = error("Not testable")
@@ -45,10 +45,10 @@ class TestSubjectService : SubjectService {
         if (subjectId in SUBJECT_IDS) MockUtils.mockSubject(subjectId)
         else null
 
-    override fun getElectiveIds(subjectId: Int): List<Int> = listOf(ELECTIVE_ID)
+    override fun getEnrollmentIds(subjectId: Int): List<Int> = listOf(ENROLLMENT_ID)
 
     override fun getTeacherSubjects(teacherId: Int): Map<Int, Subject> {
         if (teacherId != TEACHER_ID) throw EntityNotFoundException(ExceptionEntity.TEACHER)
-        return mapOf(ELECTIVE_ID to MockUtils.mockSubject(SUBJECT_ID))
+        return mapOf(ENROLLMENT_ID to MockUtils.mockSubject(SUBJECT_ID))
     }
 }

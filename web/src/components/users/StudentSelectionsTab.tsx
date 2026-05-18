@@ -1,12 +1,15 @@
-import { createEffect, createMemo, createResource, For, Show } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
-import { useI18n } from '../../providers/I18nProvider'
+import { createQuery } from '@tanstack/solid-query'
+import { createEffect, createMemo, For, Show } from 'solid-js'
+import { useAPI } from '~/providers/APIProvider'
+import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { enrollmentsQueryOptions } from '~/queries/enrollments'
+import { selectionsQueryOptions } from '~/queries/selections'
+import { enrollmentSorter } from '~/utils'
 import SectionedList from '../SectionedList'
 import { useSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
 import SubjectListItem from '../subjects/SubjectListItem'
-import type { Elective, Subject } from '../../api'
-
+import type { Enrollment, Subject } from '~/api'
 export interface StudentSelectionsTabProps {
     userId: number
 }
@@ -17,41 +20,43 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
     const { string } = useI18n()
     const subjectDisplayContext = useSubjectDisplayContext()
 
-    const [data] = createResource(async () => {
-        const [selections, electives] = await Promise.all([
-            api.client.selections.fetch(props.userId),
-            api.client.electives.fetchAll(),
-        ])
+    const selectionsQuery = createQuery(() => selectionsQueryOptions(api.client, props.userId))
+    const enrollmentsQuery = createQuery(() => enrollmentsQueryOptions(api.client))
 
-        return { selections, electives }
-    })
+    const data = () => {
+        if (!selectionsQuery.data || !enrollmentsQuery.data) return undefined
+        return { selections: selectionsQuery.data, enrollments: enrollmentsQuery.data }
+    }
 
     createEffect(() => {
         const d = data()
         if (!d) return
 
-        for (const [electiveId] of d.selections) {
-            enrollment.initializeCounts(electiveId, api.client.electives.resolveAllEnrolledCounts(electiveId))
+        for (const [enrollmentId] of d.selections) {
+            enrollment.initializeCounts(enrollmentId, api.client.enrollments.resolveAllEnrolledCounts(enrollmentId))
         }
     })
 
     const groupedSelections = createMemo(() => {
         const d = data()
-        if (!d) return {}
+        if (!d) return []
 
-        const result: Record<string, { elective: Elective; subject: Subject }[]> = {}
+        const result: Record<string, { enrollment: Enrollment; subject: Subject }[]> = {}
 
-        for (const [electiveId, subject] of d.selections) {
-            const elective = d.electives.find(e => e.id === electiveId)
-            if (!elective) continue
+        for (const [enrollmentId, subject] of d.selections) {
+            const en = d.enrollments.find(e => e.id === enrollmentId)
+            if (!en) continue
 
-            if (!result[elective.name]) {
-                result[elective.name] = []
+            if (!result[en.name]) {
+                result[en.name] = []
             }
-            result[elective.name].push({ elective, subject })
+
+            result[en.name].push({ enrollment: en, subject })
         }
 
-        return result
+        return Object.entries(result).sort(([_, [{ enrollment: enA }]], [__, [{ enrollment: enB }]]) =>
+            enrollmentSorter(enA, enB),
+        )
     })
 
     return (
@@ -64,16 +69,16 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
                         {string.NO_X_YET({ object: string.SELECTIONS().toLowerCase() })}
                     </p>
                 }
-                renderSection={(electiveName, items) => (
+                renderSection={(enrollmentName, items) => (
                     <section>
-                        <h1 class="m3-title-large padded">{electiveName}</h1>
+                        <h1 class="m3-title-large padded">{enrollmentName}</h1>
                         <ul>
                             <For each={items}>
-                                {({ elective, subject }) => (
+                                {({ enrollment: en, subject }) => (
                                     <SubjectListItem
                                         subject={subject}
-                                        electiveId={elective.id}
-                                        linkProps={subjectDisplayContext.viewLinkProps(elective.id, subject.id)}
+                                        enrollmentId={en.id}
+                                        linkProps={subjectDisplayContext.viewLinkProps(en.id, subject.id)}
                                     />
                                 )}
                             </For>

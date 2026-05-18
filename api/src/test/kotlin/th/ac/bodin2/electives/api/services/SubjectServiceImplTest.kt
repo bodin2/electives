@@ -52,7 +52,7 @@ class SubjectServiceImplTest : ApplicationTest() {
             tag = SubjectTag.SCIENCE_AND_TECHNOLOGY,
             location = "Room B201",
             capacity = 20,
-            team = TestConstants.Teams.TEAM_1_ID,
+            group = TestConstants.Groups.GROUP_1_ID,
         )
 
         assertEquals(newId, created.id.value)
@@ -74,7 +74,7 @@ class SubjectServiceImplTest : ApplicationTest() {
                 tag = SubjectTag.SCIENCE_AND_TECHNOLOGY,
                 location = null,
                 capacity = 20,
-                team = null,
+                group = null,
                 thumbnailUrl = null,
                 imageUrl = null,
             )
@@ -134,7 +134,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `create subject with non-existent team throws not found`() = runTest {
+    fun `create subject with non-existent group throws not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
             @OptIn(Transactional::class)
             subjectService.create(
@@ -145,7 +145,7 @@ class SubjectServiceImplTest : ApplicationTest() {
                 tag = SubjectTag.SCIENCE_AND_TECHNOLOGY,
                 location = null,
                 capacity = 20,
-                team = UNUSED_ID,
+                group = UNUSED_ID,
                 thumbnailUrl = null,
                 imageUrl = null,
             )
@@ -153,12 +153,12 @@ class SubjectServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `update subject with non-existent team throws not found`() = runTest {
+    fun `update subject with non-existent group throws not found`() = runTest {
         assertFailsWith<EntityNotFoundException> {
             @OptIn(Transactional::class)
             subjectService.update(
                 TestConstants.Subjects.PHYSICS_ID,
-                SubjectService.SubjectUpdate(setTeam = true, team = UNUSED_ID)
+                SubjectService.SubjectUpdate(setGroup = true, group = UNUSED_ID)
             )
         }
     }
@@ -171,7 +171,7 @@ class SubjectServiceImplTest : ApplicationTest() {
                 TestConstants.Subjects.PHYSICS_ID,
                 SubjectService.SubjectUpdate(
                     teacherIds = listOf(UNUSED_ID),
-                    electiveId = TestConstants.Electives.SCIENCE_ID
+                    enrollmentId = TestConstants.Enrollments.SCIENCE_ID
                 )
             )
         }
@@ -184,13 +184,13 @@ class SubjectServiceImplTest : ApplicationTest() {
             TestConstants.Subjects.PHYSICS_ID,
             SubjectService.SubjectUpdate(
                 teacherIds = listOf(TestConstants.Teachers.ALICE_ID),
-                electiveId = TestConstants.Electives.SCIENCE_ID
+                enrollmentId = TestConstants.Enrollments.SCIENCE_ID
             )
         )
 
         val teachers = transaction {
             subjectService.getById(TestConstants.Subjects.PHYSICS_ID)!!
-                .getTeachers(TestConstants.Electives.SCIENCE_ID)
+                .getTeachers(TestConstants.Enrollments.SCIENCE_ID)
         }
 
         assertEquals(1, teachers.size)
@@ -198,7 +198,7 @@ class SubjectServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `update subject with teachers without elective id does nothing`() = runTest {
+    fun `update subject with teachers without enrollment id does nothing`() = runTest {
         @OptIn(Transactional::class)
         subjectService.update(
             TestConstants.Subjects.PHYSICS_ID,
@@ -209,7 +209,7 @@ class SubjectServiceImplTest : ApplicationTest() {
 
         val teachers = transaction {
             subjectService.getById(TestConstants.Subjects.PHYSICS_ID)!!
-                .getTeachers(TestConstants.Electives.SCIENCE_ID)
+                .getTeachers(TestConstants.Enrollments.SCIENCE_ID)
         }
 
         // Bob is still there from mockData
@@ -221,8 +221,8 @@ class SubjectServiceImplTest : ApplicationTest() {
     fun `get teacher subjects`() = runTest {
         val subjects = transaction { subjectService.getTeacherSubjects(TestConstants.Teachers.BOB_ID) }
         assertEquals(1, subjects.size)
-        val (electiveId, subject) = subjects.entries.first()
-        assertEquals(TestConstants.Electives.SCIENCE_ID, electiveId)
+        val (enrollmentId, subject) = subjects.entries.first()
+        assertEquals(TestConstants.Enrollments.SCIENCE_ID, enrollmentId)
         assertEquals(TestConstants.Subjects.PHYSICS_ID, subject.id.value)
     }
 
@@ -230,8 +230,8 @@ class SubjectServiceImplTest : ApplicationTest() {
     fun `get teacher subjects for another teacher`() = runTest {
         val subjects = transaction { subjectService.getTeacherSubjects(TestConstants.Teachers.ALICE_ID) }
         assertEquals(1, subjects.size)
-        val (electiveId, subject) = subjects.entries.first()
-        assertEquals(TestConstants.Electives.SCIENCE_ID, electiveId)
+        val (enrollmentId, subject) = subjects.entries.first()
+        assertEquals(TestConstants.Enrollments.SCIENCE_ID, enrollmentId)
         assertEquals(TestConstants.Subjects.CHEMISTRY_ID, subject.id.value)
     }
 
@@ -243,17 +243,17 @@ class SubjectServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `get elective IDs for subject`() = runTest {
-        val ids = transaction { subjectService.getElectiveIds(TestConstants.Subjects.PHYSICS_ID) }
+    fun `get enrollment IDs for subject`() = runTest {
+        val ids = transaction { subjectService.getEnrollmentIds(TestConstants.Subjects.PHYSICS_ID) }
         assertNotNull(ids)
         assertEquals(1, ids.size)
-        assertContains(ids, TestConstants.Electives.SCIENCE_ID)
+        assertContains(ids, TestConstants.Enrollments.SCIENCE_ID)
     }
 
     @Test
-    fun `get elective IDs for not found subject`() = runTest {
+    fun `get enrollment IDs for not found subject`() = runTest {
         assertNull(transaction {
-            subjectService.getElectiveIds(UNUSED_ID)
+            subjectService.getEnrollmentIds(UNUSED_ID)
         })
     }
 }

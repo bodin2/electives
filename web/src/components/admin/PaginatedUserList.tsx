@@ -1,14 +1,16 @@
-import { ListItem, mergeClasses, TextField } from 'm3-solid'
-import { type Component, createEffect, For, Show } from 'solid-js'
+import MagnifyingIcon from '@iconify-icons/mdi/magnify'
+import { ListItem, mergeClasses, TextField } from 'm3-solid/src'
+import { type Component, createEffect, For, type JSXElement, Show, Suspense } from 'solid-js'
 import { createStore } from 'solid-js/store'
-import { useI18n } from '../../providers/I18nProvider'
-import { useScrollData } from '../../providers/ScrollDataProvider'
-import { debounce, nonNull } from '../../utils'
+import { useI18n } from '~/providers/I18nProvider'
+import { useScrollData } from '~/providers/ScrollDataProvider'
+import { debounce, nonNull } from '~/utils'
 import { Button } from '../Button'
+import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { HStack, VStack } from '../Stack'
-import { SubjectMemberListItem } from '../subjects/SubjectMembersTab'
+import { UserListItem } from '../users/UserListItem'
 import styles from './PaginatedUserList.module.css'
-import type { User } from '../../api'
+import type { User } from '~/api'
 
 export interface PaginatedUserListHandle {
     /** Trigger a refresh of the current page. */
@@ -26,12 +28,13 @@ interface PaginatedUserListProps {
     page: number
     onPageChange: (page: number) => void
     onPagePreload?: (page: number) => void
-    onSearch?: (query: string) => void
+    onSearch?: (query: string | undefined) => void
     searchLabel?: string
     isLoading?: boolean
     onClick?: (user: User) => void
     class?: string
     ref?: (handle: PaginatedUserListHandle) => void
+    showGradeGroup?: boolean
     onRefresh?: () => void
     /** Custom trailing component for each user item. */
     trailing?: Component<{ user: User }>
@@ -39,6 +42,11 @@ interface PaginatedUserListProps {
     listHeader?: Component
     /** Custom component that renders on the right side of the header. */
     headerRight?: Component
+    /** IDs of users that should appear visually selected. */
+    selectedIds?: number[]
+    /** IDs of users that should appear disabled and non-interactive. */
+    disabledIds?: number[]
+    emptyElement?: JSXElement
 }
 
 const DEFAULT_PAGE_SIZE = 50
@@ -62,8 +70,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
         }
     })
 
-    const pageSize = () => props.data?.users.length || DEFAULT_PAGE_SIZE
-    const totalPages = () => Math.ceil(store.total / pageSize())
+    const totalPages = () => Math.ceil(store.total / DEFAULT_PAGE_SIZE)
 
     const next = () => {
         if (props.page < totalPages()) props.onPageChange(props.page + 1)
@@ -90,7 +97,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                     newUserMap.delete(userId)
                     return newUserMap
                 })
-                setStore('total', t => Math.max(0, t - 1))
+                setStore('total', t => t - 1)
             },
             onUserAdd: user => {
                 setStore('users', u => {
@@ -98,6 +105,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                     newUserMap.set(user.id, user)
                     return newUserMap
                 })
+                setStore('total', t => t + 1)
             },
             onUserEdit: user => {
                 setStore('users', u => {
@@ -114,9 +122,10 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
             <VStack gap={16} class={mergeClasses(styles.header, sd.scrolledVertical && styles.scrolled)}>
                 <Show when={props.onSearch}>
                     <TextField
+                        leadingIcon={MagnifyingIcon}
                         variant="filled"
                         label={props.searchLabel}
-                        onInput={debounce(e => nonNull(props.onSearch)(e.target.value), 500)}
+                        onInput={debounce(e => nonNull(props.onSearch)(e.target.value.trim() || undefined), 350)}
                     />
                 </Show>
                 <Show when={totalPages() > 1}>
@@ -143,37 +152,48 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                     </HStack>
                 </Show>
                 <HStack alignHorizontal="space-between" alignVertical="center">
-                    <p class="m3-label-large">{string.USERS_COUNT({ count: store.total })}</p>
+                    <Suspense fallback={<span class="m3-label-large">{string.LOADING()}</span>}>
+                        <Show when={props.data}>
+                            <p class="m3-label-large">{string.USERS_COUNT({ count: store.total })}</p>
+                        </Show>
+                    </Suspense>
                     {props.headerRight?.({})}
                 </HStack>
             </VStack>
-            <div class={styles.grid}>
-                {props.listHeader?.({})}
-                <Show when={props.isLoading && !props.data && store.users.size === 0}>
-                    <ListItem headline={string.LOADING()} />
+            <SuspenseLoadingPage debugName="PaginatedUserListContent">
+                <Show when={store.users.size > 0} fallback={props.emptyElement}>
+                    <div class={styles.grid}>
+                        {props.listHeader?.({})}
+                        <Show when={props.isLoading && !props.data && store.users.size === 0}>
+                            <ListItem headline={string.LOADING()} />
+                        </Show>
+                        <Show when={props.data || store.users.size > 0}>
+                            <For
+                                each={Array.from(store.users.values())}
+                                fallback={
+                                    <Show when={!props.isLoading}>
+                                        <p class={mergeClasses('text-surface-variant', styles.padded)}>
+                                            {string.NO_USERS_FOUND()}
+                                        </p>
+                                    </Show>
+                                }
+                            >
+                                {user => (
+                                    <UserListItem
+                                        showId
+                                        showGradeGroup={props.showGradeGroup}
+                                        selected={props.selectedIds?.includes(user.id)}
+                                        disabled={props.disabledIds?.includes(user.id)}
+                                        onClick={props.onClick && (() => nonNull(props.onClick)(user))}
+                                        user={user}
+                                        trailing={props.trailing}
+                                    />
+                                )}
+                            </For>
+                        </Show>
+                    </div>
                 </Show>
-                <Show when={props.data || store.users.size > 0}>
-                    <For
-                        each={Array.from(store.users.values())}
-                        fallback={
-                            <Show when={!props.isLoading}>
-                                <p class={mergeClasses('text-surface-variant', styles.padded)}>
-                                    {string.NO_USERS_FOUND()}
-                                </p>
-                            </Show>
-                        }
-                    >
-                        {user => (
-                            <SubjectMemberListItem
-                                showId
-                                onClick={props.onClick && (() => nonNull(props.onClick)(user))}
-                                user={user}
-                                trailing={props.trailing}
-                            />
-                        )}
-                    </For>
-                </Show>
-            </div>
+            </SuspenseLoadingPage>
         </>
     )
 }

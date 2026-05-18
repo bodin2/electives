@@ -4,13 +4,13 @@ class EntityNotFoundException(val entity: ExceptionEntity, override val message:
     Exception(message)
 
 enum class ExceptionEntity {
-    ELECTIVE,
+    ENROLLMENT,
     SUBJECT,
     USER,
     STUDENT,
     TEACHER,
-    ELECTIVE_SELECTION,
-    TEAM,
+    ENROLLMENT_SELECTION,
+    GROUP,
 }
 
 class ConflictException(val entity: ExceptionEntity, override val message: String = "${entity.name} already exists") :

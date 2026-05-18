@@ -19,13 +19,8 @@ import th.ac.bodin2.electives.api.utils.badFrame
 import th.ac.bodin2.electives.api.utils.parseOrNull
 import th.ac.bodin2.electives.api.utils.send
 import th.ac.bodin2.electives.api.utils.unauthorized
-import th.ac.bodin2.electives.db.Elective
-import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope
-import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope.PayloadCase
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.acknowledged
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.bulkSubjectEnrollmentUpdate
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.envelope
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
+import th.ac.bodin2.electives.db.Enrollment
+import th.ac.bodin2.electives.proto.api.NotificationsService.*
 import th.ac.bodin2.electives.utils.env
 import th.ac.bodin2.electives.utils.setInterval
 import java.util.concurrent.ConcurrentHashMap
@@ -48,7 +43,7 @@ fun DependencyRegistry.provideNotificationsService() = provide<NotificationsServ
     )
 }
 
-private typealias SubjectSelectionUpdateListener = (electiveId: Int, subjectId: Int, enrolledCount: Int) -> Unit
+private typealias SubjectSelectionUpdateListener = (enrollmentId: Int, subjectId: Int, enrolledCount: Int) -> Unit
 
 class NotificationsServiceImpl(
     val config: Config,
@@ -69,13 +64,13 @@ class NotificationsServiceImpl(
     }
 
     /**
-     * A StateFlow of the map of per-elective StateFlows.
+     * A StateFlow of the map of per-enrollment StateFlows.
      * **Bulk updates must always be sent on connection, then in an interval after.**
      *
-     * Wrapping in a StateFlow allows [ClientConnection] to react to new electives
+     * Wrapping in a StateFlow allows [ClientConnection] to react to new enrollments
      * being added after a client has already connected.
      *
-     * Map<ElectiveId, StateFlow<Envelope?>>
+     * Map<EnrollmentId, StateFlow<Envelope?>>
      */
     internal val bulkUpdateFlows = MutableStateFlow<Map<Int, MutableStateFlow<Envelope?>>>(emptyMap())
 
@@ -97,26 +92,26 @@ class NotificationsServiceImpl(
 
     internal fun isBulkUpdatesEnabled() = config.bulkUpdatesEnabled
 
-    internal fun bulkUpdateFlowForElective(electiveId: Int): StateFlow<Envelope?> =
-        bulkUpdateFlows.value[electiveId] ?: MutableStateFlow<Envelope?>(null).also { newFlow ->
+    internal fun bulkUpdateFlowForEnrollment(enrollmentId: Int): StateFlow<Envelope?> =
+        bulkUpdateFlows.value[enrollmentId] ?: MutableStateFlow<Envelope?>(null).also { newFlow ->
             bulkUpdateFlows.update { current ->
-                if (electiveId in current) current
-                else current + (electiveId to newFlow)
+                if (enrollmentId in current) current
+                else current + (enrollmentId to newFlow)
             }
         }
 
     override fun notifySubjectSelectionUpdate(
-        electiveId: Int,
+        enrollmentId: Int,
         subjectId: Int,
         enrolledCount: Int,
     ) {
-        logger.debug("Notifying subject selection update, electiveId: $electiveId, subjectId: $subjectId, enrolledCount: $enrolledCount")
+        logger.debug("Notifying subject selection update, enrollmentId: $enrollmentId, subjectId: $subjectId, enrolledCount: $enrolledCount")
 
-        val electiveSubscriptions = subjectSelectionSubscriptions[electiveId] ?: return
-        val subjectListeners = electiveSubscriptions[subjectId] ?: return
+        val enrollmentSubscriptions = subjectSelectionSubscriptions[enrollmentId] ?: return
+        val subjectListeners = enrollmentSubscriptions[subjectId] ?: return
 
         for (listener in subjectListeners) {
-            listener(electiveId, subjectId, enrolledCount)
+            listener(enrollmentId, subjectId, enrolledCount)
         }
     }
 
@@ -136,22 +131,22 @@ class NotificationsServiceImpl(
             logger.debug("Sending bulk enrollment updates...")
 
             val updates = transaction {
-                Elective.getAllActiveIds().map { electiveId ->
-                    val enrolledCounts = Elective.getSubjectsEnrolledCounts(electiveId)
+                Enrollment.getAllActiveIds().map { enrollmentId ->
+                    val enrolledCounts = Enrollment.getSubjectsEnrolledCounts(enrollmentId)
 
-                    electiveId to envelope {
-                        bulkSubjectEnrollmentUpdate = bulkSubjectEnrollmentUpdate {
-                            this.electiveId = electiveId
-                            subjectEnrolledCounts.putAll(enrolledCounts)
-                        }
-                    }
+                    enrollmentId to Envelope(
+                        bulk_subject_enrollment_update = BulkSubjectEnrollmentUpdate(
+                            enrollment_id = enrollmentId,
+                            subject_enrolled_counts = enrolledCounts,
+                        )
+                    )
                 }
             }
 
             val activeIds = updates.map { it.first }.toSet()
 
-            for ((electiveId, update) in updates) {
-                val flow = bulkUpdateFlowForElective(electiveId) as MutableStateFlow
+            for ((enrollmentId, update) in updates) {
+                val flow = bulkUpdateFlowForEnrollment(enrollmentId) as MutableStateFlow
                 // Update the flow only if the updated value changes
                 if (flow.value != update) flow.value = update
             }
@@ -228,21 +223,21 @@ class NotificationsServiceImpl(
 
             val envelope = frame.parseOrNull<Envelope>() ?: return badFrame()
 
-            when (envelope.payloadCase) {
-                PayloadCase.SUBJECT_ENROLLMENT_UPDATE_SUBSCRIPTION_REQUEST -> {
+            when {
+                envelope.subject_enrollment_update_subscription_request != null -> {
                     val subscriptions = envelope
-                        .subjectEnrollmentUpdateSubscriptionRequest
-                        .subscriptionsMap
+                        .subject_enrollment_update_subscription_request!!
+                        .subscriptions
 
                     if (subscriptions
-                            .map { (_, subscription) -> subscription.subjectIdsCount }
+                            .map { (_, subscription) -> subscription.subject_ids.size }
                             .sum() > config.maxSubjectSubscriptionsPerClient
                     )
                         return badFrame("Exceeded maximum subject subscriptions per client: ${config.maxSubjectSubscriptionsPerClient}")
 
-                    subscriptions.forEach { (electiveId, subjectIds) ->
+                    subscriptions.forEach { (enrollmentId, subscription) ->
                         this@handleFrame.subscriptions
-                            .getOrPut(electiveId) { ConcurrentHashMap.newKeySet() } += subjectIds.subjectIdsList
+                            .getOrPut(enrollmentId) { ConcurrentHashMap.newKeySet() } += subscription.subject_ids
                     }
 
                     acknowledge(envelope)
@@ -252,7 +247,7 @@ class NotificationsServiceImpl(
                     for (cleanup in cleanups) try {
                         cleanup()
                     } catch (e: Exception) {
-                        logger.error("Error during elective enrollment subscription update:", e)
+                        logger.error("Error during enrollment enrollment subscription update:", e)
                     }
 
                     cleanups.clear()
@@ -261,51 +256,47 @@ class NotificationsServiceImpl(
                     cleanups += sendEnrollmentUpdates()
                 }
 
-                // Server payloads
-                PayloadCase.SUBJECT_ENROLLMENT_UPDATE,
-                PayloadCase.BULK_SUBJECT_ENROLLMENT_UPDATE,
-                PayloadCase.ACKNOWLEDGED -> return badFrame()
-
-                // Invalid payload
-                PayloadCase.PAYLOAD_NOT_SET,
-                PayloadCase.IDENTIFY -> return badFrame()
+                // Server payloads or invalid
+                else -> return badFrame()
             }
         }
     }
 
     private fun ClientConnection.sendEnrollmentUpdates(): () -> Unit {
-        val listener: SubjectSelectionUpdateListener = { electiveId, subjectId, enrolledCount ->
-            trySend(envelope {
-                subjectEnrollmentUpdate = subjectEnrollmentUpdate {
-                    this.electiveId = electiveId
-                    this.subjectId = subjectId
-                    this.enrolledCount = enrolledCount
-                }
-            })
+        val listener: SubjectSelectionUpdateListener = { enrollmentId, subjectId, enrolledCount ->
+            trySend(
+                Envelope(
+                    subject_enrollment_update = SubjectEnrollmentUpdate(
+                        enrollment_id = enrollmentId,
+                        subject_id = subjectId,
+                        enrolled_count = enrolledCount,
+                    )
+                )
+            )
         }
 
-        for ((electiveId, subjectIds) in subscriptions) {
-            val electiveSubscriptions = subjectSelectionSubscriptions.getOrPut(electiveId) { ConcurrentHashMap() }
+        for ((enrollmentId, subjectIds) in subscriptions) {
+            val enrollmentSubscriptions = subjectSelectionSubscriptions.getOrPut(enrollmentId) { ConcurrentHashMap() }
             for (subjectId in subjectIds) {
-                val listeners = electiveSubscriptions.getOrPut(subjectId) { CopyOnWriteArrayList() }
+                val listeners = enrollmentSubscriptions.getOrPut(subjectId) { CopyOnWriteArrayList() }
                 listeners.add(listener)
             }
         }
 
         return {
-            for ((electiveId, subjectIds) in subscriptions) {
-                val electiveSubscriptions = subjectSelectionSubscriptions[electiveId]
+            for ((enrollmentId, subjectIds) in subscriptions) {
+                val enrollmentSubscriptions = subjectSelectionSubscriptions[enrollmentId]
                 for (subjectId in subjectIds)
-                    electiveSubscriptions?.get(subjectId)?.remove(listener)
+                    enrollmentSubscriptions?.get(subjectId)?.remove(listener)
             }
         }
     }
 
     private suspend fun ClientConnection.acknowledge(envelope: Envelope) {
-        send(envelope {
-            messageId = envelope.messageId
-            acknowledged = acknowledged {}
-        })
+        send(Envelope(
+            message_id = envelope.message_id,
+            acknowledged = Acknowledged(),
+        ))
     }
 }
 
@@ -313,7 +304,7 @@ private class ClientConnection(
     private val notificationsService: NotificationsServiceImpl,
     val userId: Int,
     val session: WebSocketServerSession,
-    // Map<ElectiveId, Set<SubjectId>>
+    // Map<EnrollmentId, Set<SubjectId>>
     val subscriptions: ConcurrentHashMap<Int, ConcurrentHashMap.KeySetView<Int, Boolean>>,
     val cleanups: ConcurrentHashMap.KeySetView<() -> Unit, Boolean>,
     parentScope: CoroutineScope,
@@ -367,10 +358,10 @@ private class ClientConnection(
                 removed.forEach { active.remove(it)?.cancel() }
 
                 // Launch a collector for any newly added elective flow
-                for ((electiveId, flow) in flows) {
-                    if (electiveId in active) continue
+                for ((enrollmentId, flow) in flows) {
+                    if (enrollmentId in active) continue
 
-                    active[electiveId] = scope.launch {
+                    active[enrollmentId] = scope.launch {
                         var last: Envelope? = null
                         flow.collect { update ->
                             if (!notificationsService.isBulkUpdatesEnabled()) return@collect

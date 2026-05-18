@@ -1,42 +1,65 @@
 import DeleteOutlineIcon from '@iconify-icons/mdi/delete-outline'
 import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
 import PlusIcon from '@iconify-icons/mdi/plus'
-import { createFileRoute, useRouter } from '@tanstack/solid-router'
+import { createQuery, useQueryClient } from '@tanstack/solid-query'
+import { createFileRoute } from '@tanstack/solid-router'
 import { createSignal } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { Button } from '../../../../components/Button'
-import { Dialog } from '../../../../components/Dialog'
-import LinkButton from '../../../../components/LinkButton'
-import Page from '../../../../components/Page'
-import { HStack } from '../../../../components/Stack'
-import { useSubjectDisplayContext } from '../../../../components/subjects/SubjectDisplayContext'
-import SubjectList from '../../../../components/subjects/SubjectList'
-import { useAPI } from '../../../../providers/APIProvider'
-import { useI18n } from '../../../../providers/I18nProvider'
-import { Route as SubjectIdRoute } from './$subjectId'
-import type { Subject } from '../../../../api'
+import { Button } from '~/components/Button'
+import { ConfirmDialog } from '~/components/dialogs/base/ConfirmDialog'
+import LinkButton from '~/components/LinkButton'
+import Page from '~/components/Page'
+import { HStack, VStack } from '~/components/Stack'
+import { useSubjectDisplayContext } from '~/components/subjects/SubjectDisplayContext'
+import SubjectList from '~/components/subjects/SubjectList'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { adminSubjectsQueryOptions } from '~/queries/subjects'
+import styles from './index.module.css'
+import type { Subject } from '~/api'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/')({
     component: RouteComponent,
-    loader: async ({ context: { client } }) => {
-        const subjects = await client.subjects.admin.fetchAll()
-        return { subjects }
+    loader: async ({ context: { client, queryClient } }) => {
+        await queryClient.ensureQueryData(adminSubjectsQueryOptions(client))
     },
 })
 
 function RouteComponent() {
     const { string } = useI18n()
-    const data = Route.useLoaderData()
+    const { client } = useAPI()
+    const qc = useQueryClient()
     const [deletingSubject, setDeletingSubject] = createSignal<Subject | undefined>(undefined)
     const subjectDisplayContext = useSubjectDisplayContext()
+
+    const subjectsQuery = createQuery(() => ({ ...adminSubjectsQueryOptions(client), notifyOnChangeProps: ['data'] }))
 
     return (
         <Page name={string.SUBJECTS()} leading={null} trailing={null}>
             <SubjectList
                 noRandom
-                subjects={data().subjects}
+                searchContainerClass={styles.adminSearchContainer}
+                subjects={subjectsQuery.isSuccess ? subjectsQuery.data : []}
                 editable
                 viewLinkProps={subjectId => subjectDisplayContext.editLinkProps(subjectId)}
+                emptyElement={
+                    <VStack style={{ height: '100%' }} alignHorizontal="center" alignVertical="center" gap={16}>
+                        <VStack alignHorizontal="center">
+                            <h1 class="m3-headline-medium text-balance">{string.NO_SUBJECTS_HINT()}</h1>
+                            <p class="m3-body-large text-surface-variant text-center text-balance">
+                                {string.NO_SUBJECTS_HINT_DESCRIPTION()}
+                            </p>
+                        </VStack>
+                        <LinkButton
+                            {...subjectDisplayContext.createLinkProps()}
+                            size="m"
+                            variant="filled"
+                            icon={PlusIcon}
+                        >
+                            {string.CREATE_SUBJECT()}
+                        </LinkButton>
+                    </VStack>
+                }
                 headerActions={
                     <LinkButton {...subjectDisplayContext.createLinkProps()} variant="filled" icon={PlusIcon}>
                         {string.CREATE_SUBJECT()}
@@ -65,19 +88,23 @@ function RouteComponent() {
                 )}
             />
             <Portal>
-                <SubjectDeletionDialog deletingSubject={deletingSubject()} setDeletingSubject={setDeletingSubject} />
+                <SubjectDeletionDialog
+                    deletingSubject={deletingSubject()}
+                    setDeletingSubject={setDeletingSubject}
+                    onInvalidate={() => qc.invalidateQueries({ queryKey: ['admin', 'subjects'] })}
+                />
             </Portal>
         </Page>
     )
 }
 
 function SubjectDeletionDialog(props: {
+    onInvalidate?: () => unknown
     deletingSubject: Subject | undefined
     setDeletingSubject: (s: Subject | undefined) => void
 }) {
     const { client } = useAPI()
     const { string } = useI18n()
-    const router = useRouter()
 
     const handleDelete = async () => {
         const subject = props.deletingSubject
@@ -85,7 +112,7 @@ function SubjectDeletionDialog(props: {
 
         try {
             await client.subjects.admin.delete(subject.id)
-            await router.invalidate({ filter: r => r.routeId === Route.id || r.routeId === SubjectIdRoute.id })
+            await props.onInvalidate?.()
         } catch (e) {
             console.error(e)
             alert(string.ERROR_DELETE_SUBJECT_FAILED())
@@ -95,23 +122,16 @@ function SubjectDeletionDialog(props: {
     }
 
     return (
-        <Dialog
+        <ConfirmDialog
             open={!!props.deletingSubject}
+            variant="danger"
             closedBy="any"
-            onClose={() => props.setDeletingSubject(undefined)}
+            onCancel={() => props.setDeletingSubject(undefined)}
+            onConfirm={handleDelete}
+            confirmText={string.DELETE_SUBJECT()}
             headline={string.DELETE_SUBJECT()}
-            actions={
-                <HStack slot="actions" gap={8}>
-                    <Button variant="text" onClick={() => props.setDeletingSubject(undefined)}>
-                        {string.CANCEL()}
-                    </Button>
-                    <Button variant="tonal-error" onClick={handleDelete}>
-                        {string.DELETE_SUBJECT()}
-                    </Button>
-                </HStack>
-            }
         >
-            <p>{string.CONFIRM_DELETE_SUBJECT({ name: props.deletingSubject?.name ?? '' })}</p>
-        </Dialog>
+            <p>{string.CONFIRM_DELETE_SUBJECT({ name: <strong>{props.deletingSubject?.name ?? ''}</strong> })}</p>
+        </ConfirmDialog>
     )
 }

@@ -139,7 +139,10 @@ class AdminAuthServiceImpl(
                 if (isAdminResetEnabled()) {
                     logger.warn("Resetting admin user with ID ${config.defaultUserId}")
                     usersService.deleteUser(config.defaultUserId)
-                    throw EntityNotFoundException(ExceptionEntity.USER, "Admin reset, user ${config.defaultUserId} deleted")
+                    throw EntityNotFoundException(
+                        ExceptionEntity.USER,
+                        "Admin reset, user ${config.defaultUserId} deleted"
+                    )
                 }
             } catch (_: EntityNotFoundException) {
                 if (config.defaultUserPublicKey == null) {
@@ -167,7 +170,7 @@ class AdminAuthServiceImpl(
     private fun getAdminPublicKey(id: Int): PublicKey? = transaction {
         val publicKeyString = Admins
             .select(Admins.publicKey)
-            .where { Admins.user eq id }
+            .where { Admins.id eq id }
             .singleOrNull()
             ?.get(Admins.publicKey)
             ?: return@transaction null

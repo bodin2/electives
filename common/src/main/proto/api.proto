@@ -15,11 +15,11 @@ message AdminService {
     uint32 total = 2;
   }
 
-  message ListTeamsResponse {
-    repeated Team teams = 1;
+  message ListGroupsResponse {
+    repeated Group groups = 1;
   }
 
-  message ListElectivesEnrolledCounts {
+  message ListEnrollmentsEnrolledCounts {
     map<uint32, Counts> counts = 1;
 
     message Counts {
@@ -31,8 +31,15 @@ message AdminService {
   message AddUserRequest {
     User user = 1;
     string password = 2;
-    // Students-only
-    repeated uint32 team_ids = 3;
+    // Students: IDs of CUSTOM-typed groups to add the student to.
+    // Teachers: IDs of groups (any type) to add the teacher to.
+    repeated uint32 group_ids = 3;
+    // Students-only: ID of the group with type GRADE the student belongs to (required).
+    optional uint32 grade_id = 4;
+    // Students-only: ID of the group with type ROOM the student belongs to (required).
+    optional uint32 room_id = 5;
+    // Students-only: ID of the group with type PROGRAM the student belongs to (optional).
+    optional uint32 program_id = 6;
   }
 
   message BulkAddUsersRequest {
@@ -43,12 +50,12 @@ message AdminService {
     repeated uint32 user_ids = 1;
   }
 
-  message SetElectiveSubjectsRequest {
+  message SetEnrollmentSubjectsRequest {
     repeated uint32 subject_ids = 1;
   }
 
   message SetStudentSelectionsRequest {
-    // Elective ID -> Subject ID
+    // Enrollment ID -> Subject ID
     map<uint32, uint32> selections = 1;
   }
 
@@ -56,25 +63,44 @@ message AdminService {
     optional string first_name = 1;
     optional string middle_name = 2;
     optional string last_name = 3;
-    repeated uint32 teams = 4;
+    // Students-only: IDs of CUSTOM-typed groups to replace the student's current CUSTOM-typed memberships with.
+    // Teachers: IDs of groups (any type) to replace the teacher's current memberships with.
+    repeated uint32 groups = 4;
     optional string avatar_url = 5;
     optional string new_password = 6;
 
-    // Whether the `teams` field should be considered during patching.
-    bool patch_teams = 7;
+    // Whether the `groups` field should be considered during patching.
+    bool patch_groups = 7;
     // Whether the `middle_name` field should be considered during patching.
     bool patch_middle_name = 8;
     // Whether the `last_name` field should be considered during patching.
     bool patch_last_name = 9;
     // Whether the `avatar_url` field should be considered during patching.
     bool patch_avatar_url = 10;
+
+    // Mr. Ms. Dr. etc.
+    optional string prefix = 11;
+    // Whether the `prefix` field should be considered during patching.
+    bool patch_prefix = 12;
+
+    // Students-only: New GRADE group ID for the student.
+    optional uint32 grade_id = 13;
+    // Students-only: New ROOM group ID for the student.
+    optional uint32 room_id = 14;
+    // Students-only: New PROGRAM group ID for the student. PROGRAM is optional;
+    // to clear an existing PROGRAM membership, set `patch_program_id = true` and
+    // leave `program_id` unset.
+    optional uint32 program_id = 15;
+    // Whether the `program_id` field should be considered during patching.
+    // When true and `program_id` is unset, the student's PROGRAM membership is cleared.
+    bool patch_program_id = 16;
   }
 
-  message TeamPatch {
+  message GroupPatch {
     optional string name = 1;
   }
 
-  message ElectivePatch {
+  message EnrollmentPatch {
     optional string name = 1;
     /**
      * Unix timestamp representing the start date of the selection period.
@@ -86,14 +112,14 @@ message AdminService {
      * If not set, the selection period should be treated as indefinite.
      */
     optional uint64 end_date = 3;
-    optional uint32 team_id = 4;
+    optional uint32 group_id = 4;
 
     // Whether the `start_date` field should be considered during patching.
     bool patch_start_date = 5;
     // Whether the `end_date` field should be considered during patching.
     bool patch_end_date = 6;
-    // Whether the `team_id` field should be considered during patching.
-    bool patch_team_id = 7;
+    // Whether the `group_id` field should be considered during patching.
+    bool patch_group_id = 7;
   }
 
   message SubjectPatch {
@@ -103,7 +129,7 @@ message AdminService {
     optional SubjectTag tag = 4;
     optional string location = 5;
     optional uint32 capacity = 6;
-    optional uint32 team_id = 7;
+    optional uint32 group_id = 7;
     repeated uint32 teachers = 8;
     optional string thumbnail_url = 9;
     optional string image_url = 10;
@@ -114,8 +140,8 @@ message AdminService {
     bool patch_code = 12;
     // Whether the `location` field should be considered during patching.
     bool patch_location = 13;
-    // Whether the `team_id` field should be considered during patching.
-    bool patch_team_id = 14;
+    // Whether the `group_id` field should be considered during patching.
+    bool patch_group_id = 14;
     // Whether the `teachers` field should be considered during patching.
     bool patch_teachers = 15;
     // Whether the `thumbnail_url` field should be considered during patching.
@@ -123,16 +149,16 @@ message AdminService {
     // Whether the `image_url` field should be considered during patching.
     bool patch_image_url = 17;
 
-    // Elective ID to update teachers for (required if `patch_teachers` is true)
-    optional uint32 elective_id = 18;
+    // Enrollment ID to update teachers for (required if `patch_teachers` is true)
+    optional uint32 enrollment_id = 18;
   }
 
-  message TeamMemberCounts {
+  message GroupMemberCounts {
     map<uint32, uint32> member_counts = 1;
   }
 
-  message SubjectElectiveIds {
-    repeated uint32 elective_ids = 1;
+  message SubjectEnrollmentIds {
+    repeated uint32 enrollment_ids = 1;
   }
 }
 
@@ -148,9 +174,9 @@ message AuthService {
   }
 }
 
-message ElectivesService {
+message EnrollmentsService {
   message ListResponse {
-    repeated Elective electives = 1;
+    repeated Enrollment enrollments = 1;
   }
 
   message ListSubjectsResponse {
@@ -165,16 +191,16 @@ message ElectivesService {
 
 message UsersService {
   message StudentSelections {
-    // Elective ID -> Subject
+    // Enrollment ID -> Subject
     map<uint32, Subject> subjects = 1;
   }
 
-  message SetStudentElectiveSelectionRequest {
+  message SetStudentEnrollmentSelectionRequest {
     uint32 subject_id = 1;
   }
 
   message TeacherSubjects {
-    // Elective ID -> Subject
+    // Enrollment ID -> Subject
     map<uint32, Subject> subjects = 1;
   }
 }
@@ -201,7 +227,7 @@ message NotificationsService {
 
   // Request to subscribe to updates for specific subjects
   message SubjectEnrollmentUpdateSubscriptionRequest {
-    // Elective ID -> (subscription data)
+    // Enrollment ID -> (subscription data)
     map<uint32, SubjectEnrollmentUpdateSubscription> subscriptions = 1;
   }
 
@@ -216,24 +242,25 @@ message NotificationsService {
 
   // Sent immediately for important UI updates
   message SubjectEnrollmentUpdate {
-    uint32 elective_id = 1;
+    uint32 enrollment_id = 1;
     uint32 subject_id = 2;
     uint32 enrolled_count = 3;
   }
 
   // Sent every so often for non-important UI updates
   message BulkSubjectEnrollmentUpdate {
-    uint32 elective_id = 1;
+    uint32 enrollment_id = 1;
     map<uint32, uint32> subject_enrolled_counts = 2;
   }
 }
 
-message Team {
+message Group {
   uint32 id = 1;
   string name = 2;
+  GroupType type = 3;
 }
 
-message Elective {
+message Enrollment {
   uint32 id = 1;
   string name = 2;
   /**
@@ -246,7 +273,7 @@ message Elective {
    * If not set, the selection period should be treated as indefinite.
    */
   optional uint64 end_date = 4;
-  optional uint32 team_id = 5;
+  optional uint32 group_id = 5;
 }
 
 message Subject {
@@ -257,7 +284,7 @@ message Subject {
   SubjectTag tag = 5;
   string location = 6;
   uint32 capacity = 7;
-  optional uint32 team_id = 8;
+  optional uint32 group_id = 8;
   // Only passed in ListSubjectsResponse and StudentSelections
   repeated User teachers = 9;
   // Only passed in ListSubjectsResponse
@@ -272,9 +299,23 @@ message User {
   optional string middle_name = 3;
   optional string last_name = 4;
   UserType type = 5;
-  // Only passed for Students
-  repeated Team teams = 7;
+  // Mr. Ms. Dr. etc.
+  optional string prefix = 6;
+  /*
+   * All groups (any type) that the user belongs to.
+   *
+   * Populated for students and teachers. Filter client-side by `Group.type`
+   * if you need a specific bucket.
+   */
+  repeated Group groups = 7;
   optional string avatar_url = 8;
+}
+
+enum GroupType {
+  CUSTOM = 0;
+  GRADE = 1;
+  ROOM = 2;
+  PROGRAM = 3;
 }
 
 enum UserType {

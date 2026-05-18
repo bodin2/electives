@@ -5,113 +5,106 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 fun Student.toProto(): th.ac.bodin2.electives.proto.api.User {
-    return user {
-        id = user.id.value
-        firstName = user.firstName
-        type = UserType.STUDENT
-
-        user.middleName?.let { middleName = it }
-        user.lastName?.let { lastName = it }
-
-        user.avatarUrl?.let { avatarUrl = it }
-
-        teams.addAll(this@toProto.teams.map { it.toProto() })
-    }
+    return th.ac.bodin2.electives.proto.api.User(
+        id = user.id.value,
+        first_name = user.firstName,
+        type = UserType.STUDENT,
+        prefix = user.prefix,
+        middle_name = user.middleName,
+        last_name = user.lastName,
+        avatar_url = user.avatarUrl,
+        groups = this.groups.map { it.toProto() },
+    )
 }
 
 fun Teacher.toProto(): th.ac.bodin2.electives.proto.api.User {
-    return user {
-        id = user.id.value
-        firstName = user.firstName
-        type = UserType.TEACHER
-
-        user.middleName?.let { middleName = it }
-        user.lastName?.let { lastName = it }
-
-        user.avatarUrl?.let { avatarUrl = it }
-    }
+    return th.ac.bodin2.electives.proto.api.User(
+        id = user.id.value,
+        first_name = user.firstName,
+        type = UserType.TEACHER,
+        prefix = user.prefix,
+        middle_name = user.middleName,
+        last_name = user.lastName,
+        avatar_url = user.avatarUrl,
+        groups = this.groups.map { it.toProto() },
+    )
 }
 
 fun Admin.toProto(): th.ac.bodin2.electives.proto.api.User {
-    return user {
-        id = user.id.value
-        firstName = user.firstName
-        type = UserType.ADMIN
-
-        user.middleName?.let { middleName = it }
-        user.lastName?.let { lastName = it }
-
-        user.avatarUrl?.let { avatarUrl = it }
-    }
+    return th.ac.bodin2.electives.proto.api.User(
+        id = user.id.value,
+        first_name = user.firstName,
+        type = UserType.ADMIN,
+        prefix = user.prefix,
+        middle_name = user.middleName,
+        last_name = user.lastName,
+        avatar_url = user.avatarUrl,
+    )
 }
 
 /**
  * Convert Subject DAO to Proto representation.
  *
- * **A transaction must be active when calling this function with `electiveId`, or `withDescription = true`**
+ * **A transaction must be active when calling this function with `enrollmentId`, or `withDescription = true`**
  *
- * @param electiveId Optional elective ID to include enrolled count and teachers.
- * @param withTeachers Whether to include the teachers field (requires `electiveId`).
+ * @param enrollmentId Optional enrollment ID to include enrolled count and teachers.
+ * @param withTeachers Whether to include the teachers field (requires `enrollmentId`).
  * @param withDescription Whether to include the description field.
  * @param withEnrolledCounts Whether to include the enrolled count field.
  */
 fun Subject.toProto(
-    electiveId: Int? = null,
+    enrollmentId: Int? = null,
     withTeachers: Boolean = false,
     withDescription: Boolean = false,
     withEnrolledCounts: Boolean = false
 ): th.ac.bodin2.electives.proto.api.Subject {
     val subject = this
 
-    return subject {
-        id = subject.id.value
-        name = subject.name
-        tag = SubjectTag.forNumber(subject.tag)
-        capacity = subject.capacity
+    val teachers = if (withTeachers && enrollmentId != null) {
+        subject.getTeachers(enrollmentId).map { it.toProto() }
+    } else emptyList()
 
-        subject.location?.let { location = it }
-        subject.code?.let { code = it }
+    val enrolledCount = if (withEnrolledCounts && enrollmentId != null) {
+        Enrollment.assertExists(enrollmentId)
+        getEnrolledCount(enrollmentId)
+    } else null
 
-        subject.thumbnailUrl?.let { thumbnailUrl = it }
-        subject.imageUrl?.let { imageUrl = it }
-
-        if (withDescription) {
-            subject.description?.let { description = it }
-        }
-
-        if (withTeachers && electiveId != null) {
-            subject.getTeachers(electiveId).forEach { teachers += it.toProto() }
-        }
-
-        this@toProto.teamId?.let { teamId = it.value }
-
-        if (withEnrolledCounts && electiveId != null) {
-            Elective.assertExists(electiveId)
-            enrolledCount = getEnrolledCount(electiveId)
-        }
-    }
+    return th.ac.bodin2.electives.proto.api.Subject(
+        id = subject.id.value,
+        name = subject.name,
+        tag = SubjectTag.fromValue(subject.tag) ?: SubjectTag.THAI,
+        capacity = subject.capacity,
+        location = subject.location ?: "",
+        code = subject.code ?: "",
+        thumbnail_url = subject.thumbnailUrl,
+        image_url = subject.imageUrl,
+        description = if (withDescription) subject.description else null,
+        teachers = teachers,
+        group_id = subject.groupId?.value,
+        enrolled_count = enrolledCount,
+    )
 }
 
-fun Team.toProto(): th.ac.bodin2.electives.proto.api.Team {
-    val team = this
+fun Group.toProto(): th.ac.bodin2.electives.proto.api.Group {
+    val group = this
 
-    return team {
-        id = team.id.value
-        name = team.name
-    }
+    return th.ac.bodin2.electives.proto.api.Group(
+        id = group.id.value,
+        name = group.name,
+        type = GroupType.fromValue(group.type) ?: GroupType.CUSTOM,
+    )
 }
 
-fun Elective.toProto(): th.ac.bodin2.electives.proto.api.Elective {
-    val elective = this
+fun Enrollment.toProto(): th.ac.bodin2.electives.proto.api.Enrollment {
+    val enrollment = this
 
-    return elective {
-        id = elective.id.value
-        name = elective.name
-
-        elective.teamId?.let { teamId = it.value }
-        elective.startDate?.toUnixTimestamp()?.let { startDate = it }
-        elective.endDate?.toUnixTimestamp()?.let { endDate = it }
-    }
+    return th.ac.bodin2.electives.proto.api.Enrollment(
+        id = enrollment.id.value,
+        name = enrollment.name,
+        group_id = enrollment.groupId?.value,
+        start_date = enrollment.startDate?.toUnixTimestamp(),
+        end_date = enrollment.endDate?.toUnixTimestamp(),
+    )
 }
 
 internal fun LocalDateTime.toUnixTimestamp(): Long {

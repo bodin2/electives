@@ -1,18 +1,18 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { createFileRoute, useSearch } from '@tanstack/solid-router'
-import { Dialog, TextField, type TextFieldProps } from 'm3-solid'
+import { Dialog, TextField, type TextFieldProps } from 'm3-solid/src'
 import { createSignal, Show } from 'solid-js'
-import { UnauthorizedError } from '../api'
-import { Button } from '../components/Button'
-import SchoolLogo from '../components/images/SchoolLogo'
-import LinkButton from '../components/LinkButton'
-import Page from '../components/Page'
-import { VStack } from '../components/Stack'
-import Version from '../components/Version'
-import { useLoginRedirect } from '../hooks/useAuthRedirect'
-import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
-import { useI18n } from '../providers/I18nProvider'
-import type { RoutePath } from '../main'
+import { UnauthorizedError } from '~/api'
+import { Button } from '~/components/Button'
+import SchoolLogo from '~/components/images/SchoolLogo'
+import LinkButton from '~/components/LinkButton'
+import Page from '~/components/Page'
+import { VStack } from '~/components/Stack'
+import Version from '~/components/Version'
+import { useLoginRedirect } from '~/hooks/useAuthRedirect'
+import { AuthenticationState, TokenType, useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import type { RoutePath } from '~/main'
 
 const log = new Logger('routes/login')
 
@@ -53,13 +53,16 @@ function Login() {
         <Page>
             <Dialog
                 closedBy="none"
-                aria-label={string.LOGIN}
+                aria-label={string.LOGIN()}
                 centerHeadline
                 headline={
                     <VStack gap={16}>
-                        <SchoolLogo style={{ width: '48px', height: '55px', 'align-self': 'center' }} />
+                        <SchoolLogo
+                            style={{ width: '48px', height: '55px', 'align-self': 'center' }}
+                            imageProps={{ fetchpriority: 'high' }}
+                        />
                         <VStack gap={8} alignHorizontal="center" style={{ 'margin-bottom': '16px' }}>
-                            {string.ELECTIVES_SYSTEM()}
+                            <span aria-hidden="true">{string.ELECTIVES_SYSTEM()}</span>
                             <p class="m3-body-medium text-surface-variant">{string.LOGIN_HINT()}</p>
                         </VStack>
                     </VStack>

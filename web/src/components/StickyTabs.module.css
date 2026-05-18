@@ -1,4 +1,5 @@
-.tabs {
+/* TODO: CSS layers in M# Solid */
+.tabs.tabs {
     position: sticky;
     top: var(--sticky-offset);
     outline: 1px solid transparent;

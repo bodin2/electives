@@ -1,4 +1,66 @@
 :root {
+    /* color-scheme: light dark; */
+    --m3c-background: var(--m3c-surface);
+    --m3c-on-background: var(--m3c-on-surface);    
+    --m3c-surface: light-dark(#f3f6fc, #080e18);
+    --m3c-surface-container-lowest: light-dark(#fff, #000);
+    --m3c-surface-container-low: light-dark(#f2f5fd, #0b1421);
+    --m3c-surface-container: light-dark(#eff1f7, #131b29);
+    --m3c-surface-container-high: light-dark(#ebeef3, #152031);
+    --m3c-surface-container-highest: light-dark(#e5e7ec, #1b2331);
+    --m3c-on-surface: light-dark(#1c2738, #d1defa);
+    --m3c-on-surface-variant: light-dark(#525a68, #9eacc6);
+    --m3c-outline: light-dark(#7d8596, #69768e);
+    --m3c-outline-variant: light-dark(#c1c8da, #3b485f);
+    --m3c-inverse-surface: light-dark(#010e22, #f9f9ff);
+    --m3c-inverse-on-surface: light-dark(#979dab, #4f5561);
+    --m3c-primary: light-dark(#005fb4, #589fff);
+    --m3c-on-primary: light-dark(#f8f8ff, #002044);
+    /* --m3c-primary-container: #1c75d4; */
+    --m3c-primary-container: var(--m3c-primary-container-subtle);
+    /* --m3c-on-primary-container: #fff; */
+    --m3c-on-primary-container: var(--m3c-on-primary-container-subtle);
+    --m3c-inverse-primary: light-dark(#539cfe, #005fb3);
+    --m3c-secondary: light-dark(#486085, #879fc8);
+    --m3c-on-secondary: light-dark(#f8f8ff, #022042);
+    --m3c-secondary-container: light-dark(#c2d4f7, #173864);
+    --m3c-on-secondary-container: light-dark(#182a44, #abbfe2);
+    --m3c-tertiary: light-dark(#8b428f, #eb97eb);
+    --m3c-on-tertiary: light-dark(#fff7fa, #591160);
+    --m3c-tertiary-container: #dc8add;
+    --m3c-on-tertiary-container: #4c0154;
+    --m3c-error: light-dark(#a73a34, #ff7b71);
+    --m3c-on-error: light-dark(#fff7f6, #530004);
+    --m3c-error-container: light-dark(#ff7b71, #66080b);
+    --m3c-on-error-container: light-dark(#530004, #ff9288);
+    --m3c-shadow: #000;
+    --m3c-scrim: #000;
+    --m3c-on-on-primary: light-dark(#005eb3, #599fff);
+    --m3c-primary-container-subtle: light-dark(#c3d7ff, #002c59);
+    --m3c-on-primary-container-subtle: light-dark(#1b3853, #75acff);
+    --m3c-secondary-container-subtle: light-dark(#c8dbff, #122c4f);
+    --m3c-on-secondary-container-subtle: light-dark(#354d72, #94acd6);
+    --m3c-tertiary-container-subtle: light-dark(#ffc9fb, #500558);
+    --m3c-on-tertiary-container-subtle: light-dark(#762f7b, #e08ee1);
+    --m3c-error-container-subtle: light-dark(#ffcfca, #5c181b);
+    --m3c-on-error-container-subtle: light-dark(#6e1813, #ff897f);
+	--m3c-primary-fixed: #1c75d4;
+    --m3c-primary-fixed-dim: #0068c4;
+    --m3c-on-primary-fixed: #fff;
+    --m3c-on-primary-fixed-variant: #fefcff;
+    --m3c-secondary-fixed: #b2caf5;
+    --m3c-secondary-fixed-dim: #a5bde7;
+    --m3c-on-secondary-fixed: #142f51;
+    --m3c-on-secondary-fixed-variant: #344c70;
+    --m3c-tertiary-fixed: #ffcfee;
+    --m3c-tertiary-fixed-dim: #f0c1e0;
+    --m3c-primary-dim: light-dark(#005fb4, #589fff);
+    --m3c-secondary-dim: light-dark(#486085, #879fc8);
+    --m3c-tertiary-dim: light-dark(#79536e, #ffe4f3);
+    --m3c-error-dim: light-dark(#a73a34, #ff7b71);
+}
+
+:root.legacy-theme {
 	--m3c-primary: rgb(83 90 146);
 	--m3c-surface-tint: rgb(83 90 146);
 	--m3c-on-primary: rgb(255 255 255);

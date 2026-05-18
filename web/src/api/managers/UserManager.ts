@@ -1,6 +1,16 @@
-import { User } from '../structures'
-import { AdminAddUserRequest, AdminListUsersResponse, AdminUserPatch, RawUser, UnauthorizedError } from '../types'
+import { UsersService_TeacherSubjects } from '@bodin2/electives-common/proto/api'
+import { type Subject, User } from '../structures'
+import {
+    AdminAddUserRequest,
+    AdminBulkAddUsersRequest,
+    AdminBulkDeleteUsersRequest,
+    AdminListUsersResponse,
+    AdminUserPatch,
+    RawUser,
+    UnauthorizedError,
+} from '../types'
 import type { Cache } from '../cache'
+import type { Client } from '../client'
 import type { RESTClient } from '../rest'
 import type { CacheableManager } from '.'
 
@@ -21,15 +31,30 @@ export class UserManager implements CacheableManager {
     readonly admin: UserAdminActions
 
     constructor(
+        private readonly client: Client<unknown>,
         private readonly rest: RESTClient,
         cache: Cache<number, User>,
     ) {
         this.cache = cache
-        this.admin = new UserAdminActions(rest, this)
+        this.admin = new UserAdminActions(client, rest, this)
     }
 
     clearCache(): void {
         this.cache.clear()
+    }
+
+    /**
+     * Get or create a User instance, updating it if it already exists in cache.
+     */
+    _getOrCreate(data: RawUser, cache = true): User {
+        let user = this.cache.get(data.id)
+        if (user) {
+            user.update(data)
+        } else {
+            user = new User(this.client, data)
+            if (cache) this.cache.set(user.id, user)
+        }
+        return user
     }
 
     /**
@@ -51,14 +76,7 @@ export class UserManager implements CacheableManager {
         const data = await this.rest.get<RawUser>(`/users/${id}`, {
             decoder: RawUser,
         })
-        const user = new User(data)
-
-        // Cache the result
-        if (cache) {
-            this.cache.set(user.id, user)
-        }
-
-        return user
+        return this._getOrCreate(data, cache)
     }
 
     /**
@@ -80,6 +98,25 @@ export class UserManager implements CacheableManager {
     }
 
     /**
+     * Fetch subjects that a teacher is assigned to, grouped by enrollment
+     *
+     * @param userId The user's ID, or "@me" for the authenticated user
+     */
+    async fetchTeacherSubjects(userId: number | '@me'): Promise<Map<number, Subject>> {
+        const data = await this.rest.get<UsersService_TeacherSubjects>(`/users/${userId}/subjects`, {
+            decoder: UsersService_TeacherSubjects,
+        })
+
+        const subjects = new Map<number, Subject>()
+        for (const [enrollmentIdStr, rawSubject] of Object.entries(data.subjects)) {
+            const enrollmentId = Number.parseInt(enrollmentIdStr, 10)
+            subjects.set(enrollmentId, this.client.subjects._getOrCreate(rawSubject))
+        }
+
+        return subjects
+    }
+
+    /**
      * Resolve a user ID from various inputs
      */
     resolveId(userResolvable: User | number): number {
@@ -92,6 +129,7 @@ export class UserManager implements CacheableManager {
 
 export class UserAdminActions {
     constructor(
+        private readonly client: Client<unknown>,
         private readonly rest: RESTClient,
         private readonly manager: UserManager,
     ) {}
@@ -115,16 +153,14 @@ export class UserAdminActions {
     /**
      * Fetch students (paginated)
      * @param page The page number (1-based)
+     * @param query The search query
      */
-    async fetchStudents(page = 1): Promise<{ users: User[]; total: number }> {
+    async fetchStudents(page = 1, query?: string): Promise<{ users: User[]; total: number }> {
         const data = await this.rest.get<AdminListUsersResponse>('/admin/users/students', {
-            query: { page },
+            query: { page, query },
             decoder: AdminListUsersResponse,
         })
-        const users = data.users.map(u => new User(u))
-        for (const user of users) {
-            this.manager.cache.set(user.id, user)
-        }
+        const users = data.users.map(u => this.manager._getOrCreate(u))
         return { users, total: data.total }
     }
 
@@ -132,16 +168,14 @@ export class UserAdminActions {
      * Fetch teachers (paginated)
      *
      * @param page The page number (1-based)
+     * @param query The search query
      */
-    async fetchTeachers(page = 1): Promise<{ users: User[]; total: number }> {
+    async fetchTeachers(page = 1, query?: string): Promise<{ users: User[]; total: number }> {
         const data = await this.rest.get<AdminListUsersResponse>('/admin/users/teachers', {
-            query: { page },
+            query: { page, query },
             decoder: AdminListUsersResponse,
         })
-        const users = data.users.map(u => new User(u))
-        for (const user of users) {
-            this.manager.cache.set(user.id, user)
-        }
+        const users = data.users.map(u => this.manager._getOrCreate(u))
         return { users, total: data.total }
     }
 
@@ -156,9 +190,7 @@ export class UserAdminActions {
             encoder: AdminAddUserRequest,
             decoder: RawUser,
         })
-        const user = new User(data)
-        this.manager.cache.set(user.id, user)
-        return user
+        return this.manager._getOrCreate(data)
     }
 
     /**
@@ -167,11 +199,12 @@ export class UserAdminActions {
      * @param id The user's ID
      * @param patch The fields to update
      */
-    async patch(id: number, patch: AdminUserPatch): Promise<void> {
-        await this.rest.patch(`/admin/users/${id}`, patch, {
+    async patch(id: number, patch: AdminUserPatch): Promise<User> {
+        const data = await this.rest.patch<RawUser>(`/admin/users/${id}`, patch, {
             encoder: AdminUserPatch,
+            decoder: RawUser,
         })
-        this.manager.cache.delete(id)
+        return this.manager._getOrCreate(data)
     }
 
     /**
@@ -182,5 +215,39 @@ export class UserAdminActions {
     async delete(id: number): Promise<void> {
         await this.rest.delete(`/admin/users/${id}`)
         this.manager.cache.delete(id)
+    }
+
+    /**
+     * Bulk add users
+     *
+     * @param users The users to add
+     */
+    async bulkAdd(users: AdminAddUserRequest[]): Promise<User[]> {
+        const data = await this.rest.post<AdminListUsersResponse>(
+            '/admin/users/bulk',
+            { values: users },
+            {
+                encoder: AdminBulkAddUsersRequest,
+                decoder: AdminListUsersResponse,
+            },
+        )
+        return data.users.map(u => this.manager._getOrCreate(u))
+    }
+
+    /**
+     * Bulk delete users
+     *
+     * @param users The users to delete
+     */
+    async bulkDelete(users: (User | number)[]): Promise<void> {
+        const userIds = users.map(u => (typeof u === 'number' ? u : u.id))
+        await this.rest.request('/admin/users/bulk', {
+            method: 'DELETE',
+            body: { userIds },
+            encoder: AdminBulkDeleteUsersRequest,
+        })
+        for (const id of userIds) {
+            this.manager.cache.delete(id)
+        }
     }
 }

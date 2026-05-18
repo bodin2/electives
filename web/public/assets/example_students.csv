@@ -1,0 +1,4 @@
+id,prefix,first_name,middle_name,last_name,password,grade,room,program,groups
+10001,นางสาว,กัญญา,,วัฒนา,password123,ม.5,ม.5/14,,
+10002,นาย,พสุธร,,บัวหล้า,securePassword,ม.6,ม.6/13,,"Custom Group 1, Custom Group 2"
+10003,Mr.,Jasper,Reid,Callahan,password,ม.4,ม.4/9,"English Program",

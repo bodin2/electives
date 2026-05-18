@@ -4,3 +4,60 @@
     row-gap: 0px;
     flex-wrap: wrap;
 }
+
+.description {
+    color: var(--m3c-on-surface-variant);
+    word-break: break-word;
+
+    flex: 1;
+
+    h1, h2, h3 {
+        color: var(--m3c-on-surface);
+        margin-block: 0.75em;
+        font-weight: 400;
+    }
+
+    h2, h3 {
+        font-weight: 450;
+    }
+
+    h4, h5, h6 {
+        color: var(--m3c-on-surface);
+        margin-block: 0.5em;
+        font-weight: 500;
+    }
+
+    ul {
+        list-style: disc;
+        padding-left: 1em;
+    }
+
+    ol {
+        padding-left: 1.25em;
+    }
+
+    p, span, ul, ol {
+        color: var(--m3c-on-surface-variant);
+        word-wrap: break-word;
+    }
+}
+
+.thumbnail {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--m3-shape-small);
+    object-fit: cover;
+    background-color: var(--m3c-surface-container-lowest);
+    box-shadow: var(--m3-elevation-3);
+    transform-origin: bottom left;
+    transition: all var(--m3-easing-slow-spatial);
+
+    &:hover {
+        width: 128px;
+        height: 128px;
+    }
+}
+
+:where(.labelSubText) {
+    color: var(--m3c-on-surface-variant);
+}

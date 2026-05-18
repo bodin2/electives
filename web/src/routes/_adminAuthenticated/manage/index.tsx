@@ -4,15 +4,15 @@ import TeamIcon from '@iconify-icons/mdi/people-group'
 import TeacherIcon from '@iconify-icons/mdi/teacher'
 import TicketIcon from '@iconify-icons/mdi/ticket'
 import { createFileRoute } from '@tanstack/solid-router'
-import { Icon } from 'm3-solid'
-import IconLabel from '../../../components/IconLabel'
-import { LinkCard } from '../../../components/LinkCard'
-import Page from '../../../components/Page'
-import { VStack } from '../../../components/Stack'
-import { useI18n } from '../../../providers/I18nProvider'
+import { Icon } from 'm3-solid/src'
+import IconLabel from '~/components/IconLabel'
+import { LinkCard } from '~/components/LinkCard'
+import Page from '~/components/Page'
+import { VStack } from '~/components/Stack'
+import { useI18n } from '~/providers/I18nProvider'
 import styles from './index.module.css'
 import type { IconifyIcon } from '@iconify/types'
-import type { RoutePath } from '../../../main'
+import type { RoutePath } from '~/main'
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/')({
     component: AdminDashboard,
@@ -29,7 +29,7 @@ function AdminDashboard() {
                     <VStack gap={8} class={styles.cardGrid}>
                         <GridCard icon={PeopleIcon} title={string.STUDENTS()} to="/manage/students" />
                         <GridCard icon={TeacherIcon} title={string.TEACHERS()} to="/manage/teachers" />
-                        <GridCard icon={TeamIcon} title={string.TEAMS()} to="/manage/teams" />
+                        <GridCard icon={TeamIcon} title={string.GROUPS()} to="/manage/groups" />
                     </VStack>
                 </VStack>
                 <VStack gap={8}>

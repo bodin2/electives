@@ -1,17 +1,17 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { createFileRoute } from '@tanstack/solid-router'
-import { Dialog } from 'm3-solid'
+import { Dialog } from 'm3-solid/src'
 import { createSignal } from 'solid-js'
-import { importPrivateKey } from '../../api/ssh'
-import { Button } from '../../components/Button'
-import SchoolLogo from '../../components/images/SchoolLogo'
-import LinkButton from '../../components/LinkButton'
-import Page from '../../components/Page'
-import { VStack } from '../../components/Stack'
-import Version from '../../components/Version'
-import { useLoginRedirect } from '../../hooks/useAuthRedirect'
-import { AuthenticationState, TokenType, useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
+import { importPrivateKey } from '~/api/ssh'
+import { Button } from '~/components/Button'
+import SchoolLogo from '~/components/images/SchoolLogo'
+import LinkButton from '~/components/LinkButton'
+import Page from '~/components/Page'
+import { VStack } from '~/components/Stack'
+import Version from '~/components/Version'
+import { useLoginRedirect } from '~/hooks/useAuthRedirect'
+import { AuthenticationState, TokenType, useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
 
 const log = new Logger('routes/manage/login')
 
@@ -58,13 +58,16 @@ function AdminLogin() {
         <Page>
             <Dialog
                 closedBy="none"
-                aria-label={string.ADMIN_LOGIN}
+                aria-label={string.ADMIN_LOGIN()}
                 centerHeadline
                 headline={
                     <VStack gap={16}>
-                        <SchoolLogo style={{ width: '48px', height: '55px', 'align-self': 'center' }} />
+                        <SchoolLogo
+                            style={{ width: '48px', height: '55px', 'align-self': 'center' }}
+                            imageProps={{ fetchpriority: 'high' }}
+                        />
                         <VStack gap={8} alignHorizontal="center">
-                            {string.ADMIN_LOGIN()}
+                            <span aria-hidden="true">{string.ADMIN_LOGIN()}</span>
                             <p class="m3-body-medium text-surface-variant">{string.ADMIN_LOGIN_HINT()}</p>
                         </VStack>
                     </VStack>

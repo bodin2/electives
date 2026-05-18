@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@protobuf-ts/protoc": "2.11.1",
-    "ts-proto": "2.11.6"
+    "ts-proto": "2.11.8"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.12.0"

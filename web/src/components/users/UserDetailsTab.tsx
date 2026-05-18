@@ -1,20 +1,19 @@
-import CloseIcon from '@iconify-icons/mdi/close'
 import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import HashTagIcon from '@iconify-icons/mdi/hashtag-box-outline'
 import LabelOutlineIcon from '@iconify-icons/mdi/label-outline'
 import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
 import PlusIcon from '@iconify-icons/mdi/plus'
-import { TextField } from 'm3-solid'
-import { createSignal, For, Show } from 'solid-js'
+import { TextField } from 'm3-solid/src'
+import { createSignal, Show } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { Portal } from 'solid-js/web'
-import { type Team, type User, UserType } from '../../api'
-import { useI18n } from '../../providers/I18nProvider'
-import { nonNull } from '../../utils'
-import Badge from '../Badge'
+import { type Group, GroupType, User, UserType } from '~/api'
+import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
+import { Badges, GroupBadge } from '../Badges'
 import { Button } from '../Button'
-import AddTeamToStudentDialog from '../dialogs/AddTeamToStudentDialog'
-import TextFieldDialog from '../dialogs/TextFieldDialog'
+import AddGroupToStudentDialog from '../dialogs/AddGroupToStudentDialog'
+import TextFieldDialog from '../dialogs/base/TextFieldDialog'
 import IconLabel from '../IconLabel'
 import { Option, Select } from '../Select'
 import { HStack, VStack } from '../Stack'
@@ -28,7 +27,7 @@ interface UserDetailsTabProps {
     descriptionClass?: string
     labelClass?: string
     initialType?: UserType
-    teams?: Team[]
+    groups?: Group[]
 }
 
 export default function UserDetailsTab(props: UserDetailsTabProps) {
@@ -36,7 +35,8 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
     const ctx = useUserDisplayContext()
 
     const [avatarDialogOpen, setAvatarDialogOpen] = createSignal(false)
-    const [addTeamOpen, setAddTeamOpen] = createSignal(false)
+    const [addGroupOpen, setAddGroupOpen] = createSignal(false)
+    const [editingSlot, setEditingSlot] = createSignal<GroupType | null>(null)
 
     const [fieldErrors, setFieldErrors] = createStore<Record<string, string | undefined>>({})
 
@@ -96,7 +96,7 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
     return (
         <Show when={ctx.user}>
             <VStack gap={32}>
-                <HStack gap={32} alignVertical="center" wrap>
+                <HStack gap={32} alignVertical="center">
                     {/** biome-ignore lint/a11y/noStaticElementInteractions: Intentional */}
                     {/** biome-ignore lint/a11y/useKeyWithClickEvents: Intentional */}
                     <div
@@ -125,23 +125,39 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                         </Show>
                     </div>
 
-                    <VStack gap={4} grow>
-                        <HStack alignVertical="center" gap={8} wrap>
-                            <h1 class="m3-headline-medium">{user().fullName}</h1>
-                            <Show when={user().isStudent()}>
-                                <UserTeamsRenderer user={user()} />
+                    <VStack grow>
+                        <HStack alignVertical="center" wrap>
+                            <h1 class="m3-headline-medium">{user().displayName}</h1>
+                            <HStack wrap style={{ 'row-gap': '4px' }}>
+                                <Show when={user().isStudent()}>
+                                    <FixedSlotBadge
+                                        user={user()}
+                                        slot={GroupType.GRADE}
+                                        onEdit={setEditingSlot}
+                                        required
+                                    />
+                                    <FixedSlotBadge
+                                        user={user()}
+                                        slot={GroupType.ROOM}
+                                        onEdit={setEditingSlot}
+                                        required
+                                    />
+                                    <FixedSlotBadge user={user()} slot={GroupType.PROGRAM} onEdit={setEditingSlot} />
+                                </Show>
+                                <BadgeListEditor user={user()} />
                                 <HStack gap={4} alignVertical="center" wrap>
                                     <Button
                                         size="xs"
                                         variant="tonal"
                                         icon={PlusIcon}
-                                        onClick={() => setAddTeamOpen(true)}
+                                        onClick={() => setAddGroupOpen(true)}
                                     >
-                                        {string.ADD_TEAM()}
+                                        {string.ADD_GROUP()}
                                     </Button>
                                 </HStack>
-                            </Show>
+                            </HStack>
                         </HStack>
+
                         <HStack class={styles.infoRow}>
                             <Show when={!ctx.creating}>
                                 <IconLabel icon={HashTagIcon} text={String(user().id)} class={props.labelClass} />
@@ -200,6 +216,19 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                     </Show>
 
                     <TextField
+                        name="prefix"
+                        variant="outlined"
+                        autocomplete="honorific-prefix"
+                        label={string.PREFIX()}
+                        value={user().prefix ?? ''}
+                        onInput={e => {
+                            ctx.onEdit?.('prefix', e.currentTarget.value, 'patchPrefix')
+                            validate('prefix', e.target)
+                        }}
+                        disabled={!ctx.editable}
+                    />
+
+                    <TextField
                         required
                         name="firstName"
                         variant="outlined"
@@ -247,7 +276,7 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                             name="newPassword"
                             variant="outlined"
                             autocomplete={ctx.creating ? 'new-password' : 'current-password'}
-                            type="password"
+                            type="text"
                             label={ctx.creating ? string.PASSWORD() : string.NEW_PASSWORD()}
                             value={ctx.userData?.newPassword ?? ''}
                             onInput={e => {
@@ -269,20 +298,51 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
             </VStack>
 
             <Portal>
-                <AddTeamToStudentDialog
-                    open={addTeamOpen()}
-                    onClose={team => {
-                        setAddTeamOpen(false)
-                        if (team && ctx.onEdit) {
+                <AddGroupToStudentDialog
+                    open={addGroupOpen()}
+                    onClose={group => {
+                        setAddGroupOpen(false)
+                        if (group && ctx.onEdit) {
                             ctx.onEdit(
-                                'teams',
-                                [...user().teams.map(t => t.toJSON()), team.toJSON()].sort((a, b) => a.id - b.id),
-                                'patchTeams',
+                                'groups',
+                                [...user().groups, group].sort(User.GROUP_SORTER).map(g => g.toJSON()),
+                                'patchGroups',
                             )
                         }
                     }}
-                    teams={props.teams || []}
-                    currentTeamIds={user().teams.map(t => t.id)}
+                    groups={(props.groups || []).filter(g => user().isTeacher() || g.type === GroupType.CUSTOM)}
+                    currentGroupIds={user().groups.map(g => g.id)}
+                    headline={user().isTeacher() ? string.ADD_GROUP() : undefined}
+                />
+                <AddGroupToStudentDialog
+                    open={editingSlot() !== null}
+                    onClose={group => {
+                        const slot = editingSlot()
+                        setEditingSlot(null)
+                        if (slot === null || !group || !ctx.onEdit) return
+                        // Replace the existing same-typed group (if any) with the picked one
+                        const next = [...user().groups.filter(g => g.type !== slot), group]
+                            .sort(User.GROUP_SORTER)
+                            .map(g => g.toJSON())
+                        ctx.onEdit('groups', next, 'patchGroups')
+                    }}
+                    groups={(props.groups || []).filter(g => g.type === editingSlot())}
+                    currentGroupIds={[]}
+                    initialId={user().groups.find(g => g.type === editingSlot())?.id}
+                    headline={slotHeadline(editingSlot(), string)}
+                    selectLabel={slotLabel(editingSlot(), string)}
+                    selectPlaceholder={slotPlaceholder(editingSlot(), string)}
+                    onClear={
+                        // Only the PROGRAM slot is server-side optional (gradeId/roomId are required).
+                        editingSlot() === GroupType.PROGRAM && ctx.onEdit
+                            ? () => {
+                                  const next = user()
+                                      .groups.filter(g => g.type !== GroupType.PROGRAM)
+                                      .map(g => g.toJSON())
+                                  nonNull(ctx.onEdit)('groups', next, 'patchGroups')
+                              }
+                            : undefined
+                    }
                 />
                 <TextFieldDialog
                     dialog={{ quick: true }}
@@ -297,32 +357,71 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
     )
 }
 
-function UserTeamsRenderer(props: { user: User }) {
+function BadgeListEditor(props: { user: User }) {
     const ctx = useUserDisplayContext()
 
     return (
-        <For each={props.user.teams}>
-            {team => (
-                <Badge variant="tonal" class={styles.badge}>
-                    {team.name}
-                    <Show when={ctx.editable && ctx.onEdit}>
-                        <Button
-                            size="xs"
-                            variant="text"
-                            icon={CloseIcon}
-                            iconType="only"
-                            class={styles.deleteButton}
-                            onClick={() =>
-                                nonNull(ctx.onEdit)(
-                                    'teams',
-                                    props.user.teams.filter(t => t.id !== team.id).map(t => t.toJSON()),
-                                    'patchTeams',
-                                )
-                            }
-                        />
-                    </Show>
-                </Badge>
-            )}
-        </For>
+        <Badges
+            groups={props.user.groups}
+            types={props.user.isTeacher() ? undefined : [GroupType.CUSTOM]}
+            onRemove={
+                ctx.editable && ctx.onEdit
+                    ? group =>
+                          nonNull(ctx.onEdit)(
+                              'groups',
+                              props.user.groups.filter(g => g.id !== group.id).map(g => g.toJSON()),
+                              'patchGroups',
+                          )
+                    : undefined
+            }
+        />
     )
+}
+
+function FixedSlotBadge(props: { user: User; slot: GroupType; required?: boolean; onEdit: (slot: GroupType) => void }) {
+    const { string } = useI18n()
+    const ctx = useUserDisplayContext()
+    const current = () => props.user.groups.find(g => g.type === props.slot)
+
+    return (
+        <GroupBadge
+            group={current()}
+            fallbackType={props.slot}
+            placeholder={slotPlaceholder(props.slot, string)}
+            required={props.required}
+            onEdit={ctx.editable && ctx.onEdit ? () => props.onEdit(props.slot) : undefined}
+        />
+    )
+}
+
+type StringApi = ReturnType<typeof useI18n>['string']
+
+function slotPlaceholder(slot: GroupType | null, string: StringApi): string {
+    switch (slot) {
+        case GroupType.GRADE:
+            return string.SELECT_GRADE_HINT()
+        case GroupType.ROOM:
+            return string.SELECT_ROOM_HINT()
+        case GroupType.PROGRAM:
+            return string.SELECT_PROGRAM_HINT()
+        default:
+            return string.SELECT_GROUP_HINT()
+    }
+}
+
+function slotLabel(slot: GroupType | null, string: StringApi): string {
+    switch (slot) {
+        case GroupType.GRADE:
+            return string.GROUP_TYPE_GRADE()
+        case GroupType.ROOM:
+            return string.GROUP_TYPE_ROOM()
+        case GroupType.PROGRAM:
+            return string.GROUP_TYPE_PROGRAM()
+        default:
+            return string.GROUPS()
+    }
+}
+
+function slotHeadline(slot: GroupType | null, string: StringApi): string {
+    return slotPlaceholder(slot, string)
 }

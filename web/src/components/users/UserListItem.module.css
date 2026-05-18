@@ -1,0 +1,21 @@
+.selected {
+    --m3-list-item-container-color: var(--m3c-primary-container);
+}
+
+/* TODO: Add layers in M3 Solid */
+.centerChildrenVertically.centerChildrenVertically {
+    align-items: center;
+}
+
+.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: var(--m3-shape-full);
+    background-color: var(--m3c-surface-container-lowest);
+}

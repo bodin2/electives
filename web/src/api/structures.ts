@@ -1,41 +1,82 @@
-import { type RawElective, type RawSubject, type RawTeam, type RawUser, type SubjectTag, UserType } from './types'
+import {
+    GroupType,
+    type RawEnrollment,
+    type RawGroup,
+    type RawSubject,
+    type RawUser,
+    type SubjectTag,
+    UserType,
+} from './types'
+import type { Client } from './client'
 
-export class Team {
-    readonly id: number
-    readonly name: string
+export class Group {
+    id: number
+    name: string
+    type: GroupType
+    readonly client: Client<unknown>
 
-    constructor(data: RawTeam) {
+    constructor(client: Client<unknown>, data: RawGroup) {
+        this.client = client
         this.id = data.id
         this.name = data.name
+        this.type = data.type
     }
 
-    toJSON(): RawTeam {
+    update(data: Partial<RawGroup>) {
+        if (data.id !== undefined) this.id = data.id
+        if (data.name !== undefined) this.name = data.name
+        if (data.type !== undefined) this.type = data.type
+    }
+
+    /** Whether this group is a freeform CUSTOM group (not slotted GRADE/ROOM/PROGRAM) */
+    isCustom(): boolean {
+        return this.type === GroupType.CUSTOM
+    }
+
+    toJSON(): RawGroup {
         return {
             id: this.id,
             name: this.name,
+            type: this.type,
         }
     }
 }
 
 export class User {
-    readonly id: number
-    readonly firstName: string
-    readonly middleName?: string
-    readonly lastName?: string
-    readonly type: UserType
-    /** The user's avatar as bytes (optional) */
-    readonly avatarUrl?: string
-    /** Teams the user belongs to (only for students) */
-    readonly teams: Team[]
+    static GROUP_TYPE_SORT_ORDER: Record<GroupType, number> = {
+        [GroupType.GRADE]: 0,
+        [GroupType.ROOM]: 1,
+        [GroupType.PROGRAM]: 2,
+        [GroupType.CUSTOM]: 3,
+        [GroupType.UNRECOGNIZED]: 4,
+    }
 
-    constructor(data: RawUser) {
+    static GROUP_SORTER = (a: Group, b: Group) =>
+        User.GROUP_TYPE_SORT_ORDER[a.type] - User.GROUP_TYPE_SORT_ORDER[b.type] || a.name.localeCompare(b.name)
+
+    id: number
+    firstName: string
+    prefix?: string
+    middleName?: string
+    lastName?: string
+    type: UserType
+    /** The user's avatar as bytes (optional) */
+    avatarUrl?: string
+    /** Groups the user belongs to (only for students) */
+    groups: Group[]
+
+    readonly client: Client<unknown>
+
+    constructor(client: Client<unknown>, data: RawUser) {
+        this.client = client
         this.id = data.id
         this.firstName = data.firstName
+        this.prefix = data.prefix
         this.middleName = data.middleName
         this.lastName = data.lastName
         this.type = data.type
         this.avatarUrl = data.avatarUrl
-        this.teams = (data.teams ?? []).map(t => new Team(t)).sort((a, b) => a.id - b.id)
+        this.groups = (data.groups ?? []).map(g => client.groups._getOrCreate(g)).sort(User.GROUP_SORTER)
     }
 
     /**
@@ -44,6 +85,14 @@ export class User {
     get fullName(): string {
         const names = [this.firstName, this.middleName, this.lastName].filter(Boolean)
         return names.join(' ')
+    }
+
+    /**
+     * Get the user's display name, including their full name and prefixes.
+     */
+    get displayName(): string {
+        const parts = [this.prefix, this.firstName, this.middleName, this.lastName].filter(Boolean)
+        return parts.join(' ')
     }
 
     /**
@@ -61,57 +110,116 @@ export class User {
     }
 
     /**
-     * Check if the user belongs to a specific team
+     * Check if the user is an admin
      */
-    hasTeam(teamId: number): boolean {
-        return this.teams.some(t => t.id === teamId)
+    isAdmin(): boolean {
+        return this.type === UserType.ADMIN
+    }
+
+    /**
+     * Check if the user belongs to a specific group
+     */
+    hasGroup(groupId: number): boolean {
+        return this.groups.some(g => g.id === groupId)
+    }
+
+    /** The student's GRADE group, if any. */
+    get grade(): Group | undefined {
+        return this.groups.find(g => g.type === GroupType.GRADE)
+    }
+
+    /** The student's ROOM group, if any. */
+    get room(): Group | undefined {
+        return this.groups.find(g => g.type === GroupType.ROOM)
+    }
+
+    /** The student's PROGRAM group, if any. */
+    get program(): Group | undefined {
+        return this.groups.find(g => g.type === GroupType.PROGRAM)
+    }
+
+    /** All of the student's CUSTOM groups */
+    get customGroups(): Group[] {
+        return this.groups.filter(g => g.type === GroupType.CUSTOM)
+    }
+
+    /**
+     * Update the user with new data.
+     * Only updates fields that are present in the data.
+     *
+     * @param data The new user data
+     */
+    update(data: Partial<RawUser>): void {
+        if (data.firstName !== undefined) this.firstName = data.firstName
+        if ('prefix' in data) this.prefix = data.prefix
+        if ('middleName' in data) this.middleName = data.middleName
+        if ('lastName' in data) this.lastName = data.lastName
+        if (data.type !== undefined) this.type = data.type
+        if ('avatarUrl' in data) this.avatarUrl = data.avatarUrl
+        if (data.groups !== undefined)
+            this.groups = data.groups.map(g => this.client.groups._getOrCreate(g)).sort(User.GROUP_SORTER)
     }
 
     toJSON(): RawUser {
         return {
             id: this.id,
             firstName: this.firstName,
+            prefix: this.prefix,
             middleName: this.middleName,
             lastName: this.lastName,
             type: this.type,
             avatarUrl: this.avatarUrl,
-            teams: this.teams.map(t => t.toJSON()),
+            groups: this.groups.map(g => g.toJSON()),
         }
     }
 }
 
-export class Elective {
-    readonly id: number
-    readonly name: string
-    readonly startDate?: Date
-    readonly endDate?: Date
-    readonly teamId: number | null
-    /** Subjects within this elective. `null` if not fetched. */
-    subjects: Subject[] | null = null
+export class Enrollment {
+    id: number
+    name: string
+    startDate?: Date
+    endDate?: Date
+    groupId: number | null
 
-    constructor(data: RawElective) {
+    readonly client: Client<unknown>
+
+    constructor(client: Client<unknown>, data: RawEnrollment) {
+        this.client = client
         this.id = data.id
         this.name = data.name
         this.startDate = data.startDate ? new Date(data.startDate * 1000) : undefined
         this.endDate = data.endDate ? new Date(data.endDate * 1000) : undefined
-        this.teamId = data.teamId ?? null
+        this.groupId = data.groupId ?? null
+    }
+
+    /** Subjects within this enrollment. `null` if not fetched. */
+    get subjects(): Subject[] | null {
+        return this.client.subjects.resolveAll(this.id) ?? null
+    }
+
+    update(data: Partial<RawEnrollment>): void {
+        if (data.name !== undefined) this.name = data.name
+        if ('startDate' in data) this.startDate = data.startDate ? new Date(data.startDate * 1000) : undefined
+        if ('endDate' in data) this.endDate = data.endDate ? new Date(data.endDate * 1000) : undefined
+        if ('groupId' in data) this.groupId = data.groupId ?? null
     }
 
     /**
-     * Check if the elective selection period is currently active
+     * Check if the selection is currently open
      */
     isSelectionOpen(): boolean {
         const now = Date.now()
-
-        if (this.startDate && now < this.startDate.getTime()) {
-            return false
-        }
-
-        if (this.endDate && now > this.endDate.getTime()) {
-            return false
-        }
-
+        if (this.startDate && now < this.startDate.getTime()) return false
+        if (this.endDate && now > this.endDate.getTime()) return false
         return true
+    }
+
+    /**
+     * Check if the selection has ended
+     */
+    isSelectionEnded(): boolean {
+        if (!this.endDate) return false
+        return Date.now() > this.endDate.getTime()
     }
 
     /**
@@ -136,32 +244,33 @@ export class Elective {
         return Math.max(0, diff)
     }
 
-    toJSON(): RawElective {
+    toJSON(): RawEnrollment {
         return {
             id: this.id,
             name: this.name,
             startDate: this.startDate ? Math.floor(this.startDate.getTime() / 1000) : undefined,
             endDate: this.endDate ? Math.floor(this.endDate.getTime() / 1000) : undefined,
-            teamId: this.teamId ?? undefined,
+            groupId: this.groupId ?? undefined,
         }
     }
 }
 
 export class Subject {
-    readonly id: number
-    readonly name: string
-    readonly description?: string
-    readonly code: string
-    readonly tag: SubjectTag
-    readonly location: string
-    readonly capacity: number
-    readonly teamId?: number
-    /** Teachers assigned to this subject */
-    readonly teachers: User[]
-    readonly thumbnailUrl?: string
-    readonly imageUrl?: string
+    id: number
+    name: string
+    description?: string
+    code: string
+    tag: SubjectTag
+    location: string
+    capacity: number
+    groupId?: number
+    thumbnailUrl?: string
+    imageUrl?: string
 
-    constructor(data: RawSubject) {
+    readonly client: Client<unknown>
+
+    constructor(client: Client<unknown>, data: RawSubject) {
+        this.client = client
         this.id = data.id
         this.name = data.name
         this.description = data.description
@@ -169,27 +278,42 @@ export class Subject {
         this.tag = data.tag
         this.location = data.location
         this.capacity = data.capacity
-        this.teamId = data.teamId
-        this.teachers = data.teachers.map(t => new User(t))
+        this.groupId = data.groupId
         this.thumbnailUrl = data.thumbnailUrl
         this.imageUrl = data.imageUrl
+    }
+
+    /**
+     * Update the subject with new data.
+     * Only updates fields that are present in the data.
+     *
+     * @param data The new subject data
+     */
+    update(data: Partial<RawSubject>): void {
+        if (data.name !== undefined) this.name = data.name
+        if ('description' in data) this.description = data.description
+        if (data.code !== undefined) this.code = data.code
+        if (data.tag !== undefined) this.tag = data.tag
+        if (data.location !== undefined) this.location = data.location
+        if (data.capacity !== undefined) this.capacity = data.capacity
+        if ('groupId' in data) this.groupId = data.groupId
+        if ('thumbnailUrl' in data) this.thumbnailUrl = data.thumbnailUrl
+        if ('imageUrl' in data) this.imageUrl = data.imageUrl
     }
 
     canUserEnroll(user: User): boolean {
         if (!user.isStudent()) return false
 
-        if (this.teamId != null && !user.hasTeam(this.teamId)) {
+        if (this.groupId != null && !user.hasGroup(this.groupId)) {
             return false
         }
 
         return true
     }
 
-    isTaughtBy(user: User): boolean {
-        if (!user.isTeacher()) return false
-        return this.teachers.some(t => t.id === user.id)
-    }
-
+    /**
+     * This will not include teachers, as a subject is not tied to any specific enrollment.
+     */
     toJSON(): RawSubject {
         return {
             id: this.id,
@@ -199,8 +323,8 @@ export class Subject {
             tag: this.tag,
             location: this.location,
             capacity: this.capacity,
-            teamId: this.teamId,
-            teachers: this.teachers.map(t => t.toJSON()),
+            groupId: this.groupId,
+            teachers: [],
             thumbnailUrl: this.thumbnailUrl,
             imageUrl: this.imageUrl,
         }

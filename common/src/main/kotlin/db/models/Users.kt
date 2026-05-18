@@ -6,6 +6,9 @@ import org.jetbrains.exposed.v1.javatime.datetime
 object Users : IdTable<Int>("users") {
     override val id = integer("id").entityId()
 
+    // Mr. Ms. Dr. etc.
+    val prefix = varchar("prefix", 255).nullable()
+
     val firstName = varchar("first_name", 255)
     val middleName = varchar("middle_name", 255).nullable()
     val lastName = varchar("last_name", 255).nullable()

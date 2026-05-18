@@ -1,9 +1,9 @@
 import LogOutIcon from '@iconify-icons/mdi/logout'
 import { splitProps } from 'solid-js'
-import { useAPI } from '../../providers/APIProvider'
-import { useI18n } from '../../providers/I18nProvider'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
-import type { ButtonProps } from 'm3-solid'
+import type { ButtonProps } from 'm3-solid/src'
 import type { JSX } from 'solid-js/h/jsx-runtime'
 
 export default function LogOutButton(

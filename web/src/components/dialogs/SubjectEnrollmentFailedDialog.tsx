@@ -1,4 +1,4 @@
-import { useI18n } from '../../providers/I18nProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import { Dialog } from '../Dialog'
 

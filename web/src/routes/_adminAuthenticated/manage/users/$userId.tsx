@@ -1,17 +1,18 @@
-import { createFileRoute, useRouter } from '@tanstack/solid-router'
-import { batch, createEffect, createMemo, createSignal, on, onCleanup, onMount } from 'solid-js'
-import { type AdminUserPatch, User, UserType } from '../../../../api'
-import Page from '../../../../components/Page'
-import {
-    type UserData,
-    type UserPatchSetterKey,
-    useUserDisplayContext,
-} from '../../../../components/users/UserDisplayContext'
-import UserInfo from '../../../../components/users/UserInfo'
-import { useAPI } from '../../../../providers/APIProvider'
-import { useI18n } from '../../../../providers/I18nProvider'
-import { Route as StudentsRoute } from '../students'
-import { Route as TeachersRoute } from '../teachers'
+import { createQuery, useQueryClient } from '@tanstack/solid-query'
+import { createFileRoute } from '@tanstack/solid-router'
+import { batch, createEffect, createMemo, createRenderEffect, createSignal, on, onCleanup, onMount } from 'solid-js'
+import { Portal } from 'solid-js/web'
+import { type AdminUserPatch, GroupType, NotFoundError, User, UserType } from '~/api'
+import { ConfirmDialog } from '~/components/dialogs/base/ConfirmDialog'
+import Page from '~/components/Page'
+import NotFoundPage from '~/components/pages/NotFoundPage'
+import { type UserData, type UserPatchSetterKey, useUserDisplayContext } from '~/components/users/UserDisplayContext'
+import UserInfo from '~/components/users/UserInfo'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { groupsQueryOptions } from '~/queries/groups'
+import { userQueryOptions } from '~/queries/users'
+import { catchErrors } from '~/utils/error-component'
 
 type UserSearch = {
     type?: 'student' | 'teacher'
@@ -19,6 +20,9 @@ type UserSearch = {
 }
 
 export const Route = createFileRoute('/_adminAuthenticated/manage/users/$userId')({
+    params: {
+        parse: ({ userId }): { userId: string | number } => ({ userId }),
+    },
     validateSearch: (search: Record<string, unknown>): UserSearch => {
         return {
             type: (search.type as 'student' | 'teacher') || undefined,
@@ -26,34 +30,46 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/users/$userId'
         }
     },
     component: RouteComponent,
-    loader: async ({ params: { userId }, context: { client } }) => {
-        const teams = await client.teams.fetchAll().catch(() => [])
+    errorComponent: catchErrors([NotFoundError, NotFoundPage]),
+    loader: async ({ params: { userId }, context: { client, queryClient } }) => {
+        const promises: Promise<unknown>[] = [queryClient.ensureQueryData(groupsQueryOptions(client)).catch(() => [])]
 
-        if (isNewRoute(userId)) {
-            return { user: null, teams }
+        if (!isNewRoute(userId)) {
+            const userIdNum = Number(userId)
+            promises.push(queryClient.ensureQueryData(userQueryOptions(client, userIdNum)))
         }
 
-        const userIdNum = Number(userId)
-        const user = await client.users.fetch(userIdNum).catch(() => null)
-
-        return { user, teams }
+        await Promise.all(promises)
     },
 })
 
-const isNewRoute = (userId: string) => userId === 'new'
+const isNewRoute = (userId: string | number) => userId === 'new'
 
 function RouteComponent() {
     const params = Route.useParams()
     const search = Route.useSearch()
-    const data = Route.useLoaderData()
     const navigate = Route.useNavigate()
 
     const isNew = () => isNewRoute(params().userId)
 
     const { client } = useAPI()
     const { string } = useI18n()
-    const router = useRouter()
+    const qc = useQueryClient()
     const displayContext = useUserDisplayContext()
+
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = createSignal(false)
+
+    const groupsQuery = createQuery(() => groupsQueryOptions(client))
+    const userQuery = createQuery(() => {
+        const id = Number(params().userId)
+        return {
+            ...userQueryOptions(client, Number.isNaN(id) ? 0 : id),
+            enabled: !isNew() && !Number.isNaN(id),
+        }
+    })
+
+    const groups = () => groupsQuery.data ?? []
+    const loadedUser = () => userQuery.data ?? null
 
     const initialType = () => {
         if (search().type === 'teacher') return UserType.TEACHER
@@ -61,17 +77,17 @@ function RouteComponent() {
     }
 
     const [userData, setUserData] = createSignal<UserData>(
-        data().user?.toJSON() ?? {
+        loadedUser()?.toJSON() ?? {
             id: -1,
             firstName: string.NEW_USER_FIRST_NAME(),
             type: initialType(),
-            teams: [],
+            groups: [],
         },
     )
 
     const [modifiedFields, setModifiedFields] = createSignal<Set<string>>(new Set())
 
-    const user = createMemo(() => new User(userData()))
+    const user = createMemo(() => new User(client, userData()))
 
     createEffect(() => {
         displayContext.setEdited(modifiedFields().size > 0)
@@ -79,7 +95,7 @@ function RouteComponent() {
 
     createEffect(
         on(
-            () => data().user,
+            () => loadedUser(),
             u => {
                 if (u) {
                     batch(() => {
@@ -92,7 +108,7 @@ function RouteComponent() {
                             id: -1,
                             firstName: string.NEW_USER_FIRST_NAME(),
                             type: initialType(),
-                            teams: [],
+                            groups: [],
                         })
                         setModifiedFields(new Set<string>())
                     })
@@ -106,7 +122,7 @@ function RouteComponent() {
     })
 
     const title = () => {
-        if (!isNew()) return user().fullName
+        if (!isNew()) return user().displayName
 
         switch (userData().type) {
             case UserType.STUDENT:
@@ -125,26 +141,48 @@ function RouteComponent() {
         }
     }
 
-    const invalidate = (type: UserType) =>
-        router.invalidate({
-            filter: r => r.routeId === (type === UserType.STUDENT ? StudentsRoute.id : TeachersRoute.id),
-        })
+    const invalidate = (type: UserType, userId?: number) =>
+        Promise.all([
+            qc.invalidateQueries({
+                queryKey: ['admin', type === UserType.STUDENT ? 'students' : 'teachers'],
+            }),
+            userId !== undefined ? qc.invalidateQueries({ queryKey: ['users', userId] }) : undefined,
+        ])
 
     const handleSave = async () => {
         const u = userData()
+
+        const gradeId = u.groups.find(g => g.type === GroupType.GRADE)?.id
+        const roomId = u.groups.find(g => g.type === GroupType.ROOM)?.id
+        const programId = u.groups.find(g => g.type === GroupType.PROGRAM)?.id
+        // For teachers, include all groups.
+        // For students, only include custom groups (grade/room/program are sent separately).
+        const groupIds = (
+            u.type === UserType.TEACHER ? u.groups : u.groups.filter(g => g.type === GroupType.CUSTOM)
+        ).map(g => g.id)
 
         if (isNew()) {
             if (u.id < 0) return
             if (!u.newPassword) return
 
+            if (u.type === UserType.STUDENT && (gradeId === undefined || roomId === undefined)) {
+                alert(string.ERROR_SAVE_FAILED({ error: 'Students require both a grade and a room.' }))
+                return
+            }
+
             try {
                 await client.users.admin.put(u.id, {
                     user: u,
                     password: u.newPassword,
-                    teamIds: u.teams?.map(t => t.id) ?? [],
+                    groupIds,
+                    gradeId,
+                    roomId,
+                    programId,
                 })
 
                 displayContext.setUserData({ ...userData(), newPassword: '' })
+
+                await invalidate(u.type, u.id)
 
                 navigate({
                     params: { userId: u.id.toString() },
@@ -156,13 +194,21 @@ function RouteComponent() {
             }
         } else {
             const modified = modifiedFields()
+            const groupsTouched = modified.has('groups') || modified.has('patchGroups')
+
             const patch: AdminUserPatch = {
-                teams: u.teams?.map(t => t.id) ?? [],
-                patchTeams: modified.has('teams') || modified.has('patchTeams'),
+                groups: groupIds,
+                patchGroups: groupsTouched,
+                gradeId: groupsTouched ? gradeId : undefined,
+                roomId: groupsTouched ? roomId : undefined,
+                programId: groupsTouched ? programId : undefined,
+                patchProgramId: groupsTouched,
+                patchPrefix: modified.has('prefix') || modified.has('patchPrefix'),
                 patchMiddleName: modified.has('middleName') || modified.has('patchMiddleName'),
                 patchAvatarUrl: modified.has('avatarUrl') || modified.has('patchAvatarUrl'),
                 patchLastName: modified.has('lastName') || modified.has('patchLastName'),
                 firstName: u.firstName,
+                prefix: u.prefix,
                 middleName: u.middleName,
                 lastName: u.lastName,
                 avatarUrl: u.avatarUrl || undefined,
@@ -173,7 +219,7 @@ function RouteComponent() {
                 await client.users.admin.patch(user().id, patch)
                 setModifiedFields(new Set<string>())
                 setUserData({ ...userData(), newPassword: '' })
-                await invalidate(userData().type)
+                await invalidate(userData().type, user().id)
             } catch (e) {
                 console.error(e)
                 alert(string.ERROR_SAVE_FAILED({ error: String(e) }))
@@ -181,10 +227,36 @@ function RouteComponent() {
         }
     }
 
-    const handleDelete = async () => {
-        await client.users.admin.delete(user().id)
-        await invalidate(userData().type)
-        router.history.back()
+    const handleDelete = () => {
+        setConfirmDeleteOpen(true)
+    }
+
+    const doDelete = async () => {
+        try {
+            const deletedUserId = user().id
+            const deletedUserType = user().type
+
+            await client.users.admin.delete(deletedUserId)
+
+            // Remove, not invalidate
+            qc.removeQueries({ queryKey: ['users', deletedUserId] })
+
+            await invalidate(deletedUserType, deletedUserId)
+
+            switch (deletedUserType) {
+                case UserType.TEACHER:
+                    await navigate({ to: '/manage/teachers', replace: true, search: { page: 1 } })
+                    break
+                case UserType.STUDENT:
+                    await navigate({ to: '/manage/students', replace: true, search: { page: 1 } })
+                    break
+            }
+        } catch (e) {
+            console.error(e)
+            alert(string.ERROR_DELETE_FAILED({ error: String(e) }))
+        } finally {
+            setConfirmDeleteOpen(false)
+        }
     }
 
     onMount(() => {
@@ -205,7 +277,7 @@ function RouteComponent() {
         })
     })
 
-    createEffect(() => {
+    createRenderEffect(() => {
         batch(() => {
             displayContext.setCreating(isNew())
             displayContext.setUser(user())
@@ -215,7 +287,20 @@ function RouteComponent() {
 
     return (
         <Page name={title()} allowBacking leading={null} trailing={null}>
-            <UserInfo initialType={initialType()} teams={data().teams} />
+            <Portal>
+                <ConfirmDialog
+                    open={confirmDeleteOpen()}
+                    variant="danger"
+                    closedBy="any"
+                    onCancel={() => setConfirmDeleteOpen(false)}
+                    onConfirm={doDelete}
+                    confirmText={string.DELETE_USER()}
+                    headline={string.DELETE_USER()}
+                >
+                    <p>{string.CONFIRM_DELETE_USER({ name: <strong>{user().displayName}</strong> })}</p>
+                </ConfirmDialog>
+            </Portal>
+            <UserInfo initialType={initialType()} groups={groups()} />
         </Page>
     )
 }

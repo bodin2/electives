@@ -1,6 +1,8 @@
 package th.ac.bodin2.electives.api
 
-import com.google.protobuf.MessageLite
+import com.squareup.wire.Message
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -11,9 +13,10 @@ import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.utils.getParser
+import th.ac.bodin2.electives.api.utils.getAdapter
 import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.db.models.*
+import th.ac.bodin2.electives.proto.api.GroupType
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -35,15 +38,16 @@ object TestDatabase {
 
     fun connect() {
         if (!::db.isInitialized) {
-            db = org.jetbrains.exposed.v1.jdbc.Database.connect(
-                "jdbc:sqlite:file:./build/tmp/test/db",
-                "org.sqlite.JDBC",
-                setupConnection = {
-                    it.createStatement().use { stmt ->
-                        stmt.execute("PRAGMA foreign_keys=ON;")
-                    }
-                }
-            )
+            val dataSource = HikariDataSource(HikariConfig().apply {
+                // SQLite in-memory shared cache so all pooled connections see the
+                // same database. The pool is capped at 1 because SQLite serializes
+                // writes anyway, and to avoid surprises with the in-memory store.
+                jdbcUrl = "jdbc:sqlite:file:test?mode=memory&cache=shared"
+                driverClassName = "org.sqlite.JDBC"
+                maximumPoolSize = 1
+                connectionInitSql = "PRAGMA foreign_keys=ON;"
+            })
+            db = org.jetbrains.exposed.v1.jdbc.Database.connect(dataSource)
         }
 
         TransactionManager.defaultDatabase = db
@@ -57,60 +61,81 @@ object TestDatabase {
     fun Application.mockData() {
         val usersService: UsersService by dependencies
 
-        Teams.insert {
-            it[id] = TestConstants.Teams.TEAM_1_ID
-            it[name] = TestConstants.Teams.TEAM_1_NAME
+        Groups.insert {
+            it[id] = TestConstants.Groups.GROUP_1_ID
+            it[name] = TestConstants.Groups.GROUP_1_NAME
+            it[type] = GroupType.CUSTOM.value
         }
-        Teams.insert {
-            it[id] = TestConstants.Teams.TEAM_2_ID
-            it[name] = TestConstants.Teams.TEAM_2_NAME
+        Groups.insert {
+            it[id] = TestConstants.Groups.GROUP_2_ID
+            it[name] = TestConstants.Groups.GROUP_2_NAME
+            it[type] = GroupType.CUSTOM.value
+        }
+        Groups.insert {
+            it[id] = TestConstants.Groups.GRADE_ID
+            it[name] = TestConstants.Groups.GRADE_NAME
+            it[type] = GroupType.GRADE.value
+        }
+        Groups.insert {
+            it[id] = TestConstants.Groups.ROOM_ID
+            it[name] = TestConstants.Groups.ROOM_NAME
+            it[type] = GroupType.ROOM.value
+        }
+        Groups.insert {
+            it[id] = TestConstants.Groups.PROGRAM_ID
+            it[name] = TestConstants.Groups.PROGRAM_NAME
+            it[type] = GroupType.PROGRAM.value
         }
 
         usersService.createStudent(
-            TestConstants.Students.JOHN_ID,
-            TestConstants.Students.JOHN_FIRST_NAME,
-            TestConstants.Students.JOHN_MIDDLE_NAME,
-            TestConstants.Students.JOHN_LAST_NAME,
-            TestConstants.Students.JOHN_PASSWORD
+            id = TestConstants.Students.JOHN_ID,
+            firstName = TestConstants.Students.JOHN_FIRST_NAME,
+            middleName = TestConstants.Students.JOHN_MIDDLE_NAME,
+            lastName = TestConstants.Students.JOHN_LAST_NAME,
+            password = TestConstants.Students.JOHN_PASSWORD,
+            gradeId = TestConstants.Groups.GRADE_ID,
+            roomId = TestConstants.Groups.ROOM_ID,
+            programId = TestConstants.Groups.PROGRAM_ID,
         )
         usersService.createStudent(
-            TestConstants.Students.JANE_ID,
-            TestConstants.Students.JANE_FIRST_NAME,
-            null,
-            TestConstants.Students.JANE_LAST_NAME,
-            TestConstants.Students.JANE_PASSWORD
+            id = TestConstants.Students.JANE_ID,
+            firstName = TestConstants.Students.JANE_FIRST_NAME,
+            lastName = TestConstants.Students.JANE_LAST_NAME,
+            password = TestConstants.Students.JANE_PASSWORD,
+            gradeId = TestConstants.Groups.GRADE_ID,
+            roomId = TestConstants.Groups.ROOM_ID,
+            programId = TestConstants.Groups.PROGRAM_ID,
         )
 
-        StudentTeams.insert {
+        StudentGroups.insert {
             it[student] = TestConstants.Students.JOHN_ID
-            it[team] = TestConstants.Teams.TEAM_1_ID
+            it[group] = TestConstants.Groups.GROUP_1_ID
         }
-        StudentTeams.insert {
+        StudentGroups.insert {
             it[student] = TestConstants.Students.JANE_ID
-            it[team] = TestConstants.Teams.TEAM_2_ID
+            it[group] = TestConstants.Groups.GROUP_2_ID
         }
 
         usersService.createTeacher(
-            TestConstants.Teachers.BOB_ID,
-            TestConstants.Teachers.BOB_FIRST_NAME,
-            null,
-            TestConstants.Teachers.BOB_LAST_NAME,
-            TestConstants.Teachers.BOB_PASSWORD
+            id = TestConstants.Teachers.BOB_ID,
+            firstName = TestConstants.Teachers.BOB_FIRST_NAME,
+            lastName = TestConstants.Teachers.BOB_LAST_NAME,
+            password = TestConstants.Teachers.BOB_PASSWORD
         )
         usersService.createTeacher(
-            TestConstants.Teachers.ALICE_ID,
-            TestConstants.Teachers.ALICE_FIRST_NAME,
-            TestConstants.Teachers.ALICE_MIDDLE_NAME,
-            TestConstants.Teachers.ALICE_LAST_NAME,
-            TestConstants.Teachers.ALICE_PASSWORD
+            id = TestConstants.Teachers.ALICE_ID,
+            firstName = TestConstants.Teachers.ALICE_FIRST_NAME,
+            middleName = TestConstants.Teachers.ALICE_MIDDLE_NAME,
+            lastName = TestConstants.Teachers.ALICE_LAST_NAME,
+            password = TestConstants.Teachers.ALICE_PASSWORD
         )
 
-        Electives.insert {
-            it[id] = TestConstants.Electives.SCIENCE_ID
-            it[name] = TestConstants.Electives.SCIENCE_NAME
+        Enrollments.insert {
+            it[id] = TestConstants.Enrollments.SCIENCE_ID
+            it[name] = TestConstants.Enrollments.SCIENCE_NAME
             it[startDate] = null
             it[endDate] = null
-            it[team] = TestConstants.Teams.TEAM_1_ID
+            it[group] = TestConstants.Groups.GROUP_1_ID
         }
 
         Subjects.insert {
@@ -118,10 +143,10 @@ object TestDatabase {
             it[name] = TestConstants.Subjects.PHYSICS_NAME
             it[description] = TestConstants.Subjects.PHYSICS_DESCRIPTION
             it[code] = TestConstants.Subjects.PHYSICS_CODE
-            it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.number
+            it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.value
             it[location] = TestConstants.Subjects.PHYSICS_LOCATION
             it[capacity] = TestConstants.Subjects.PHYSICS_CAPACITY
-            it[team] = TestConstants.Teams.TEAM_1_ID
+            it[group] = TestConstants.Groups.GROUP_1_ID
         }
 
         Subjects.insert {
@@ -129,46 +154,45 @@ object TestDatabase {
             it[name] = TestConstants.Subjects.CHEMISTRY_NAME
             it[description] = TestConstants.Subjects.CHEMISTRY_DESCRIPTION
             it[code] = TestConstants.Subjects.CHEMISTRY_CODE
-            it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.number
+            it[tag] = SubjectTag.SCIENCE_AND_TECHNOLOGY.value
             it[location] = TestConstants.Subjects.CHEMISTRY_LOCATION
             it[capacity] = TestConstants.Subjects.CHEMISTRY_CAPACITY
-            it[team] = TestConstants.Teams.TEAM_1_ID
+            it[group] = TestConstants.Groups.GROUP_1_ID
         }
 
-        ElectiveSubjects.insert {
-            it[elective] = TestConstants.Electives.SCIENCE_ID
+        EnrollmentSubjects.insert {
+            it[enrollment] = TestConstants.Enrollments.SCIENCE_ID
             it[subject] = TestConstants.Subjects.PHYSICS_ID
         }
-        ElectiveSubjects.insert {
-            it[elective] = TestConstants.Electives.SCIENCE_ID
+        EnrollmentSubjects.insert {
+            it[enrollment] = TestConstants.Enrollments.SCIENCE_ID
             it[subject] = TestConstants.Subjects.CHEMISTRY_ID
         }
 
         TeacherSubjects.insert {
             it[teacher] = TestConstants.Teachers.BOB_ID
             it[subject] = TestConstants.Subjects.PHYSICS_ID
-            it[elective] = TestConstants.Electives.SCIENCE_ID
+            it[enrollment] = TestConstants.Enrollments.SCIENCE_ID
         }
         TeacherSubjects.insert {
             it[teacher] = TestConstants.Teachers.ALICE_ID
             it[subject] = TestConstants.Subjects.CHEMISTRY_ID
-            it[elective] = TestConstants.Electives.SCIENCE_ID
+            it[enrollment] = TestConstants.Enrollments.SCIENCE_ID
         }
     }
 }
 
-
-suspend fun HttpClient.postProto(url: String, message: MessageLite): HttpResponse {
+suspend fun HttpClient.postProto(url: String, message: Message<*, *>): HttpResponse {
     return post(url) {
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
-suspend fun HttpClient.putProto(url: String, message: MessageLite): HttpResponse {
+suspend fun HttpClient.putProto(url: String, message: Message<*, *>): HttpResponse {
     return put(url) {
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
@@ -178,19 +202,19 @@ suspend fun HttpClient.getWithAuth(url: String, token: String): HttpResponse {
     }
 }
 
-suspend fun HttpClient.postProtoWithAuth(url: String, message: MessageLite, token: String): HttpResponse {
+suspend fun HttpClient.postProtoWithAuth(url: String, message: Message<*, *>, token: String): HttpResponse {
     return post(url) {
         bearerAuth(token)
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
-suspend fun HttpClient.putProtoWithAuth(url: String, message: MessageLite, token: String): HttpResponse {
+suspend fun HttpClient.putProtoWithAuth(url: String, message: Message<*, *>, token: String): HttpResponse {
     return put(url) {
         bearerAuth(token)
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
@@ -200,15 +224,15 @@ suspend fun HttpClient.deleteWithAuth(url: String, token: String): HttpResponse 
     }
 }
 
-suspend fun HttpClient.patchProtoWithAuth(url: String, message: MessageLite, token: String): HttpResponse {
+suspend fun HttpClient.patchProtoWithAuth(url: String, message: Message<*, *>, token: String): HttpResponse {
     return patch(url) {
         bearerAuth(token)
         contentType(ContentType.Application.ProtoBuf)
-        setBody(message.toByteArray())
+        setBody(message.encode())
     }
 }
 
-suspend inline fun <reified T : MessageLite> HttpResponse.parse(): T {
-    val parser = getParser(T::class.java)
-    return parser.parseFrom(bodyAsBytes())
+suspend inline fun <reified T : Message<T, *>> HttpResponse.parse(): T {
+    val adapter = getAdapter(T::class.java)
+    return adapter.decode(bodyAsBytes())
 }

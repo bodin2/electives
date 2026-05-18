@@ -1,3 +1,4 @@
+import { API_CLIENT_NAME } from '~/constants'
 import { signChallenge } from './ssh'
 import {
     AdminChallengeResponse,
@@ -11,6 +12,10 @@ import type { Gateway, GatewayAuthenticator } from './gateway'
 import type { RESTClient } from './rest'
 
 export interface AdminAuthenticateOptions {
+    /**
+     * User ID of the admin account to authenticate as
+     */
+    id: number
     /**
      * A `CryptoKey` obtained from `importPrivateKey()`
      */
@@ -136,10 +141,11 @@ export class AdminAuthenticator implements Authenticator<AdminAuthenticateOption
         const signature = await signChallenge(options.key, challenge)
 
         const body: AuthenticateRequest = {
-            id: 0,
+            id: options.id,
             password: signature,
-            clientName: '',
+            clientName: API_CLIENT_NAME,
         }
+
         const data = await this.rest.post<AuthenticateResponse>('/admin/auth', body, {
             encoder: AuthenticateRequest,
             decoder: AuthenticateResponse,

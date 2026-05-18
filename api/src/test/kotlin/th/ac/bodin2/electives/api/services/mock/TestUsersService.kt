@@ -27,11 +27,15 @@ class TestUsersService : UsersService {
     override fun createStudent(
         id: Int,
         firstName: String,
+        gradeId: Int,
+        roomId: Int,
+        programId: Int?,
+        prefix: String?,
         middleName: String?,
         lastName: String?,
         password: String,
         avatarUrl: String?,
-        teams: List<Int>?,
+        groupIds: List<Int>?,
     ) = error("Not testable")
 
     @Transactional
@@ -40,10 +44,12 @@ class TestUsersService : UsersService {
     override fun createTeacher(
         id: Int,
         firstName: String,
+        prefix: String?,
         middleName: String?,
         lastName: String?,
         password: String,
         avatarUrl: String?,
+        groupIds: List<Int>?,
     ) = error("Not testable")
 
     @Transactional

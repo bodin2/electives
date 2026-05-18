@@ -11,7 +11,7 @@ interface SubjectService {
     /**
      * Creates a new subject with the given information.
      *
-     * @throws EntityNotFoundException if the specified team or any of the specified teachers do not exist.
+     * @throws EntityNotFoundException if the specified group or any of the specified teachers do not exist.
      * @throws ConflictException if a subject with the same ID already exists.
      */
     @Transactional
@@ -23,7 +23,7 @@ interface SubjectService {
         tag: SubjectTag = SubjectTag.THAI,
         location: String? = null,
         capacity: Int,
-        team: Int? = null,
+        group: Int? = null,
         thumbnailUrl: String? = null,
         imageUrl: String? = null,
     ): Subject
@@ -39,7 +39,7 @@ interface SubjectService {
     /**
      * Updates a subject's information.
      *
-     * @throws EntityNotFoundException if the subject or team does not exist.
+     * @throws EntityNotFoundException if the subject or group does not exist.
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
@@ -52,9 +52,9 @@ interface SubjectService {
         val tag: SubjectTag? = null,
         val location: String? = null,
         val capacity: Int? = null,
-        val team: Int? = null,
+        val group: Int? = null,
         val teacherIds: List<Int>? = null,
-        val electiveId: Int? = null,
+        val enrollmentId: Int? = null,
         val thumbnailUrl: String? = null,
         val imageUrl: String? = null,
         val setDescription: Boolean = false,
@@ -62,17 +62,17 @@ interface SubjectService {
         val setLocation: Boolean = false,
         val setImageUrl: Boolean = false,
         val setThumbnailUrl: Boolean = false,
-        val setTeam: Boolean = false,
+        val setGroup: Boolean = false,
     )
 
     fun getAll(): List<Subject>
 
     fun getById(subjectId: Int): Subject?
 
-    fun getElectiveIds(subjectId: Int): List<Int>?
+    fun getEnrollmentIds(subjectId: Int): List<Int>?
 
     /**
-     * Gets all subjects that a teacher teaches, grouped by elective ID.
+     * Gets all subjects that a teacher teaches, grouped by enrollment ID.
      *
      * @throws EntityNotFoundException if the teacher does not exist.
      */

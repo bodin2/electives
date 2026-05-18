@@ -1,0 +1,13 @@
+.card {
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.card:hover {
+    background-color: var(--m3c-surface-container-highest);
+}
+
+.card[data-open='true'] {
+    background-color: var(--m3c-primary-container);
+    border-color: var(--m3c-outline-variant);
+}

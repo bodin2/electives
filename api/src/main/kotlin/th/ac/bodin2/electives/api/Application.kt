@@ -1,5 +1,7 @@
 package th.ac.bodin2.electives.api
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -71,7 +73,7 @@ suspend fun Application.module() {
 
     val controllers = mutableListOf(
         authController,
-        electivesController,
+        enrollmentsController,
         miscController,
         notificationsController,
         usersController,
@@ -86,15 +88,16 @@ suspend fun Application.module() {
 
 fun setupDatabase() {
     if (TransactionManager.primaryDatabase == null) {
-        val path = requireEnvNonBlank("DB_PATH")
-        Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC") {
-            createStatement().use {
-                it.execute("PRAGMA foreign_keys=ON;")
-                it.execute("PRAGMA journal_mode=WAL;")
-                it.execute("PRAGMA synchronous=NORMAL;")
-                it.execute("PRAGMA busy_timeout=5000;")
-            }
-        }
+        val dataSource = HikariDataSource(HikariConfig().apply {
+            jdbcUrl = requireEnvNonBlank("DB_URL")
+            username = env("DB_USER")
+            password = env("DB_PASSWORD")
+            driverClassName = "org.postgresql.Driver"
+            maximumPoolSize = env("DB_POOL_SIZE")?.toInt() ?: 10
+            isAutoCommit = false
+            transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+        })
+        Database.init(dataSource)
     } else {
         logger.warn("Database already initialized? This is not normal.")
     }
@@ -110,10 +113,10 @@ fun Application.provideDependencies() = dependencies {
         provideNotificationsService()
     }
 
-    provide<ElectiveService> { ElectiveServiceImpl() }
+    provide<EnrollmentService> { EnrollmentServiceImpl() }
     provide<SubjectService> { SubjectServiceImpl() }
-    provide<TeamService> { TeamServiceImpl() }
-    provide<ElectiveSelectionService> { ElectiveSelectionServiceImpl(resolve<NotificationsService>()) }
+    provide<GroupService> { GroupServiceImpl() }
+    provide<EnrollmentSelectionService> { EnrollmentSelectionServiceImpl(resolve<NotificationsService>()) }
 
     if (isAdminEnabled) {
         provideAdminAuthService()

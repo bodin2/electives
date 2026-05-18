@@ -8,13 +8,12 @@ import th.ac.bodin2.electives.api.getWithAuth
 import th.ac.bodin2.electives.api.parse
 import th.ac.bodin2.electives.api.patchProtoWithAuth
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
-import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.mock.TestSubjectService
 import th.ac.bodin2.electives.proto.api.AdminService
-import th.ac.bodin2.electives.proto.api.AdminServiceKt.subjectPatch
-import th.ac.bodin2.electives.proto.api.ElectivesService
+import th.ac.bodin2.electives.proto.api.EnrollmentsService
 import th.ac.bodin2.electives.proto.api.Subject
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -35,10 +34,10 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
 
         val response = client.adminGet("/admin/subjects")
             .assertOK()
-            .parse<ElectivesService.ListSubjectsResponse>()
+            .parse<EnrollmentsService.ListSubjectsResponse>()
 
-        assertEquals(TestSubjectService.SUBJECT_IDS.size, response.subjectsCount)
-        assertEquals(0, response.subjectsList[0].teachersCount)
+        assertEquals(TestSubjectService.SUBJECT_IDS.size, response.subjects.size)
+        assertEquals(0, response.subjects[0].teachers.size)
     }
 
     @Test
@@ -50,7 +49,7 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
             .parse<Subject>()
 
         assertEquals(SUBJECT_ID, subject.id)
-        assertEquals(0, subject.teachersCount)
+        assertEquals(0, subject.teachers.size)
     }
 
     @Test
@@ -66,18 +65,18 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
     }
 
     @Test
-    fun `get elective IDs for subject`() = runRouteTest {
+    fun `get enrollment IDs for subject`() = runRouteTest {
         startApplication()
 
-        val ids = client.adminGet("/admin/subjects/$SUBJECT_ID/elective-ids")
+        val ids = client.adminGet("/admin/subjects/$SUBJECT_ID/enrollment-ids")
             .assertOK()
-            .parse<AdminService.SubjectElectiveIds>()
-        assertEquals(1, ids.electiveIdsCount)
-        assertContains(ids.electiveIdsList, ELECTIVE_ID)
+            .parse<AdminService.SubjectEnrollmentIds>()
+        assertEquals(1, ids.enrollment_ids.size)
+        assertContains(ids.enrollment_ids, ENROLLMENT_ID)
     }
 
     @Test
-    fun `get elective IDs for not found subject`() = runRouteTest {
+    fun `get enrollment IDs for not found subject`() = runRouteTest {
         startApplication()
 
         client.adminGet("/admin/subjects/$UNUSED_ID").assertNotFound()
@@ -94,7 +93,7 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
 
         val subject = client.patchProtoWithAuth(
             "/admin/subjects/$SUBJECT_ID",
-            subjectPatch { name = "New Name" },
+            AdminService.SubjectPatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertOK().parse<Subject>()
 
@@ -107,7 +106,7 @@ class AdminSubjectsRoutesTest : ApplicationTest() {
 
         client.patchProtoWithAuth(
             "/admin/subjects/$UNUSED_ID",
-            subjectPatch { name = "New Name" },
+            AdminService.SubjectPatch(name = "New Name"),
             ADMIN_TOKEN
         ).assertNotFound("Subject not found")
     }

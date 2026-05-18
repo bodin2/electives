@@ -16,22 +16,17 @@ import org.jetbrains.exposed.v1.jdbc.update
 import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.SessionUserMocks.janeSessionUser
 import th.ac.bodin2.electives.api.SessionUserMocks.johnSessionUser
-import th.ac.bodin2.electives.api.TestConstants.Electives
+import th.ac.bodin2.electives.api.TestConstants.Enrollments
+import th.ac.bodin2.electives.api.TestConstants.Groups
 import th.ac.bodin2.electives.api.TestConstants.Students
 import th.ac.bodin2.electives.api.TestConstants.Subjects
-import th.ac.bodin2.electives.api.TestConstants.Teams
 import th.ac.bodin2.electives.api.TestConstants.TestData.CLIENT_NAME
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.utils.send
-import th.ac.bodin2.electives.db.Elective
-import th.ac.bodin2.electives.db.models.StudentTeams
-import th.ac.bodin2.electives.proto.api.NotificationsService.Envelope
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.envelope
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.identify
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdate
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdateSubscription
-import th.ac.bodin2.electives.proto.api.NotificationsServiceKt.subjectEnrollmentUpdateSubscriptionRequest
+import th.ac.bodin2.electives.db.Enrollment
+import th.ac.bodin2.electives.db.models.StudentGroups
+import th.ac.bodin2.electives.proto.api.NotificationsService.*
 import java.time.LocalDateTime
 import kotlin.test.*
 import kotlin.time.Duration.Companion.milliseconds
@@ -45,9 +40,9 @@ class NotificationsServiceImplTest : ApplicationTest() {
             return service
         }
 
-    private val ApplicationTestBuilder.electiveSelectionService: ElectiveSelectionService
+    private val ApplicationTestBuilder.enrollmentSelectionService: EnrollmentSelectionService
         get() {
-            val service: ElectiveSelectionService by application.dependencies
+            val service: EnrollmentSelectionService by application.dependencies
             return service
         }
 
@@ -77,11 +72,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
         block: suspend DefaultClientWebSocketSession.() -> Unit
     ) {
         createWSClient().webSocket("/notifications") {
-            send(envelope {
-                identify = identify {
-                    this.token = token
-                }
-            })
+            send(Envelope(identify = Identify(token = token)))
 
             block()
         }
@@ -117,28 +108,26 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `websocket subscription request acknowledged`() = runTest {
         webSocket {
-            val envelope = envelope {
-                messageId = 1
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(Subjects.PHYSICS_ID)
-                            }
+            val envelope = Envelope(
+                message_id = 1L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(Subjects.PHYSICS_ID)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, envelope.encode()))
 
             val response = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
 
-            val ackEnvelope = Envelope.parseFrom(response.readBytes())
-            assertEquals(1, ackEnvelope.messageId, "Expected message ID to match")
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(response.readBytes())
+            assertEquals(1L, ackEnvelope.message_id, "Expected message ID to match")
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             close()
         }
@@ -147,29 +136,26 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `websocket subscription to multiple subjects`() = runTest {
         webSocket {
-            val envelope = envelope {
-                messageId = 2
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(Subjects.PHYSICS_ID)
-                                subjectIds.add(Subjects.CHEMISTRY_ID)
-                            }
+            val envelope = Envelope(
+                message_id = 2L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(Subjects.PHYSICS_ID, Subjects.CHEMISTRY_ID)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, envelope.encode()))
 
             val response = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
 
-            val ackEnvelope = Envelope.parseFrom(response.readBytes())
-            assertEquals(2, ackEnvelope.messageId, "Expected message ID to match")
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(response.readBytes())
+            assertEquals(2L, ackEnvelope.message_id, "Expected message ID to match")
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             close()
         }
@@ -178,20 +164,18 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `websocket subscription exceeds max subjects limit`() = runTest {
         webSocket {
-            val envelope = envelope {
-                messageId = 3
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                repeat(10) { subjectIds.add(it) }
-                            }
+            val envelope = Envelope(
+                message_id = 3L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = (0 until 10).toList()
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, envelope.encode()))
             assertFailsWith<ClosedReceiveChannelException>("Expected connection to be closed by server") {
                 incoming.receive()
             }
@@ -201,26 +185,24 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `websocket subscription with empty subject list`() = runTest {
         webSocket {
-            val envelope = envelope {
-                messageId = 4
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {}
-                        )
-                    }
-            }
+            val envelope = Envelope(
+                message_id = 4L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription()
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, envelope.encode()))
 
             val response = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
 
-            val ackEnvelope = Envelope.parseFrom(response.readBytes())
-            assertEquals(4, ackEnvelope.messageId, "Expected message ID to match")
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(response.readBytes())
+            assertEquals(4L, ackEnvelope.message_id, "Expected message ID to match")
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             close()
         }
@@ -249,15 +231,15 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `websocket send server-only payload`() = runTest {
         webSocket {
-            val envelope = envelope {
-                subjectEnrollmentUpdate = subjectEnrollmentUpdate {
-                    electiveId = Electives.SCIENCE_ID
-                    subjectId = Subjects.PHYSICS_ID
-                    enrolledCount = 10
-                }
-            }
+            val envelope = Envelope(
+                subject_enrollment_update = SubjectEnrollmentUpdate(
+                    enrollment_id = Enrollments.SCIENCE_ID,
+                    subject_id = Subjects.PHYSICS_ID,
+                    enrolled_count = 10,
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, envelope.encode()))
             assertFailsWith<ClosedReceiveChannelException>("Expected connection to be closed by server") {
                 incoming.receive()
             }
@@ -265,30 +247,28 @@ class NotificationsServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `websocket subscription to nonexistent elective`() = runTest {
+    fun `websocket subscription to nonexistent enrollment`() = runTest {
         webSocket {
-            val envelope = envelope {
-                messageId = 5
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            UNUSED_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(Subjects.PHYSICS_ID)
-                            }
+            val envelope = Envelope(
+                message_id = 5L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        UNUSED_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(Subjects.PHYSICS_ID)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, envelope.encode()))
 
             val response = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
 
-            val ackEnvelope = Envelope.parseFrom(response.readBytes())
-            assertEquals(5, ackEnvelope.messageId, "Expected message ID to match")
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(response.readBytes())
+            assertEquals(5L, ackEnvelope.message_id, "Expected message ID to match")
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             close()
         }
@@ -297,28 +277,26 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `websocket subscription with negative ids`() = runTest {
         webSocket {
-            val envelope = envelope {
-                messageId = 6
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            -1,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(-1)
-                            }
+            val envelope = Envelope(
+                message_id = 6L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        -1 to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(-1)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, envelope.encode()))
 
             val response = withTimeout(10.seconds) {
                 incoming.receive() as Frame.Binary
             }
 
-            val ackEnvelope = Envelope.parseFrom(response.readBytes())
-            assertEquals(6, ackEnvelope.messageId, "Expected message ID to match")
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(response.readBytes())
+            assertEquals(6L, ackEnvelope.message_id, "Expected message ID to match")
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             close()
         }
@@ -328,28 +306,26 @@ class NotificationsServiceImplTest : ApplicationTest() {
     fun `websocket multiple subscription requests`() = runTest {
         webSocket {
             repeat(3) { i ->
-                val envelope = envelope {
-                    messageId = (i + 1).toLong()
-                    subjectEnrollmentUpdateSubscriptionRequest =
-                        subjectEnrollmentUpdateSubscriptionRequest {
-                            subscriptions.put(
-                                Electives.SCIENCE_ID,
-                                subjectEnrollmentUpdateSubscription {
-                                    subjectIds.add(Subjects.PHYSICS_ID)
-                                }
+                val envelope = Envelope(
+                    message_id = (i + 1).toLong(),
+                    subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                        subscriptions = mapOf(
+                            Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                                subject_ids = listOf(Subjects.PHYSICS_ID)
                             )
-                        }
-                }
+                        )
+                    )
+                )
 
-                outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+                outgoing.send(Frame.Binary(true, envelope.encode()))
 
                 val response = withTimeout(5.seconds) {
                     incoming.receive() as Frame.Binary
                 }
 
-                val ackEnvelope = Envelope.parseFrom(response.readBytes())
-                assertEquals((i + 1).toLong(), ackEnvelope.messageId, "Expected message ID to match")
-                assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+                val ackEnvelope = Envelope.ADAPTER.decode(response.readBytes())
+                assertEquals((i + 1).toLong(), ackEnvelope.message_id, "Expected message ID to match")
+                assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
             }
 
             close()
@@ -359,26 +335,24 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `websocket subscription without message id`() = runTest {
         webSocket {
-            val envelope = envelope {
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(Subjects.PHYSICS_ID)
-                            }
+            val envelope = Envelope(
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(Subjects.PHYSICS_ID)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            send(Frame.Binary(true, envelope.toByteArray()))
+            send(Frame.Binary(true, envelope.encode()))
 
             val response = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
 
-            val ackEnvelope = Envelope.parseFrom(response.readBytes())
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(response.readBytes())
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             close()
         }
@@ -387,28 +361,26 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `websocket subscription at exact max limit`() = runTest {
         webSocket {
-            val envelope = envelope {
-                messageId = 7
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                repeat(5) { subjectIds.add(it) }
-                            }
+            val envelope = Envelope(
+                message_id = 7L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = (0 until 5).toList()
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, envelope.encode()))
 
             val response = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
 
-            val ackEnvelope = Envelope.parseFrom(response.readBytes())
-            assertEquals(7, ackEnvelope.messageId, "Expected message ID to match")
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(response.readBytes())
+            assertEquals(7L, ackEnvelope.message_id, "Expected message ID to match")
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             close()
         }
@@ -417,84 +389,80 @@ class NotificationsServiceImplTest : ApplicationTest() {
     @Test
     fun `websocket multiple electives within limit`() = runTest {
         webSocket {
-            val envelope = envelope {
-                messageId = 8
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            1,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(101)
-                                subjectIds.add(102)
-                            }
+            val envelope = Envelope(
+                message_id = 8L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        1 to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(101, 102)
+                        ),
+                        2 to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(201, 202, 203)
                         )
-                        subscriptions.put(
-                            2,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(201)
-                                subjectIds.add(202)
-                                subjectIds.add(203)
-                            }
-                        )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, envelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, envelope.encode()))
 
             val response = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
 
-            val ackEnvelope = Envelope.parseFrom(response.readBytes())
-            assertEquals(8, ackEnvelope.messageId, "Expected message ID to match")
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(response.readBytes())
+            assertEquals(8L, ackEnvelope.message_id, "Expected message ID to match")
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             close()
         }
     }
 
     @Test
-    fun `websocket receives bulk enrollment updates for all electives`() = runTest {
+    fun `websocket receives bulk enrollment updates for all enrollments`() = runTest {
         webSocket {
             serviceConfig.bulkUpdatesEnabled = true
 
-            val electives = transaction { Elective.getAllActiveIds() }
-            assertTrue(electives.isNotEmpty(), "Test requires at least one elective")
+            val enrollments = transaction { Enrollment.getAllActiveIds() }
+            assertTrue(enrollments.isNotEmpty(), "Test requires at least one enrollment")
 
             val received = mutableMapOf<Int, Envelope>()
 
             // Trigger a selection
-            electiveSelectionService.setStudentSelection(
+            enrollmentSelectionService.setStudentSelection(
                 johnSessionUser,
                 Students.JOHN_ID,
-                Electives.SCIENCE_ID,
+                Enrollments.SCIENCE_ID,
                 Subjects.PHYSICS_ID,
             )
 
             withTimeout(15.seconds) {
-                while (received.size < electives.size || received.values.all { 
-                        it.bulkSubjectEnrollmentUpdate.subjectEnrolledCountsMap.values.all { count -> count == 0 } 
+                while (received.size < enrollments.size || received.values.all {
+                        it.bulk_subject_enrollment_update!!.subject_enrolled_counts.values.all { count -> count == 0 }
                     }) {
                     val frame = incoming.receive() as Frame.Binary
-                    val envelope = Envelope.parseFrom(frame.readBytes())
+                    val envelope = Envelope.ADAPTER.decode(frame.readBytes())
 
-                    if (envelope.hasBulkSubjectEnrollmentUpdate()) {
-                        val bulk = envelope.bulkSubjectEnrollmentUpdate
-                        received[bulk.electiveId] = envelope
+                    if (envelope.bulk_subject_enrollment_update != null) {
+                        val bulk = envelope.bulk_subject_enrollment_update!!
+                        received[bulk.enrollment_id] = envelope
                     }
                 }
             }
 
-            // Received exactly one bulk update per elective (eventually with data)
+            // Received exactly one bulk update per enrollment (eventually with data)
             assertEquals(
-                electives.toSet(),
+                enrollments.toSet(),
                 received.keys,
-                "Did not receive bulk updates for all electives"
+                "Did not receive bulk updates for all enrollments"
             )
 
             // Is the payload correct?
-            val scienceUpdate = received[Electives.SCIENCE_ID]!!.bulkSubjectEnrollmentUpdate
-            assertEquals(1, scienceUpdate.subjectEnrolledCountsMap[Subjects.PHYSICS_ID], "Expected 1 student in Physics")
+            val scienceUpdate = received[Enrollments.SCIENCE_ID]!!.bulk_subject_enrollment_update!!
+            assertEquals(
+                1,
+                scienceUpdate.subject_enrolled_counts[Subjects.PHYSICS_ID],
+                "Expected 1 student in Physics"
+            )
 
             serviceConfig.bulkUpdatesEnabled = false
 
@@ -503,48 +471,48 @@ class NotificationsServiceImplTest : ApplicationTest() {
     }
 
     @Test
-    fun `bulk update flow is removed when elective becomes inactive`() = runTest {
+    fun `bulk update flow is removed when enrollment becomes inactive`() = runTest {
         webSocket {
             serviceConfig.bulkUpdatesEnabled = true
 
-            val electives = transaction { Elective.getAllActiveIds() }
-            assertTrue(electives.contains(Electives.SCIENCE_ID), "Science elective should be active")
+            val enrollments = transaction { Enrollment.getAllActiveIds() }
+            assertTrue(enrollments.contains(Enrollments.SCIENCE_ID), "Science enrollment should be active")
 
             // Wait for at least one bulk update to arrive so the flow is created
             withTimeout(15.seconds) {
                 while (true) {
                     val frame = incoming.receive() as Frame.Binary
-                    val envelope = Envelope.parseFrom(frame.readBytes())
-                    if (envelope.hasBulkSubjectEnrollmentUpdate() &&
-                        envelope.bulkSubjectEnrollmentUpdate.electiveId == Electives.SCIENCE_ID
+                    val envelope = Envelope.ADAPTER.decode(frame.readBytes())
+                    if (envelope.bulk_subject_enrollment_update != null &&
+                        envelope.bulk_subject_enrollment_update!!.enrollment_id == Enrollments.SCIENCE_ID
                     ) break
                 }
             }
 
             assertTrue(
-                notificationsService.bulkUpdateFlows.value.containsKey(Electives.SCIENCE_ID),
-                "Expected bulk update flow to exist for science elective"
+                notificationsService.bulkUpdateFlows.value.containsKey(Enrollments.SCIENCE_ID),
+                "Expected bulk update flow to exist for science enrollment"
             )
 
-            // Make the elective inactive by setting its end date to the past
+            // Make the enrollment inactive by setting its end date to the past
             transaction {
-                th.ac.bodin2.electives.db.models.Electives.update(
-                    { th.ac.bodin2.electives.db.models.Electives.id eq Electives.SCIENCE_ID }
+                th.ac.bodin2.electives.db.models.Enrollments.update(
+                    { th.ac.bodin2.electives.db.models.Enrollments.id eq Enrollments.SCIENCE_ID }
                 ) {
                     it[endDate] = LocalDateTime.now().minusDays(1)
                 }
             }
 
-            // Wait for the bulk update loop to clear the inactive elective's flow
+            // Wait for the bulk update loop to clear the inactive enrollment's flow
             withTimeout(15.seconds) {
-                while (notificationsService.bulkUpdateFlows.value.containsKey(Electives.SCIENCE_ID)) {
+                while (notificationsService.bulkUpdateFlows.value.containsKey(Enrollments.SCIENCE_ID)) {
                     delay(100.milliseconds)
                 }
             }
 
             assertFalse(
-                notificationsService.bulkUpdateFlows.value.containsKey(Electives.SCIENCE_ID),
-                "Expected bulk update flow to be removed for inactive elective"
+                notificationsService.bulkUpdateFlows.value.containsKey(Enrollments.SCIENCE_ID),
+                "Expected bulk update flow to be removed for inactive enrollment"
             )
 
             serviceConfig.bulkUpdatesEnabled = false
@@ -568,42 +536,40 @@ class NotificationsServiceImplTest : ApplicationTest() {
     fun `websocket client subscribes and receives subject enrollment update`() = runTest {
         webSocket {
             // Subscribe to physics subject
-            val subscriptionEnvelope = envelope {
-                messageId = 100
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(Subjects.PHYSICS_ID)
-                            }
+            val subscriptionEnvelope = Envelope(
+                message_id = 100L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(Subjects.PHYSICS_ID)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, subscriptionEnvelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, subscriptionEnvelope.encode()))
 
             // Wait for acknowledgement
             val ackResponse = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
-            val ackEnvelope = Envelope.parseFrom(ackResponse.readBytes())
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(ackResponse.readBytes())
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             // Trigger a selection that affects the subscribed subject
             transaction {
-                // Add Jane to Team 1 so they can enroll in Physics
-                StudentTeams.insert {
+                // Add Jane to Group 1 so they can enroll in Physics
+                StudentGroups.insert {
                     it[student] = Students.JANE_ID
-                    it[team] = Teams.TEAM_1_ID
+                    it[group] = Groups.GROUP_1_ID
                 }
             }
 
-            assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
-                electiveSelectionService.setStudentSelection(
+            assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(
+                enrollmentSelectionService.setStudentSelection(
                     janeSessionUser,
                     Students.JANE_ID,
-                    Electives.SCIENCE_ID,
+                    Enrollments.SCIENCE_ID,
                     Subjects.PHYSICS_ID
                 )
             )
@@ -612,16 +578,16 @@ class NotificationsServiceImplTest : ApplicationTest() {
             val updateResponse = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
-            val updateEnvelope = Envelope.parseFrom(updateResponse.readBytes())
-            assertTrue(
-                updateEnvelope.hasSubjectEnrollmentUpdate(),
+            val updateEnvelope = Envelope.ADAPTER.decode(updateResponse.readBytes())
+            assertNotNull(
+                updateEnvelope.subject_enrollment_update,
                 "Expected subjectEnrollmentUpdate notification"
             )
 
-            val update = updateEnvelope.subjectEnrollmentUpdate
-            assertEquals(Electives.SCIENCE_ID, update.electiveId)
-            assertEquals(Subjects.PHYSICS_ID, update.subjectId)
-            assertTrue(update.enrolledCount > 0, "Enrolled count should be greater than 0")
+            val update = updateEnvelope.subject_enrollment_update!!
+            assertEquals(Enrollments.SCIENCE_ID, update.enrollment_id)
+            assertEquals(Subjects.PHYSICS_ID, update.subject_id)
+            assertTrue(update.enrolled_count > 0, "Enrolled count should be greater than 0")
 
             close()
         }
@@ -631,35 +597,32 @@ class NotificationsServiceImplTest : ApplicationTest() {
     fun `websocket client subscribes to multiple subjects and receives updates`() = runTest {
         webSocket {
             // Subscribe to both physics and chemistry
-            val subscriptionEnvelope = envelope {
-                messageId = 101
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(Subjects.PHYSICS_ID)
-                                subjectIds.add(Subjects.CHEMISTRY_ID)
-                            }
+            val subscriptionEnvelope = Envelope(
+                message_id = 101L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(Subjects.PHYSICS_ID, Subjects.CHEMISTRY_ID)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, subscriptionEnvelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, subscriptionEnvelope.encode()))
 
             // Wait for acknowledgement
             val ackResponse = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
-            val ackEnvelope = Envelope.parseFrom(ackResponse.readBytes())
-            assertTrue(ackEnvelope.hasAcknowledged(), "Expected acknowledged response")
+            val ackEnvelope = Envelope.ADAPTER.decode(ackResponse.readBytes())
+            assertNotNull(ackEnvelope.acknowledged, "Expected acknowledged response")
 
             // Enroll John in Physics
-            assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
-                electiveSelectionService.setStudentSelection(
+            assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(
+                enrollmentSelectionService.setStudentSelection(
                     johnSessionUser,
                     Students.JOHN_ID,
-                    Electives.SCIENCE_ID,
+                    Enrollments.SCIENCE_ID,
                     Subjects.PHYSICS_ID
                 )
             )
@@ -668,9 +631,9 @@ class NotificationsServiceImplTest : ApplicationTest() {
             val physicsUpdateResponse = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
-            val physicsUpdateEnvelope = Envelope.parseFrom(physicsUpdateResponse.readBytes())
-            assertTrue(physicsUpdateEnvelope.hasSubjectEnrollmentUpdate())
-            assertEquals(Subjects.PHYSICS_ID, physicsUpdateEnvelope.subjectEnrollmentUpdate.subjectId)
+            val physicsUpdateEnvelope = Envelope.ADAPTER.decode(physicsUpdateResponse.readBytes())
+            assertNotNull(physicsUpdateEnvelope.subject_enrollment_update)
+            assertEquals(Subjects.PHYSICS_ID, physicsUpdateEnvelope.subject_enrollment_update!!.subject_id)
 
             close()
         }
@@ -680,53 +643,49 @@ class NotificationsServiceImplTest : ApplicationTest() {
     fun `websocket client updates subscription and receives new updates`() = runTest {
         webSocket {
             // Initial subscription to physics only
-            val initialSubscription = envelope {
-                messageId = 102
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(Subjects.PHYSICS_ID)
-                            }
+            val initialSubscription = Envelope(
+                message_id = 102L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(Subjects.PHYSICS_ID)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, initialSubscription.toByteArray()))
+            outgoing.send(Frame.Binary(true, initialSubscription.encode()))
 
             val ack1 = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
-            assertTrue(Envelope.parseFrom(ack1.readBytes()).hasAcknowledged())
+            assertNotNull(Envelope.ADAPTER.decode(ack1.readBytes()).acknowledged)
 
             // Update subscription to chemistry only
-            val updatedSubscription = envelope {
-                messageId = 103
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(Subjects.CHEMISTRY_ID)
-                            }
+            val updatedSubscription = Envelope(
+                message_id = 103L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(Subjects.CHEMISTRY_ID)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, updatedSubscription.toByteArray()))
+            outgoing.send(Frame.Binary(true, updatedSubscription.encode()))
 
             val ack2 = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
-            assertTrue(Envelope.parseFrom(ack2.readBytes()).hasAcknowledged())
+            assertNotNull(Envelope.ADAPTER.decode(ack2.readBytes()).acknowledged)
 
             // Trigger update for chemistry
-            assertIs<ElectiveSelectionService.ModifySelectionResult.Success>(
-                electiveSelectionService.setStudentSelection(
+            assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(
+                enrollmentSelectionService.setStudentSelection(
                     johnSessionUser,
                     Students.JOHN_ID,
-                    Electives.SCIENCE_ID,
+                    Enrollments.SCIENCE_ID,
                     Subjects.CHEMISTRY_ID,
                 )
             )
@@ -735,9 +694,9 @@ class NotificationsServiceImplTest : ApplicationTest() {
             val updateResponse = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
-            val updateEnvelope = Envelope.parseFrom(updateResponse.readBytes())
-            assertTrue(updateEnvelope.hasSubjectEnrollmentUpdate())
-            assertEquals(Subjects.CHEMISTRY_ID, updateEnvelope.subjectEnrollmentUpdate.subjectId)
+            val updateEnvelope = Envelope.ADAPTER.decode(updateResponse.readBytes())
+            assertNotNull(updateEnvelope.subject_enrollment_update)
+            assertEquals(Subjects.CHEMISTRY_ID, updateEnvelope.subject_enrollment_update!!.subject_id)
 
             close()
         }
@@ -747,41 +706,38 @@ class NotificationsServiceImplTest : ApplicationTest() {
     fun `websocket client unsubscribes and stops receiving updates`() = runTest {
         webSocket {
             // Subscribe to physics
-            val subscriptionEnvelope = envelope {
-                messageId = 104
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        subscriptions.put(
-                            Electives.SCIENCE_ID,
-                            subjectEnrollmentUpdateSubscription {
-                                subjectIds.add(Subjects.PHYSICS_ID)
-                            }
+            val subscriptionEnvelope = Envelope(
+                message_id = 104L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    subscriptions = mapOf(
+                        Enrollments.SCIENCE_ID to SubjectEnrollmentUpdateSubscription(
+                            subject_ids = listOf(Subjects.PHYSICS_ID)
                         )
-                    }
-            }
+                    )
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, subscriptionEnvelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, subscriptionEnvelope.encode()))
 
             val ack1 = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
-            assertTrue(Envelope.parseFrom(ack1.readBytes()).hasAcknowledged())
+            assertNotNull(Envelope.ADAPTER.decode(ack1.readBytes()).acknowledged)
 
             // Unsubscribe (send empty subscription)
-            val unsubscribeEnvelope = envelope {
-                messageId = 105
-                subjectEnrollmentUpdateSubscriptionRequest =
-                    subjectEnrollmentUpdateSubscriptionRequest {
-                        // Empty subscriptions map means unsubscribe from all
-                    }
-            }
+            val unsubscribeEnvelope = Envelope(
+                message_id = 105L,
+                subject_enrollment_update_subscription_request = SubjectEnrollmentUpdateSubscriptionRequest(
+                    // Empty subscriptions map means unsubscribe from all
+                )
+            )
 
-            outgoing.send(Frame.Binary(true, unsubscribeEnvelope.toByteArray()))
+            outgoing.send(Frame.Binary(true, unsubscribeEnvelope.encode()))
 
             val ack2 = withTimeout(5.seconds) {
                 incoming.receive() as Frame.Binary
             }
-            assertTrue(Envelope.parseFrom(ack2.readBytes()).hasAcknowledged())
+            assertNotNull(Envelope.ADAPTER.decode(ack2.readBytes()).acknowledged)
 
             close()
         }
@@ -808,11 +764,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
         assertFailsWith<CancellationException> {
             try {
                 createWSClient().webSocket("/notifications") {
-                    send(envelope {
-                        identify = identify {
-                            token = "invalid-token"
-                        }
-                    })
+                    send(Envelope(identify = Identify(token = "invalid-token")))
 
                     // Connection should be closed due to authentication failure
                     incoming.receive()

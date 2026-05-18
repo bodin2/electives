@@ -8,6 +8,7 @@ import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.db.Admin
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
+import th.ac.bodin2.electives.proto.api.GroupType
 import th.ac.bodin2.electives.proto.api.UserType
 import java.security.PublicKey
 
@@ -25,27 +26,31 @@ interface UsersService {
     /**
      * Creates a new student with the given information.
      *
-     * @throws EntityNotFoundException if any of the specified teams do not exist.
+     * @throws EntityNotFoundException if any of the specified groups do not exist.
+     * @throws IllegalArgumentException if a referenced group does not have the expected type, or if the password does not meet the requirements.
      * @throws ConflictException if a user/student with the same ID already exists.
-     * @throws IllegalArgumentException if the password does not meet the requirements.
      */
     fun createStudent(
         id: Int,
         firstName: String,
+        gradeId: Int,
+        roomId: Int,
+        programId: Int? = null,
+        prefix: String? = null,
         middleName: String? = null,
         lastName: String? = null,
         password: String,
         avatarUrl: String? = null,
-        teams: List<Int>? = null,
+        groupIds: List<Int>? = null,
     ): Student
 
     /**
      * Creates multiple students in a batch operation.
      *
-     * @throws BatchOperationException.MissingTeams if any of the specified teams do not exist, with the list of missing team IDs in [UsersService.BatchOperationException.MissingTeams.ids].
+     * @throws BatchOperationException.MissingGroups if any of the specified groups do not exist, with the list of missing group IDs in [UsersService.BatchOperationException.MissingGroups.ids].
      * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [UsersService.BatchOperationException.ConflictingEntities.ids].
      * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
-     *   - [IllegalArgumentException] if the password does not meet the requirements.
+     *   - [IllegalArgumentException] if the password does not meet the requirements, or if any group has the wrong type for its slot.
      */
     @Transactional
     fun createStudents(inserts: List<StudentInsert>): List<Student>
@@ -59,10 +64,12 @@ interface UsersService {
     fun createTeacher(
         id: Int,
         firstName: String,
+        prefix: String? = null,
         middleName: String? = null,
         lastName: String? = null,
         password: String,
         avatarUrl: String? = null,
+        groupIds: List<Int>? = null,
     ): Teacher
 
     /**
@@ -71,6 +78,7 @@ interface UsersService {
      * @throws BatchOperationException.ConflictingEntities if any user with the same IDs already exists, with the list of conflicting IDs in [BatchOperationException.ConflictingEntities.ids].
      * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
      *   - [IllegalArgumentException] if the password does not meet the requirements.
+     * @throws BatchOperationException.MissingGroups if any of the specified groups do not exist.
      */
     @Transactional
     fun createTeachers(inserts: List<TeacherInsert>): List<Teacher>
@@ -103,7 +111,8 @@ interface UsersService {
     /**
      * Updates the student's profile information.
      *
-     * @throws EntityNotFoundException if the user or team does not exist.
+     * @throws EntityNotFoundException if the user, student, or any referenced group does not exist.
+     * @throws IllegalArgumentException if a referenced group does not have the expected type.
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
@@ -131,13 +140,14 @@ interface UsersService {
         class ConflictingEntities(val ids: List<Int>) :
             BatchOperationException("Entity with the same IDs already exists")
 
-        class MissingTeams(val ids: List<Int>) : BatchOperationException("Teams are missing")
+        class MissingGroups(val ids: List<Int>) : BatchOperationException("Groups are missing")
         class InvalidUserData(val id: Int, cause: Throwable) : BatchOperationException("Invalid user data", cause)
     }
 
     class UserData(
         val id: Int,
         val firstName: String,
+        val prefix: String? = null,
         val middleName: String? = null,
         val lastName: String? = null,
         val avatarUrl: String? = null,
@@ -145,11 +155,28 @@ interface UsersService {
     )
 
     sealed class UserInsert(val user: UserData)
-    class StudentInsert(user: UserData, val teams: List<Int> = emptyList()) : UserInsert(user)
-    class TeacherInsert(user: UserData) : UserInsert(user)
+
+    /**
+     * @param gradeId ID of a GRADE-typed group the student is assigned to (required).
+     * @param roomId ID of a ROOM-typed group the student is assigned to (required).
+     * @param programId Optional ID of a PROGRAM-typed group the student is assigned to.
+     * @param groups Optional list of CUSTOM-typed group IDs to add the student to.
+     */
+    class StudentInsert(
+        user: UserData,
+        val gradeId: Int,
+        val roomId: Int,
+        val programId: Int? = null,
+        val groups: List<Int> = emptyList(),
+    ) : UserInsert(user)
+
+    class TeacherInsert(user: UserData, val groups: List<Int> = emptyList()) : UserInsert(user)
     class AdminInsert(user: UserData, val publicKey: PublicKey) : UserInsert(user)
 
     /**
+     * If [setPrefix] is true, the prefix is updated to the given value (which may be null).
+     * If false, the prefix is left unchanged.
+     *
      * If [setMiddleName] is true, the middle name is updated to the given value (which may be null).
      * If false, the middle name is left unchanged.
      *
@@ -161,9 +188,11 @@ interface UsersService {
      */
     data class UserUpdate(
         val firstName: String?,
+        val prefix: String? = null,
         val middleName: String?,
         val lastName: String?,
         val avatarUrl: String?,
+        val setPrefix: Boolean = false,
         val setMiddleName: Boolean = false,
         val setLastName: Boolean = false,
         val setAvatarUrl: Boolean = false,
@@ -171,11 +200,20 @@ interface UsersService {
 
     data class StudentUpdate(
         val user: UserUpdate,
-        val teams: List<Int>? = null,
+        val groups: List<Int>? = null,
+        val gradeId: Int? = null,
+        val roomId: Int? = null,
+        val programId: Int? = null,
+        val setProgramId: Boolean = false,
     )
 
     data class TeacherUpdate(
         val user: UserUpdate,
+        /**
+         * If non-null, replaces the teacher's current group memberships with the provided list of group IDs.
+         * Groups can be of any [GroupType]. All referenced groups must exist.
+         */
+        val groups: List<Int>? = null,
     )
 
     /**

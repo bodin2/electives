@@ -1,21 +1,18 @@
-import com.google.protobuf.gradle.id
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
-    alias(libs.plugins.protobuf)
+    alias(libs.plugins.wire)
 }
 
 dependencies {
-    api(libs.protobuf.kotlin.lite)
-    api(libs.protobuf.java)
+    api(libs.wire.runtime)
 
     api(libs.exposed.core)
     api(libs.exposed.dao)
     api(libs.exposed.jdbc)
     api(libs.exposed.java.time)
 
-    api(libs.sqlite.jdbc)
     implementation(libs.dotenv.kotlin)
 
     // @TODO: Use the version without prebuilt binaries and include setup instructions
@@ -25,18 +22,12 @@ dependencies {
     testImplementation(libs.kotlin.test.junit)
 }
 
-protobuf {
-    protoc {
-        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.asProvider().get()}"
+wire {
+    sourcePath {
+        srcDir("src/main/proto")
     }
 
-    generateProtoTasks {
-        all().forEach {
-            it.builtins {
-                id("kotlin") { option("lite") }
-            }
-        }
-    }
+    kotlin {}
 }
 
 // Force UTF-8 encoding for Java compilation to handle non-ASCII (Thai) chars in generated sources

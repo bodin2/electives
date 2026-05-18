@@ -1,9 +1,9 @@
-import ErrorIcon from '../../images/error.webp'
-import { useI18n } from '../../providers/I18nProvider'
+import ErrorIcon from '~/images/error.webp'
+import { useI18n } from '~/providers/I18nProvider'
 import { VStack } from '../Stack'
 import styles from './Image.module.css'
 import type { ComponentProps } from 'solid-js'
-import type { StyleRecordOnly } from '../../global'
+import type { StyleRecordOnly } from '~/global'
 
 export default function ErrorIllustration(props: StyleRecordOnly<ComponentProps<'div'>>) {
     const { string } = useI18n()

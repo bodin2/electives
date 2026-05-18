@@ -6,21 +6,21 @@ import io.ktor.server.testing.*
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.*
 import th.ac.bodin2.electives.api.annotations.Transactional
-import th.ac.bodin2.electives.api.services.ElectiveSelectionService.*
+import th.ac.bodin2.electives.api.services.EnrollmentSelectionService.*
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.PASSWORD
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
-import th.ac.bodin2.electives.api.services.mock.testElectiveSelectionServiceResponse
+import th.ac.bodin2.electives.api.services.mock.testEnrollmentSelectionServiceResponse
 import th.ac.bodin2.electives.proto.api.User
 import th.ac.bodin2.electives.proto.api.UserType
-import th.ac.bodin2.electives.proto.api.UsersServiceKt.setStudentElectiveSelectionRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import th.ac.bodin2.electives.proto.api.UsersService as UsersServiceProto
 
 @OptIn(Transactional::class)
 class UsersRoutesTest : ApplicationTest() {
@@ -102,8 +102,8 @@ class UsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<th.ac.bodin2.electives.proto.api.UsersService.StudentSelections>()
 
-        assertEquals(SUBJECT_ID, selections.subjectsMap[ELECTIVE_ID]?.id)
-        assertEquals(TEACHER_ID, selections.subjectsMap[ELECTIVE_ID]?.teachersList?.first()?.id)
+        assertEquals(SUBJECT_ID, selections.subjects[ENROLLMENT_ID]?.id)
+        assertEquals(TEACHER_ID, selections.subjects[ENROLLMENT_ID]?.teachers?.first()?.id)
     }
 
     @Test
@@ -116,9 +116,9 @@ class UsersRoutesTest : ApplicationTest() {
         serviceResponse: ModifySelectionResult,
         delete: Boolean = false
     ): HttpResponse {
-        testElectiveSelectionServiceResponse = serviceResponse
+        testEnrollmentSelectionServiceResponse = serviceResponse
 
-        val url = "/users/@me/selections/${ELECTIVE_ID}"
+        val url = "/users/@me/selections/${ENROLLMENT_ID}"
         val token = studentToken()
 
         if (delete) {
@@ -127,22 +127,20 @@ class UsersRoutesTest : ApplicationTest() {
 
         return client.putProtoWithAuth(
             url,
-            setStudentElectiveSelectionRequest {
-                subjectId = SUBJECT_ID
-            },
+            UsersServiceProto.SetStudentEnrollmentSelectionRequest(subject_id = SUBJECT_ID),
             token
         )
     }
 
     @Test
     fun `modify selection success`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.Success).assertOK()
+        modifySelectionWithResult(ModifySelectionResult.Success).assertNoContent()
     }
 
     @Test
-    fun `modify selection on not found elective`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.NotFound(ExceptionEntity.ELECTIVE))
-            .assertNotFound("Elective not found")
+    fun `modify selection on not found enrollment`() = runRouteTest {
+        modifySelectionWithResult(ModifySelectionResult.NotFound(ExceptionEntity.ENROLLMENT))
+            .assertNotFound("Enrollment not found")
     }
 
     @Test
@@ -166,31 +164,31 @@ class UsersRoutesTest : ApplicationTest() {
     @Test
     fun `modify selection not enrolled`() = runRouteTest {
         modifySelectionWithResult(ModifySelectionResult.CannotModify(ModifySelectionStatus.NOT_ENROLLED), true)
-            .assertBadRequest("Student has not enrolled in the selected elective")
+            .assertBadRequest("Student has not enrolled in the selected enrollment")
     }
 
     @Test
-    fun `modify selection subject not in elective`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.SUBJECT_NOT_IN_ELECTIVE))
-            .assertBadRequest("Subject is not part of this elective")
+    fun `modify selection subject not in enrollment`() = runRouteTest {
+        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.SUBJECT_NOT_IN_ENROLLMENT))
+            .assertBadRequest("Subject is not part of this enrollment")
     }
 
     @Test
     fun `modify selection already enrolled`() = runRouteTest {
         modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.ALREADY_ENROLLED))
-            .assertConflict("Student has already enrolled for this elective")
+            .assertConflict("Student has already enrolled for this enrollment")
     }
 
     @Test
-    fun `modify selection not in elective team`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_ELECTIVE_TEAM))
-            .assertForbidden("Student does not pass the team requirements")
+    fun `modify selection not in enrollment group`() = runRouteTest {
+        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_ENROLLMENT_GROUP))
+            .assertForbidden("Student does not pass the group requirements")
     }
 
     @Test
-    fun `modify selection not in subject team`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_SUBJECT_TEAM))
-            .assertForbidden("Student does not pass the team requirements")
+    fun `modify selection not in subject group`() = runRouteTest {
+        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_SUBJECT_GROUP))
+            .assertForbidden("Student does not pass the group requirements")
     }
 
     @Test
@@ -200,15 +198,18 @@ class UsersRoutesTest : ApplicationTest() {
     }
 
     @Test
-    fun `modify selection not in elective date range`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE))
-            .assertBadRequest("Not in elective enrollment date range")
+    fun `modify selection not in enrollment date range`() = runRouteTest {
+        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE))
+            .assertBadRequest("Not in enrollment date range")
     }
 
     @Test
-    fun `delete selection not in elective date range`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_ELECTIVE_DATE_RANGE), true)
-            .assertBadRequest("Not in elective enrollment date range")
+    fun `delete selection not in enrollment date range`() = runRouteTest {
+        modifySelectionWithResult(
+            ModifySelectionResult.CannotEnroll(CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE),
+            true
+        )
+            .assertBadRequest("Not in enrollment date range")
     }
 
     @Test
@@ -217,8 +218,8 @@ class UsersRoutesTest : ApplicationTest() {
             .assertOK()
             .parse<th.ac.bodin2.electives.proto.api.UsersService.TeacherSubjects>()
 
-        assertTrue(response.subjectsMap.isNotEmpty())
-        assertEquals(SUBJECT_ID, response.subjectsMap.values.first().id)
+        assertTrue(response.subjects.isNotEmpty())
+        assertEquals(SUBJECT_ID, response.subjects.values.first().id)
     }
 
     @Test

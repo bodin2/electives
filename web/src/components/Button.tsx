@@ -1,6 +1,7 @@
-import { type ButtonProps, LoadingIndicator, Button as M3Button, mergeClasses } from 'm3-solid'
+import { mergeRefs } from '@solid-primitives/refs'
+import { type ButtonProps, LoadingIndicator, Button as M3Button, mergeClasses } from 'm3-solid/src'
 import { createEffect, createSignal, type JSX, Show, splitProps } from 'solid-js'
-import { useI18n } from '../providers/I18nProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import styles from './Button.module.css'
 
 export function Button(
@@ -11,7 +12,11 @@ export function Button(
     },
 ) {
     const { string } = useI18n()
-    const [local, others] = splitProps(props, ['variant', 'loading', 'onClick', 'icon'])
+    const [local, others] = splitProps(props, ['variant', 'loading', 'onClick', 'icon', 'ref'])
+    const [measuredSize, setMeasuredSize] = createSignal<{ width: string; height: string }>({
+        width: '0px',
+        height: '0px',
+    })
 
     const [loading, setLoading] = createSignal(local.loading ?? false)
     const isLoadingStateControlled = () => local.loading !== undefined
@@ -20,9 +25,19 @@ export function Button(
         if (local.loading !== undefined) setLoading(local.loading)
     })
 
+    let button: HTMLButtonElement | undefined
+
     // Wrap onClick to prevent multiple clicks while loading, or completing an action
     const wrappedOnClick: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent> = async e => {
-        if (loading()) return
+        if (loading() || !button) return
+
+        const rect = button.getBoundingClientRect()
+        const style = getComputedStyle(button)
+
+        setMeasuredSize({
+            width: `calc(${rect.width}px - ${style.paddingLeft} - ${style.paddingRight})`,
+            height: `calc(${rect.height}px - ${style.paddingTop} - ${style.paddingBottom})`,
+        })
 
         const onClick = local.onClick
         const ret = onClick?.(e)
@@ -48,6 +63,7 @@ export function Button(
     return (
         <M3Button
             {...others}
+            ref={mergeRefs(local.ref, el => (button = el))}
             icon={loading() ? undefined : local.icon}
             onClick={wrappedOnClick}
             class={mergeClasses(
@@ -57,13 +73,16 @@ export function Button(
             )}
             variant={wrappedVariant()}
         >
-            <Show when={props.children || loading()}>
-                <Show when={loading()}>
-                    <LoadingIndicator aria-label={string.LOADING()} class={styles.loading} />
-                </Show>
-                <div style={{ display: 'flex', opacity: loading() ? 0 : 1 }} aria-hidden={loading()}>
-                    {props.children}
-                </div>
+            <Show
+                when={!loading()}
+                fallback={
+                    <>
+                        <LoadingIndicator aria-label={string.LOADING()} class={styles.loading} />
+                        <div style={measuredSize()} />
+                    </>
+                }
+            >
+                {props.children}
             </Show>
         </M3Button>
     )

@@ -1,12 +1,12 @@
-import { useAPI } from '../../providers/APIProvider'
-import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
-import { useI18n } from '../../providers/I18nProvider'
-import AddUserDialog from './AddUserDialog'
+import { useAPI } from '~/providers/APIProvider'
+import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import AddUserDialog from './base/AddUserDialog'
 
 export default function AddStudentToSubjectDialog(props: {
     open: boolean
     onClose: () => unknown
-    electiveId: number
+    enrollmentId: number
     subjectId: number
 }) {
     const api = useAPI()
@@ -18,12 +18,10 @@ export default function AddStudentToSubjectDialog(props: {
             open={props.open}
             onClose={props.onClose}
             headline={string.ADD_STUDENT_TO_SUBJECT()}
-            actionLabel={string.ADD_STUDENT_TO_SUBJECT()}
-            idLabel={string.STUDENT_ID()}
-            validateUser={user => (!user.isStudent() ? string.ERROR_NOT_STUDENT() : null)}
+            type="student"
             onConfirm={async user => {
-                await api.client.selections.set(user.id, props.electiveId, props.subjectId)
-                enrolledCounts.bumpVersion(props.electiveId)
+                await api.client.selections.set(user.id, props.enrollmentId, props.subjectId)
+                enrolledCounts.setCount(props.enrollmentId, props.subjectId, current => current + 1)
             }}
         />
     )

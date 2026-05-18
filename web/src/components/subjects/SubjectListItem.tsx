@@ -1,36 +1,53 @@
-import { type JSX, Show } from 'solid-js'
-import { User } from '../../api'
-import SubjectThumbnailPlaceholder from '../../images/subject-thumbnail-placeholder.webp'
-import { useEnrollmentCounts } from '../../providers/EnrollmentCountsProvider'
-import { useI18n } from '../../providers/I18nProvider'
+import { createQuery, skipToken } from '@tanstack/solid-query'
+import { ListItem, mergeClasses } from 'm3-solid/src'
+import { createMemo, type JSX, Show, Suspense } from 'solid-js'
+import SubjectThumbnailPlaceholder from '~/images/subject-thumbnail-placeholder.webp'
+import { useAPI } from '~/providers/APIProvider'
+import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { groupQueryOptions } from '~/queries/groups'
+import { GroupBadge } from '../Badges'
 import LinkListItem from '../LinkListItem'
-import { VStack } from '../Stack'
+import { HStack, VStack } from '../Stack'
 import styles from './SubjectListItem.module.css'
 import type { LinkProps } from '@tanstack/solid-router'
-import type { Subject } from '../../api'
+import type { Subject } from '~/api'
 
 interface SubjectListItemProps {
     subject: Subject
     editable?: boolean
-    electiveId?: number
+    enrollmentId?: number
     actions?: JSX.Element
     linkProps?: LinkProps
+    onClick?: () => void
+    selected?: boolean
 }
 
 export default function SubjectListItem(props: SubjectListItemProps) {
     const { string } = useI18n()
+    const api = useAPI()
     const enrollment = useEnrollmentCounts()
 
+    const groupQuery = createQuery(() => ({
+        ...groupQueryOptions(api.client, props.subject.groupId ?? skipToken),
+        enabled: api.client.user?.isAdmin() ?? props.subject.groupId !== undefined,
+    }))
+
     const enrolledCount = () => {
-        return props.electiveId !== undefined ? (enrollment.getCount(props.electiveId, props.subject.id) ?? 0) : 0
+        return props.enrollmentId !== undefined ? enrollment.getCount(props.enrollmentId, props.subject.id) : undefined
     }
 
     const isNearCapacity = () => {
-        if (props.electiveId === undefined) return false
-        return enrolledCount() / props.subject.capacity > 0.8 || props.subject.capacity - enrolledCount() < 5
+        const count = enrolledCount()
+        if (props.enrollmentId === undefined || count === undefined) return false
+        return count / props.subject.capacity > 0.8 || props.subject.capacity - count < 5
     }
 
-    const teacherNames = () => props.subject.teachers.map(t => new User(t).fullName).join(', ') || '-'
+    const teacherNames = () => {
+        if (props.enrollmentId === undefined) return null
+        const teachers = api.client.subjects.resolveTeachers(props.enrollmentId, props.subject.id)
+        return (teachers?.map(t => t.displayName) ?? []).join(', ') || null
+    }
 
     const Leading = (
         <img
@@ -43,7 +60,7 @@ export default function SubjectListItem(props: SubjectListItemProps) {
     const Trailing = (
         <VStack alignHorizontal="end">
             <Show when={props.actions}>{props.actions}</Show>
-            <Show when={props.electiveId !== undefined}>
+            <Show when={enrolledCount() !== undefined}>
                 <p
                     class="m3-body-medium"
                     classList={{
@@ -58,21 +75,46 @@ export default function SubjectListItem(props: SubjectListItemProps) {
 
     const supporting = (
         <>
-            <p>{`${string.CLASS()}: ${props.subject.location}`}</p>
-            <p>{`${string.TEACHERS()}: ${teacherNames()}`}</p>
+            <p>{`${props.subject.code} • ${string.CLASS()}: ${props.subject.location}`}</p>
+            <p>{''}</p>
+            <Show when={teacherNames()}>{names => <p>{`${string.TEACHERS()}: ${names()}`}</p>}</Show>
         </>
     )
 
+    const commonProps = createMemo(() => ({
+        class: mergeClasses(styles.item, props.selected && styles.selected),
+        lines: 4 as const,
+        headline: (
+            /* @once */
+            <HStack alignVertical="center">
+                {props.subject.name}
+                <Suspense>
+                    <Show when={groupQuery.data}>{group => <GroupBadge group={group()} />}</Show>
+                </Suspense>
+            </HStack>
+        ),
+        leading: Leading,
+        trailing: Trailing,
+        supporting,
+    }))
+
+    const ariaLabel = () =>
+        [
+            `${props.subject.name} (${props.subject.code})`,
+            `${string.CLASS()}: ${props.subject.location}`,
+            teacherNames() && `${string.TEACHERS()}: ${teacherNames()}`,
+        ]
+            .filter(Boolean)
+            .join(', ')
+
     return (
-        <LinkListItem
-            {...props.linkProps}
-            class={styles.item}
-            lines={4}
-            headline={props.subject.name}
-            preloadDelay={500}
-            leading={Leading}
-            trailing={Trailing}
-            supporting={supporting}
-        />
+        <Show
+            when={props.onClick}
+            fallback={
+                <LinkListItem aria-label={ariaLabel()} {...props.linkProps} {...commonProps()} preloadDelay={500} />
+            }
+        >
+            {onClick => <ListItem aria-label={ariaLabel()} onClick={onClick()} {...commonProps()} />}
+        </Show>
     )
 }

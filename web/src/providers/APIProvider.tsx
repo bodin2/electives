@@ -22,10 +22,12 @@ import {
     RESTClient,
     UserAuthenticator,
     UserType,
-} from '../api'
-import { GatewayEndpoints } from '../api/gateway'
-import { NetworkError } from '../api/types'
-import { nonNull } from '../utils'
+} from '~/api'
+import { GatewayEndpoints } from '~/api/gateway'
+import { NetworkError } from '~/api/types'
+import { API_BASE_URL, API_CLIENT_NAME } from '~/constants'
+import { queryClient } from '~/queries/queryClient'
+import { nonNull } from '~/utils'
 
 export enum AuthenticationState {
     Loading = 0,
@@ -49,10 +51,11 @@ const TOKEN_TYPE_KEY = 'auth_token_type'
 const APIContext = createContext<APIApi>()
 const log = new Logger('APIProvider')
 
-export enum TokenType {
-    User = 'user',
-    Admin = 'admin',
-}
+export type TokenType = (typeof TokenType)[keyof typeof TokenType]
+export const TokenType = {
+    User: 'user',
+    Admin: 'admin',
+} as const
 
 type APIClient = Client<unknown>
 const gatewayURLFromBaseURL = (baseURL: string, tokenType: TokenType): string => {
@@ -85,7 +88,7 @@ const configureClientAuth = (client: APIClient, tokenType: TokenType): Authentic
 }
 
 export const createClient = () => {
-    const baseURL = process.env.API_BASE_URL || 'http://localhost:8080'
+    const baseURL = API_BASE_URL
     const tokenType = getTokenType()
     const rest = new RESTClient({ baseURL })
     const gateway = new Gateway({
@@ -94,13 +97,17 @@ export const createClient = () => {
         reconnectDelay: 5000,
     })
 
-    return new Client({
+    latestClient = new Client({
         rest,
         gateway,
         authenticator: createAuthenticator(rest, tokenType),
         autoConnect: true,
     })
+
+    return latestClient
 }
+
+export let latestClient: Client<unknown> | null = null
 
 export const initAuth = async (client: APIClient): Promise<AuthenticationState> => {
     const token = localStorage.getItem(TOKEN_KEY)
@@ -138,7 +145,6 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
               ? TokenType.User
               : null,
     )
-    const [updater, setUpdater] = createSignal(0)
 
     createEffect(() => {
         log.debug('Authentication state changed to:', AuthenticationState[authState()])
@@ -151,22 +157,19 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
         })
     })
 
-    let loggingOut = false
-
     function checkSession(error: Error) {
-        loggingOut = true
         client.hasSession().then(hasSession => {
             if (!hasSession) {
                 log.warn('Unauthorized, logging out:', error.message)
                 return client.logout()
             }
-
-            loggingOut = false
         })
     }
 
     createEffect(
-        on(updater, () => {
+        on(authState, state => {
+            if (state === AuthenticationState.NetworkError) return
+
             const onReady = (user: ClientEventMap['ready']) => {
                 log.info('Logged in as:', user)
                 setTokenType(user.type === UserType.ADMIN ? TokenType.Admin : TokenType.User)
@@ -198,7 +201,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             }
 
             const onUnauthorized = (error: ClientEventMap['unauthorized']) => {
-                if (authState() === AuthenticationState.LoggedOut || loggingOut) {
+                if (authState() === AuthenticationState.LoggedOut) {
                     log.warn('Received unauthorized event while logged out, likely a bad session.')
                     return
                 }
@@ -211,7 +214,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
                 localStorage.removeItem(TOKEN_TYPE_KEY)
                 setTokenType(null)
                 setAuthState(AuthenticationState.LoggedOut)
-                setUpdater(~updater())
+                queryClient.clear()
 
                 log.info('Logged out')
             }
@@ -253,7 +256,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
         tokenType: tokenType,
         login: async (id: number, password: string) => {
             configureClientAuth(client, TokenType.User)
-            const credentials: LoginOptions = { id, password, clientName: `web@${process.env.APP_VERSION}` }
+            const credentials: LoginOptions = { id, password, clientName: API_CLIENT_NAME }
             await client.login(credentials)
 
             const token = client.rest.token
@@ -267,7 +270,8 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
         },
         adminLogin: async (key: CryptoKey) => {
             configureClientAuth(client, TokenType.Admin)
-            const credentials: AdminAuthenticateOptions = { key }
+            // TODO: Support multiple admin accounts
+            const credentials: AdminAuthenticateOptions = { key, id: 0 }
             await client.login(credentials)
 
             const token = client.rest.token

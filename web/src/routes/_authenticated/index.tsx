@@ -1,61 +1,66 @@
 import SettingsIcon from '@iconify-icons/mdi/cog'
+import { createQuery } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { createSignal } from 'solid-js'
 import { Portal } from 'solid-js/web'
-import { Button } from '../../components/Button'
-import SettingsDialog from '../../components/dialogs/SettingsDialog'
-import ElectiveList from '../../components/electives/ElectiveList'
-import UserInfoCard from '../../components/electives/UserInfoCard'
-import Page from '../../components/Page'
-import { VStack } from '../../components/Stack'
-import { useI18n } from '../../providers/I18nProvider'
-import { electiveSorter, nonNull } from '../../utils'
+import { Button } from '~/components/Button'
+import SettingsDialog from '~/components/dialogs/SettingsDialog'
+import EnrollmentList from '~/components/enrollments/EnrollmentList'
+import Page from '~/components/Page'
+import { VStack } from '~/components/Stack'
+import UserInfoCard from '~/components/users/UserInfoCard'
+import { useAPI } from '~/providers/APIProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import { enrollmentsQueryOptions } from '~/queries/enrollments'
+import { selectionsQueryOptions } from '~/queries/selections'
+import { enrollmentSorter, nonNull } from '~/utils'
 import { AUTHENTICATED_ROUTE_DEFAULTS } from '../_authenticated'
 import styles from './index.module.css'
 
 export const Route = createFileRoute('/_authenticated/')({
     ...AUTHENTICATED_ROUTE_DEFAULTS,
     loader: async ({ context }) => {
-        const user = nonNull(context.client.user)
-
-        const [electives] = await Promise.all([
-            context.client.electives.fetchAll().then(electives =>
-                electives
-                    .filter(e => {
-                        // Teachers can see all electives
-                        if (user.isTeacher()) return true
-
-                        if (e.teamId != null) return user.hasTeam(e.teamId)
-                        return true
-                    })
-                    .sort(electiveSorter),
-            ),
-            // Prefetch student's selections
-            user.isStudent() ? context.client.selections.fetch('@me') : null,
+        const { client, queryClient } = context
+        await Promise.all([
+            queryClient.ensureQueryData(enrollmentsQueryOptions(client)),
+            nonNull(client.user).isStudent()
+                ? queryClient.ensureQueryData(selectionsQueryOptions(client, '@me'))
+                : null,
         ])
-
-        return { electives, user }
     },
     component: Home,
 })
 
 function Home() {
-    const data = Route.useLoaderData()
     const navigate = Route.useNavigate()
     const { string } = useI18n()
+    const { client } = useAPI()
+    const user = nonNull(client.user)
+
+    const enrollmentsQuery = createQuery(() => enrollmentsQueryOptions(client))
+
+    const enrollments = () =>
+        (enrollmentsQuery.data ?? [])
+            .filter(e => {
+                // Teachers can see all enrollments
+                if (user.isTeacher()) return true
+                if (e.groupId != null) return user.hasGroup(e.groupId)
+                return true
+            })
+            .sort(enrollmentSorter)
 
     const [settingsOpen, setSettingsOpen] = createSignal(false)
 
     const onCardClick = (id: number) => {
         navigate({
-            to: '/enroll/$electiveId',
-            params: { electiveId: id },
+            to: '/enroll/$enrollmentId',
+            params: { enrollmentId: id },
         })
     }
 
     return (
         <Page
-            name={string.ELECTIVES()}
+            name={string.ENROLLMENTS()}
             trailing={
                 <Button
                     variant="text"
@@ -71,7 +76,7 @@ function Home() {
             <VStack gap={16} class="padded">
                 <UserInfoCard class={styles.card} />
             </VStack>
-            <ElectiveList electives={data().electives} user={data().user} onCardClick={onCardClick} />
+            <EnrollmentList enrollments={enrollments()} user={user} onCardClick={onCardClick} />
             <Portal>
                 <SettingsDialog open={settingsOpen()} onClose={() => setSettingsOpen(false)} />
             </Portal>

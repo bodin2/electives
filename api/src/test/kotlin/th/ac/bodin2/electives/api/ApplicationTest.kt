@@ -46,8 +46,8 @@ abstract class ApplicationTest {
             register(RATE_LIMIT_ADMIN, mock)
             register(RATE_LIMIT_ADMIN_AUTH, mock)
             register(RATE_LIMIT_AUTH, mock)
-            register(RATE_LIMIT_ELECTIVES, mock)
-            register(RATE_LIMIT_ELECTIVES_SUBJECT_MEMBERS, mock)
+            register(RATE_LIMIT_ENROLLMENTS, mock)
+            register(RATE_LIMIT_ENROLLMENTS_SUBJECT_MEMBERS, mock)
             register(RATE_LIMIT_NOTIFICATIONS, mock)
             register(RATE_LIMIT_USERS, mock)
             register(RATE_LIMIT_USERS_SELECTIONS, mock)
@@ -67,10 +67,10 @@ abstract class ApplicationTest {
                         provide<Argon2> { Argon2(16.MiB, 5) }
                         provide<UsersService> { TestUsersService() }
                         provide<NotificationsService> { mockk(relaxed = true) }
-                        provide<ElectiveService> { TestElectiveService() }
-                        provide<ElectiveSelectionService> { TestElectiveSelectionService() }
+                        provide<EnrollmentService> { TestEnrollmentService() }
+                        provide<EnrollmentSelectionService> { TestEnrollmentSelectionService() }
                         provide<SubjectService> { TestSubjectService() }
-                        provide<TeamService> { TestTeamService() }
+                        provide<GroupService> { TestGroupService() }
                         provide<AdminAuthService> {
                             mockk<AdminAuthService>(relaxed = true).apply {
                                 every { permitsIP(any()) } returns true
@@ -129,6 +129,7 @@ abstract class ApplicationTest {
         msg?.let { assertEquals(it, bodyAsText()) }
     }
 
+    suspend fun HttpResponse.assertNoContent(msg: String? = null) = assertStatus(HttpStatusCode.NoContent, msg)
     suspend fun HttpResponse.assertOK(msg: String? = null) = assertStatus(HttpStatusCode.OK, msg)
     suspend fun HttpResponse.assertNotFound(msg: String? = null) = assertStatus(HttpStatusCode.NotFound, msg)
     suspend fun HttpResponse.assertBadRequest(msg: String? = null) = assertStatus(HttpStatusCode.BadRequest, msg)

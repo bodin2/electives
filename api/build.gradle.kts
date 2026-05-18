@@ -33,7 +33,10 @@ dependencies {
     implementation(libs.ktor.server.rate.limit)
     implementation(libs.ktor.server.call.logging)
     implementation(libs.logback.classic)
+    implementation(libs.postgresql)
+    implementation(libs.hikaricp)
 
+    testImplementation(libs.sqlite.jdbc)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)

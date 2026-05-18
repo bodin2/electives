@@ -1,30 +1,31 @@
+import { SubjectTag } from '@bodin2/electives-common/proto/api'
 import KBArrowDownIcon from '@iconify-icons/mdi/keyboard-arrow-down'
 import KBArrowUpIcon from '@iconify-icons/mdi/keyboard-arrow-up'
-import type { LinkProps } from '@tanstack/solid-router'
-import { Button } from 'm3-solid'
+import { Button } from 'm3-solid/src'
 import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
-import { useI18n } from '../../providers/I18nProvider'
-import { createHashFromString, seededShuffle } from '../../utils/random'
+import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
+import { createHashFromString, seededShuffle } from '~/utils/random'
 import { HStack, VStack } from '../Stack'
+import styles from './SubjectCategorySection.module.css'
 import SubjectListItem from './SubjectListItem'
-import type { SubjectTag } from '@bodin2/electives-common/proto/api'
-import type { Elective, Subject } from '../../api'
+import type { LinkProps } from '@tanstack/solid-router'
+import type { Enrollment, Subject } from '~/api'
 
 const randomSeed = Math.floor(Math.random() * 2147483647)
 
 interface SubjectCategorySectionProps {
-    category: keyof typeof SubjectTag
+    category: SubjectTag | string
     subjects: Subject[]
     defaultExpanded?: boolean
     maxUnexpandedShown: number
-    headerClass?: string
-    listClass?: string
-    thumbnailClass?: string
     noRandom?: boolean
     editable?: boolean
-    elective?: Elective
+    enrollment?: Enrollment
     itemActions?: (subject: Subject) => JSX.Element
     viewLinkProps?: (subjectId: number) => LinkProps
+    selectedIds?: number[]
+    onSubjectClick?: (subject: Subject) => void
 }
 
 export default function SubjectCategorySection(props: SubjectCategorySectionProps) {
@@ -32,7 +33,9 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
     const { string } = useI18n()
 
     const tagName = (): string => {
-        const key = `SUBJECT_CATEGORY_${props.category}` as keyof typeof string
+        if (typeof props.category === 'string') return props.category
+
+        const key = `SUBJECT_CATEGORY_${SubjectTag[props.category]}` as keyof typeof string
         const value = string[key]
         const fallback = string.SUBJECT_CATEGORY_OTHER
 
@@ -45,7 +48,9 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
 
     const expandable = () => props.subjects.length > props.maxUnexpandedShown
 
-    const categorySeed = createMemo(() => randomSeed ^ createHashFromString(props.category))
+    const categorySeed = createMemo(
+        () => randomSeed ^ (typeof props.category === 'string' ? createHashFromString(props.category) : props.category),
+    )
     const subjectRandomized = createMemo(() =>
         props.noRandom ? props.subjects : seededShuffle(props.subjects, categorySeed()),
     )
@@ -58,9 +63,9 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
                 as="header"
                 alignVertical="center"
                 alignHorizontal={expandable() ? 'space-between' : 'start'}
-                class={props.headerClass}
+                class={styles.header}
             >
-                <h1 class="m3-title-large">
+                <h1 class="m3-title-large" aria-label={`${tagName()} (${props.subjects.length} ${string.SUBJECTS()})`}>
                     {tagName()} ({props.subjects.length})
                 </h1>
                 <Show when={expandable()}>
@@ -73,15 +78,17 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
                     </Button>
                 </Show>
             </HStack>
-            <ul class={props.listClass}>
+            <ul class={styles.list}>
                 <For each={displayedSubjects()}>
                     {subject => (
                         <SubjectListItem
                             subject={subject}
                             editable={props.editable}
-                            electiveId={props.elective?.id}
+                            enrollmentId={props.enrollment?.id}
                             actions={props.itemActions?.(subject)}
                             linkProps={props.viewLinkProps?.(subject.id)}
+                            selected={props.selectedIds?.includes(subject.id)}
+                            onClick={props.onSubjectClick && (() => nonNull(props.onSubjectClick)(subject))}
                         />
                     )}
                 </For>

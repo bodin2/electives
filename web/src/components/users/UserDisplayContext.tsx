@@ -1,7 +1,7 @@
 import { createContext, type ParentProps, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import type { LinkProps } from '@tanstack/solid-router'
-import type { AdminUserPatch, RawUser, User } from '../../api'
+import type { AdminUserPatch, RawUser, User } from '~/api'
 
 export type UserPatchSetterKey = {
     [K in keyof AdminUserPatch]: AdminUserPatch[K] extends boolean | undefined ? K : never
@@ -63,19 +63,9 @@ export function UserDisplayContextProvider(
 export const useUserDisplayContext = () => useContext(UserDisplayContext)
 
 export const BaseUserDisplayContext = {
-    createLinkProps: type => ({
-        to: '/manage/users/$userId',
-        params: { userId: 'new' },
-        search: { type },
-    }),
-    editLinkProps: userId => ({
-        to: '/manage/users/$userId',
-        params: { userId },
-    }),
-    viewLinkProps: userId => ({
-        to: '/manage/users/$userId',
-        params: { userId },
-    }),
+    createLinkProps: () => ({}),
+    editLinkProps: () => ({}),
+    viewLinkProps: () => ({}),
     creating: false,
     editable: false,
     edited: false,

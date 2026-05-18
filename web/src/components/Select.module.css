@@ -40,6 +40,27 @@
         transition: 0.25s rotate var(--m3-easing-fast);
         scale: 1 0.6;
     }
+
+    &:disabled {
+        opacity: 0.5;
+    }
+
+    &:hover {
+        background-color: var(--m3c-surface-container-highest);
+    }
+
+    &:focus {
+        border-bottom: 2px solid var(--m3c-primary);
+        padding-bottom: 15px; /* Adjust padding to prevent jumping when border increases */
+    }
+
+    &.error {
+        border-bottom-color: var(--m3c-error);
+    }
+
+    &.error:focus {
+        border-bottom-color: var(--m3c-error);
+    }
 }
 
 .option {
@@ -66,23 +87,6 @@
     border: none;
     border-radius: var(--m3-shape-small);
     box-shadow: var(--m3-elevation-1);
-}
-
-.select:hover {
-    background-color: var(--m3c-surface-variant);
-}
-
-.select:focus {
-    border-bottom: 2px solid var(--m3c-primary);
-    padding-bottom: 15px; /* Adjust padding to prevent jumping when border increases */
-}
-
-.select.error {
-    border-bottom-color: var(--m3c-error);
-}
-
-.select.error:focus {
-    border-bottom-color: var(--m3c-error);
 }
 
 .supportingText {

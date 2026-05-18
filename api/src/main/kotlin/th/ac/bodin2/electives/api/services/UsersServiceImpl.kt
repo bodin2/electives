@@ -19,6 +19,7 @@ import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersServiceImpl.Config
 import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.*
+import th.ac.bodin2.electives.proto.api.GroupType
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.env
@@ -66,6 +67,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         private val userInfoFields = listOf(
             Users.id,
             Users.avatarUrl,
+            Users.prefix,
             Users.firstName,
             Users.middleName,
             Users.lastName
@@ -94,70 +96,140 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     override fun createStudent(
         id: Int,
         firstName: String,
+        gradeId: Int,
+        roomId: Int,
+        programId: Int?,
+        prefix: String?,
         middleName: String?,
         lastName: String?,
         password: String,
         avatarUrl: String?,
-        teams: List<Int>?,
+        groupIds: List<Int>?,
     ): Student {
-        val user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
+        assertGroupHasType(gradeId, GroupType.GRADE)
+        assertGroupHasType(roomId, GroupType.ROOM)
+        programId?.let { assertGroupHasType(it, GroupType.PROGRAM) }
+        assertGroupsHaveType(groupIds.orEmpty(), GroupType.CUSTOM)
+
+        val user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
         val studentRow = Students
-            .insert {
-                it[Students.id] = user.id
-                it[Students.user] = user.id
-            }
+            .insert { it[Students.id] = user.id }
             .resultedValues!!
             .first()
 
-        StudentTeams.batchInsert(teams ?: emptyList()) {
-            Team.assertExists(it)
-
-            this[StudentTeams.student] = id
-            this[StudentTeams.team] = it
+        // All memberships go into the join table: GRADE + ROOM (always) + PROGRAM (optional) + any CUSTOMs
+        val allGroupIds = (listOfNotNull(gradeId, roomId, programId) + groupIds.orEmpty()).distinct()
+        StudentGroups.batchInsert(allGroupIds) {
+            this[StudentGroups.student] = id
+            this[StudentGroups.group] = it
         }
 
-        return Student.wrapRow(studentRow).load(Student::teams)
+        return Student.wrapRow(studentRow).load(Student::user, Student::groups)
+    }
+
+    /**
+     * Asserts that the given group exists and has the expected [GroupType].
+     *
+     * @throws EntityNotFoundException if the group does not exist.
+     * @throws IllegalArgumentException if the group has a different type.
+     */
+    private fun assertGroupHasType(groupId: Int, expected: GroupType) {
+        val type = Group.getType(groupId)
+            ?: throw EntityNotFoundException(ExceptionEntity.GROUP, "Group does not exist: $groupId")
+
+        require(type == expected.value) {
+            "Group $groupId has type: ${GroupType.fromValue(type)?.name ?: type}, expected: ${expected.name}"
+        }
+    }
+
+    /**
+     * Asserts that every given group exists and has the expected [GroupType].
+     * @throws UsersService.BatchOperationException.MissingGroups if any group does not exist.
+     * @throws IllegalArgumentException if any group has a different type.
+     */
+    private fun assertGroupsHaveType(groupIds: Collection<Int>, expected: GroupType) {
+        if (groupIds.isEmpty()) return
+
+        val distinct = groupIds.toSet()
+        val rows = Groups.select(Groups.id, Groups.type)
+            .where { Groups.id inList distinct }
+            .associate { it[Groups.id].value to it[Groups.type] }
+
+        val missing = distinct.filter { it !in rows }
+        if (missing.isNotEmpty()) {
+            throw UsersService.BatchOperationException.MissingGroups(missing)
+        }
+
+        val mismatched = rows.filter { it.value != expected.value }.keys
+        require(mismatched.isEmpty()) {
+            "Groups $mismatched don't have the expected type: ${expected.name}"
+        }
     }
 
     @Transactional
     override fun createStudents(inserts: List<UsersService.StudentInsert>) = transaction {
         if (inserts.isEmpty()) return@transaction emptyList()
 
-        val requestedTeamIds = inserts
-            .flatMap { it.teams }
-            .toSet()
+        // Collect every referenced group ID and type so we can validate in one query
+        val expectedTypes = mutableMapOf<Int, GroupType>()
+        for (insert in inserts) {
+            fun add(id: Int, type: GroupType) {
+                val prev = expectedTypes[id]
+                if (prev != null && prev != type) {
+                    throw UsersService.BatchOperationException.InvalidUserData(
+                        insert.user.id,
+                        IllegalArgumentException("Group $id is referenced as both ${prev.name} and ${type.name}")
+                    )
+                }
+                expectedTypes[id] = type
+            }
+            add(insert.gradeId, GroupType.GRADE)
+            add(insert.roomId, GroupType.ROOM)
+            insert.programId?.let { add(it, GroupType.PROGRAM) }
+            insert.groups.forEach { add(it, GroupType.CUSTOM) }
+        }
 
-        val existingTeamIds = Teams
-            .select(Teams.id)
-            .where { Teams.id inList requestedTeamIds.toList() }
-            .map { it[Teams.id].value }
-            .toSet()
+        val existing = Groups.select(Groups.id, Groups.type)
+            .where { Groups.id inList expectedTypes.keys.toList() }
+            .associate { it[Groups.id].value to it[Groups.type] }
 
-        val missingTeamIds = requestedTeamIds.filter { it !in existingTeamIds }
-        if (!missingTeamIds.isEmpty()) throw UsersService.BatchOperationException.MissingTeams(missingTeamIds)
+        val missing = expectedTypes.keys.filter { it !in existing }
+        if (missing.isNotEmpty()) throw UsersService.BatchOperationException.MissingGroups(missing)
+
+        val mismatched = expectedTypes.filter { (id, type) -> existing[id] != type.value }
+        if (mismatched.isNotEmpty()) {
+            // Attribute the error to the first student that referenced any mismatched group.
+            val badId = mismatched.keys.first()
+            val owner = inserts.first { insert ->
+                badId == insert.gradeId || badId == insert.roomId || badId == insert.programId ||
+                        badId in insert.groups
+            }
+
+            throw UsersService.BatchOperationException.InvalidUserData(
+                owner.user.id,
+                IllegalArgumentException("Group $badId has wrong type for its slot")
+            )
+        }
 
         val prepared = insertUserBatch(inserts)
 
         Students.batchInsert(prepared) { item ->
-            val uid = item.request.user.id
-
-            this[Students.user] = uid
-            this[Students.id] = uid
+            this[Students.id] = item.request.user.id
         }
 
-        val studentTeams = prepared.flatMap { item ->
-            item.request.teams
-                .distinct()
-                .map { teamId -> item.request.user.id to teamId }
+        val memberships = prepared.flatMap { item ->
+            val insert = item.request
+            val ids = (listOfNotNull(insert.gradeId, insert.roomId, insert.programId) + insert.groups).distinct()
+            ids.map { groupId -> insert.user.id to groupId }
         }
 
-        StudentTeams.batchInsert(studentTeams) { (studentId, teamId) ->
-            this[StudentTeams.student] = studentId
-            this[StudentTeams.team] = teamId
+        StudentGroups.batchInsert(memberships) { (studentId, groupId) ->
+            this[StudentGroups.student] = studentId
+            this[StudentGroups.group] = groupId
         }
 
         return@transaction Student.find { Students.id inList prepared.map { it.request.user.id } }
-            .with(Student::user, Student::teams)
+            .with(Student::user, Student::groups)
             .toList()
     }
 
@@ -169,46 +241,96 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     override fun createTeacher(
         id: Int,
         firstName: String,
+        prefix: String?,
         middleName: String?,
         lastName: String?,
         password: String,
         avatarUrl: String?,
-    ) = Teacher.new(id) {
-        user = createUser(id, firstName, middleName, lastName, password, avatarUrl)
+        groupIds: List<Int>?,
+    ): Teacher {
+        // Validate all groups exist. Teachers don't have "slotted" groups (like grade/room),
+        // so we just check for existence.
+        groupIds?.let { ids ->
+            if (ids.isNotEmpty()) {
+                val distinct = ids.toSet()
+                val existing = Groups.select(Groups.id)
+                    .where { Groups.id inList distinct }
+                    .map { it[Groups.id].value }
+                    .toSet()
+
+                val missing = distinct.filter { it !in existing }
+                if (missing.isNotEmpty()) {
+                    throw EntityNotFoundException(ExceptionEntity.GROUP, "Groups do not exist: $missing")
+                }
+            }
+        }
+
+        val user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
+        val teacher = Teacher.new(user.id.value) {}
+
+        groupIds?.let { ids ->
+            TeacherGroups.batchInsert(ids.distinct()) {
+                this[TeacherGroups.teacher] = id
+                this[TeacherGroups.group] = it
+            }
+        }
+
+        return teacher.load(Teacher::user, Teacher::groups)
     }
 
     @Transactional
     override fun createTeachers(inserts: List<UsersService.TeacherInsert>) = transaction {
         if (inserts.isEmpty()) return@transaction emptyList()
 
+        // Validate groups
+        val allGroupIds = inserts.flatMap { it.groups }.distinct()
+        if (allGroupIds.isNotEmpty()) {
+            val existing = Groups.select(Groups.id)
+                .where { Groups.id inList allGroupIds }
+                .map { it[Groups.id].value }
+                .toSet()
+
+            val missing = allGroupIds.filter { it !in existing }
+            if (missing.isNotEmpty()) throw UsersService.BatchOperationException.MissingGroups(missing)
+        }
+
         val prepared = insertUserBatch(inserts)
 
         Teachers.batchInsert(prepared) { item ->
             val uid = item.request.user.id
 
-            this[Teachers.user] = uid
             this[Teachers.id] = uid
         }
 
+        val memberships = prepared.flatMap { item ->
+            item.request.groups.distinct().map { groupId -> item.request.user.id to groupId }
+        }
+
+        TeacherGroups.batchInsert(memberships) { (teacherId, groupId) ->
+            this[TeacherGroups.teacher] = teacherId
+            this[TeacherGroups.group] = groupId
+        }
+
         return@transaction Teacher.find { Teachers.id inList prepared.map { it.request.user.id } }
-            .with(Teacher::user)
+            .with(Teacher::user, Teacher::groups)
             .toList()
     }
 
     // @TODO: Test this
     @Transactional
     override fun createAdmin(insert: UsersService.AdminInsert) = transaction {
-        Admin.new(insert.user.id) {
-            user = createUser(
-                id = insert.user.id,
-                firstName = insert.user.firstName,
-                middleName = insert.user.middleName,
-                lastName = insert.user.lastName,
-                password = insert.user.password,
-                avatarUrl = insert.user.avatarUrl,
-                assertPassword = false
-            )
+        val user = createUser(
+            id = insert.user.id,
+            firstName = insert.user.firstName,
+            prefix = insert.user.prefix,
+            middleName = insert.user.middleName,
+            lastName = insert.user.lastName,
+            password = insert.user.password,
+            avatarUrl = insert.user.avatarUrl,
+            assertPassword = false
+        )
 
+        Admin.new(user.id.value) {
             publicKey = Base64.getEncoder().encodeToString(insert.publicKey.encoded)
         }
     }
@@ -243,6 +365,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
             this[Users.id] = user.id
             this[Users.avatarUrl] = user.avatarUrl
+            this[Users.prefix] = user.prefix
             this[Users.firstName] = user.firstName
             this[Users.middleName] = user.middleName
             this[Users.lastName] = user.lastName
@@ -287,36 +410,117 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = transaction {
         Student.assertExists(id)
 
+        // Validate group types up-front so we never partially update on failure
+        update.gradeId?.let { assertGroupHasType(it, GroupType.GRADE) }
+        update.roomId?.let { assertGroupHasType(it, GroupType.ROOM) }
+        if (update.setProgramId) update.programId?.let { assertGroupHasType(it, GroupType.PROGRAM) }
+        update.groups?.let { assertGroupsHaveType(it, GroupType.CUSTOM) }
+
+        val hasFixedGroupUpdate = update.gradeId != null || update.roomId != null || update.setProgramId
+
         try {
             updateUser(id, update.user)
         } catch (e: NothingToUpdateException) {
-            update.teams ?: throw e
+            if (update.groups == null && !hasFixedGroupUpdate) throw e
         }
 
-        update.teams?.let { teams ->
-            StudentTeams.deleteWhere { StudentTeams.student eq id }
-            StudentTeams.batchInsert(teams) {
-                Team.assertExists(it)
+        // Removes the student's current membership in the fixed slot of [type], if any
+        fun clearFixedSlot(type: GroupType) {
+            val currentOfType =
+                (StudentGroups innerJoin Groups)
+                    .select(StudentGroups.group)
+                    .where { (StudentGroups.student eq id) and (Groups.type eq type.value) }
+                    .map { it[StudentGroups.group].value }
 
-                this[StudentTeams.student] = id
-                this[StudentTeams.team] = it
+            if (currentOfType.isNotEmpty()) {
+                StudentGroups.deleteWhere {
+                    (StudentGroups.student eq id) and (StudentGroups.group inList currentOfType)
+                }
             }
         }
 
-        Student.findById(id)!!.load(Student::user, Student::teams)
+        // For each slotted group being updated, swap the existing membership of that type for the new one
+        fun swapFixedSlot(newGroupId: Int, type: GroupType) {
+            clearFixedSlot(type)
+            StudentGroups.insert {
+                it[StudentGroups.student] = id
+                it[StudentGroups.group] = newGroupId
+            }
+        }
+
+        update.gradeId?.let { swapFixedSlot(it, GroupType.GRADE) }
+        update.roomId?.let { swapFixedSlot(it, GroupType.ROOM) }
+        if (update.setProgramId) {
+            // Either swap to the new program or clear the existing one (programId == null).
+            update.programId?.let { swapFixedSlot(it, GroupType.PROGRAM) } ?: clearFixedSlot(GroupType.PROGRAM)
+        }
+
+        // Replace all CUSTOM memberships for this student with the provided list
+        update.groups?.let { newCustoms ->
+            val currentCustoms =
+                (StudentGroups innerJoin Groups)
+                    .select(StudentGroups.group)
+                    .where { (StudentGroups.student eq id) and (Groups.type eq GroupType.CUSTOM.value) }
+                    .map { it[StudentGroups.group].value }
+
+            if (currentCustoms.isNotEmpty()) {
+                StudentGroups.deleteWhere {
+                    (StudentGroups.student eq id) and (StudentGroups.group inList currentCustoms)
+                }
+            }
+
+            StudentGroups.batchInsert(newCustoms.distinct()) {
+                this[StudentGroups.student] = id
+                this[StudentGroups.group] = it
+            }
+        }
+
+        Student.findById(id)!!.load(Student::user, Student::groups)
     }
 
     @Transactional
     override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = transaction {
         Teacher.assertExists(id)
-        updateUser(id, update.user)
-        Teacher.findById(id)!!.load(Teacher::user)
+
+        // Validate all referenced groups exist up-front so we never partially update on failure.
+        update.groups?.let { groupIds ->
+            if (groupIds.isNotEmpty()) {
+                val distinct = groupIds.toSet()
+                val existing = Groups.select(Groups.id)
+                    .where { Groups.id inList distinct }
+                    .map { it[Groups.id].value }
+                    .toSet()
+
+                val missing = distinct.filter { it !in existing }
+                if (missing.isNotEmpty()) {
+                    throw UsersService.BatchOperationException.MissingGroups(missing)
+                }
+            }
+        }
+
+        try {
+            updateUser(id, update.user)
+        } catch (e: NothingToUpdateException) {
+            if (update.groups == null) throw e
+        }
+
+        // Replace all of the teacher's group memberships with the provided list.
+        update.groups?.let { newGroups ->
+            TeacherGroups.deleteWhere { TeacherGroups.teacher eq id }
+            TeacherGroups.batchInsert(newGroups.distinct()) {
+                this[TeacherGroups.teacher] = id
+                this[TeacherGroups.group] = it
+            }
+        }
+
+        Teacher.findById(id)!!.load(Teacher::user, Teacher::groups)
     }
 
     private fun updateUser(id: Int, update: UsersService.UserUpdate) {
         Users.update(where = { Users.id eq id }) {
             with(update) {
                 if (firstName != null) it[Users.firstName] = firstName
+                if (setPrefix) it[Users.prefix] = prefix
                 if (setMiddleName) it[Users.middleName] = middleName
                 if (setLastName) it[Users.lastName] = lastName
                 if (setAvatarUrl) it[Users.avatarUrl] = avatarUrl
@@ -339,9 +543,9 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         if (rows == 0) throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
     }
 
-    override fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)
+    override fun getTeacherById(id: Int): Teacher? = Teacher.findById(id)?.load(Teacher::user, Teacher::groups)
 
-    override fun getStudentById(id: Int): Student? = Student.findById(id)
+    override fun getStudentById(id: Int): Student? = Student.findById(id)?.load(Student::user, Student::groups)
 
     override fun getAdminById(id: Int): Admin? = Admin.findById(id)
 
@@ -362,7 +566,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             }.orderBy(Students.id).limit(PAGE_SIZE).offset(offset)
 
             val students = Student.wrapRows(dataQuery)
-                .with(Student::user, Student::teams)
+                .with(Student::user, Student::groups)
                 .toList()
 
             students to count
@@ -386,7 +590,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             }.orderBy(Teachers.id).limit(PAGE_SIZE).offset(offset)
 
             val teachers = Teacher.wrapRows(dataQuery)
-                .with(Teacher::user)
+                .with(Teacher::user, Teacher::groups)
                 .toList()
 
             teachers to count
@@ -478,6 +682,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     private fun createUser(
         id: Int,
         firstName: String,
+        prefix: String? = null,
         middleName: String?,
         lastName: String?,
         password: String,
@@ -488,6 +693,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
         val stmt = Users.insertIgnore {
             it[Users.id] = id
+            it[Users.prefix] = prefix
             it[Users.firstName] = firstName
             it[Users.middleName] = middleName
             it[Users.lastName] = lastName

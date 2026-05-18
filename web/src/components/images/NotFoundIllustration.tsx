@@ -1,10 +1,10 @@
-import NotFoundIcon from '../../images/not-found.webp'
-import NotFoundEEIcon from '../../images/not-found-ee.webp'
-import { useI18n } from '../../providers/I18nProvider'
+import NotFoundIcon from '~/images/not-found.webp'
+import NotFoundEEIcon from '~/images/not-found-ee.webp'
+import { useI18n } from '~/providers/I18nProvider'
 import { VStack } from '../Stack'
 import styles from './Image.module.css'
 import type { ComponentProps } from 'solid-js'
-import type { StyleRecordOnly } from '../../global'
+import type { StyleRecordOnly } from '~/global'
 
 export default function NotFoundIllustration(props: StyleRecordOnly<ComponentProps<'div'>>) {
     const { string } = useI18n()
