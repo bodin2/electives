@@ -129,6 +129,7 @@ abstract class ApplicationTest {
         msg?.let { assertEquals(it, bodyAsText()) }
     }
 
+    suspend fun HttpResponse.assertNoContent(msg: String? = null) = assertStatus(HttpStatusCode.NoContent, msg)
     suspend fun HttpResponse.assertOK(msg: String? = null) = assertStatus(HttpStatusCode.OK, msg)
     suspend fun HttpResponse.assertNotFound(msg: String? = null) = assertStatus(HttpStatusCode.NotFound, msg)
     suspend fun HttpResponse.assertBadRequest(msg: String? = null) = assertStatus(HttpStatusCode.BadRequest, msg)
