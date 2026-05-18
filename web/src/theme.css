@@ -1,5 +1,7 @@
 :root {
     /* color-scheme: light dark; */
+    --m3c-background: var(--m3c-surface);
+    --m3c-on-background: var(--m3c-on-surface);    
     --m3c-surface: light-dark(#f3f6fc, #080e18);
     --m3c-surface-container-lowest: light-dark(#fff, #000);
     --m3c-surface-container-low: light-dark(#f2f5fd, #0b1421);
