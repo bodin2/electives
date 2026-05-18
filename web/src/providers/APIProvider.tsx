@@ -145,7 +145,6 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
               ? TokenType.User
               : null,
     )
-    const [updater, setUpdater] = createSignal(0)
 
     createEffect(() => {
         log.debug('Authentication state changed to:', AuthenticationState[authState()])
@@ -168,7 +167,9 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
     }
 
     createEffect(
-        on(updater, () => {
+        on(authState, state => {
+            if (state === AuthenticationState.NetworkError) return
+
             const onReady = (user: ClientEventMap['ready']) => {
                 log.info('Logged in as:', user)
                 setTokenType(user.type === UserType.ADMIN ? TokenType.Admin : TokenType.User)
@@ -213,7 +214,6 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
                 localStorage.removeItem(TOKEN_TYPE_KEY)
                 setTokenType(null)
                 setAuthState(AuthenticationState.LoggedOut)
-                setUpdater(~updater())
                 queryClient.clear()
 
                 log.info('Logged out')
