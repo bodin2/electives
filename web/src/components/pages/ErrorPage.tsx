@@ -1,8 +1,9 @@
 import { useRouter } from '@tanstack/solid-router'
 import { mergeClasses } from 'm3-solid/src'
 import { createRenderEffect, Show } from 'solid-js'
-import { useAPI } from '~/providers/APIProvider'
+import { latestClient, useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
+import { queryClient } from '~/queries/queryClient'
 import { Button } from '../Button'
 import ErrorIllustration from '../images/ErrorIllustration'
 import Page from '../Page'
@@ -10,7 +11,7 @@ import { HStack, VStack } from '../Stack'
 import Version from '../Version'
 import styles from './ErrorPage.module.css'
 
-export default function ErrorPage(props: { error: string | Error; reset: () => void | Promise<void> }) {
+export default function ErrorPage(props: { error: string | Error; reset: () => void | Promise<void>; soft?: boolean }) {
     const { string } = useI18n()
     const router = useRouter()
 
@@ -49,6 +50,8 @@ export default function ErrorPage(props: { error: string | Error; reset: () => v
                     </Button>
                     <Button
                         onClick={() => {
+                            latestClient?.clearCaches()
+                            queryClient.resetQueries()
                             router.invalidate({ sync: true })
                             props.reset()
                         }}

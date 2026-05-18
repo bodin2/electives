@@ -26,6 +26,7 @@ import {
 import { GatewayEndpoints } from '~/api/gateway'
 import { NetworkError } from '~/api/types'
 import { API_BASE_URL, API_CLIENT_NAME } from '~/constants'
+import { queryClient } from '~/queries/queryClient'
 import { nonNull } from '~/utils'
 
 export enum AuthenticationState {
@@ -96,13 +97,17 @@ export const createClient = () => {
         reconnectDelay: 5000,
     })
 
-    return new Client({
+    latestClient = new Client({
         rest,
         gateway,
         authenticator: createAuthenticator(rest, tokenType),
         autoConnect: true,
     })
+
+    return latestClient
 }
+
+export let latestClient: Client<unknown> | null = null
 
 export const initAuth = async (client: APIClient): Promise<AuthenticationState> => {
     const token = localStorage.getItem(TOKEN_KEY)
@@ -209,6 +214,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
                 setTokenType(null)
                 setAuthState(AuthenticationState.LoggedOut)
                 setUpdater(~updater())
+                queryClient.clear()
 
                 log.info('Logged out')
             }
