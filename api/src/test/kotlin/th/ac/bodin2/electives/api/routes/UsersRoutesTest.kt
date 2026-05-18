@@ -134,7 +134,7 @@ class UsersRoutesTest : ApplicationTest() {
 
     @Test
     fun `modify selection success`() = runRouteTest {
-        modifySelectionWithResult(ModifySelectionResult.Success).assertOK()
+        modifySelectionWithResult(ModifySelectionResult.Success).assertNoContent()
     }
 
     @Test
