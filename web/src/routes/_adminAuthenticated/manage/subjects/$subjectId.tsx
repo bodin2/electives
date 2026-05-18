@@ -61,7 +61,7 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/subjects/$subj
         )
 
         // Speculative loading
-        enrollmentId = (enrollmentId ?? enrollmentIds.length === 1) ? enrollmentIds[0] : undefined
+        enrollmentId = enrollmentId ?? (enrollmentIds.length === 1 ? enrollmentIds[0] : undefined)
 
         const promises: Promise<unknown>[] = []
 
