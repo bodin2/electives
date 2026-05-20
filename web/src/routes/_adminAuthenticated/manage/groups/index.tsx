@@ -1,5 +1,5 @@
 import PlusIcon from '@iconify-icons/mdi/plus'
-import { createQuery } from '@tanstack/solid-query'
+import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import GroupList from '~/components/admin/GroupList'
 import { Button } from '~/components/Button'
@@ -25,6 +25,7 @@ function RouteComponent() {
     const navigate = Route.useNavigate()
     const { client } = useAPI()
     const { string } = useI18n()
+    const qc = useQueryClient()
 
     const groupsQuery = createQuery(() => ({ ...groupsQueryOptions(client), notifyOnChangeProps: ['data'] }))
     const memberCountsQuery = createQuery(() => ({
@@ -47,6 +48,8 @@ function RouteComponent() {
     const handleDelete = async (group: Group) => {
         try {
             await client.groups.admin.delete(group.id)
+            qc.removeQueries({ queryKey: ['group', group.id] })
+            await qc.invalidateQueries({ queryKey: ['groups'], exact: true })
         } catch (e) {
             console.error(e)
             alert(string.ERROR_DELETE_FAILED({ error: String(e) }))

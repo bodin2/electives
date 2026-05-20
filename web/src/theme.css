@@ -27,8 +27,10 @@
     --m3c-on-secondary-container: light-dark(#182a44, #abbfe2);
     --m3c-tertiary: light-dark(#8b428f, #eb97eb);
     --m3c-on-tertiary: light-dark(#fff7fa, #591160);
-    --m3c-tertiary-container: #dc8add;
-    --m3c-on-tertiary-container: #4c0154;
+    /* --m3c-tertiary-container: #dc8add; */
+    /* --m3c-on-tertiary-container: #4c0154; */
+    --m3c-tertiary-container: var(--m3c-tertiary-container-subtle);
+    --m3c-on-tertiary-container: var(--m3c-on-tertiary-container-subtle);
     --m3c-error: light-dark(#a73a34, #ff7b71);
     --m3c-on-error: light-dark(#fff7f6, #530004);
     --m3c-error-container: light-dark(#ff7b71, #66080b);

@@ -18,7 +18,7 @@ class TestGroupService : GroupService {
     }
 
     @Transactional
-    override fun create(id: Int, name: String, type: GroupType): Group = error("Not testable")
+    override fun create(id: Int, name: String, type: GroupType, parentId: Int?): Group = error("Not testable")
 
     @Transactional
     override fun delete(id: Int) = error("Not testable")
@@ -26,7 +26,7 @@ class TestGroupService : GroupService {
     @Transactional
     override fun update(id: Int, update: GroupService.GroupUpdate): Group {
         if (id !in GROUP_IDS) throw EntityNotFoundException(ExceptionEntity.GROUP)
-        return MockUtils.mockGroup(id)
+        return MockUtils.mockGroup(id, parentId = if (update.setParentId) update.parentId else null)
     }
 
     override fun getAll() = GROUP_IDS.map { id -> MockUtils.mockGroup(id) }

@@ -29,11 +29,18 @@ class GroupServiceImpl : GroupService {
         id: Int,
         name: String,
         type: GroupType,
+        parentId: Int?,
     ) = transaction {
+        parentId?.let {
+            val parent = Group.findById(it) ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
+            if (parent.parentId != null) throw ConflictException(ExceptionEntity.GROUP)
+        }
+
         val stmt = Groups.insertIgnore {
             it[this.id] = id
             it[this.name] = name
             it[this.type] = type.value
+            it[this.parentId] = parentId
         }
 
         if (stmt.insertedCount == 0) throw ConflictException(ExceptionEntity.GROUP)
@@ -65,6 +72,18 @@ class GroupServiceImpl : GroupService {
         Group.findById(id) ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
         val rows = Groups.updateReturning(where = { Groups.id eq id }) {
             update.name?.let { name -> it[this.name] = name }
+            if (update.setParentId) {
+                update.parentId?.let { pid ->
+                    val parent = Group.findById(pid) ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
+                    if (parent.parentId != null) throw ConflictException(ExceptionEntity.GROUP)
+                }
+                // A group that already has children cannot become a child itself
+                if (update.parentId != null) {
+                    val hasChildren = Groups.selectAll().where { Groups.parentId eq id }.empty().not()
+                    if (hasChildren) throw ConflictException(ExceptionEntity.GROUP)
+                }
+                it[this.parentId] = update.parentId
+            }
 
             if (it.firstDataSet.isEmpty()) throw NothingToUpdateException()
         }

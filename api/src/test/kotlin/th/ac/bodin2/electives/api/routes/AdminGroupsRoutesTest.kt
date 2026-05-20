@@ -113,11 +113,12 @@ class AdminGroupsRoutesTest : ApplicationTest() {
 
         val group = client.patchProtoWithAuth(
             "/admin/groups/$ENROLLMENT_GROUP_ID",
-            AdminService.GroupPatch(name = "New Name"),
+            AdminService.GroupPatch(name = "New Name", parent_id = 123, patch_parent_id = true),
             ADMIN_TOKEN
         ).assertOK().parse<Group>()
-
+ 
         assertEquals(ENROLLMENT_GROUP_ID, group.id)
+        assertEquals(123, group.parent_id)
     }
 
     @Test

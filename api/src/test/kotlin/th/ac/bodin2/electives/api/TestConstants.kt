@@ -54,6 +54,13 @@ object TestConstants {
 
         const val PROGRAM_ID = 30
         const val PROGRAM_NAME = "CS"
+
+        // IDs used by parent/child nesting tests
+        const val PARENT_GROUP_ID = 900
+        const val CHILD_GROUP_ID = 901
+        const val LEAF_GROUP_ID = 902
+        const val ROOT_PARENT_GROUP_ID = 903
+        const val SUB_GROUP_ID = 904
     }
 
     object Enrollments {
