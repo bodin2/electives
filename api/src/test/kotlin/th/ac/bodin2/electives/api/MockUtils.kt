@@ -44,9 +44,10 @@ object MockUtils {
         return mock
     }
 
-    fun mockGroup(id: Int): Group {
+    fun mockGroup(id: Int, parentId: Int? = null): Group {
         val mock = mockk<Group>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Groups)
+        every { mock.parentId } returns parentId?.let { EntityID(it, Groups) }
 
         return mock
     }

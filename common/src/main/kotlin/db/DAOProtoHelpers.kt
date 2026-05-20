@@ -92,6 +92,7 @@ fun Group.toProto(): th.ac.bodin2.electives.proto.api.Group {
         id = group.id.value,
         name = group.name,
         type = GroupType.fromValue(group.type) ?: GroupType.CUSTOM,
+        parent_id = group.parentId?.value,
     )
 }
 

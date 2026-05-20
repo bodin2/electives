@@ -827,7 +827,7 @@ class AdminGroupsController(
 
         try {
             @OptIn(Transactional::class)
-            groupService.create(group.id, group.name, group.type)
+            groupService.create(group.id, group.name, group.type, group.parent_id)
             noContent()
         } catch (_: ConflictException) {
             conflict("Group with the same ID already exists")
@@ -856,6 +856,8 @@ class AdminGroupsController(
 
         val update = GroupService.GroupUpdate(
             name = req.name,
+            parentId = req.parent_id,
+            setParentId = req.patch_parent_id,
         )
 
         try {

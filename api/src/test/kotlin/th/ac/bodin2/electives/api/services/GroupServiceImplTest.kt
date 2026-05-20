@@ -52,6 +52,37 @@ class GroupServiceImplTest : ApplicationTest() {
         val fetched = transaction { groupService.getById(newId) }
         assertNotNull(fetched)
         assertEquals("New Group", fetched.name)
+        assertNull(fetched.parentId)
+    }
+
+    @Test
+    fun `create group with parentId`() = runTest {
+        val parentId = TestConstants.Groups.GRADE_ID
+        val newId = 501
+
+        @OptIn(Transactional::class)
+        val created = groupService.create(newId, "Group with Parent", parentId = parentId)
+
+        assertEquals(newId, created.id.value)
+
+        val fetched = transaction { groupService.getById(newId) }
+        assertNotNull(fetched)
+        assertEquals(parentId, fetched.parentId?.value)
+    }
+
+    @Test
+    fun `create group with parent that has a parent throws conflict`() = runTest {
+        val parentId = TestConstants.Groups.GRADE_ID
+        val childId = 502
+        val grandchildId = 503
+
+        @OptIn(Transactional::class)
+        groupService.create(childId, "Child", parentId = parentId)
+
+        assertFailsWith<ConflictException> {
+            @OptIn(Transactional::class)
+            groupService.create(grandchildId, "Grandchild", parentId = childId)
+        }
     }
 
     @Test
@@ -167,6 +198,40 @@ class GroupServiceImplTest : ApplicationTest() {
         val fetched = transaction { groupService.getById(TestConstants.Groups.GROUP_1_ID) }
         assertNotNull(fetched)
         assertEquals("Updated Group", fetched.name)
+    }
+
+    @Test
+    fun `update group parentId`() = runTest {
+        val parentId = TestConstants.Groups.GRADE_ID
+        @OptIn(Transactional::class)
+        groupService.update(
+            TestConstants.Groups.GROUP_1_ID,
+            GroupService.GroupUpdate(parentId = parentId, setParentId = true)
+        )
+
+        val fetched = transaction { groupService.getById(TestConstants.Groups.GROUP_1_ID) }
+        assertNotNull(fetched)
+        assertEquals(parentId, fetched.parentId?.value)
+    }
+
+    @Test
+    fun `update group remove parentId`() = runTest {
+        val parentId = TestConstants.Groups.GRADE_ID
+        @OptIn(Transactional::class)
+        groupService.update(
+            TestConstants.Groups.GROUP_1_ID,
+            GroupService.GroupUpdate(parentId = parentId, setParentId = true)
+        )
+
+        @OptIn(Transactional::class)
+        groupService.update(
+            TestConstants.Groups.GROUP_1_ID,
+            GroupService.GroupUpdate(parentId = null, setParentId = true)
+        )
+
+        val fetched = transaction { groupService.getById(TestConstants.Groups.GROUP_1_ID) }
+        assertNotNull(fetched)
+        assertNull(fetched.parentId)
     }
 
     @Test
@@ -375,5 +440,64 @@ class GroupServiceImplTest : ApplicationTest() {
 
         // Jane was the only existing member of GROUP_2.
         assertEquals(1, transaction { groupService.getMemberCount(TestConstants.Groups.GROUP_2_ID) })
+    }
+
+    @Test
+    fun `update group with children to have a parentId throws conflict`() = runTest {
+        @OptIn(Transactional::class)
+        groupService.create(TestConstants.Groups.PARENT_GROUP_ID, "Parent Group")
+        @OptIn(Transactional::class)
+        groupService.create(TestConstants.Groups.CHILD_GROUP_ID, "Child Group", parentId = TestConstants.Groups.PARENT_GROUP_ID)
+
+        // PARENT_GROUP_ID now has children, so setting a parentId on it should fail
+        assertFailsWith<ConflictException> {
+            @OptIn(Transactional::class)
+            groupService.update(
+                TestConstants.Groups.PARENT_GROUP_ID,
+                GroupService.GroupUpdate(parentId = TestConstants.Groups.GRADE_ID, setParentId = true)
+            )
+        }
+
+        // Verify the group is unchanged
+        val fetched = transaction { groupService.getById(TestConstants.Groups.PARENT_GROUP_ID) }
+        assertNotNull(fetched)
+        assertNull(fetched.parentId)
+    }
+
+    @Test
+    fun `update group without children to have a parentId succeeds`() = runTest {
+        @OptIn(Transactional::class)
+        groupService.create(TestConstants.Groups.LEAF_GROUP_ID, "Leaf Group")
+
+        @OptIn(Transactional::class)
+        groupService.update(
+            TestConstants.Groups.LEAF_GROUP_ID,
+            GroupService.GroupUpdate(parentId = TestConstants.Groups.GRADE_ID, setParentId = true)
+        )
+
+        val fetched = transaction { groupService.getById(TestConstants.Groups.LEAF_GROUP_ID) }
+        assertNotNull(fetched)
+        assertEquals(TestConstants.Groups.GRADE_ID, fetched.parentId?.value)
+    }
+
+    @Test
+    fun `update group removing parentId when it has children succeeds`() = runTest {
+        // A group that has children should be able to clear its own parentId (it's already a root)
+        // This is a no-op scenario but should not throw
+        @OptIn(Transactional::class)
+        groupService.create(TestConstants.Groups.ROOT_PARENT_GROUP_ID, "Root Parent")
+        @OptIn(Transactional::class)
+        groupService.create(TestConstants.Groups.SUB_GROUP_ID, "Sub Group", parentId = TestConstants.Groups.ROOT_PARENT_GROUP_ID)
+
+        // Clearing parentId (which is already null) should succeed
+        @OptIn(Transactional::class)
+        groupService.update(
+            TestConstants.Groups.ROOT_PARENT_GROUP_ID,
+            GroupService.GroupUpdate(parentId = null, setParentId = true)
+        )
+
+        val fetched = transaction { groupService.getById(TestConstants.Groups.ROOT_PARENT_GROUP_ID) }
+        assertNotNull(fetched)
+        assertNull(fetched.parentId)
     }
 }

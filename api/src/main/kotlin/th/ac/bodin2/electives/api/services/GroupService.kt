@@ -20,6 +20,7 @@ interface GroupService {
         id: Int,
         name: String,
         type: GroupType = GroupType.CUSTOM,
+        parentId: Int? = null,
     ): Group
 
     /**
@@ -41,6 +42,8 @@ interface GroupService {
 
     data class GroupUpdate(
         val name: String? = null,
+        val parentId: Int? = null,
+        val setParentId: Boolean = false,
     )
 
     fun getAll(): List<Group>

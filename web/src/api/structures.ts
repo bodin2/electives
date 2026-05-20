@@ -13,6 +13,7 @@ export class Group {
     id: number
     name: string
     type: GroupType
+    parentId?: number
     readonly client: Client<unknown>
 
     constructor(client: Client<unknown>, data: RawGroup) {
@@ -20,12 +21,22 @@ export class Group {
         this.id = data.id
         this.name = data.name
         this.type = data.type
+        this.parentId = data.parentId
     }
 
     update(data: Partial<RawGroup>) {
         if (data.id !== undefined) this.id = data.id
         if (data.name !== undefined) this.name = data.name
         if (data.type !== undefined) this.type = data.type
+        if ('parentId' in data) this.parentId = data.parentId
+    }
+
+    isRoot(): this is Group & { parentId: undefined } {
+        return this.parentId === undefined
+    }
+
+    isSub(): this is Group & { parentId: number } {
+        return this.parentId !== undefined
     }
 
     /** Whether this group is a freeform CUSTOM group (not slotted GRADE/ROOM/PROGRAM) */
@@ -38,6 +49,7 @@ export class Group {
             id: this.id,
             name: this.name,
             type: this.type,
+            parentId: this.parentId,
         }
     }
 }

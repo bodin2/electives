@@ -28,9 +28,29 @@ export default function GroupList(props: GroupListProps) {
     const [deletingGroup, setDeletingGroup] = createSignal(false)
     let groupToDelete: Group | undefined
 
+    const subGroupsByParent = createMemo(() => {
+        const map: Record<number, Group[]> = {}
+        for (const g of props.groups) {
+            // biome-ignore lint/suspicious/noAssignInExpressions: This is fine
+            if (g.isSub()) (map[g.parentId] ??= []).push(g)
+        }
+        // Sort each bucket
+        for (const key in map) {
+            map[key].sort(User.GROUP_SORTER)
+        }
+        return map
+    })
+
     const filteredGroups = createMemo(() => {
         const query = search().toLowerCase()
-        return props.groups.filter(g => g.name.toLowerCase().includes(query)).sort(User.GROUP_SORTER)
+        return props.groups
+            .filter(
+                g =>
+                    g.isRoot() &&
+                    (g.name.toLowerCase().includes(query) ||
+                        (subGroupsByParent()[g.id]?.some(g => g.name.toLowerCase().includes(query)) ?? false)),
+            )
+            .sort(User.GROUP_SORTER)
     })
 
     const setGroupToDelete = (group: Group | undefined) => {
@@ -59,10 +79,13 @@ export default function GroupList(props: GroupListProps) {
                     <For each={filteredGroups()}>
                         {group => (
                             <GroupItem
+                                expanded={search() !== '' ? true : undefined}
                                 group={group}
                                 onEdit={props.onEdit}
                                 onDelete={g => setGroupToDelete(g)}
                                 memberCount={props.memberCounts[group.id] ?? 0}
+                                memberCounts={props.memberCounts}
+                                subGroups={subGroupsByParent()[group.id]}
                             />
                         )}
                     </For>

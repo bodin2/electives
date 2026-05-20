@@ -150,6 +150,7 @@ class Group(id: EntityID<Int>) : Entity<Int>(id) {
 
     var name by Groups.name
     var type by Groups.type
+    var parentId by Groups.parentId
 }
 
 open class EnrollmentCompanion : EntityClass<Int, Enrollment>(Enrollments) {

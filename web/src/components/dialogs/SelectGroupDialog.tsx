@@ -5,7 +5,7 @@ import { Portal } from 'solid-js/web'
 import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import { Dialog } from '../Dialog'
-import { Option, Select } from '../Select'
+import { GroupSelect } from '../GroupSelect'
 import { HStack, VStack } from '../Stack'
 import type { IconifyIcon } from '@iconify/types'
 import type { Group } from '~/api'
@@ -111,28 +111,14 @@ export function SelectGroupDialog(props: SelectGroupDialogProps) {
                                     })}
                             </p>
                         </Show>
-                        <Select
-                            label={props.selectLabel ?? string.GROUP()}
-                            value={selected() ?? ''}
-                            onInput={async e => {
-                                const val = e.currentTarget.value
-                                const parsed = val ? Number(val) : null
-                                setSelected(parsed)
-                            }}
-                        >
-                            <Option value="" hidden selected={selected() === null}>
-                                {props.selectPlaceholder ?? string.SELECT_GROUP_HINT()}
-                            </Option>
-                            <Show when={props.groups}>
-                                {g =>
-                                    g().map(group => (
-                                        <Option value={group.id} selected={group.id === selected()}>
-                                            {group.name}
-                                        </Option>
-                                    ))
-                                }
-                            </Show>
-                        </Select>
+                        <GroupSelect
+                            required
+                            label={props.selectLabel}
+                            placeholder={props.selectPlaceholder}
+                            value={selected()}
+                            groups={props.groups}
+                            onInput={setSelected}
+                        />
                     </VStack>
                 </Dialog>
             </Portal>

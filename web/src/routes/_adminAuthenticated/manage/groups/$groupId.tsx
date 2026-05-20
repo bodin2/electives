@@ -14,6 +14,7 @@ import AddStudentToGroupDialog from '~/components/dialogs/AddStudentToGroupDialo
 import AddTeacherToGroupDialog from '~/components/dialogs/AddTeacherToGroupDialog'
 import { ConfirmDialog } from '~/components/dialogs/base/ConfirmDialog'
 import { SelectGroupDialog } from '~/components/dialogs/SelectGroupDialog'
+import { GroupSelect } from '~/components/GroupSelect'
 import Page from '~/components/Page'
 import { SuspenseLoadingPage } from '~/components/pages/LoadingPage'
 import NotFoundPage from '~/components/pages/NotFoundPage'
@@ -29,7 +30,7 @@ import {
     groupQueryOptions,
     groupsQueryOptions,
 } from '~/queries/groups'
-import { debounce } from '~/utils'
+import { debounce, nonNull } from '~/utils'
 import { catchErrors } from '~/utils/error-component'
 import { simpleXXHash31 } from '~/utils/xxhash'
 
@@ -45,6 +46,7 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/groups/$groupI
 
         const groupIdNum = Number(groupId)
         await Promise.all([
+            queryClient.ensureQueryData(groupsQueryOptions(client)),
             queryClient.ensureQueryData(groupQueryOptions(client, groupIdNum)),
             queryClient.prefetchQuery(groupMembersQueryOptions(client, groupIdNum, page)),
             queryClient.prefetchQuery(groupManagersQueryOptions(client, groupIdNum, page)),
@@ -60,6 +62,7 @@ function RouteComponent() {
     const { client } = useAPI()
     const { string } = useI18n()
     const navigate = Route.useNavigate()
+    const qc = useQueryClient()
 
     const isNew = () => isNewRoute(params().groupId)
 
@@ -73,6 +76,7 @@ function RouteComponent() {
 
     const [name, setName] = createSignal('')
     const [type, setType] = createSignal<GroupType>(GroupType.CUSTOM)
+    const [parentId, setParentId] = createSignal<number | null>(null)
 
     // Reset local signals when group data changes
     createEffect(() => {
@@ -80,11 +84,29 @@ function RouteComponent() {
         if (t) {
             setName(t.name)
             setType(t.type)
+            setParentId(t.parentId ?? null)
         } else if (isNew()) {
             setName('')
             setType(GroupType.CUSTOM)
+            setParentId(null)
         }
     })
+
+    const groupsQuery = createQuery(() => ({
+        ...groupsQueryOptions(client),
+        notifyOnChangeProps: ['data'],
+    }))
+
+    const parentCandidates = createMemo(() => {
+        const all = groupsQuery.data ?? []
+        return all.filter(g => g.id !== Number(params().groupId) && g.isRoot() && all.some(gg => gg.parentId !== g.id))
+    })
+
+    const isNonParentGroup = () => {
+        if (isNew()) return true
+
+        return groupsQuery.data?.every(g => g.parentId !== nonNull(groupQuery.data).id) ?? true
+    }
 
     const handleSave = async () => {
         const trimmed = name().trim()
@@ -94,11 +116,24 @@ function RouteComponent() {
             try {
                 if (isNew()) {
                     const id = simpleXXHash31(`${trimmed}:${performance.now()}`, Math.floor(Math.random() * 0x7fffffff))
-                    await client.groups.admin.put(id, { id, name: trimmed, type: type() })
+                    await client.groups.admin.put(id, {
+                        id,
+                        name: trimmed,
+                        type: type(),
+                        parentId: parentId() ?? undefined,
+                    })
+
+                    qc.removeQueries({ queryKey: ['groups'], exact: true })
+                    qc.removeQueries({ queryKey: ['group', id] })
+
                     // After creating, we should probably navigate to the new ID
                     navigate({ params: { groupId: id.toString() }, search: { page: 1 }, replace: true })
                 } else {
-                    await client.groups.admin.patch(Number(params().groupId), { name: trimmed })
+                    await client.groups.admin.patch(Number(params().groupId), {
+                        name: trimmed,
+                        parentId: parentId() ?? undefined,
+                        patchParentId: true,
+                    })
                 }
 
                 break
@@ -165,6 +200,15 @@ function RouteComponent() {
                                 </For>
                             </Select>
                         </Show>
+                        <GroupSelect
+                            disabled={!isNonParentGroup()}
+                            supportingText={isNonParentGroup() ? undefined : string.CANNOT_SET_PARENT_GROUP_PARENT()}
+                            label={string.PARENT_GROUP()}
+                            placeholder={string.NO_PARENT_GROUP()}
+                            value={parentId()}
+                            groups={parentCandidates()}
+                            onInput={setParentId}
+                        />
                         <Button variant="filled" onClick={handleSave} disabled={!name().trim()}>
                             {string.SAVE()}
                         </Button>
