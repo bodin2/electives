@@ -11,7 +11,7 @@ import { SuspenseLoadingPage } from '~/components/pages/LoadingPage'
 import { HStack, VStack } from '~/components/Stack'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
-import { enrollmentsQueryOptions } from '~/queries/enrollments'
+import { enrollmentsQueryOptions, adminEnrollmentsProgressQueryOptions } from '~/queries/enrollments'
 import { groupsQueryOptions } from '~/queries/groups'
 import { enrollmentSorter } from '~/utils'
 import styles from './index.module.css'
@@ -44,6 +44,13 @@ function RouteComponent() {
         const query = search().toLowerCase()
         return enrollments().filter(e => e.name.toLowerCase().includes(query))
     }
+
+    const progressQuery = createQuery(() =>
+        adminEnrollmentsProgressQueryOptions(
+            client,
+            enrollments().map(e => e.id),
+        ),
+    )
 
     const handleCreate = () => {
         navigate({
@@ -94,6 +101,7 @@ function RouteComponent() {
                                     {enrollment => (
                                         <AdminEnrollmentCard
                                             enrollment={enrollment}
+                                            progress={progressQuery.data?.[enrollment.id]}
                                             onClick={id =>
                                                 navigate({
                                                     to: '/manage/enrollments/$enrollmentId',

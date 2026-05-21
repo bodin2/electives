@@ -11,6 +11,18 @@ export const enrollmentsQueryOptions = (client: Client<unknown>) =>
     })
 
 /**
+ * @cache refetch
+ */
+export const adminEnrollmentsProgressQueryOptions = (client: Client<unknown>, ids: number[]) =>
+    queryOptions({
+        queryKey: ['admin', 'enrollments', 'progress', ids] as const,
+        queryFn: () => client.enrollments.admin.fetchProgress(ids),
+        enabled: ids.length > 0,
+        refetchInterval: 5000,
+        refetchIntervalInBackground: false,
+    })
+
+/**
  * @cache update-in-place
  */
 export const enrollmentQueryOptions = (client: Client<unknown>, enrollmentId: number) =>

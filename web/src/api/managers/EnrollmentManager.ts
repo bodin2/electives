@@ -1,3 +1,4 @@
+import { AdminService_ListEnrollmentsEnrolledCounts } from '@bodin2/electives-common/proto/api'
 import { Enrollment, type Subject, type User } from '../structures'
 import {
     AdminEnrollmentPatch,
@@ -212,6 +213,20 @@ export class EnrollmentAdminActions {
     async delete(id: number): Promise<void> {
         await this.rest.delete(`/admin/enrollments/${id}`)
         this.manager.cache.delete(id)
+    }
+
+    /**
+     * Fetch enrollment progress (selected/total counts) for a list of enrollment IDs
+     *
+     * @param ids The enrollment IDs to fetch progress for
+     */
+    async fetchProgress(ids: number[]): Promise<Record<number, AdminEnrollmentCounts>> {
+        if (ids.length === 0) return {}
+        const data = await this.rest.get<AdminService_ListEnrollmentsEnrolledCounts>('/admin/enrollments/progress', {
+            query: { ids: ids.join(',') },
+            decoder: AdminService_ListEnrollmentsEnrolledCounts,
+        })
+        return data.counts
     }
 
     /**

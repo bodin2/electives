@@ -11,3 +11,42 @@
     background-color: var(--m3c-primary-container);
     border-color: var(--m3c-outline-variant);
 }
+
+.progressContainer {
+    position: relative;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.progressSvg {
+    rotate: -90deg;
+    color: var(--m3c-primary);
+}
+
+.progressTrack {
+    stroke: var(--m3c-surface-container);
+}
+
+.progressIndicator {
+    stroke: var(--m3c-primary);
+    transition: stroke-dashoffset 0.3s var(--m3-easing-fast, ease-out);
+}
+
+.progressLabel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--m3c-on-surface);
+    pointer-events: none;
+    line-height: 1.1;
+}
+
+.progressLabel small {
+    color: var(--m3c-on-surface-variant);
+    margin-top: -4px;
+}
