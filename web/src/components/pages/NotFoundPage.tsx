@@ -47,11 +47,7 @@ export function NotFoundPageContent(props: { illustration?: boolean }) {
             <Show when={props.illustration}>
                 <Show when={count() >= COUNTER_THRESHOLD}>
                     <div class={styles.ee} aria-hidden="true">
-                        <NotFoundEEIllustration
-                            tabindex="-1"
-                            class={styles.popup}
-                            onClick={() => setDialogOpen(true)}
-                        />
+                        <NotFoundEEIllustration class={styles.popup} onClick={() => setDialogOpen(true)} />
                     </div>
                 </Show>
                 <Dialog

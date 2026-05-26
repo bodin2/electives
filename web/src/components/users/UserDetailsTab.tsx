@@ -106,7 +106,6 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
                             cursor: ctx.editable ? 'pointer' : 'default',
                         }}
                         onClick={editAvatar}
-                        tabindex="-1"
                     >
                         <UserAvatar
                             imageUrl={user().avatarUrl}

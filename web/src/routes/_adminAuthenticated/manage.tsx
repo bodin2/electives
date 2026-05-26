@@ -162,10 +162,9 @@ function RouteComponent() {
                         <LinkNavigationRailItem icon={ClassIcon} label={string.SUBJECTS()} to="/manage/subjects" />
                     </NavigationRail>
                 </div>
-                <VStack tabindex="-1" grow class={styles.outer}>
+                <VStack grow class={styles.outer}>
                     <VStack
                         ref={setContainerRef}
-                        tabindex="-1"
                         grow
                         class={mergeClasses(styles.inner, modalNav() && styles.modalNav)}
                         gap={0}
