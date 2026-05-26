@@ -39,7 +39,7 @@
         "@tanstack/solid-query": "5.100.14",
         "@tanstack/solid-router": "1.170.8",
         "@tanstack/solid-router-devtools": "1.167.0",
-        "m3-solid": "https://github.com/PalmDevs/m3-solid.git#3faee2a",
+        "m3-solid": "https://github.com/PalmDevs/m3-solid.git#b7ee713",
         "marked": "18.0.4",
         "mitt": "3.0.1",
         "postcss": "8.5.15",
@@ -415,7 +415,7 @@
 
     "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
-    "m3-solid": ["m3-solid@github:PalmDevs/m3-solid#3faee2a", { "dependencies": { "@iconify-icons/mdi": "^1.2.48", "@solid-primitives/refs": "^1.1.3" }, "peerDependencies": { "solid-js": "^1.9.12" } }, "PalmDevs-m3-solid-3faee2a", "sha512-vfp+PxHdWtyNi39Azf6r9xbIDgkcRntep1pxZrF6RNd8VDcmeW6CXE7RTvf8fQEF67Lj7d5CZ4VZenfF2Z2pFg=="],
+    "m3-solid": ["m3-solid@github:PalmDevs/m3-solid#b7ee713", { "dependencies": { "@iconify-icons/mdi": "^1.2.48", "@solid-primitives/refs": "^1.1.3" }, "peerDependencies": { "solid-js": "^1.9.13" } }, "PalmDevs-m3-solid-b7ee713", "sha512-XVBUN1J9+jmJzkbHVykto7PcWrT0WmJBQN1Uh1M4yIpYfrx9a1yb3/dyqbQOMGh3gdfReLKI9eKJp6AQzwC9oA=="],
 
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 

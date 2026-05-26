@@ -1,21 +1,20 @@
+import './theme.css'
+import './styles.css'
+import 'm3-solid/src/styles.css'
+
 import { render } from 'solid-js/web'
 import 'solid-devtools'
 
+import { MetaProvider } from '@solidjs/meta'
 import { QueryClientProvider } from '@tanstack/solid-query'
 import { createRouter, type Register, type RoutePaths, RouterProvider, type ToPathOption } from '@tanstack/solid-router'
-import { routeTree } from '~/routeTree.gen'
-
-import 'm3-solid/src/styles.css'
-import './theme.css'
-import './styles.css'
-
-import { MetaProvider } from '@solidjs/meta'
 import ErrorPage from '~/components/pages/ErrorPage'
 import LoadingPage from '~/components/pages/LoadingPage'
 import NotFoundPage from '~/components/pages/NotFoundPage'
 import { createClient, initAuth } from '~/providers/APIProvider'
 import I18nProvider from '~/providers/I18nProvider'
 import { queryClient } from '~/queries/queryClient'
+import { routeTree } from '~/routeTree.gen'
 import type { RouterContext } from '~/routes/__root'
 
 const client = createClient()
