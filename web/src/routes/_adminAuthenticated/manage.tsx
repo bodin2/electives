@@ -21,10 +21,7 @@ import LogOutButton from '~/components/buttons/LogOutButton'
 import SettingsDialog from '~/components/dialogs/SettingsDialog'
 import { PageTopAppBar } from '~/components/PageTopAppBar'
 import { HStack, VStack } from '~/components/Stack'
-import {
-    BaseSubjectDisplayContext,
-    SubjectDisplayContextProvider,
-} from '~/components/subjects/SubjectDisplayContext'
+import { BaseSubjectDisplayContext, SubjectDisplayContextProvider } from '~/components/subjects/SubjectDisplayContext'
 import { UserDisplayContextProvider, useUserDisplayContext } from '~/components/users/UserDisplayContext'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
@@ -137,6 +134,8 @@ function RouteComponent() {
                         alignment="top"
                         open={navOpen()}
                         onChange={setNavOpen}
+                        backdropProps={{ style: { 'z-index': 'calc(var(--layer-nav-backdrop))' } }}
+                        hideTop
                         fill
                     >
                         <LinkNavigationRailItem icon={AdminIcon} label={string.ADMIN_DASHBOARD()} to="/manage" exact />

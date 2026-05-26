@@ -78,7 +78,7 @@ export default function SubjectCategorySection(props: SubjectCategorySectionProp
                     </Button>
                 </Show>
             </HStack>
-            <ul class={styles.list}>
+            <ul>
                 <For each={displayedSubjects()}>
                     {subject => (
                         <SubjectListItem

@@ -2,8 +2,7 @@
     --m3-list-item-container-color: var(--m3c-primary-container);
 }
 
-/* TODO: Add layers in M3 Solid */
-.centerChildrenVertically.centerChildrenVertically {
+.centerChildrenVertically {
     align-items: center;
 }
 

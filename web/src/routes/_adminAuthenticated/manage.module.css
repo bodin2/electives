@@ -43,21 +43,11 @@
     }
 }
 
-.navRail.navRail.navRail {
+.navRail {
     z-index: var(--layer-nav);
     padding-block: 16px;
     /* So it looks connected to TopAppBar */
     border-top-right-radius: 0;
-
-    /* Hide the top content div (TODO: Fix in M3Solid) */
-    > div:first-child {
-        display: none;
-    }
-}
-
-/* Backdrop, TODO: Fix in M3Solid */
-.navRail + div {
-    z-index: calc(var(--layer-nav-backdrop));
 }
 
 :global(#app):has(:global(#admin-app)) {
