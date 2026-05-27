@@ -1,7 +1,9 @@
 package th.ac.bodin2.electives.api.services
 
 import org.jetbrains.exposed.v1.core.*
-import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.EntityNotFoundException
@@ -24,9 +26,6 @@ class EnrollmentSelectionServiceImpl(private val notificationsService: Notificat
     companion object {
         private val logger = LoggerFactory.getLogger(EnrollmentSelectionServiceImpl::class.java)
     }
-
-    // We're currently using SQLite, which locks during writes, so technically all of this code to prevent TOCTOU doesn't really matter.
-    // But in case if we ever switch databases, this will be useful.
 
     // We want to prevent overbooking: Thread A reads (29/30) -> Thread B reads (29/30) -> A inserts (30/30) -> B inserts (31/30)
     // SERIALIZABLE will ensure that if two transactions try to do this at the same time, one of them will be fail.
