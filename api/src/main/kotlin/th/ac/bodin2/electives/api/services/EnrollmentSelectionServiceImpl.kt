@@ -25,31 +25,6 @@ class EnrollmentSelectionServiceImpl(private val notificationsService: Notificat
         private val logger = LoggerFactory.getLogger(EnrollmentSelectionServiceImpl::class.java)
     }
 
-    @Transactional
-    override fun forceSetAllStudentSelections(studentId: Int, selections: Map<Int, Int>) {
-        transaction {
-            Student.assertExists(studentId)
-
-            val selections = selections.map { (enrollmentId, subjectId) ->
-                Subject.assertExists(subjectId)
-                Enrollment.assertExists(enrollmentId)
-
-                if (!Subject.isPartOfEnrollment(subjectId, enrollmentId)) {
-                    throw IllegalArgumentException("Subject $subjectId is not part of enrollment $enrollmentId")
-                }
-
-                enrollmentId to subjectId
-            }
-
-            StudentClasses.deleteWhere { StudentClasses.student eq studentId }
-            StudentClasses.batchInsert(selections) { (enrollmentId, subjectId) ->
-                this[StudentClasses.student] = studentId
-                this[StudentClasses.enrollment] = enrollmentId
-                this[StudentClasses.subject] = subjectId
-            }
-        }
-    }
-
     // We're currently using SQLite, which locks during writes, so technically all of this code to prevent TOCTOU doesn't really matter.
     // But in case if we ever switch databases, this will be useful.
 

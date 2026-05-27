@@ -1,5 +1,5 @@
 import { nonNull } from '~/utils'
-import { AdminSetStudentSelectionsRequest, SetStudentEnrollmentSelectionRequest, StudentSelections } from '../types'
+import { SetStudentEnrollmentSelectionRequest, StudentSelections } from '../types'
 import type { Cache } from '../cache'
 import type { Client } from '../client'
 import type { RESTClient } from '../rest'
@@ -9,7 +9,6 @@ import type { CacheableManager, FetchOptions } from '.'
 export class SelectionManager implements CacheableManager {
     // Map<UserID, Map<EnrollmentID, Subject>>
     readonly cache: Cache<number, Map<number, Subject>>
-    readonly admin: SelectionAdminActions
 
     constructor(
         private readonly client: Client<unknown>,
@@ -17,7 +16,6 @@ export class SelectionManager implements CacheableManager {
         cache: Cache<number, Map<number, Subject>>,
     ) {
         this.cache = cache
-        this.admin = new SelectionAdminActions(rest, this)
     }
 
     clearCache(): void {
@@ -113,26 +111,5 @@ export class SelectionManager implements CacheableManager {
     resolveSelection(userId: number, enrollmentId: number): Subject | undefined {
         const selections = this.cache.get(userId)
         return selections?.get(enrollmentId)
-    }
-}
-
-export class SelectionAdminActions {
-    constructor(
-        private readonly rest: RESTClient,
-        private readonly manager: SelectionManager,
-    ) {}
-
-    /**
-     * Set all selections for a student
-     *
-     * @param studentId The student's ID
-     * @param selections Map of Enrollment ID -> Subject ID
-     */
-    async setAll(studentId: number, selections: Record<number, number>): Promise<void> {
-        const body: AdminSetStudentSelectionsRequest = { selections }
-        await this.rest.put(`/admin/users/${studentId}/selections`, body, {
-            encoder: AdminSetStudentSelectionsRequest,
-        })
-        this.manager.cache.delete(studentId)
     }
 }

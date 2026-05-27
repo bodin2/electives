@@ -18,9 +18,6 @@ var testEnrollmentSelectionServiceResponse: ModifySelectionResult = ModifySelect
 
 class TestEnrollmentSelectionService : EnrollmentSelectionService {
     @Transactional
-    override fun forceSetAllStudentSelections(studentId: Int, selections: Map<Int, Int>) = error("Not testable")
-
-    @Transactional
     override suspend fun setStudentSelection(
         executor: UsersService.SessionUser,
         studentId: Int,

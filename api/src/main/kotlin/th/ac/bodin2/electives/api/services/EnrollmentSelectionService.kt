@@ -6,21 +6,6 @@ import th.ac.bodin2.electives.db.Subject
 
 interface EnrollmentSelectionService {
     /**
-     * Sets all subject selections for a student. No permission or seat checks are performed.
-     *
-     * @param studentId The ID of the student.
-     * @param selections A map of enrollment IDs to selected subject IDs.
-     *
-     * @throws th.ac.bodin2.electives.EntityNotFoundException if the student, enrollment, or subject does not exist.
-     * @throws IllegalArgumentException if the subject is not part of the enrollment.
-     */
-    @Transactional
-    fun forceSetAllStudentSelections(
-        studentId: Int,
-        selections: Map<Int, Int>,
-    )
-
-    /**
      * Sets the subject selection for a student in a given enrollment.
      *
      * @param executor The user performing the operation.

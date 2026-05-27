@@ -5,7 +5,7 @@ export {
     EnrollmentManager,
 } from './EnrollmentManager'
 export { GroupAdminActions, GroupManager } from './GroupManager'
-export { SelectionAdminActions, SelectionManager } from './SelectionManager'
+export { SelectionManager } from './SelectionManager'
 export {
     SubjectAdminActions,
     SubjectManager,

@@ -41,7 +41,6 @@ import java.time.ZoneId
 
 val adminController = controller {
     val usersService: UsersService by dependencies
-    val enrollmentSelectionService: EnrollmentSelectionService by dependencies
     val enrollmentService: EnrollmentService by dependencies
     val subjectService: SubjectService by dependencies
     val groupService: GroupService by dependencies
@@ -49,7 +48,6 @@ val adminController = controller {
     listOf(
         adminAuthController,
         AdminUsersController(usersService),
-        AdminUsersSelectionsController(enrollmentSelectionService),
         AdminEnrollmentsController(enrollmentService, groupService),
         AdminEnrollmentsSubjectsController(enrollmentService),
         AdminSubjectsController(subjectService),
@@ -405,37 +403,6 @@ class AdminUsersController(
             usersService.deleteUsers(req.user_ids)
         } catch (e: UsersService.BatchOperationException.NotFoundEntities) {
             throw badRequest("Users not found: ${e.ids.joinToString(", ")}")
-        }
-        noContent()
-    }
-}
-
-class AdminUsersSelectionsController(
-    private val enrollmentSelectionService: EnrollmentSelectionService,
-) : Controller {
-    override fun Application.register() {
-        adminRoutes {
-            put<Admin.Users.Id.Selections> { params -> handlePutStudentSelections(params.parent.id) }
-        }
-    }
-
-    private suspend fun RoutingContext.handlePutStudentSelections(id: Int) {
-        val req = call.parseOrNull<AdminService.SetStudentSelectionsRequest>()
-            ?: throw badRequest()
-
-        try {
-            @OptIn(Transactional::class)
-            enrollmentSelectionService.forceSetAllStudentSelections(id, req.selections)
-        } catch (e: EntityNotFoundException) {
-            throw when (e.entity) {
-                ExceptionEntity.STUDENT -> e
-                ExceptionEntity.ENROLLMENT -> badRequest("One or more enrollments not found")
-                ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
-
-                else -> e
-            }
-        } catch (_: IllegalArgumentException) {
-            throw badRequest("One or more subjects are not part of their respective enrollments")
         }
         noContent()
     }
@@ -913,11 +880,7 @@ private class Admin {
 
         // DELETE, PATCH: UserPatch, PUT: AddUserRequest
         @Resource("{id}")
-        class Id(val parent: Users, val id: Int) {
-            // PUT: SetStudentSelectionsRequest
-            @Resource("selections")
-            class Selections(val parent: Id)
-        }
+        class Id(val parent: Users, val id: Int)
     }
 
     @Resource("enrollments")
