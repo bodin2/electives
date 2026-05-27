@@ -13,8 +13,7 @@ import th.ac.bodin2.electives.api.RATE_LIMIT_USERS
 import th.ac.bodin2.electives.api.RATE_LIMIT_USERS_SELECTIONS
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.EnrollmentSelectionService
-import th.ac.bodin2.electives.api.services.EnrollmentSelectionService.ModifySelectionResult
-import th.ac.bodin2.electives.api.services.EnrollmentSelectionService.ModifySelectionStatus
+import th.ac.bodin2.electives.api.services.EnrollmentSelectionService.*
 import th.ac.bodin2.electives.api.services.SubjectService
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
@@ -75,8 +74,8 @@ val usersController = controller {
 
 context(enrollmentSelectionService: EnrollmentSelectionService)
 suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
-    try {
-        val response = transaction {
+    val response = try {
+        transaction {
             val selections = enrollmentSelectionService.getStudentSelections(userId)
 
             UsersProto.StudentSelections(
@@ -90,14 +89,14 @@ suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
                 }
             )
         }
-
-        // @TODO: Return more specific error if user is not a student?
-        // But that requires an extra query and exposes unnecessary information...
-
-        call.respond(response)
     } catch (_: EntityNotFoundException) {
-        return badRequest("Viewing selections for non-student users")
+        throw badRequest("Viewing selections for non-student users")
     }
+
+    // @TODO: Return more specific error if user is not a student?
+    // But that requires an extra query and exposes unnecessary information...
+
+    call.respond(response)
 }
 
 context(usersService: UsersService)
@@ -108,21 +107,19 @@ suspend fun RoutingContext.handleGetUser(userId: Int) {
                 UserType.STUDENT -> usersService.getStudentById(userId)?.toProto()
                 UserType.TEACHER -> usersService.getTeacherById(userId)?.toProto()
                 UserType.ADMIN -> usersService.getAdminById(userId)?.toProto()
-
-                else -> throw IllegalStateException("Unknown user type: $type (id: $userId)")
             }
         } catch (_: EntityNotFoundException) {
             null
         }
-    } ?: return userNotFoundError()
+    } ?: throw userNotFound()
 
     call.respond(userProto)
 }
 
 context(subjectService: SubjectService)
 suspend fun RoutingContext.handleGetTeacherSubjects(userId: Int) {
-    try {
-        val response = transaction {
+    val response = try {
+        transaction {
             UsersProto.TeacherSubjects(
                 subjects = subjectService.getTeacherSubjects(userId).mapValues {
                     it.value.toProto(
@@ -133,11 +130,11 @@ suspend fun RoutingContext.handleGetTeacherSubjects(userId: Int) {
                 }
             )
         }
-
-        call.respond(response)
     } catch (_: EntityNotFoundException) {
-        return badRequest("Viewing subjects for non-teacher users")
+        throw badRequest("Viewing subjects for non-teacher users")
     }
+
+    call.respond(response)
 }
 
 context(enrollmentSelectionService: EnrollmentSelectionService)
@@ -146,7 +143,7 @@ private suspend fun RoutingContext.handlePutStudentEnrollmentSelection(
     studentId: Int,
     executor: UsersService.SessionUser
 ) {
-    val req = call.parseOrNull<SetStudentEnrollmentSelectionRequest>() ?: return badRequest()
+    val req = call.parseOrNull<SetStudentEnrollmentSelectionRequest>() ?: throw badRequest()
 
     @OptIn(Transactional::class)
     when (val result =
@@ -157,39 +154,39 @@ private suspend fun RoutingContext.handlePutStudentEnrollmentSelection(
             /**
              * See [th.ac.bodin2.electives.api.services.EnrollmentSelectionServiceImpl.tryHandling]
              */
-            return when (result.entity) {
+            throw when (result.entity) {
                 ExceptionEntity.ENROLLMENT -> notFound("Enrollment not found")
                 ExceptionEntity.SUBJECT -> badRequest("Subject does not exist")
-                ExceptionEntity.STUDENT -> modifyingNonStudentUserSelectionError()
+                ExceptionEntity.STUDENT -> modifyingNonStudentUserSelection()
 
-                else -> throw IllegalStateException("Unreachable case: ${result.entity}")
+                else -> IllegalStateException("Unreachable case: ${result.entity}")
             }
         }
 
         is ModifySelectionResult.CannotModify -> {
             when (result.status) {
-                ModifySelectionStatus.FORBIDDEN -> return forbidden("Not allowed")
+                ModifySelectionStatus.FORBIDDEN -> throw forbidden("Not allowed")
 
                 else -> throw IllegalStateException("Unreachable case: ${result.status}")
             }
         }
 
         is ModifySelectionResult.CannotEnroll -> when (result.status) {
-            EnrollmentSelectionService.CanEnrollStatus.SUBJECT_NOT_IN_ENROLLMENT ->
-                return badRequest("Subject is not part of this enrollment")
+            CanEnrollStatus.SUBJECT_NOT_IN_ENROLLMENT ->
+                throw badRequest("Subject is not part of this enrollment")
 
-            EnrollmentSelectionService.CanEnrollStatus.ALREADY_ENROLLED ->
-                return conflict("Student has already enrolled for this enrollment")
+            CanEnrollStatus.ALREADY_ENROLLED ->
+                throw conflict("Student has already enrolled for this enrollment")
 
-            EnrollmentSelectionService.CanEnrollStatus.NOT_IN_ENROLLMENT_GROUP,
-            EnrollmentSelectionService.CanEnrollStatus.NOT_IN_SUBJECT_GROUP ->
-                return forbidden("Student does not pass the group requirements")
+            CanEnrollStatus.NOT_IN_ENROLLMENT_GROUP,
+            CanEnrollStatus.NOT_IN_SUBJECT_GROUP ->
+                throw forbidden("Student does not pass the group requirements")
 
-            EnrollmentSelectionService.CanEnrollStatus.SUBJECT_FULL ->
-                return badRequest("Selected subject is full")
+            CanEnrollStatus.SUBJECT_FULL ->
+                throw badRequest("Selected subject is full")
 
-            EnrollmentSelectionService.CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE ->
-                return badRequest("Not in enrollment date range")
+            CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE ->
+                throw badRequest("Not in enrollment date range")
 
             else -> throw IllegalStateException("Unreachable case: ${result.status}")
         }
@@ -207,27 +204,27 @@ private suspend fun RoutingContext.handleDeleteStudentEnrollmentSelection(
         ModifySelectionResult.Success -> noContent()
 
         is ModifySelectionResult.CannotModify -> {
-            return when (result.status) {
+            throw when (result.status) {
                 ModifySelectionStatus.FORBIDDEN -> forbidden("Not allowed")
                 ModifySelectionStatus.NOT_ENROLLED -> badRequest("Student has not enrolled in the selected enrollment")
             }
         }
 
         is ModifySelectionResult.NotFound -> {
-            return when (result.entity) {
+            throw when (result.entity) {
                 ExceptionEntity.ENROLLMENT -> notFound("Enrollment not found")
-                ExceptionEntity.STUDENT -> modifyingNonStudentUserSelectionError()
+                ExceptionEntity.STUDENT -> modifyingNonStudentUserSelection()
 
-                else -> throw IllegalStateException("Unreachable case: ${result.entity}")
+                else -> IllegalStateException("Unreachable case: ${result.entity}")
             }
         }
 
         is ModifySelectionResult.CannotEnroll -> {
-            return when (result.status) {
+            throw when (result.status) {
                 EnrollmentSelectionService.CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE ->
                     badRequest("Not in enrollment date range")
 
-                else -> throw IllegalStateException("Unreachable case: ${result.status}")
+                else -> IllegalStateException("Unreachable case: ${result.status}")
             }
         }
     }
@@ -258,15 +255,15 @@ private suspend inline fun RoutingContext.resolveUserIdEnforced(
         val gettingUserId = if (idParam == ME_USER_ID) {
             user.id
         } else {
-            idParam.toIntOrNull() ?: return@authenticated badRequest()
+            idParam.toIntOrNull() ?: throw badRequest()
         }
 
         block(gettingUserId, user)
     }
 }
 
-private suspend inline fun RoutingContext.userNotFoundError() = notFound("User not found")
-private suspend inline fun RoutingContext.modifyingNonStudentUserSelectionError() =
+private fun userNotFound() = notFound("User not found")
+private fun modifyingNonStudentUserSelection() =
     badRequest("Modifying selections for non-student users")
 
 @Suppress("UNUSED")

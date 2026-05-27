@@ -32,6 +32,7 @@ dependencies {
     implementation(libs.ktor.server.di)
     implementation(libs.ktor.server.rate.limit)
     implementation(libs.ktor.server.call.logging)
+    implementation(libs.ktor.server.status.pages)
     implementation(libs.logback.classic)
     implementation(libs.postgresql)
     implementation(libs.hikaricp)

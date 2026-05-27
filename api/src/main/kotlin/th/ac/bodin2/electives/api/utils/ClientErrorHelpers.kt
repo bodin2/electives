@@ -7,6 +7,17 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 
+class ClientException(val statusCode: HttpStatusCode, override val message: String? = null) : Exception(message) {
+    // Client exceptions are expected to be thrown frequently, so we can skip filling in the stack trace for better performance
+    override fun fillInStackTrace(): Throwable? = null
+}
+
+fun notFound(message: String? = null): ClientException = ClientException(HttpStatusCode.NotFound, message)
+fun badRequest(message: String? = null): ClientException = ClientException(HttpStatusCode.BadRequest, message)
+fun unauthorized(message: String? = null): ClientException = ClientException(HttpStatusCode.Unauthorized, message)
+fun forbidden(message: String? = null): ClientException = ClientException(HttpStatusCode.Forbidden, message)
+fun conflict(message: String? = null): ClientException = ClientException(HttpStatusCode.Conflict, message)
+
 suspend inline fun RoutingContext.ok() {
     call.respond(HttpStatusCode.OK)
 }
@@ -15,50 +26,14 @@ suspend inline fun RoutingContext.noContent() {
     call.respond(HttpStatusCode.NoContent)
 }
 
-suspend inline fun RoutingContext.badRequest(message: String? = null) {
-    call.response.status(HttpStatusCode.BadRequest)
-    message?.let { call.respondText(it) }
+suspend inline fun RoutingContext.created(proto: Message<*, *>) {
+    call.respond(proto, HttpStatusCode.Created)
 }
 
 suspend inline fun WebSocketServerSession.badFrame(message: String? = null) {
     close(CloseReason(CloseReason.Codes.PROTOCOL_ERROR, message ?: "Bad Frame"))
 }
 
-suspend inline fun WebSocketServerSession.unauthorized(message: String? = null) {
+suspend inline fun WebSocketServerSession.unauthorizedFrame(message: String? = null) {
     close(CloseReason(CloseReason.Codes.PROTOCOL_ERROR, message ?: "Unauthorized"))
-}
-
-class ErrorResponse(val status: HttpStatusCode, val message: String?)
-
-sealed class RouteResponse
-data class Err(val response: ErrorResponse) : RouteResponse()
-data class Ok(val response: Message<*, *>) : RouteResponse()
-
-suspend inline fun RoutingContext.error(response: ErrorResponse) {
-    call.response.status(response.status)
-    response.message?.let { call.respondText(it) }
-}
-
-suspend inline fun RoutingContext.created(proto: Message<*, *>) {
-    call.respond(proto, HttpStatusCode.Created)
-}
-
-suspend inline fun RoutingContext.notFound(message: String? = null) {
-    call.response.status(HttpStatusCode.NotFound)
-    message?.let { call.respondText(it) }
-}
-
-suspend inline fun RoutingContext.unauthorized(message: String? = null) {
-    call.response.status(HttpStatusCode.Unauthorized)
-    message?.let { call.respondText(it) }
-}
-
-suspend inline fun RoutingContext.forbidden(message: String? = null) {
-    call.response.status(HttpStatusCode.Forbidden)
-    message?.let { call.respondText(it) }
-}
-
-suspend inline fun RoutingContext.conflict(message: String? = null) {
-    call.response.status(HttpStatusCode.Conflict)
-    message?.let { call.respondText(it) }
 }

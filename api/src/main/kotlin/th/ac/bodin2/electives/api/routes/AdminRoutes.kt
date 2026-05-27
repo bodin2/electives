@@ -25,11 +25,11 @@ import th.ac.bodin2.electives.api.ADMIN_AUTHENTICATION
 import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN
 import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN_AUTH
 import th.ac.bodin2.electives.api.annotations.Transactional
+import th.ac.bodin2.electives.api.asBadRequest
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
-import th.ac.bodin2.electives.api.utils.unauthorized
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.db.models.Students
@@ -83,7 +83,7 @@ val adminAuthController = controller {
             }
 
             post<Admin.Auth> {
-                val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return@post notFound()
+                val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: throw notFound()
 
                 try {
                     when (val result = adminAuthService.createSession(
@@ -96,14 +96,16 @@ val adminAuthController = controller {
 
                         is CreateSessionResult.NoChallenge,
                         is CreateSessionResult.IPNotAllowed,
-                        is CreateSessionResult.UserNotAdmin -> notFound()
+                        is CreateSessionResult.UserNotAdmin -> throw notFound()
 
-                        is CreateSessionResult.InvalidSignature -> unauthorized()
+                        is CreateSessionResult.InvalidSignature -> throw unauthorized()
                     }
 
+                } catch (e: ClientException) {
+                    throw e
                 } catch (e: Exception) {
                     application.log.error("Attempt create admin session failed: ${e.message}")
-                    unauthorized()
+                    throw unauthorized()
                 }
             }
         }
@@ -153,12 +155,12 @@ class AdminUsersController(
 
     private suspend fun RoutingContext.handlePutUser(id: Int) {
         val req = call.parseOrNull<AdminService.AddUserRequest>()
-            ?: return badRequest()
-        val user = req.user ?: return badRequest("Missing user")
-        if (user.id != id) return badRequest("ID in URL does not match body")
+            ?: throw badRequest()
+        val user = req.user ?: throw badRequest("Missing user")
+        if (user.id != id) throw badRequest("ID in URL does not match body")
 
-        try {
-            val protoOrNull = transaction {
+        val protoOrNull = try {
+            transaction {
                 val created = when (user.type) {
                     UserType.STUDENT -> {
                         val gradeId = req.grade_id
@@ -204,28 +206,28 @@ class AdminUsersController(
                     else -> null
                 }
             }
-
-            protoOrNull
-                ?: return badRequest("Unsupported user type or missing required group IDs (grade_id, room_id)")
-
-            created(protoOrNull)
         } catch (e: IllegalArgumentException) {
-            badRequest(e.message ?: "Invalid request")
+            throw badRequest(e.message ?: "Invalid request")
         } catch (_: EntityNotFoundException) {
-            badRequest("One or more specified groups not found")
+            throw badRequest("One or more specified groups not found")
         } catch (_: ConflictException) {
-            conflict("User with the same ID already exists")
+            throw conflict("User with the same ID already exists")
         } catch (e: ExposedSQLException) {
-            badRequest(e.message ?: "SQL exception occurred")
+            throw badRequest(e.message ?: "SQL exception occurred")
         }
+
+        protoOrNull
+            ?: throw badRequest("Unsupported user type or missing required group IDs (grade_id, room_id)")
+
+        created(protoOrNull)
     }
 
     private suspend fun RoutingContext.handlePatchUser(id: Int) {
         val req = call.parseOrNull<AdminService.UserPatch>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
-        try {
-            val proto = transaction {
+        val proto = try {
+            transaction {
                 val type = usersService.getUserType(id)
 
                 val update = UsersService.UserUpdate(
@@ -273,35 +275,34 @@ class AdminUsersController(
 
                 proto
             }
-
-            call.respond(proto)
         } catch (e: EntityNotFoundException) {
-            return when (e.entity) {
+            throw when (e.entity) {
                 ExceptionEntity.USER,
                 ExceptionEntity.TEACHER,
                 ExceptionEntity.STUDENT -> notFound("User not found")
 
                 ExceptionEntity.GROUP -> badRequest("One or more groups not found")
 
-                else -> throw e
+                else -> e
             }
-        } catch (_: NothingToUpdateException) {
-            badRequest("Nothing to update")
         } catch (e: IllegalArgumentException) {
-            badRequest(e.message ?: "Invalid request")
+            if (e is NothingToUpdateException) throw badRequest("Nothing to update")
+            throw badRequest(e.message ?: "Invalid request")
         }
+
+        call.respond(proto)
     }
 
     private suspend fun RoutingContext.handleDeleteUser(id: Int) {
         try {
             @OptIn(Transactional::class)
             usersService.deleteUser(id)
-            noContent()
         } catch (_: EntityNotFoundException) {
-            return notFound("User not found")
+            throw notFound("User not found")
         } catch (e: ExposedSQLException) {
-            badRequest(e.message ?: "SQL exception occurred")
+            throw badRequest(e.message ?: "SQL exception occurred")
         }
+        noContent()
     }
 
     private fun AdminService.AddUserRequest.toUserInsert(): UsersService.UserData {
@@ -322,16 +323,16 @@ class AdminUsersController(
     // @TODO: Create user with one single method call: createUsers()
     private suspend fun RoutingContext.handleBulkAddUsers() {
         val req = call.parseOrNull<AdminService.BulkAddUsersRequest>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
-        if (req.values.any { it.user == null }) return badRequest("Missing user in one or more entries")
+        if (req.values.any { it.user == null }) throw badRequest("Missing user in one or more entries")
 
         val inserts = req.values.groupBy { it.user!!.type }
 
         if (inserts.keys.minus(supportedBulkAddTypes).any { key ->
                 (inserts[key]?.isNotEmpty()) ?: false
             }) {
-            return badRequest("Unsupported user types")
+            throw badRequest("Unsupported user types")
         }
 
         val teacherInserts = inserts[UserType.TEACHER]?.map {
@@ -346,7 +347,7 @@ class AdminUsersController(
             val roomId = it.room_id
 
             if (gradeId == null || roomId == null) {
-                return badRequest("Student ${it.user!!.id} is missing one of grade_id, room_id")
+                throw badRequest("Student ${it.user!!.id} is missing one of grade_id, room_id")
             }
 
             UsersService.StudentInsert(
@@ -358,10 +359,10 @@ class AdminUsersController(
             )
         }
 
-        try {
+        val created: List<User> = try {
             // Dedupe transactions
             @OptIn(Transactional::class)
-            val created = transaction {
+            transaction {
                 buildList {
                     if (!teacherInserts.isNullOrEmpty()) {
                         usersService.createTeachers(teacherInserts).forEach { add(it.toProto()) }
@@ -372,36 +373,40 @@ class AdminUsersController(
                     }
                 }
             }
-
-            created(AdminService.ListUsersResponse(users = created, total = created.size))
         } catch (e: UsersService.BatchOperationException) {
             when (e) {
-                is UsersService.BatchOperationException.InvalidUserData -> when (e.cause) {
-                    is IllegalArgumentException -> badRequest(
-                        "User ${e.id} has invalid data: ${(e.cause as IllegalArgumentException).message ?: "unknown"}"
-                    )
+                is UsersService.BatchOperationException.InvalidUserData -> {
+                    val cause = e.cause
+                    if (cause is IllegalArgumentException) {
+                        throw badRequest("User ${e.id} has invalid data: ${cause.message ?: "unknown"}")
+                    }
+                    throw e
                 }
 
-                is UsersService.BatchOperationException.MissingGroups -> badRequest("One or more specified groups not found")
+                is UsersService.BatchOperationException.MissingGroups ->
+                    throw badRequest("One or more specified groups not found")
 
-                is UsersService.BatchOperationException.ConflictingEntities -> conflict("One or more users with the same ID already exists")
+                is UsersService.BatchOperationException.ConflictingEntities ->
+                    throw conflict("One or more users with the same ID already exists")
 
                 else -> throw e
             }
         }
+
+        created(AdminService.ListUsersResponse(users = created, total = created.size))
     }
 
     private suspend fun RoutingContext.handleBulkDeleteUsers() {
         val req = call.parseOrNull<AdminService.BulkDeleteUsersRequest>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
         try {
             @OptIn(Transactional::class)
             usersService.deleteUsers(req.user_ids)
-            noContent()
         } catch (e: UsersService.BatchOperationException.NotFoundEntities) {
-            return badRequest("Users not found: ${e.ids.joinToString(", ")}")
+            throw badRequest("Users not found: ${e.ids.joinToString(", ")}")
         }
+        noContent()
     }
 }
 
@@ -416,24 +421,23 @@ class AdminUsersSelectionsController(
 
     private suspend fun RoutingContext.handlePutStudentSelections(id: Int) {
         val req = call.parseOrNull<AdminService.SetStudentSelectionsRequest>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
         try {
             @OptIn(Transactional::class)
             enrollmentSelectionService.forceSetAllStudentSelections(id, req.selections)
-
-            noContent()
         } catch (e: EntityNotFoundException) {
-            return when (e.entity) {
-                ExceptionEntity.STUDENT -> notFound("Student not found")
+            throw when (e.entity) {
+                ExceptionEntity.STUDENT -> e
                 ExceptionEntity.ENROLLMENT -> badRequest("One or more enrollments not found")
                 ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
 
-                else -> throw e
+                else -> e
             }
         } catch (_: IllegalArgumentException) {
-            badRequest("One or more subjects are not part of their respective enrollments")
+            throw badRequest("One or more subjects are not part of their respective enrollments")
         }
+        noContent()
     }
 }
 
@@ -457,9 +461,9 @@ class AdminEnrollmentsController(
 
     private suspend fun RoutingContext.handlePutEnrollment(id: Int) {
         val enrollment = call.parseOrNull<Enrollment>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
-        if (enrollment.id != id) return badRequest("ID in URL does not match body")
+        if (enrollment.id != id) throw badRequest("ID in URL does not match body")
 
         try {
             @OptIn(Transactional::class)
@@ -470,32 +474,31 @@ class AdminEnrollmentsController(
                 startDate = enrollment.start_date?.secondsToUTCDateTime,
                 endDate = enrollment.end_date?.secondsToUTCDateTime
             )
-
-            noContent()
-        } catch (_: EntityNotFoundException) {
-            badRequest("Group not found")
+        } catch (e: EntityNotFoundException) {
+            throw e.asBadRequest()
         } catch (_: ConflictException) {
-            conflict("Enrollment with the same ID already exists")
+            throw conflict("Enrollment with the same ID already exists")
         } catch (e: ExposedSQLException) {
-            badRequest(e.message ?: "SQL exception occurred")
+            throw badRequest(e.message ?: "SQL exception occurred")
         }
+        noContent()
     }
 
     private suspend fun RoutingContext.handleDeleteEnrollment(id: Int) {
         try {
             @OptIn(Transactional::class)
             enrollmentService.delete(id)
-            noContent()
         } catch (_: EntityNotFoundException) {
-            notFound("Enrollment not found")
+            throw notFound("Enrollment not found")
         } catch (e: ExposedSQLException) {
-            badRequest(e.message ?: "SQL exception occurred")
+            throw badRequest(e.message ?: "SQL exception occurred")
         }
+        noContent()
     }
 
     private suspend fun RoutingContext.handleGetEnrollmentsProgress(idsParam: String) {
         val ids = idsParam.split(",").mapNotNull { it.trim().toIntOrNull() }
-        if (ids.isEmpty()) return badRequest()
+        if (ids.isEmpty()) throw badRequest()
 
         val counts = transaction {
             val totalStudents by lazy { Students.selectAll().count().toInt() }
@@ -526,7 +529,7 @@ class AdminEnrollmentsController(
 
     private suspend fun RoutingContext.handlePatchEnrollment(id: Int) {
         val req = call.parseOrNull<AdminService.EnrollmentPatch>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
         val update = EnrollmentService.EnrollmentUpdate(
             name = req.name,
@@ -538,22 +541,22 @@ class AdminEnrollmentsController(
             setEndDate = req.patch_end_date,
         )
 
-        try {
-            val proto = transaction {
+        val proto = try {
+            transaction {
                 @OptIn(Transactional::class)
                 enrollmentService.update(id, update).toProto()
             }
-            call.respond(proto)
         } catch (e: EntityNotFoundException) {
-            return when (e.entity) {
+            throw when (e.entity) {
                 ExceptionEntity.ENROLLMENT -> notFound("Enrollment not found")
                 ExceptionEntity.GROUP -> badRequest("Group not found")
 
-                else -> throw e
+                else -> e
             }
         } catch (_: NothingToUpdateException) {
-            badRequest("Nothing to update")
+            throw badRequest("Nothing to update")
         }
+        call.respond(proto)
     }
 }
 
@@ -568,21 +571,20 @@ class AdminEnrollmentsSubjectsController(private val enrollmentService: Enrollme
 
     private suspend fun RoutingContext.handlePutEnrollmentSubjects(enrollmentId: Int) {
         val req = call.parseOrNull<AdminService.SetEnrollmentSubjectsRequest>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
         try {
             @OptIn(Transactional::class)
             enrollmentService.setSubjects(enrollmentId, req.subject_ids)
-
-            noContent()
         } catch (e: EntityNotFoundException) {
-            return when (e.entity) {
+            throw when (e.entity) {
                 ExceptionEntity.ENROLLMENT -> notFound("Enrollment not found")
                 ExceptionEntity.SUBJECT -> badRequest("One or more subjects not found")
 
-                else -> throw e
+                else -> e
             }
         }
+        noContent()
     }
 }
 
@@ -612,17 +614,17 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
 
     private suspend fun RoutingContext.handleGetSubject(id: Int) {
         val response = transaction { subjectService.getById(id)?.toProto(withDescription = true, withTeachers = true) }
-            ?: return notFound()
+            ?: throw notFound()
 
         call.respond(response)
     }
 
     private suspend fun RoutingContext.handlePutSubject(id: Int) {
         val subject = call.parseOrNull<Subject>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
-        if (subject.id != id) return badRequest("ID in URL does not match body")
-        if (subject.teachers.isNotEmpty()) return badRequest("Can't add teachers into a subject immediately")
+        if (subject.id != id) throw badRequest("ID in URL does not match body")
+        if (subject.teachers.isNotEmpty()) throw badRequest("Can't add teachers into a subject immediately")
 
         try {
             @OptIn(Transactional::class)
@@ -638,37 +640,36 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
                 thumbnailUrl = subject.thumbnail_url,
                 imageUrl = subject.image_url,
             )
-
-            noContent()
         } catch (e: EntityNotFoundException) {
-            return when (e.entity) {
-                ExceptionEntity.GROUP -> badRequest("Group not found")
+            throw when (e.entity) {
+                ExceptionEntity.GROUP -> e.asBadRequest()
                 ExceptionEntity.TEACHER -> badRequest("One or more teachers not found")
 
-                else -> throw e
+                else -> e
             }
         } catch (_: ConflictException) {
-            conflict("Subject with the same ID already exists")
+            throw conflict("Subject with the same ID already exists")
         } catch (e: ExposedSQLException) {
-            badRequest(e.message ?: "SQL exception occurred")
+            throw badRequest(e.message ?: "SQL exception occurred")
         }
+        noContent()
     }
 
     private suspend fun RoutingContext.handleDeleteSubject(id: Int) {
         try {
             @OptIn(Transactional::class)
             subjectService.delete(id)
-            noContent()
         } catch (_: EntityNotFoundException) {
-            notFound("Subject not found")
+            throw notFound("Subject not found")
         } catch (e: ExposedSQLException) {
-            badRequest(e.message ?: "SQL exception occurred")
+            throw badRequest(e.message ?: "SQL exception occurred")
         }
+        noContent()
     }
 
     private suspend fun RoutingContext.handlePatchSubject(id: Int) {
         val req = call.parseOrNull<AdminService.SubjectPatch>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
         val update = SubjectService.SubjectUpdate(
             name = req.name,
@@ -690,28 +691,28 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
             setThumbnailUrl = req.patch_thumbnail_url,
         )
 
-        try {
-            val proto = transaction {
+        val proto = try {
+            transaction {
                 @OptIn(Transactional::class)
                 subjectService.update(id, update).toProto(withDescription = true, withTeachers = true)
             }
-            call.respond(proto)
         } catch (e: EntityNotFoundException) {
-            return when (e.entity) {
+            throw when (e.entity) {
                 ExceptionEntity.SUBJECT -> notFound("Subject not found")
                 ExceptionEntity.TEACHER -> badRequest("One or more teachers not found")
-                ExceptionEntity.GROUP -> badRequest("Group not found")
+                ExceptionEntity.GROUP -> e.asBadRequest()
 
-                else -> throw e
+                else -> e
             }
         } catch (_: NothingToUpdateException) {
-            badRequest("Nothing to update")
+            throw badRequest("Nothing to update")
         }
+        call.respond(proto)
     }
 
     private suspend fun RoutingContext.handleGetSubjectEnrollmentIds(id: Int) {
         val ids = transaction { subjectService.getEnrollmentIds(id) }
-            ?: return notFound()
+            ?: throw notFound()
 
         call.respond(AdminService.SubjectEnrollmentIds(enrollment_ids = ids))
     }
@@ -769,11 +770,10 @@ class AdminGroupsController(
             transaction {
                 groupService.deleteMembers(groupId)
             }
-
-            noContent()
         } catch (_: EntityNotFoundException) {
-            notFound("Group not found")
+            throw notFound("Group not found")
         }
+        noContent()
     }
 
     private suspend fun RoutingContext.handleMigrateGroupMembers(groupId: Int, targetGroupId: Int) {
@@ -782,18 +782,17 @@ class AdminGroupsController(
             transaction {
                 groupService.migrateMembers(groupId, targetGroupId)
             }
-
-            ok()
         } catch (_: EntityNotFoundException) {
-            notFound("Group not found")
+            throw notFound("Group not found")
         } catch (_: ConflictException) {
-            conflict("Target group must be a different group of the same type")
+            throw conflict("Target group must be a different group of the same type")
         }
+        ok()
     }
 
     private suspend fun RoutingContext.handleGetGroupMembers(groupId: Int, page: Int, query: String?) {
-        try {
-            val response = transaction {
+        val response = try {
+            transaction {
                 val (members, count) = @OptIn(Transactional::class) groupService.getMembers(groupId, page, query)
 
                 AdminService.ListUsersResponse(
@@ -801,10 +800,10 @@ class AdminGroupsController(
                     total = count.toInt(),
                 )
             }
-            call.respond(response)
         } catch (_: EntityNotFoundException) {
-            notFound("Group not found")
+            throw notFound("Group not found")
         }
+        call.respond(response)
     }
 
     private suspend fun RoutingContext.handleGetGroups() {
@@ -814,45 +813,45 @@ class AdminGroupsController(
 
     private suspend fun RoutingContext.handleGetGroup(id: Int) {
         val response = transaction { groupService.getById(id)?.toProto() }
-            ?: return notFound()
+            ?: throw notFound()
 
         call.respond(response)
     }
 
     private suspend fun RoutingContext.handlePutGroup(id: Int) {
         val group = call.parseOrNull<Group>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
-        if (group.id != id) return badRequest("ID in URL does not match body")
+        if (group.id != id) throw badRequest("ID in URL does not match body")
 
         try {
             @OptIn(Transactional::class)
             groupService.create(group.id, group.name, group.type, group.parent_id)
-            noContent()
         } catch (_: ConflictException) {
-            conflict("Group with the same ID already exists")
+            throw conflict("Group with the same ID already exists")
         } catch (e: ExposedSQLException) {
-            badRequest(e.message ?: "SQL exception occurred")
+            throw badRequest(e.message ?: "SQL exception occurred")
         }
+        noContent()
     }
 
     private suspend fun RoutingContext.handleDeleteGroup(id: Int) {
         try {
             @OptIn(Transactional::class)
             groupService.delete(id)
-            noContent()
         } catch (_: EntityNotFoundException) {
-            notFound("Group not found")
+            throw notFound("Group not found")
         } catch (_: ConflictException) {
-            conflict("Group has members; reassign or remove them before deleting")
+            throw conflict("Group has members; reassign or remove them before deleting")
         } catch (e: ExposedSQLException) {
-            badRequest(e.message ?: "SQL exception occurred")
+            throw badRequest(e.message ?: "SQL exception occurred")
         }
+        noContent()
     }
 
     private suspend fun RoutingContext.handlePatchGroup(id: Int) {
         val req = call.parseOrNull<AdminService.GroupPatch>()
-            ?: return badRequest()
+            ?: throw badRequest()
 
         val update = GroupService.GroupUpdate(
             name = req.name,
@@ -860,21 +859,21 @@ class AdminGroupsController(
             setParentId = req.patch_parent_id,
         )
 
-        try {
-            val proto = transaction {
+        val proto = try {
+            transaction {
                 @OptIn(Transactional::class)
                 groupService.update(id, update).toProto()
             }
-            call.respond(proto)
         } catch (e: EntityNotFoundException) {
-            return when (e.entity) {
+            throw when (e.entity) {
                 ExceptionEntity.GROUP -> notFound("Group not found")
 
-                else -> throw e
+                else -> e
             }
         } catch (_: NothingToUpdateException) {
-            badRequest("Nothing to update")
+            throw badRequest("Nothing to update")
         }
+        call.respond(proto)
     }
 
     private suspend fun RoutingContext.handleGetGroupMemberCounts() {

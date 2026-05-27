@@ -67,6 +67,7 @@ suspend fun Application.module() {
         mdc("userId") { it.userId()?.toString() }
     }
 
+    configureStatusPages()
     configureHTTP()
     configureWebSocket()
     configureSecurity()

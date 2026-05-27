@@ -29,22 +29,17 @@ val authController = controller {
 
 context(usersService: UsersService)
 suspend fun RoutingContext.handleAuth() {
-    val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: return badRequest()
+    val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: throw badRequest()
 
-    try {
+    val token = try {
         @OptIn(Transactional::class)
-        val token = usersService.createSession(req.id, req.password, req.client_name)
-        call.respond(AuthService.AuthenticateResponse(token = token))
-    } catch (e: Throwable) {
-        when (e) {
-            is EntityNotFoundException,
-            is IllegalArgumentException -> {
-                return unauthorized("Bad credentials")
-            }
-
-            else -> throw e
-        }
+        usersService.createSession(req.id, req.password, req.client_name)
+    } catch (_: EntityNotFoundException) {
+        throw unauthorized("Bad credentials")
+    } catch (_: IllegalArgumentException) {
+        throw unauthorized("Bad credentials")
     }
+    call.respond(AuthService.AuthenticateResponse(token = token))
 }
 
 context(usersService: UsersService)

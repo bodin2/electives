@@ -1,6 +1,5 @@
 package th.ac.bodin2.electives.api.routes
 
-import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.ratelimit.*
@@ -11,6 +10,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_ENROLLMENTS
 import th.ac.bodin2.electives.api.RATE_LIMIT_ENROLLMENTS_SUBJECT_MEMBERS
+import th.ac.bodin2.electives.api.asBadRequest
 import th.ac.bodin2.electives.api.services.EnrollmentService
 import th.ac.bodin2.electives.api.services.EnrollmentService.QueryResult
 import th.ac.bodin2.electives.api.utils.*
@@ -60,7 +60,7 @@ suspend fun RoutingContext.handleGetEnrollments() {
 context(enrollmentService: EnrollmentService)
 suspend fun RoutingContext.handleGetEnrollment(enrollmentId: Int) {
     val response = transaction { enrollmentService.getById(enrollmentId)?.toProto() }
-        ?: return enrollmentNotFoundError()
+        ?: throw enrollmentNotFound()
 
     call.respond(response)
 }
@@ -68,8 +68,8 @@ suspend fun RoutingContext.handleGetEnrollment(enrollmentId: Int) {
 context(enrollmentService: EnrollmentService)
 suspend fun RoutingContext.handleGetEnrollmentSubjects(enrollmentId: Int) {
     val response = transaction {
-        return@transaction when (val result = enrollmentService.getSubjects(enrollmentId)) {
-            is QueryResult.EnrollmentNotFound -> null
+        when (val result = enrollmentService.getSubjects(enrollmentId)) {
+            is QueryResult.EnrollmentNotFound -> throw enrollmentNotFound()
             is QueryResult.Success ->
                 EnrollmentsService.ListSubjectsResponse(
                     subjects = result.value.map {
@@ -84,34 +84,29 @@ suspend fun RoutingContext.handleGetEnrollmentSubjects(enrollmentId: Int) {
 
             else -> throw IllegalStateException("Unreachable case: $result")
         }
-    } ?: return enrollmentNotFoundError()
+    }
 
     call.respond(response)
 }
 
 context(enrollmentService: EnrollmentService)
 private suspend fun RoutingContext.handleGetEnrollmentSubject(enrollmentId: Int, subjectId: Int) {
-    val response = transaction<RouteResponse> {
+    val response = transaction {
         when (val result = enrollmentService.getSubject(enrollmentId, subjectId)) {
-            is QueryResult.EnrollmentNotFound -> Err(enrollmentNotFound)
-            is QueryResult.SubjectNotFound -> Err(subjectNotFound)
-            is QueryResult.SubjectNotPartOfEnrollment -> Err(subjectNotPartOfEnrollment(enrollmentId, subjectId))
+            is QueryResult.EnrollmentNotFound -> throw enrollmentNotFound()
+            is QueryResult.SubjectNotFound -> throw subjectNotFound()
+            is QueryResult.SubjectNotPartOfEnrollment -> throw subjectNotPartOfEnrollment(enrollmentId, subjectId)
 
-            is QueryResult.Success -> Ok(
-                result.value.toProto(
-                    withDescription = true,
-                    withTeachers = true,
-                    enrollmentId = enrollmentId,
-                    withEnrolledCounts = true,
-                )
+            is QueryResult.Success -> result.value.toProto(
+                withDescription = true,
+                withTeachers = true,
+                enrollmentId = enrollmentId,
+                withEnrolledCounts = true,
             )
         }
     }
 
-    when (response) {
-        is Err -> return error(response.response)
-        is Ok -> call.respond(response.response)
-    }
+    call.respond(response)
 }
 
 context(enrollmentService: EnrollmentService)
@@ -120,28 +115,23 @@ suspend fun RoutingContext.handleGetEnrollmentSubjectMembers(
     subjectId: Int,
     withStudents: Boolean,
 ) {
-    val response = transaction<RouteResponse> {
+    val response = transaction {
         when (val result = enrollmentService.getSubjectMembers(enrollmentId, subjectId, withStudents)) {
-            is QueryResult.EnrollmentNotFound -> Err(enrollmentNotFound)
-            is QueryResult.SubjectNotFound -> Err(subjectNotFound)
-            is QueryResult.SubjectNotPartOfEnrollment -> Err(subjectNotPartOfEnrollment(enrollmentId, subjectId))
+            is QueryResult.EnrollmentNotFound -> throw enrollmentNotFound()
+            is QueryResult.SubjectNotFound -> throw subjectNotFound()
+            is QueryResult.SubjectNotPartOfEnrollment -> throw subjectNotPartOfEnrollment(enrollmentId, subjectId)
 
             is QueryResult.Success -> {
                 val (teachers, students) = result.value
-                Ok(
-                    EnrollmentsService.ListSubjectMembersResponse(
-                        teachers = teachers.map { it.toProto() },
-                        students = students.map { it.toProto() },
-                    )
+                EnrollmentsService.ListSubjectMembersResponse(
+                    teachers = teachers.map { it.toProto() },
+                    students = students.map { it.toProto() },
                 )
             }
         }
     }
 
-    when (response) {
-        is Err -> return error(response.response)
-        is Ok -> call.respond(response.response)
-    }
+    call.respond(response)
 }
 
 context(enrollmentService: EnrollmentService)
@@ -150,53 +140,34 @@ suspend fun RoutingContext.handleGetUnenrolledMembers(
     groupId: Int,
     page: Int
 ) {
-    val response = transaction<RouteResponse> {
+    val response = transaction {
         try {
             when (val result = enrollmentService.getUnenrolledMembers(enrollmentId, groupId, page)) {
-                is QueryResult.EnrollmentNotFound -> Err(enrollmentNotFound)
+                is QueryResult.EnrollmentNotFound -> throw enrollmentNotFound()
                 is QueryResult.Success -> {
                     val (students, count) = result.value
-                    Ok(
-                        AdminService.ListUsersResponse(
-                            users = students.map { it.toProto() },
-                            total = count.toInt(),
-                        )
+                    AdminService.ListUsersResponse(
+                        users = students.map { it.toProto() },
+                        total = count.toInt(),
                     )
                 }
 
                 else -> throw IllegalStateException("Unreachable case: $result")
             }
         } catch (e: EntityNotFoundException) {
-            Err(ErrorResponse(HttpStatusCode.BadRequest, "Group not found"))
+            throw e.asBadRequest()
         } catch (e: IllegalArgumentException) {
-            Err(ErrorResponse(HttpStatusCode.BadRequest, e.message ?: "Invalid request"))
+            throw badRequest(e.message ?: "Invalid request")
         }
     }
 
-    when (response) {
-        is Err -> return error(response.response)
-        is Ok -> call.respond(response.response)
-    }
+    call.respond(response)
 }
 
-private val enrollmentNotFound: ErrorResponse
-    get() = ErrorResponse(
-        status = HttpStatusCode.NotFound,
-        message = "Enrollment not found",
-    )
-
-private val subjectNotFound: ErrorResponse
-    get() = ErrorResponse(
-        status = HttpStatusCode.NotFound,
-        message = "Subject not found",
-    )
-
-private fun subjectNotPartOfEnrollment(enrollmentId: Int, subjectId: Int) = ErrorResponse(
-    status = HttpStatusCode.BadRequest,
-    message = "Subject $subjectId is not part of enrollment $enrollmentId",
-)
-
-private suspend inline fun RoutingContext.enrollmentNotFoundError() = error(enrollmentNotFound)
+private fun enrollmentNotFound() = notFound("Enrollment not found")
+private fun subjectNotFound() = notFound("Subject not found")
+private fun subjectNotPartOfEnrollment(enrollmentId: Int, subjectId: Int) =
+    badRequest("Subject $subjectId is not part of enrollment $enrollmentId")
 
 @Suppress("UNUSED")
 @Resource("/enrollments")

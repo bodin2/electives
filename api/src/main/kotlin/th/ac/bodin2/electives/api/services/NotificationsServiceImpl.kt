@@ -18,7 +18,7 @@ import th.ac.bodin2.electives.api.toPrincipal
 import th.ac.bodin2.electives.api.utils.badFrame
 import th.ac.bodin2.electives.api.utils.parseOrNull
 import th.ac.bodin2.electives.api.utils.send
-import th.ac.bodin2.electives.api.utils.unauthorized
+import th.ac.bodin2.electives.api.utils.unauthorizedFrame
 import th.ac.bodin2.electives.db.Enrollment
 import th.ac.bodin2.electives.proto.api.NotificationsService.*
 import th.ac.bodin2.electives.utils.env
@@ -211,7 +211,7 @@ class NotificationsServiceImpl(
                 else -> logger.error("Error during authentication from IP: ${call.request.origin.remoteHost}", e)
             }
 
-            return unauthorized()
+            return unauthorizedFrame()
         }
 
         handleSession(userId)
