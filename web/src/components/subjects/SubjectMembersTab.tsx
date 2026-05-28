@@ -220,6 +220,7 @@ function SubjectMembersSection(props: SubjectMembersSectionProps) {
                 <For each={props.users}>
                     {user => (
                         <UserListItem
+                            class={styles.item}
                             onClick={() => navigate(userCtx.viewLinkProps(user.id))}
                             user={user}
                             currentUser={currentUser()}

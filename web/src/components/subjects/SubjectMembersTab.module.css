@@ -27,10 +27,10 @@
 
 .list {
     z-index: var(--layer-content);
+}
 
-    a, button {
-        width: 100%;
-    }
+.item {
+    width: 100%;
 }
 
 .noMembers {
