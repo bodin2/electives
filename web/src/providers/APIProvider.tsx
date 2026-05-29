@@ -20,6 +20,7 @@ import {
     Gateway,
     type LoginOptions,
     RESTClient,
+    UnauthorizedError,
     UserAuthenticator,
     UserType,
 } from '~/api'
@@ -287,10 +288,23 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             const token = localStorage.getItem(TOKEN_KEY)
             if (!token) throw new Error('No stored token available to resume session')
 
+            setAuthState(AuthenticationState.Loading)
+
             const type = getTokenType()
             const authenticator = configureClientAuth(client, type)
             authenticator.setToken(token)
-            await client.resume(token)
+
+            try {
+                await client.resume(token)
+            } catch (e) {
+                if (e instanceof UnauthorizedError) {
+                    log.warn('Failed to resume session with stored token, logging out:', e)
+                    await client.logout().catch(() => null)
+                    setAuthState(AuthenticationState.LoggedOut)
+                }
+
+                throw e
+            }
         },
         logout: () => client.logout(),
     }
