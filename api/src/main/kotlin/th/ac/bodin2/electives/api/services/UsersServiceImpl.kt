@@ -24,6 +24,7 @@ import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.env
 import th.ac.bodin2.electives.utils.withMinimumDelay
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.LocalDateTime
 import java.util.*
@@ -62,7 +63,18 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         private const val PAGE_SIZE = 50
         private const val TOKEN_SIZE = 32
         private val secureRand = SecureRandom()
+        private val sha256Digest = ThreadLocal.withInitial { MessageDigest.getInstance("SHA-256") }
         private val logger = LoggerFactory.getLogger(UsersServiceImpl::class.java)
+
+        /**
+         * Hashes a high-entropy session token with SHA-256. Session tokens are generated from a
+         * cryptographically secure source with sufficient entropy, so a fast hash is adequate and
+         * a slow password hash (Argon2) is unnecessary.
+         */
+        private fun hashSessionToken(token: String): String =
+            sha256Digest.get().apply { reset() }
+                .digest(token.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
 
         private val userInfoFields = listOf(
             Users.id,
@@ -638,7 +650,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             it[Users.sessionExpiry] =
                 LocalDateTime.now().plusSeconds(customDurationSeconds ?: config.sessionDurationSeconds)
 
-            it[Users.sessionHash] = argon2.hash(session.toCharArray())
+            it[Users.sessionHash] = hashSessionToken(session)
         }
 
         return "$id.$session"
@@ -662,7 +674,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         if (sessionExpiry.isBefore(LocalDateTime.now()))
             throw IllegalArgumentException("Session expired for user: $userId")
 
-        if (!argon2.verify(sessionHash, session.toCharArray()))
+        if (!MessageDigest.isEqual(sessionHash.toByteArray(Charsets.UTF_8), hashSessionToken(session).toByteArray(Charsets.UTF_8)))
             throw IllegalArgumentException("Invalid session token for user: $userId")
 
         logger.debug("Validated session token, user: $userId")
