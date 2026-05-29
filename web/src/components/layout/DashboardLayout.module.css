@@ -50,12 +50,12 @@
     border-top-right-radius: 0;
 }
 
-:global(#app):has(:global(#admin-app)) {
+:global(#app):has(:global(#dashboard-app)) {
     height: 100vh;
     height: 100dvh;
     --sticky-offset: 0px;
 }
 
-:global(#admin-app) {
+:global(#dashboard-app) {
     min-height: 0;
 }

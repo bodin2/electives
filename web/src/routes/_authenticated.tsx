@@ -1,12 +1,12 @@
 import { createFileRoute, type ErrorRouteComponent, Outlet } from '@tanstack/solid-router'
 import { Match, Switch } from 'solid-js'
 import { UnauthorizedError } from '~/api'
-import { PageTopAppBar } from '~/components/PageTopAppBar'
+import DashboardLayout from '~/components/layout/DashboardLayout'
+import { getUserNav } from '~/components/layout/navEntries'
 import LoadingPage from '~/components/pages/LoadingPage'
 import { useLogoutRedirect } from '~/hooks/useAuthRedirect'
 import { AuthenticationState, TokenType, useAPI } from '~/providers/APIProvider'
-import { usePageData } from '~/providers/PageProvider'
-import ScrollDataProvider from '~/providers/ScrollDataProvider'
+import { nonNull } from '~/utils'
 import { catchErrors } from '~/utils/error-component'
 
 export const AUTHENTICATED_ROUTE_DEFAULTS = {
@@ -25,22 +25,20 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedLayout() {
     const api = useAPI()
-    const pageData = usePageData()
 
     useUserLogoutRedirect()
 
     return (
-        <ScrollDataProvider>
-            <Switch>
-                <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.User}>
-                    <PageTopAppBar elevated={pageData.topAppBarElevated} />
+        <Switch>
+            <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.User}>
+                <DashboardLayout entries={getUserNav(nonNull(api.client.user).type)}>
                     <Outlet />
-                </Match>
-                <Match when={api.authState() === AuthenticationState.Loading}>
-                    <LoadingPage debugName="AuthenticatedLayout" />
-                </Match>
-            </Switch>
-        </ScrollDataProvider>
+                </DashboardLayout>
+            </Match>
+            <Match when={api.authState() === AuthenticationState.Loading}>
+                <LoadingPage debugName="AuthenticatedLayout" />
+            </Match>
+        </Switch>
     )
 }
 
