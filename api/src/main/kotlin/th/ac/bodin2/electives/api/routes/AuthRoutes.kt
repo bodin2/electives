@@ -3,7 +3,6 @@ package th.ac.bodin2.electives.api.routes
 import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_AUTH
 import th.ac.bodin2.electives.api.annotations.Transactional
@@ -45,7 +44,7 @@ suspend fun RoutingContext.handleAuth() {
 context(usersService: UsersService)
 private suspend fun RoutingContext.handleLogOut() {
     authenticated { user ->
-        transaction { usersService.clearSession(user.id) }
+        dbQuery { usersService.clearSession(user.id) }
         ok()
     }
 }

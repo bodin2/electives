@@ -6,13 +6,13 @@ import org.jetbrains.exposed.v1.core.notInList
 import org.jetbrains.exposed.v1.core.notInSubQuery
 import org.jetbrains.exposed.v1.dao.with
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.EnrollmentService.QueryResult
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.*
 import java.time.LocalDateTime
@@ -23,13 +23,13 @@ class EnrollmentServiceImpl : EnrollmentService {
     }
 
     @Transactional
-    override fun create(
+    override suspend fun create(
         id: Int,
         name: String,
         group: Int?,
         startDate: LocalDateTime?,
         endDate: LocalDateTime?
-    ) = transaction {
+    ) = dbQuery {
         val stmt = Enrollments.insertIgnore {
             it[this.id] = id
             it[this.name] = name
@@ -48,8 +48,8 @@ class EnrollmentServiceImpl : EnrollmentService {
 
 
     @Transactional
-    override fun delete(id: Int) {
-        transaction {
+    override suspend fun delete(id: Int) {
+        dbQuery {
             val rows = Enrollments.deleteWhere { Enrollments.id eq id }
             if (rows == 0) {
                 throw EntityNotFoundException(ExceptionEntity.ENROLLMENT)
@@ -58,7 +58,7 @@ class EnrollmentServiceImpl : EnrollmentService {
     }
 
     @Transactional
-    override fun update(id: Int, update: EnrollmentService.EnrollmentUpdate) = transaction {
+    override suspend fun update(id: Int, update: EnrollmentService.EnrollmentUpdate) = dbQuery {
         Enrollment.assertExists(id)
 
         val rows = Enrollments.updateReturning(where = { Enrollments.id eq id }) {
@@ -76,8 +76,8 @@ class EnrollmentServiceImpl : EnrollmentService {
     }
 
     @Transactional
-    override fun setSubjects(enrollmentId: Int, subjectIds: List<Int>) {
-        transaction {
+    override suspend fun setSubjects(enrollmentId: Int, subjectIds: List<Int>) {
+        dbQuery {
             Enrollment.assertExists(enrollmentId)
 
             val subjectIds = subjectIds.distinct()

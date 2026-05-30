@@ -24,7 +24,7 @@ class TestUsersService : UsersService {
     override val sessionCreationFlow: SharedFlow<Int>
         get() = error("Not testable")
 
-    override fun createStudent(
+    override suspend fun createStudent(
         id: Int,
         firstName: String,
         gradeId: Int,
@@ -38,10 +38,9 @@ class TestUsersService : UsersService {
         groupIds: List<Int>?,
     ) = error("Not testable")
 
-    @Transactional
-    override fun createStudents(inserts: List<UsersService.StudentInsert>) = error("Not testable")
+    override suspend fun createStudents(inserts: List<UsersService.StudentInsert>) = error("Not testable")
 
-    override fun createTeacher(
+    override suspend fun createTeacher(
         id: Int,
         firstName: String,
         prefix: String?,
@@ -52,32 +51,31 @@ class TestUsersService : UsersService {
         groupIds: List<Int>?,
     ) = error("Not testable")
 
-    @Transactional
-    override fun createTeachers(inserts: List<UsersService.TeacherInsert>) = error("Not testable")
+    override suspend fun createTeachers(inserts: List<UsersService.TeacherInsert>) = error("Not testable")
 
     @Transactional
-    override fun createAdmin(insert: UsersService.AdminInsert) = error("Not testable")
+    override suspend fun createAdmin(insert: UsersService.AdminInsert) = error("Not testable")
 
     @Transactional
-    override fun deleteUser(id: Int) = error("Not testable")
+    override suspend fun deleteUser(id: Int) = error("Not testable")
 
     @Transactional
     override suspend fun deleteUsers(id: List<Int>) = error("Not testable")
 
     @Transactional
-    override fun updateStudent(id: Int, update: UsersService.StudentUpdate): Student {
+    override suspend fun updateStudent(id: Int, update: UsersService.StudentUpdate): Student {
         if (id != STUDENT_ID) throw EntityNotFoundException(ExceptionEntity.STUDENT)
         return mockStudent(id)
     }
 
     @Transactional
-    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate): Teacher {
+    override suspend fun updateTeacher(id: Int, update: UsersService.TeacherUpdate): Teacher {
         if (id != TEACHER_ID) throw EntityNotFoundException(ExceptionEntity.TEACHER)
         return mockTeacher(id)
     }
 
     @Transactional
-    override fun setPassword(id: Int, newPassword: String) {
+    override suspend fun setPassword(id: Int, newPassword: String) {
         getUserType(id) // throws if user not found
     }
 
@@ -152,8 +150,7 @@ class TestUsersService : UsersService {
         }
     }
 
-    @Transactional
-    override fun getStudents(page: Int, query: String?): Pair<List<Student>, Long> {
+    override suspend fun getStudents(page: Int, query: String?): Pair<List<Student>, Long> {
         return if (page == 1) {
             listOf(mockStudent(STUDENT_ID)) to 1
         } else {
@@ -161,8 +158,7 @@ class TestUsersService : UsersService {
         }
     }
 
-    @Transactional
-    override fun getTeachers(page: Int, query: String?): Pair<List<Teacher>, Long> {
+    override suspend fun getTeachers(page: Int, query: String?): Pair<List<Teacher>, Long> {
         return if (page == 1) {
             listOf(mockTeacher(TEACHER_ID)) to 1
         } else {

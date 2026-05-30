@@ -2,9 +2,9 @@ package th.ac.bodin2.electives.api.services
 
 import io.ktor.server.application.*
 import io.ktor.server.plugins.di.*
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
@@ -12,6 +12,7 @@ import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.contains
 import th.ac.bodin2.electives.api.logger
 import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.db.models.Admins
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.CIDR
@@ -129,37 +130,39 @@ class AdminAuthServiceImpl(
         logger.warn("AdminAuthService is running!")
 
         @OptIn(Transactional::class)
-        transaction {
-            try {
-                val type = usersService.getUserType(config.defaultUserId)
-                if (type != UserType.ADMIN) {
-                    logger.warn("Default admin user with ID ${config.defaultUserId} is a ${type.name}. You may need to recreate the database.")
-                }
+        runBlocking {
+            dbQuery {
+                try {
+                    val type = usersService.getUserType(config.defaultUserId)
+                    if (type != UserType.ADMIN) {
+                        logger.warn("Default admin user with ID ${config.defaultUserId} is a ${type.name}. You may need to recreate the database.")
+                    }
 
-                if (isAdminResetEnabled()) {
-                    logger.warn("Resetting admin user with ID ${config.defaultUserId}")
-                    usersService.deleteUser(config.defaultUserId)
-                    throw EntityNotFoundException(
-                        ExceptionEntity.USER,
-                        "Admin reset, user ${config.defaultUserId} deleted"
+                    if (isAdminResetEnabled()) {
+                        logger.warn("Resetting admin user with ID ${config.defaultUserId}")
+                        usersService.deleteUser(config.defaultUserId)
+                        throw EntityNotFoundException(
+                            ExceptionEntity.USER,
+                            "Admin reset, user ${config.defaultUserId} deleted"
+                        )
+                    }
+                } catch (_: EntityNotFoundException) {
+                    if (config.defaultUserPublicKey == null) {
+                        logger.warn("Default admin user with ID ${config.defaultUserId} could not be created. ADMIN_PUBLIC_KEY is required during initial setup.")
+                        return@dbQuery
+                    }
+
+                    usersService.createAdmin(
+                        UsersService.AdminInsert(
+                            user = UsersService.UserData(
+                                id = config.defaultUserId,
+                                firstName = "Admin",
+                                password = "",
+                            ),
+                            publicKey = config.defaultUserPublicKey
+                        )
                     )
                 }
-            } catch (_: EntityNotFoundException) {
-                if (config.defaultUserPublicKey == null) {
-                    logger.warn("Default admin user with ID ${config.defaultUserId} could not be created. ADMIN_PUBLIC_KEY is required during initial setup.")
-                    return@transaction
-                }
-
-                usersService.createAdmin(
-                    UsersService.AdminInsert(
-                        user = UsersService.UserData(
-                            id = config.defaultUserId,
-                            firstName = "Admin",
-                            password = "",
-                        ),
-                        publicKey = config.defaultUserPublicKey
-                    )
-                )
             }
         }
     }
@@ -167,13 +170,13 @@ class AdminAuthServiceImpl(
     override fun permitsIP(ip: String) =
         config.allowedIPs?.let { ip in it } ?: true
 
-    private fun getAdminPublicKey(id: Int): PublicKey? = transaction {
+    private suspend fun getAdminPublicKey(id: Int): PublicKey? = dbQuery {
         val publicKeyString = Admins
             .select(Admins.publicKey)
             .where { Admins.id eq id }
             .singleOrNull()
             ?.get(Admins.publicKey)
-            ?: return@transaction null
+            ?: return@dbQuery null
 
         val publicKey = try {
             val bytes = Base64.getDecoder().decode(publicKeyString)
@@ -182,18 +185,18 @@ class AdminAuthServiceImpl(
                 .generatePublic(X509EncodedKeySpec(bytes))
         } catch (e: Exception) {
             logger.error("Invalid admin public key for admin user: $id", e)
-            return@transaction null
+            return@dbQuery null
         }
 
         val rsa = publicKey as? RSAPublicKey
-            ?: return@transaction null
+            ?: return@dbQuery null
 
         val bits = rsa.modulus.bitLength()
         if (bits < 2048) {
             logger.warn("Admin RSA public key is $bits bits (< 2048), admin user: $id")
         }
 
-        return@transaction publicKey
+        return@dbQuery publicKey
     }
 
     private fun verifySignature(signature: String, challenge: ByteArray, publicKey: PublicKey): Boolean {
@@ -250,7 +253,7 @@ class AdminAuthServiceImpl(
                 return@withMinimumDelay CreateSessionResult.InvalidSignature
             }
 
-            val token = transaction {
+            val token = dbQuery {
                 usersService.insecurelyCreateSessionWithoutValidation(id, config.sessionDurationSeconds)
             }
 

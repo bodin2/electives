@@ -17,7 +17,7 @@ class TestSubjectService : SubjectService {
     }
 
     @Transactional
-    override fun create(
+    override suspend fun create(
         id: Int,
         name: String,
         description: String?,
@@ -31,10 +31,10 @@ class TestSubjectService : SubjectService {
     ): Subject = error("Not testable")
 
     @Transactional
-    override fun delete(id: Int) = error("Not testable")
+    override suspend fun delete(id: Int) = error("Not testable")
 
     @Transactional
-    override fun update(id: Int, update: SubjectService.SubjectUpdate): Subject {
+    override suspend fun update(id: Int, update: SubjectService.SubjectUpdate): Subject {
         if (id !in SUBJECT_IDS) throw EntityNotFoundException(ExceptionEntity.SUBJECT)
         return MockUtils.mockSubject(id)
     }

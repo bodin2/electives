@@ -1,18 +1,14 @@
 package th.ac.bodin2.electives.api.services
 
-import org.jetbrains.exposed.v1.core.Op
-import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.count
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.dao.with
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.db.Group
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
@@ -25,12 +21,12 @@ class GroupServiceImpl : GroupService {
     }
 
     @Transactional
-    override fun create(
+    override suspend fun create(
         id: Int,
         name: String,
         type: GroupType,
         parentId: Int?,
-    ) = transaction {
+    ) = dbQuery {
         parentId?.let {
             val parent = Group.findById(it) ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
             if (parent.parentId != null) throw ConflictException(ExceptionEntity.GROUP)
@@ -48,8 +44,8 @@ class GroupServiceImpl : GroupService {
     }
 
     @Transactional
-    override fun delete(id: Int) {
-        transaction {
+    override suspend fun delete(id: Int) {
+        dbQuery {
             val type = Group.getType(id) ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
             // GRADE/CLASS groups must never lose members silently
             // Refuse to delete a non-CUSTOM/PROGRAM group that still has members
@@ -68,7 +64,7 @@ class GroupServiceImpl : GroupService {
     }
 
     @Transactional
-    override fun update(id: Int, update: GroupService.GroupUpdate) = transaction {
+    override suspend fun update(id: Int, update: GroupService.GroupUpdate) = dbQuery {
         Group.findById(id) ?: throw EntityNotFoundException(ExceptionEntity.GROUP)
         val rows = Groups.updateReturning(where = { Groups.id eq id }) {
             update.name?.let { name -> it[this.name] = name }
@@ -95,7 +91,7 @@ class GroupServiceImpl : GroupService {
     override fun getById(groupId: Int) = Group.findById(groupId)
 
     @Transactional
-    override fun getMembers(groupId: Int, page: Int, query: String?): Pair<List<Student>, Long> = transaction {
+    override suspend fun getMembers(groupId: Int, page: Int, query: String?): Pair<List<Student>, Long> = dbQuery {
         Group.assertExists(groupId)
 
         val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
@@ -123,7 +119,7 @@ class GroupServiceImpl : GroupService {
     }
 
     @Transactional
-    override fun getManagers(groupId: Int, page: Int, query: String?): Pair<List<Teacher>, Long> = transaction {
+    override suspend fun getManagers(groupId: Int, page: Int, query: String?): Pair<List<Teacher>, Long> = dbQuery {
         Group.assertExists(groupId)
 
         val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
@@ -160,8 +156,8 @@ class GroupServiceImpl : GroupService {
             .count().toInt()
 
     @Transactional
-    override fun deleteMembers(groupId: Int) {
-        transaction {
+    override suspend fun deleteMembers(groupId: Int) {
+        dbQuery {
             Group.assertExists(groupId)
 
             val studentIds = StudentGroups
@@ -169,15 +165,15 @@ class GroupServiceImpl : GroupService {
                 .where { StudentGroups.group eq groupId }
                 .map { it[StudentGroups.student].value }
 
-            if (studentIds.isEmpty()) return@transaction
+            if (studentIds.isEmpty()) return@dbQuery
 
             Users.deleteWhere { Users.id inList studentIds }
         }
     }
 
     @Transactional
-    override fun migrateMembers(groupId: Int, targetGroupId: Int) {
-        transaction {
+    override suspend fun migrateMembers(groupId: Int, targetGroupId: Int) {
+        dbQuery {
             if (groupId == targetGroupId) throw ConflictException(ExceptionEntity.GROUP)
 
             val sourceType = Group.getType(groupId)
@@ -192,7 +188,7 @@ class GroupServiceImpl : GroupService {
                 .where { StudentGroups.group eq groupId }
                 .map { it[StudentGroups.student].value }
 
-            if (studentIds.isEmpty()) return@transaction
+            if (studentIds.isEmpty()) return@dbQuery
 
             StudentGroups.batchInsert(studentIds, ignore = true) {
                 this[StudentGroups.student] = it

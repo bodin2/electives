@@ -89,12 +89,18 @@ suspend fun Application.module() {
 
 fun setupDatabase() {
     if (TransactionManager.primaryDatabase == null) {
+        val poolSize = env("DB_POOL_SIZE")?.toInt() ?: 10
         val dataSource = HikariDataSource(HikariConfig().apply {
             jdbcUrl = requireEnvNonBlank("DB_URL")
             username = env("DB_USER")
             password = env("DB_PASSWORD")
             driverClassName = "org.postgresql.Driver"
-            maximumPoolSize = env("DB_POOL_SIZE")?.toInt() ?: 10
+            maximumPoolSize = poolSize
+            minimumIdle = env("DB_MINIMUM_IDLE")?.toInt() ?: poolSize
+            connectionTimeout = env("DB_CONNECTION_TIMEOUT")?.toLong() ?: 10_000
+            maxLifetime = env("DB_MAX_LIFETIME")?.toLong() ?: 1_800_000
+            idleTimeout = env("DB_IDLE_TIMEOUT")?.toLong() ?: 600_000
+            leakDetectionThreshold = env("DB_LEAK_DETECTION_THRESHOLD")?.toLong() ?: 0
             isAutoCommit = false
             transactionIsolation = "TRANSACTION_REPEATABLE_READ"
         })
@@ -126,8 +132,3 @@ fun Application.provideDependencies() = dependencies {
 
 inline fun <reified T : Any> DependencyRegistry.contains() =
     contains(DependencyKey<T>())
-
-suspend inline fun <reified T : Any> DependencyRegistry.resolveOrNull(): T? {
-    val key = DependencyKey<T>()
-    return if (contains(key)) get(key) else null
-}

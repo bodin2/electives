@@ -26,6 +26,10 @@ object MockUtils {
     fun mockDAOHelpers() {
         mockkObject(Enrollment.Companion)
         every { Enrollment.assertExists(any()) } answers { mockk(relaxed = true) }
+
+        // Batched subject-listing helpers (used by List<Subject>.toProto)
+        every { Enrollment.getTeachersBySubject(any()) } returns mapOf(SUBJECT_ID to listOf(mockTeacher(TEACHER_ID)))
+        every { Enrollment.getSubjectsEnrolledCounts(any()) } returns mapOf(SUBJECT_ID to 0)
     }
 
     fun unmockDAOHelpers() {

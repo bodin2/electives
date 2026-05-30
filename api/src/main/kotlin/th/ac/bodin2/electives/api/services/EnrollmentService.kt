@@ -18,7 +18,7 @@ interface EnrollmentService {
      * @throws ConflictException if an enrollment with the same ID already exists.
      */
     @Transactional
-    fun create(
+    suspend fun create(
         id: Int,
         name: String,
         group: Int? = null,
@@ -32,7 +32,7 @@ interface EnrollmentService {
      * @throws EntityNotFoundException if the enrollment does not exist.
      */
     @Transactional
-    fun delete(id: Int)
+    suspend fun delete(id: Int)
 
     /**
      * Updates an enrollment's information.
@@ -41,13 +41,13 @@ interface EnrollmentService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun update(id: Int, update: EnrollmentUpdate): Enrollment
+    suspend fun update(id: Int, update: EnrollmentUpdate): Enrollment
 
     /**
      * Sets the subjects that are part of the enrollment.
      */
     @Transactional
-    fun setSubjects(enrollmentId: Int, subjectIds: List<Int>)
+    suspend fun setSubjects(enrollmentId: Int, subjectIds: List<Int>)
 
     data class EnrollmentUpdate(
         val name: String? = null,

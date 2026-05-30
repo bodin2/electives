@@ -10,21 +10,16 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.api.isTest
 import th.ac.bodin2.electives.api.services.NotificationsServiceImpl.Config
 import th.ac.bodin2.electives.api.toPrincipal
-import th.ac.bodin2.electives.api.utils.badFrame
-import th.ac.bodin2.electives.api.utils.parseOrNull
-import th.ac.bodin2.electives.api.utils.send
-import th.ac.bodin2.electives.api.utils.unauthorizedFrame
+import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.Enrollment
 import th.ac.bodin2.electives.proto.api.NotificationsService.*
 import th.ac.bodin2.electives.utils.env
 import th.ac.bodin2.electives.utils.setInterval
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -81,7 +76,7 @@ class NotificationsServiceImpl(
     private val connections = ConcurrentHashMap<Int, ClientConnection>()
 
     private val subjectSelectionSubscriptions =
-        ConcurrentHashMap<Int, ConcurrentHashMap<Int, CopyOnWriteArrayList<SubjectSelectionUpdateListener>>>()
+        ConcurrentHashMap<Int, ConcurrentHashMap<Int, ConcurrentHashMap.KeySetView<SubjectSelectionUpdateListener, Boolean>>>()
 
     init {
         globalScope.launch {
@@ -105,7 +100,7 @@ class NotificationsServiceImpl(
         subjectId: Int,
         enrolledCount: Int,
     ) {
-        logger.debug("Notifying subject selection update, enrollmentId: $enrollmentId, subjectId: $subjectId, enrolledCount: $enrolledCount")
+        if (logger.isDebugEnabled) logger.debug("Notifying subject selection update, enrollmentId: $enrollmentId, subjectId: $subjectId, enrolledCount: $enrolledCount")
 
         val enrollmentSubscriptions = subjectSelectionSubscriptions[enrollmentId] ?: return
         val subjectListeners = enrollmentSubscriptions[subjectId] ?: return
@@ -130,14 +125,15 @@ class NotificationsServiceImpl(
             val startMs = System.currentTimeMillis()
             logger.debug("Sending bulk enrollment updates...")
 
-            val updates = transaction {
-                Enrollment.getAllActiveIds().map { enrollmentId ->
-                    val enrolledCounts = Enrollment.getSubjectsEnrolledCounts(enrollmentId)
+            val updates = dbQuery {
+                val activeIds = Enrollment.getAllActiveIds()
+                val countsByEnrollment = Enrollment.getSubjectsEnrolledCountsForIds(activeIds)
 
+                activeIds.map { enrollmentId ->
                     enrollmentId to Envelope(
                         bulk_subject_enrollment_update = BulkSubjectEnrollmentUpdate(
                             enrollment_id = enrollmentId,
-                            subject_enrolled_counts = enrolledCounts,
+                            subject_enrolled_counts = countsByEnrollment[enrollmentId] ?: emptyMap(),
                         )
                     )
                 }
@@ -163,7 +159,7 @@ class NotificationsServiceImpl(
     }
 
     private suspend fun WebSocketServerSession.handleSession(userId: Int) {
-        logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
+        if (logger.isDebugEnabled) logger.debug("Client connected, user: $userId, IP: ${call.request.origin.remoteHost}")
 
         val connection = ClientConnection(
             notificationsService = this@NotificationsServiceImpl,
@@ -176,7 +172,7 @@ class NotificationsServiceImpl(
 
         connection.start()
         connections.put(userId, connection)?.let {
-            logger.warn("Existing connection found for user: $userId, closing previous connection")
+            if (logger.isDebugEnabled) logger.debug("Existing connection found for user: $userId, closing previous connection")
             it.close()
         }
 
@@ -185,7 +181,7 @@ class NotificationsServiceImpl(
         } finally {
             connection.close()
             connections.remove(userId, connection)
-            logger.debug("Client disconnected, user: $userId")
+            if (logger.isDebugEnabled) logger.debug("Client disconnected, user: $userId")
         }
     }
 
@@ -241,7 +237,7 @@ class NotificationsServiceImpl(
                     }
 
                     acknowledge(envelope)
-                    logger.debug("Client subscriptions updated, user: $userId")
+                    if (logger.isDebugEnabled) logger.debug("Client subscriptions updated, user: $userId")
 
                     // Cleanup previous enrollment update listeners
                     for (cleanup in cleanups) try {
@@ -278,7 +274,7 @@ class NotificationsServiceImpl(
         for ((enrollmentId, subjectIds) in subscriptions) {
             val enrollmentSubscriptions = subjectSelectionSubscriptions.getOrPut(enrollmentId) { ConcurrentHashMap() }
             for (subjectId in subjectIds) {
-                val listeners = enrollmentSubscriptions.getOrPut(subjectId) { CopyOnWriteArrayList() }
+                val listeners = enrollmentSubscriptions.getOrPut(subjectId) { ConcurrentHashMap.newKeySet() }
                 listeners.add(listener)
             }
         }
@@ -320,10 +316,14 @@ private class ClientConnection(
             if (outgoing.isClosedForSend) return
 
             val dropped = droppedCount.incrementAndGet()
-            logger.warn("Dropped envelope for user: $userId, dropped so far: $dropped")
+            if (logger.isDebugEnabled) {
+                logger.debug("Dropped envelope for user: $userId, dropped so far: $dropped")
+            }
 
             if (dropped >= DROPPED_LIMIT) {
-                logger.error("Dropped envelope limit reached for user: $userId, closing connection")
+                if (logger.isDebugEnabled) {
+                    logger.debug("Dropped envelope limit reached for user: $userId, closing connection")
+                }
                 close()
             }
         }

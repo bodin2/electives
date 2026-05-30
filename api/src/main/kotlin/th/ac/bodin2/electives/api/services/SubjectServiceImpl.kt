@@ -3,12 +3,12 @@ package th.ac.bodin2.electives.api.services
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.db.Group
 import th.ac.bodin2.electives.db.Subject
 import th.ac.bodin2.electives.db.Teacher
@@ -20,7 +20,7 @@ import th.ac.bodin2.electives.proto.api.SubjectTag
 
 class SubjectServiceImpl : SubjectService {
     @Transactional
-    override fun create(
+    override suspend fun create(
         id: Int,
         name: String,
         description: String?,
@@ -31,7 +31,7 @@ class SubjectServiceImpl : SubjectService {
         group: Int?,
         thumbnailUrl: String?,
         imageUrl: String?,
-    ) = transaction {
+    ) = dbQuery {
         val stmt = Subjects.insertIgnore {
             it[this.id] = id
             it[this.name] = name
@@ -54,8 +54,8 @@ class SubjectServiceImpl : SubjectService {
     }
 
     @Transactional
-    override fun delete(id: Int) {
-        transaction {
+    override suspend fun delete(id: Int) {
+        dbQuery {
             val rows = Subjects.deleteWhere { Subjects.id eq id }
             if (rows == 0) {
                 throw EntityNotFoundException(ExceptionEntity.SUBJECT)
@@ -64,7 +64,7 @@ class SubjectServiceImpl : SubjectService {
     }
 
     @Transactional
-    override fun update(id: Int, update: SubjectService.SubjectUpdate) = transaction {
+    override suspend fun update(id: Int, update: SubjectService.SubjectUpdate) = dbQuery {
         Subject.assertExists(id)
 
         val subject = try {

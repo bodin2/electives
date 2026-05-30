@@ -8,8 +8,6 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.dao.load
 import org.jetbrains.exposed.v1.dao.with
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
@@ -17,6 +15,7 @@ import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.UsersServiceImpl.Config
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.db.*
 import th.ac.bodin2.electives.db.models.*
 import th.ac.bodin2.electives.proto.api.GroupType
@@ -75,15 +74,6 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             sha256Digest.get().apply { reset() }
                 .digest(token.toByteArray(Charsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }
-
-        private val userInfoFields = listOf(
-            Users.id,
-            Users.avatarUrl,
-            Users.prefix,
-            Users.firstName,
-            Users.middleName,
-            Users.lastName
-        )
     }
 
     override fun getUserType(id: Int): UserType {
@@ -105,7 +95,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
     }
 
-    override fun createStudent(
+    override suspend fun createStudent(
         id: Int,
         firstName: String,
         gradeId: Int,
@@ -123,7 +113,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         programId?.let { assertGroupHasType(it, GroupType.PROGRAM) }
         assertGroupsHaveType(groupIds.orEmpty(), GroupType.CUSTOM)
 
-        val user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
+        val passwordHash = hashNewPasswordAsync(password)
+        val user = createUser(id, firstName, prefix, middleName, lastName, passwordHash, avatarUrl)
         val studentRow = Students
             .insert { it[Students.id] = user.id }
             .resultedValues!!
@@ -178,9 +169,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
     }
 
-    @Transactional
-    override fun createStudents(inserts: List<UsersService.StudentInsert>) = transaction {
-        if (inserts.isEmpty()) return@transaction emptyList()
+    override suspend fun createStudents(inserts: List<UsersService.StudentInsert>): List<Student> {
+        if (inserts.isEmpty()) return emptyList()
 
         // Collect every referenced group ID and type so we can validate in one query
         val expectedTypes = mutableMapOf<Int, GroupType>()
@@ -240,7 +230,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             this[StudentGroups.group] = groupId
         }
 
-        return@transaction Student.find { Students.id inList prepared.map { it.request.user.id } }
+        return Student.find { Students.id inList prepared.map { it.request.user.id } }
             .with(Student::user, Student::groups)
             .toList()
     }
@@ -250,7 +240,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         val passwordHash: String
     )
 
-    override fun createTeacher(
+    override suspend fun createTeacher(
         id: Int,
         firstName: String,
         prefix: String?,
@@ -277,7 +267,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             }
         }
 
-        val user = createUser(id, firstName, prefix, middleName, lastName, password, avatarUrl)
+        val passwordHash = hashNewPasswordAsync(password)
+        val user = createUser(id, firstName, prefix, middleName, lastName, passwordHash, avatarUrl)
         val teacher = Teacher.new(user.id.value) {}
 
         groupIds?.let { ids ->
@@ -290,9 +281,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         return teacher.load(Teacher::user, Teacher::groups)
     }
 
-    @Transactional
-    override fun createTeachers(inserts: List<UsersService.TeacherInsert>) = transaction {
-        if (inserts.isEmpty()) return@transaction emptyList()
+    override suspend fun createTeachers(inserts: List<UsersService.TeacherInsert>): List<Teacher> {
+        if (inserts.isEmpty()) return emptyList()
 
         // Validate groups
         val allGroupIds = inserts.flatMap { it.groups }.distinct()
@@ -323,23 +313,28 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             this[TeacherGroups.group] = groupId
         }
 
-        return@transaction Teacher.find { Teachers.id inList prepared.map { it.request.user.id } }
+        return Teacher.find { Teachers.id inList prepared.map { it.request.user.id } }
             .with(Teacher::user, Teacher::groups)
             .toList()
     }
 
     // @TODO: Test this
     @Transactional
-    override fun createAdmin(insert: UsersService.AdminInsert) = transaction {
+    override suspend fun createAdmin(insert: UsersService.AdminInsert) = dbQuery {
+        // Admins may have no password (authenticated via RSA key), so a blank password maps to a
+        // null hash and password requirements are not enforced. Hashing is synchronous here because
+        // this method owns its (rare, startup-time) transaction.
+        val rawPassword = insert.user.password
+        val passwordHash = if (rawPassword.isBlank()) null else argon2.hash(rawPassword.toCharArray())
+
         val user = createUser(
             id = insert.user.id,
             firstName = insert.user.firstName,
             prefix = insert.user.prefix,
             middleName = insert.user.middleName,
             lastName = insert.user.lastName,
-            password = insert.user.password,
+            passwordHash = passwordHash,
             avatarUrl = insert.user.avatarUrl,
-            assertPassword = false
         )
 
         Admin.new(user.id.value) {
@@ -347,7 +342,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         }
     }
 
-    private fun <T : UsersService.UserInsert> insertUserBatch(inserts: List<T>): List<PreparedUserInsert<T>> {
+    private suspend fun <T : UsersService.UserInsert> insertUserBatch(inserts: List<T>): List<PreparedUserInsert<T>> {
         val conflicts = Users
             .select(Users.id)
             .where { Users.id inList inserts.map { it.user.id } }
@@ -361,7 +356,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         val prepared = inserts.map { req ->
             val user = req.user
             val passwordHash = try {
-                argon2.hash(user.password.assertPasswordRequirements().toCharArray())
+                argon2.hashAsync(user.password.assertPasswordRequirements().toCharArray())
             } catch (e: IllegalArgumentException) {
                 throw UsersService.BatchOperationException.InvalidUserData(user.id, e)
             }
@@ -388,8 +383,8 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override fun deleteUser(id: Int) {
-        val rows = transaction { Users.deleteWhere { Users.id eq id } }
+    override suspend fun deleteUser(id: Int) {
+        val rows = dbQuery { Users.deleteWhere { Users.id eq id } }
         if (rows == 0) {
             throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
         }
@@ -401,7 +396,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     override suspend fun deleteUsers(id: List<Int>) {
         if (id.isEmpty()) return
 
-        suspendTransaction {
+        dbQuery {
             val notFoundIds = Users
                 .select(Users.id)
                 .where { not(Users.id inList id) }
@@ -419,7 +414,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override fun updateStudent(id: Int, update: UsersService.StudentUpdate) = transaction {
+    override suspend fun updateStudent(id: Int, update: UsersService.StudentUpdate) = dbQuery {
         Student.assertExists(id)
 
         // Validate group types up-front so we never partially update on failure
@@ -491,7 +486,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = transaction {
+    override suspend fun updateTeacher(id: Int, update: UsersService.TeacherUpdate) = dbQuery {
         Teacher.assertExists(id)
 
         // Validate all referenced groups exist up-front so we never partially update on failure.
@@ -543,10 +538,10 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override fun setPassword(id: Int, newPassword: String) {
+    override suspend fun setPassword(id: Int, newPassword: String) {
         val password = newPassword.assertPasswordRequirements()
 
-        val rows = transaction {
+        val rows = dbQuery {
             Users.update(where = { Users.id eq id }) {
                 it[Users.passwordHash] = argon2.hash(password.toCharArray())
             }
@@ -561,52 +556,48 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
     override fun getAdminById(id: Int): Admin? = Admin.findById(id)
 
-    @Transactional
-    override fun getStudents(page: Int, query: String?): Pair<List<Student>, Long> {
+    override suspend fun getStudents(page: Int, query: String?): Pair<List<Student>, Long> {
         require(page >= 1) { "Page must be at least 1" }
         val offset = ((page - 1) * PAGE_SIZE).toLong()
         val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
-        return transaction {
-            val count = if (searchCondition != null) {
-                Students.innerJoin(Users).selectAll().where(searchCondition).count()
-            } else {
-                Students.selectAll().count()
-            }
 
-            val dataQuery = Students.innerJoin(Users).selectAll().apply {
-                if (searchCondition != null) where(searchCondition)
-            }.orderBy(Students.id).limit(PAGE_SIZE).offset(offset)
-
-            val students = Student.wrapRows(dataQuery)
-                .with(Student::user, Student::groups)
-                .toList()
-
-            students to count
+        val count = if (searchCondition != null) {
+            Students.innerJoin(Users).selectAll().where(searchCondition).count()
+        } else {
+            Students.selectAll().count()
         }
+
+        val dataQuery = Students.innerJoin(Users).selectAll().apply {
+            if (searchCondition != null) where(searchCondition)
+        }.orderBy(Students.id).limit(PAGE_SIZE).offset(offset)
+
+        val students = Student.wrapRows(dataQuery)
+            .with(Student::user, Student::groups)
+            .toList()
+
+        return students to count
     }
 
-    @Transactional
-    override fun getTeachers(page: Int, query: String?): Pair<List<Teacher>, Long> {
+    override suspend fun getTeachers(page: Int, query: String?): Pair<List<Teacher>, Long> {
         require(page >= 1) { "Page must be at least 1" }
         val offset = ((page - 1) * PAGE_SIZE).toLong()
         val searchCondition = query?.takeIf { it.isNotBlank() }?.let { userSearchCondition(it) }
-        return transaction {
-            val count = if (searchCondition != null) {
-                Teachers.innerJoin(Users).selectAll().where(searchCondition).count()
-            } else {
-                Teachers.selectAll().count()
-            }
 
-            val dataQuery = Teachers.innerJoin(Users).selectAll().apply {
-                if (searchCondition != null) where(searchCondition)
-            }.orderBy(Teachers.id).limit(PAGE_SIZE).offset(offset)
-
-            val teachers = Teacher.wrapRows(dataQuery)
-                .with(Teacher::user, Teacher::groups)
-                .toList()
-
-            teachers to count
+        val count = if (searchCondition != null) {
+            Teachers.innerJoin(Users).selectAll().where(searchCondition).count()
+        } else {
+            Teachers.selectAll().count()
         }
+
+        val dataQuery = Teachers.innerJoin(Users).selectAll().apply {
+            if (searchCondition != null) where(searchCondition)
+        }.orderBy(Teachers.id).limit(PAGE_SIZE).offset(offset)
+
+        val teachers = Teacher.wrapRows(dataQuery)
+            .with(Teacher::user, Teacher::groups)
+            .toList()
+
+        return teachers to count
     }
 
     @Transactional
@@ -619,25 +610,25 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
                 require(length <= 256) { "Audience string too long for user: $id (aud = ${slice(0..32)}...)" }
             }
 
-            suspendTransaction {
+            // Fetch the hash in a short transaction. The connection is returned to the pool before the expensive Argon2 verification
+            val passwordHash = dbQuery {
                 val user = Users.select(Users.passwordHash).where { Users.id eq id }.singleOrNull()
                     ?: throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
 
-                val passwordHash = user[Users.passwordHash]
-
-                require(passwordHash != null) { "User not password authenticatable: $id" }
-
-                require(
-                    argon2.verify(passwordHash, password.toCharArray())
-                ) { "Invalid password for user: $id" }
-
-                val token = insecurelyCreateSessionWithoutValidation(id)
-
-                _sessionCreationFlow.emit(id)
-                logger.debug("New session created, user: $id, aud: $aud")
-
-                token
+                user[Users.passwordHash]
             }
+
+            require(passwordHash != null) { "User not password authenticatable: $id" }
+
+            require(argon2.verifyAsync(passwordHash, password.toCharArray())) { "Invalid password for user: $id" }
+
+            // Persist the new session token in a second short transaction
+            val token = dbQuery { insecurelyCreateSessionWithoutValidation(id) }
+
+            _sessionCreationFlow.emit(id)
+            logger.debug("New session created, user: $id, aud: $aud")
+
+            token
         }
 
     @Transactional
@@ -662,13 +653,19 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
 
         val userId = subject.toIntOrNull() ?: throw IllegalArgumentException("Invalid token subject: $subject")
 
-        val user = Users.select(Users.sessionHash, Users.sessionExpiry).where { Users.id eq userId }.singleOrNull()
+        val row = Users
+            .leftJoin(Students)
+            .leftJoin(Teachers)
+            .leftJoin(Admins)
+            .select(Users.sessionHash, Users.sessionExpiry, Students.id, Teachers.id, Admins.id)
+            .where { Users.id eq userId }
+            .singleOrNull()
             ?: throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $userId")
 
-        val sessionExpiry = user[Users.sessionExpiry]
+        val sessionExpiry = row[Users.sessionExpiry]
             ?: throw IllegalArgumentException("No active session for user: $userId")
 
-        val sessionHash = user[Users.sessionHash]
+        val sessionHash = row[Users.sessionHash]
             ?: throw IllegalArgumentException("No active session for user: $userId")
 
         if (sessionExpiry.isBefore(LocalDateTime.now()))
@@ -677,9 +674,16 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         if (!MessageDigest.isEqual(sessionHash.toByteArray(Charsets.UTF_8), hashSessionToken(session).toByteArray(Charsets.UTF_8)))
             throw IllegalArgumentException("Invalid session token for user: $userId")
 
+        val type = when {
+            row.getOrNull(Students.id) != null -> UserType.STUDENT
+            row.getOrNull(Teachers.id) != null -> UserType.TEACHER
+            row.getOrNull(Admins.id) != null -> UserType.ADMIN
+            else -> throw IllegalStateException("User is not a Student, Teacher, or Admin: $userId")
+        }
+
         logger.debug("Validated session token, user: $userId")
 
-        return UsersService.SessionUser(userId, getUserType(userId))
+        return UsersService.SessionUser(userId, type)
     }
 
     override fun clearSession(userId: Int) {
@@ -691,25 +695,35 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
         logger.debug("Session cleared, user: $userId")
     }
 
+    /**
+     * Validates password requirements and hashes the password on the bounded Argon2 dispatcher,
+     * off any held DB connection. Used by the [createStudent]/[createTeacher] paths which run inside
+     * the caller's [dbQuery] transaction.
+     */
+    private suspend fun hashNewPasswordAsync(password: String): String =
+        argon2.hashAsync(password.assertPasswordRequirements().toCharArray())
+
+    /**
+     * Inserts a [User] row with an already-computed [passwordHash] (null for no-password users).
+     * Password validation and hashing are performed by the caller so this stays a pure DB write
+     * that can run inside any (blocking or suspended) transaction.
+     */
     private fun createUser(
         id: Int,
         firstName: String,
         prefix: String? = null,
         middleName: String?,
         lastName: String?,
-        password: String,
+        passwordHash: String?,
         avatarUrl: String?,
-        assertPassword: Boolean = true
     ): User {
-        val password = if (assertPassword) password.assertPasswordRequirements() else password
-
         val stmt = Users.insertIgnore {
             it[Users.id] = id
             it[Users.prefix] = prefix
             it[Users.firstName] = firstName
             it[Users.middleName] = middleName
             it[Users.lastName] = lastName
-            it[Users.passwordHash] = if (password.isBlank()) null else argon2.hash(password.toCharArray())
+            it[Users.passwordHash] = passwordHash
             it[Users.avatarUrl] = avatarUrl
         }
 

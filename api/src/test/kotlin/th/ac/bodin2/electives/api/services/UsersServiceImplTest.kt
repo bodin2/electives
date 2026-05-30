@@ -18,6 +18,7 @@ import th.ac.bodin2.electives.api.TestConstants.Teachers
 import th.ac.bodin2.electives.api.TestConstants.TestData
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
@@ -57,7 +58,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create student`() = runTest {
-        transaction {
+        suspendTransaction {
             val student = usersService.createStudent(
                 id = 1010,
                 firstName = "New",
@@ -79,7 +80,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create teacher`() = runTest {
-        transaction {
+        suspendTransaction {
             val teacher = usersService.createTeacher(
                 id = 2010,
                 firstName = "New",
@@ -95,7 +96,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create teacher with groups`() = runTest {
-        transaction {
+        suspendTransaction {
             val teacher = usersService.createTeacher(
                 id = 2011,
                 firstName = "Grouped",
@@ -113,7 +114,7 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create teacher with missing group throws`() = runTest {
         assertFailsWith<EntityNotFoundException> {
-            transaction {
+            suspendTransaction {
                 usersService.createTeacher(
                     id = 2012,
                     firstName = "Missing",
@@ -128,7 +129,7 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create student with duplicate id throws conflict`() = runTest {
         assertFailsWith<ConflictException> {
-            transaction {
+            suspendTransaction {
                 usersService.createStudent(
                     id = Students.JOHN_ID,
                     firstName = "Duplicate",
@@ -145,7 +146,7 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create teacher with duplicate id throws conflict`() = runTest {
         assertFailsWith<ConflictException> {
-            transaction {
+            suspendTransaction {
                 usersService.createTeacher(
                     id = Teachers.BOB_ID,
                     firstName = "Duplicate",
@@ -426,9 +427,9 @@ class UsersServiceImplTest : ApplicationTest() {
         val newGradeId = 9001
 
         // Create a second GRADE-typed group to swap into.
-        transaction {
+        run {
             val groupService: GroupService by application.dependencies
-            groupService.create(newGradeId, "Grade 8", th.ac.bodin2.electives.proto.api.GroupType.GRADE)
+            dbQuery { groupService.create(newGradeId, "Grade 8", th.ac.bodin2.electives.proto.api.GroupType.GRADE) }
         }
 
         val oldGradeId = TestConstants.Groups.GRADE_ID
@@ -700,7 +701,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `list students`() = runTest {
-        val (students, total) = usersService.getStudents()
+        val (students, total) = suspendTransaction { usersService.getStudents() }
 
         assertTrue(students.isNotEmpty())
         // In tests, we should have students < PAGE_SIZE
@@ -710,7 +711,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `list teachers`() = runTest {
-        val (teachers, total) = usersService.getTeachers()
+        val (teachers, total) = suspendTransaction { usersService.getTeachers() }
 
         assertTrue(teachers.isNotEmpty())
         // In tests, we should have students < PAGE_SIZE
@@ -720,7 +721,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `list students on empty page`() = runTest {
-        val (students, total) = usersService.getStudents(page = 100)
+        val (students, total) = suspendTransaction { usersService.getStudents(page = 100) }
 
         assertTrue(students.isEmpty())
         assertTrue(total >= 0)
@@ -729,20 +730,20 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `list students on invalid page fails`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            usersService.getStudents(page = 0)
+            suspendTransaction { usersService.getStudents(page = 0) }
         }
     }
 
     @Test
     fun `list teachers on invalid page fails`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            usersService.getTeachers(page = 0)
+            suspendTransaction { usersService.getTeachers(page = 0) }
         }
     }
 
     @Test
     fun `search students by first name`() = runTest {
-        val (students, total) = usersService.getStudents(query = Students.JOHN_FIRST_NAME)
+        val (students, total) = suspendTransaction { usersService.getStudents(query = Students.JOHN_FIRST_NAME) }
 
         assertTrue(students.isNotEmpty())
         assertTrue(transaction {
@@ -758,7 +759,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `search students by last name`() = runTest {
-        val (students, total) = usersService.getStudents(query = Students.JOHN_LAST_NAME)
+        val (students, total) = suspendTransaction { usersService.getStudents(query = Students.JOHN_LAST_NAME) }
 
         assertTrue(students.isNotEmpty())
         assertTrue(students.any { it.id.value == Students.JOHN_ID })
@@ -768,7 +769,7 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `search students by id substring`() = runTest {
         val idSubstring = Students.JOHN_ID.toString().substring(0, 3)
-        val (students, total) = usersService.getStudents(query = idSubstring)
+        val (students, total) = suspendTransaction { usersService.getStudents(query = idSubstring) }
 
         assertTrue(students.isNotEmpty())
         assertTrue(students.any { it.id.value == Students.JOHN_ID })
@@ -777,7 +778,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `search students with no results`() = runTest {
-        val (students, total) = usersService.getStudents(query = "nonexistentnameXYZ")
+        val (students, total) = suspendTransaction { usersService.getStudents(query = "nonexistentnameXYZ") }
 
         assertTrue(students.isEmpty())
         assertEquals(0L, total)
@@ -785,8 +786,8 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `search students with blank query returns all`() = runTest {
-        val (allStudents, allTotal) = usersService.getStudents()
-        val (blankStudents, blankTotal) = usersService.getStudents(query = "  ")
+        val (allStudents, allTotal) = suspendTransaction { usersService.getStudents() }
+        val (blankStudents, blankTotal) = suspendTransaction { usersService.getStudents(query = "  ") }
 
         assertEquals(allTotal, blankTotal)
         assertEquals(allStudents.size, blankStudents.size)
@@ -794,7 +795,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `search teachers by first name`() = runTest {
-        val (teachers, total) = usersService.getTeachers(query = Teachers.BOB_FIRST_NAME)
+        val (teachers, total) = suspendTransaction { usersService.getTeachers(query = Teachers.BOB_FIRST_NAME) }
 
         assertTrue(teachers.isNotEmpty())
         assertTrue(teachers.any { it.id.value == Teachers.BOB_ID })
@@ -803,7 +804,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `search teachers with no results`() = runTest {
-        val (teachers, total) = usersService.getTeachers(query = "nonexistentnameXYZ")
+        val (teachers, total) = suspendTransaction { usersService.getTeachers(query = "nonexistentnameXYZ") }
 
         assertTrue(teachers.isEmpty())
         assertEquals(0L, total)
@@ -811,7 +812,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `search students by middle name`() = runTest {
-        val (students, _) = usersService.getStudents(query = Students.JOHN_MIDDLE_NAME)
+        val (students, _) = suspendTransaction { usersService.getStudents(query = Students.JOHN_MIDDLE_NAME) }
 
         assertTrue(students.isNotEmpty())
         assertTrue(students.any { it.id.value == Students.JOHN_ID })
@@ -820,7 +821,7 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create student with short password fails`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            transaction {
+            suspendTransaction {
                 usersService.createStudent(
                     id = UNUSED_ID,
                     firstName = "Test",
@@ -839,7 +840,7 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create student with long password fails`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            transaction {
+            suspendTransaction {
                 usersService.createStudent(
                     id = UNUSED_ID,
                     firstName = "Test",
@@ -858,7 +859,7 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create teacher with short password fails`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            transaction {
+            suspendTransaction {
                 usersService.createTeacher(
                     id = UNUSED_ID,
                     firstName = "Test",
@@ -874,7 +875,7 @@ class UsersServiceImplTest : ApplicationTest() {
     @Test
     fun `create teacher with long password fails`() = runTest {
         assertFailsWith<IllegalArgumentException> {
-            transaction {
+            suspendTransaction {
                 usersService.createTeacher(
                     id = UNUSED_ID,
                     firstName = "Test",
@@ -955,7 +956,7 @@ class UsersServiceImplTest : ApplicationTest() {
             ),
         )
 
-        val students = transaction { usersService.createStudents(inserts) }
+        val students = suspendTransaction { usersService.createStudents(inserts) }
 
         assertEquals(2, students.size)
         assertTrue(students.any { it.id.value == 3001 })
@@ -970,7 +971,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create students batch empty list`() = runTest {
-        val students = transaction { usersService.createStudents(emptyList()) }
+        val students = suspendTransaction { usersService.createStudents(emptyList()) }
         assertTrue(students.isEmpty())
     }
 
@@ -987,7 +988,7 @@ class UsersServiceImplTest : ApplicationTest() {
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.MissingGroups> {
-            transaction { usersService.createStudents(inserts) }
+            suspendTransaction { usersService.createStudents(inserts) }
         }
         assertTrue(UNUSED_ID in ex.ids)
     }
@@ -1004,7 +1005,7 @@ class UsersServiceImplTest : ApplicationTest() {
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.ConflictingEntities> {
-            transaction { usersService.createStudents(inserts) }
+            suspendTransaction { usersService.createStudents(inserts) }
         }
         assertTrue(Students.JOHN_ID in ex.ids)
     }
@@ -1027,7 +1028,7 @@ class UsersServiceImplTest : ApplicationTest() {
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.ConflictingEntities> {
-            transaction { usersService.createStudents(inserts) }
+            suspendTransaction { usersService.createStudents(inserts) }
         }
         assertTrue(Students.JOHN_ID in ex.ids)
         assertTrue(Students.JANE_ID in ex.ids)
@@ -1045,7 +1046,7 @@ class UsersServiceImplTest : ApplicationTest() {
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
-            transaction { usersService.createStudents(inserts) }
+            suspendTransaction { usersService.createStudents(inserts) }
         }
         assertEquals(3004, ex.id)
         assertIs<IllegalArgumentException>(ex.cause)
@@ -1063,7 +1064,7 @@ class UsersServiceImplTest : ApplicationTest() {
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
-            transaction { usersService.createStudents(inserts) }
+            suspendTransaction { usersService.createStudents(inserts) }
         }
         assertEquals(3005, ex.id)
         assertIs<IllegalArgumentException>(ex.cause)
@@ -1081,7 +1082,7 @@ class UsersServiceImplTest : ApplicationTest() {
             ),
         )
 
-        val teachers = transaction { usersService.createTeachers(inserts) }
+        val teachers = suspendTransaction { usersService.createTeachers(inserts) }
 
         assertEquals(2, teachers.size)
         assertTrue(teachers.any { it.id.value == 4001 })
@@ -1096,7 +1097,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create teachers batch empty list`() = runTest {
-        val teachers = transaction { usersService.createTeachers(emptyList()) }
+        val teachers = suspendTransaction { usersService.createTeachers(emptyList()) }
         assertTrue(teachers.isEmpty())
     }
 
@@ -1109,7 +1110,7 @@ class UsersServiceImplTest : ApplicationTest() {
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.ConflictingEntities> {
-            transaction { usersService.createTeachers(inserts) }
+            suspendTransaction { usersService.createTeachers(inserts) }
         }
         assertTrue(Teachers.BOB_ID in ex.ids)
     }
@@ -1123,7 +1124,7 @@ class UsersServiceImplTest : ApplicationTest() {
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
-            transaction { usersService.createTeachers(inserts) }
+            suspendTransaction { usersService.createTeachers(inserts) }
         }
         assertEquals(4003, ex.id)
         assertIs<IllegalArgumentException>(ex.cause)
@@ -1138,7 +1139,7 @@ class UsersServiceImplTest : ApplicationTest() {
         )
 
         val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
-            transaction { usersService.createTeachers(inserts) }
+            suspendTransaction { usersService.createTeachers(inserts) }
         }
         assertEquals(4004, ex.id)
         assertIs<IllegalArgumentException>(ex.cause)
@@ -1187,7 +1188,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create student with prefix`() = runTest {
-        transaction {
+        suspendTransaction {
             val student = usersService.createStudent(
                 id = 5001,
                 firstName = "Maria",
@@ -1206,7 +1207,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create teacher with prefix`() = runTest {
-        transaction {
+        suspendTransaction {
             val teacher = usersService.createTeacher(
                 id = 5002,
                 firstName = "Alan",
@@ -1222,7 +1223,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create student without prefix`() = runTest {
-        transaction {
+        suspendTransaction {
             val student = usersService.createStudent(
                 id = 5003,
                 firstName = "Alice",
@@ -1402,7 +1403,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create student with prefix is included in proto serialization`() = runTest {
-        val student = transaction {
+        val student = suspendTransaction {
             usersService.createStudent(
                 id = 5004,
                 firstName = "Anna",
@@ -1422,7 +1423,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create teacher with prefix is included in proto serialization`() = runTest {
-        val teacher = transaction {
+        val teacher = suspendTransaction {
             usersService.createTeacher(
                 id = 5005,
                 firstName = "Charles",
@@ -1439,7 +1440,7 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `create student without prefix has no prefix in proto serialization`() = runTest {
-        val student = transaction {
+        val student = suspendTransaction {
             usersService.createStudent(
                 id = 5006,
                 firstName = "Bob",

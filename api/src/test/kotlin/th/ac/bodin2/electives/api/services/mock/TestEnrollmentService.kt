@@ -19,7 +19,7 @@ import java.time.LocalDateTime
 class TestEnrollmentService : EnrollmentService {
 
     @Transactional
-    override fun create(
+    override suspend fun create(
         id: Int,
         name: String,
         group: Int?,
@@ -28,16 +28,16 @@ class TestEnrollmentService : EnrollmentService {
     ): Enrollment = error("Not testable")
 
     @Transactional
-    override fun delete(id: Int) = error("Not testable")
+    override suspend fun delete(id: Int) = error("Not testable")
 
     @Transactional
-    override fun update(id: Int, update: EnrollmentService.EnrollmentUpdate): Enrollment {
+    override suspend fun update(id: Int, update: EnrollmentService.EnrollmentUpdate): Enrollment {
         if (id !in ENROLLMENT_IDS) throw EntityNotFoundException(ExceptionEntity.ENROLLMENT)
         return MockUtils.mockEnrollment(id)
     }
 
     @Transactional
-    override fun setSubjects(enrollmentId: Int, subjectIds: List<Int>) = error("Not testable")
+    override suspend fun setSubjects(enrollmentId: Int, subjectIds: List<Int>) = error("Not testable")
 
     companion object {
         val ENROLLMENT_IDS = listOf(

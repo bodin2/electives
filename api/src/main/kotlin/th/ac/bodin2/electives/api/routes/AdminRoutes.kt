@@ -16,7 +16,6 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.SerialName
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
@@ -116,9 +115,8 @@ class AdminUsersController(
     override fun Application.register() {
         adminRoutes {
             get<Admin.Users.Students> { params ->
-                val (users, total) = transaction {
+                val (users, total) = dbQuery {
                     val (students, count) =
-                        @OptIn(Transactional::class)
                         usersService.getStudents(params.page, params.query.ifBlank { null })
 
                     students.map { it.toProto() } to count.toInt()
@@ -128,9 +126,8 @@ class AdminUsersController(
             }
 
             get<Admin.Users.Teachers> { params ->
-                val (users, total) = transaction {
+                val (users, total) = dbQuery {
                     val (teachers, count) =
-                        @OptIn(Transactional::class)
                         usersService.getTeachers(params.page, params.query.ifBlank { null })
 
                     teachers.map { it.toProto() } to count.toInt()
@@ -158,7 +155,7 @@ class AdminUsersController(
         if (user.id != id) throw badRequest("ID in URL does not match body")
 
         val protoOrNull = try {
-            transaction {
+            dbQuery {
                 val created = when (user.type) {
                     UserType.STUDENT -> {
                         val gradeId = req.grade_id
@@ -166,7 +163,7 @@ class AdminUsersController(
 
                         // Students require fixed GRADE and ROOM group IDs to be set. PROGRAM is optional
                         if (gradeId == null || roomId == null) {
-                            return@transaction null
+                            return@dbQuery null
                         }
 
                         usersService.createStudent(
@@ -195,7 +192,7 @@ class AdminUsersController(
                         groupIds = req.group_ids.ifEmpty { null }
                     )
 
-                    else -> return@transaction null
+                    else -> return@dbQuery null
                 }
 
                 when (created) {
@@ -225,7 +222,7 @@ class AdminUsersController(
             ?: throw badRequest()
 
         val proto = try {
-            transaction {
+            dbQuery {
                 val type = usersService.getUserType(id)
 
                 val update = UsersService.UserUpdate(
@@ -359,8 +356,7 @@ class AdminUsersController(
 
         val created: List<User> = try {
             // Dedupe transactions
-            @OptIn(Transactional::class)
-            transaction {
+            dbQuery {
                 buildList {
                     if (!teacherInserts.isNullOrEmpty()) {
                         usersService.createTeachers(teacherInserts).forEach { add(it.toProto()) }
@@ -467,7 +463,7 @@ class AdminEnrollmentsController(
         val ids = idsParam.split(",").mapNotNull { it.trim().toIntOrNull() }
         if (ids.isEmpty()) throw badRequest()
 
-        val counts = transaction {
+        val counts = dbQuery {
             val totalStudents by lazy { Students.selectAll().count().toInt() }
             buildMap {
                 for (enrollmentId in ids) {
@@ -509,7 +505,7 @@ class AdminEnrollmentsController(
         )
 
         val proto = try {
-            transaction {
+            dbQuery {
                 @OptIn(Transactional::class)
                 enrollmentService.update(id, update).toProto()
             }
@@ -573,14 +569,14 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
     }
 
     private suspend fun RoutingContext.handleGetSubjects() {
-        val subjects = transaction {
+        val subjects = dbQuery {
             subjectService.getAll().map { it.toProto(withDescription = false, withTeachers = true) }
         }
         call.respond(EnrollmentsService.ListSubjectsResponse(subjects = subjects))
     }
 
     private suspend fun RoutingContext.handleGetSubject(id: Int) {
-        val response = transaction { subjectService.getById(id)?.toProto(withDescription = true, withTeachers = true) }
+        val response = dbQuery { subjectService.getById(id)?.toProto(withDescription = true, withTeachers = true) }
             ?: throw notFound()
 
         call.respond(response)
@@ -659,7 +655,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
         )
 
         val proto = try {
-            transaction {
+            dbQuery {
                 @OptIn(Transactional::class)
                 subjectService.update(id, update).toProto(withDescription = true, withTeachers = true)
             }
@@ -678,7 +674,7 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
     }
 
     private suspend fun RoutingContext.handleGetSubjectEnrollmentIds(id: Int) {
-        val ids = transaction { subjectService.getEnrollmentIds(id) }
+        val ids = dbQuery { subjectService.getEnrollmentIds(id) }
             ?: throw notFound()
 
         call.respond(AdminService.SubjectEnrollmentIds(enrollment_ids = ids))
@@ -703,7 +699,7 @@ class AdminGroupsController(
             get<Admin.Groups.MemberCounts> { handleGetGroupMemberCounts() }
 
             get<Admin.Groups.Id.Managers> { params ->
-                val (users, total) = transaction {
+                val (users, total) = dbQuery {
                     val (teachers, count) =
                         @OptIn(Transactional::class)
                         groupService.getManagers(params.parent.id, params.page, params.query.ifBlank { null })
@@ -734,7 +730,7 @@ class AdminGroupsController(
     private suspend fun RoutingContext.handleDeleteGroupMembers(groupId: Int) {
         try {
             @OptIn(Transactional::class)
-            transaction {
+            dbQuery {
                 groupService.deleteMembers(groupId)
             }
         } catch (_: EntityNotFoundException) {
@@ -746,7 +742,7 @@ class AdminGroupsController(
     private suspend fun RoutingContext.handleMigrateGroupMembers(groupId: Int, targetGroupId: Int) {
         try {
             @OptIn(Transactional::class)
-            transaction {
+            dbQuery {
                 groupService.migrateMembers(groupId, targetGroupId)
             }
         } catch (_: EntityNotFoundException) {
@@ -759,7 +755,7 @@ class AdminGroupsController(
 
     private suspend fun RoutingContext.handleGetGroupMembers(groupId: Int, page: Int, query: String?) {
         val response = try {
-            transaction {
+            dbQuery {
                 val (members, count) = @OptIn(Transactional::class) groupService.getMembers(groupId, page, query)
 
                 AdminService.ListUsersResponse(
@@ -774,12 +770,12 @@ class AdminGroupsController(
     }
 
     private suspend fun RoutingContext.handleGetGroups() {
-        val groups = transaction { groupService.getAll().map { it.toProto() } }
+        val groups = dbQuery { groupService.getAll().map { it.toProto() } }
         call.respond(AdminService.ListGroupsResponse(groups = groups))
     }
 
     private suspend fun RoutingContext.handleGetGroup(id: Int) {
-        val response = transaction { groupService.getById(id)?.toProto() }
+        val response = dbQuery { groupService.getById(id)?.toProto() }
             ?: throw notFound()
 
         call.respond(response)
@@ -827,7 +823,7 @@ class AdminGroupsController(
         )
 
         val proto = try {
-            transaction {
+            dbQuery {
                 @OptIn(Transactional::class)
                 groupService.update(id, update).toProto()
             }
@@ -844,7 +840,7 @@ class AdminGroupsController(
     }
 
     private suspend fun RoutingContext.handleGetGroupMemberCounts() {
-        val counts = transaction { groupService.getMemberCounts() }
+        val counts = dbQuery { groupService.getMemberCounts() }
         call.respond(AdminService.GroupMemberCounts(member_counts = counts))
     }
 }

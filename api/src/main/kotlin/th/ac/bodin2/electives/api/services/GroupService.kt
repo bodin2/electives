@@ -16,7 +16,7 @@ interface GroupService {
      * @throws ConflictException if a group with the same ID already exists.
      */
     @Transactional
-    fun create(
+    suspend fun create(
         id: Int,
         name: String,
         type: GroupType = GroupType.CUSTOM,
@@ -29,7 +29,7 @@ interface GroupService {
      * @throws EntityNotFoundException if the group does not exist.
      */
     @Transactional
-    fun delete(id: Int)
+    suspend fun delete(id: Int)
 
     /**
      * Updates a group's information.
@@ -38,7 +38,7 @@ interface GroupService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun update(id: Int, update: GroupUpdate): Group
+    suspend fun update(id: Int, update: GroupUpdate): Group
 
     data class GroupUpdate(
         val name: String? = null,
@@ -59,7 +59,7 @@ interface GroupService {
      * @throws EntityNotFoundException if the group does not exist.
      */
     @Transactional
-    fun getMembers(groupId: Int, page: Int = 1, query: String? = null): Pair<List<Student>, Long>
+    suspend fun getMembers(groupId: Int, page: Int = 1, query: String? = null): Pair<List<Student>, Long>
 
     /**
      * Gets a paginated list of group managers (teachers), optionally filtered by a search query.
@@ -70,7 +70,7 @@ interface GroupService {
      * @throws EntityNotFoundException if the group does not exist.
      */
     @Transactional
-    fun getManagers(groupId: Int, page: Int = 1, query: String? = null): Pair<List<Teacher>, Long>
+    suspend fun getManagers(groupId: Int, page: Int = 1, query: String? = null): Pair<List<Teacher>, Long>
 
     fun getMemberCounts(): Map<Int, Int>
 
@@ -85,7 +85,7 @@ interface GroupService {
      * @throws EntityNotFoundException if the group does not exist.
      */
     @Transactional
-    fun deleteMembers(groupId: Int)
+    suspend fun deleteMembers(groupId: Int)
 
     /**
      * Moves all members of [groupId] into [targetGroupId]. The target group must
@@ -96,5 +96,5 @@ interface GroupService {
      * @throws ConflictException if the groups are the same or have different types.
      */
     @Transactional
-    fun migrateMembers(groupId: Int, targetGroupId: Int)
+    suspend fun migrateMembers(groupId: Int, targetGroupId: Int)
 }

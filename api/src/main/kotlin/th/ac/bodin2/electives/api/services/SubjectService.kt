@@ -15,7 +15,7 @@ interface SubjectService {
      * @throws ConflictException if a subject with the same ID already exists.
      */
     @Transactional
-    fun create(
+    suspend fun create(
         id: Int,
         name: String,
         description: String? = null,
@@ -34,7 +34,7 @@ interface SubjectService {
      * @throws EntityNotFoundException if the subject does not exist.
      */
     @Transactional
-    fun delete(id: Int)
+    suspend fun delete(id: Int)
 
     /**
      * Updates a subject's information.
@@ -43,7 +43,7 @@ interface SubjectService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun update(id: Int, update: SubjectUpdate): Subject
+    suspend fun update(id: Int, update: SubjectUpdate): Subject
 
     data class SubjectUpdate(
         val name: String? = null,

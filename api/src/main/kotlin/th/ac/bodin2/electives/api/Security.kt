@@ -4,10 +4,10 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.di.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.services.AdminAuthService
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.services.isAdminAvailable
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.KiB
@@ -58,9 +58,9 @@ fun Application.configureSecurity() {
 }
 
 
-fun UsersService.toPrincipal(token: String, call: ApplicationCall): UsersService.SessionUser? =
+suspend fun UsersService.toPrincipal(token: String, call: ApplicationCall): UsersService.SessionUser? =
     try {
-        transaction { getSessionUser(token) }
+        dbQuery { getSessionUser(token) }
     } catch (e: Exception) {
         logger.debug("Cannot authenticate user (address: ${call.request.origin.remoteAddress}, hash: ${token.toHash()}): ${e.message}")
         null

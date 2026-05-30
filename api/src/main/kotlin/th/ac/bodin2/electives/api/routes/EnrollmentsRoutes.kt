@@ -6,7 +6,6 @@ import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.SerialName
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.api.RATE_LIMIT_ENROLLMENTS
 import th.ac.bodin2.electives.api.RATE_LIMIT_ENROLLMENTS_SUBJECT_MEMBERS
@@ -53,13 +52,13 @@ val enrollmentsController = controller {
 
 context(enrollmentService: EnrollmentService)
 suspend fun RoutingContext.handleGetEnrollments() {
-    val enrollments = transaction { enrollmentService.getAll().map { it.toProto() } }
+    val enrollments = dbQuery { enrollmentService.getAll().map { it.toProto() } }
     call.respond(EnrollmentsService.ListResponse(enrollments = enrollments))
 }
 
 context(enrollmentService: EnrollmentService)
 suspend fun RoutingContext.handleGetEnrollment(enrollmentId: Int) {
-    val response = transaction { enrollmentService.getById(enrollmentId)?.toProto() }
+    val response = dbQuery { enrollmentService.getById(enrollmentId)?.toProto() }
         ?: throw enrollmentNotFound()
 
     call.respond(response)
@@ -67,19 +66,17 @@ suspend fun RoutingContext.handleGetEnrollment(enrollmentId: Int) {
 
 context(enrollmentService: EnrollmentService)
 suspend fun RoutingContext.handleGetEnrollmentSubjects(enrollmentId: Int) {
-    val response = transaction {
+    val response = dbQuery {
         when (val result = enrollmentService.getSubjects(enrollmentId)) {
             is QueryResult.EnrollmentNotFound -> throw enrollmentNotFound()
             is QueryResult.Success ->
                 EnrollmentsService.ListSubjectsResponse(
-                    subjects = result.value.map {
-                        it.toProto(
-                            withDescription = false,
-                            withTeachers = true,
-                            enrollmentId = enrollmentId,
-                            withEnrolledCounts = true,
-                        )
-                    }
+                    subjects = result.value.toProto(
+                        enrollmentId = enrollmentId,
+                        withDescription = false,
+                        withTeachers = true,
+                        withEnrolledCounts = true,
+                    )
                 )
 
             else -> throw IllegalStateException("Unreachable case: $result")
@@ -91,7 +88,7 @@ suspend fun RoutingContext.handleGetEnrollmentSubjects(enrollmentId: Int) {
 
 context(enrollmentService: EnrollmentService)
 private suspend fun RoutingContext.handleGetEnrollmentSubject(enrollmentId: Int, subjectId: Int) {
-    val response = transaction {
+    val response = dbQuery {
         when (val result = enrollmentService.getSubject(enrollmentId, subjectId)) {
             is QueryResult.EnrollmentNotFound -> throw enrollmentNotFound()
             is QueryResult.SubjectNotFound -> throw subjectNotFound()
@@ -115,7 +112,7 @@ suspend fun RoutingContext.handleGetEnrollmentSubjectMembers(
     subjectId: Int,
     withStudents: Boolean,
 ) {
-    val response = transaction {
+    val response = dbQuery {
         when (val result = enrollmentService.getSubjectMembers(enrollmentId, subjectId, withStudents)) {
             is QueryResult.EnrollmentNotFound -> throw enrollmentNotFound()
             is QueryResult.SubjectNotFound -> throw subjectNotFound()
@@ -140,7 +137,7 @@ suspend fun RoutingContext.handleGetUnenrolledMembers(
     groupId: Int,
     page: Int
 ) {
-    val response = transaction {
+    val response = dbQuery {
         try {
             when (val result = enrollmentService.getUnenrolledMembers(enrollmentId, groupId, page)) {
                 is QueryResult.EnrollmentNotFound -> throw enrollmentNotFound()

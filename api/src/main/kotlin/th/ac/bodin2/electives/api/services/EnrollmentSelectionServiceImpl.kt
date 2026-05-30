@@ -4,12 +4,12 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.EnrollmentSelectionService.*
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.db.Enrollment
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Student.Companion.hasGroup
@@ -36,9 +36,9 @@ class EnrollmentSelectionServiceImpl(private val notificationsService: Notificat
         enrollmentId: Int,
         subjectId: Int
     ): ModifySelectionResult {
-        var onSuccess: (() -> Unit)? = null
+        var onSuccess: (suspend () -> Unit)? = null
 
-        val result = transaction(transactionIsolation = TRANSACTION_SERIALIZABLE) {
+        val result = dbQuery(transactionIsolation = TRANSACTION_SERIALIZABLE) {
             maxAttempts = 3
 
             try {
@@ -50,10 +50,10 @@ class EnrollmentSelectionServiceImpl(private val notificationsService: Notificat
                 if (executorIsSomeoneElse) {
                     if (executor.type == UserType.TEACHER) {
                         if (!Teacher.teachesSubject(executor.id, subjectId, enrollmentId)) {
-                            return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
+                            return@dbQuery ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                         }
                     } else if (executor.type != UserType.ADMIN) {
-                        return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
+                        return@dbQuery ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                     }
                 }
 
@@ -62,7 +62,7 @@ class EnrollmentSelectionServiceImpl(private val notificationsService: Notificat
                 when (val result = canEnrollInSubject(studentId, enrollmentId, subjectId, bypassDateCheck)) {
                     CanEnrollStatus.CAN_ENROLL -> {}
 
-                    else -> return@transaction ModifySelectionResult.CannotEnroll(result)
+                    else -> return@dbQuery ModifySelectionResult.CannotEnroll(result)
                 }
 
                 val currentCount = wrapAsExpression<Long>(
@@ -87,27 +87,25 @@ class EnrollmentSelectionServiceImpl(private val notificationsService: Notificat
                 )
 
                 if (inserted == 0 || inserted == null) {
-                    logger.debug("Student enrollment selection failed due to full subject, user: $studentId, enrollment: $enrollmentId, subject: $subjectId, executor: ${executor.id}")
-
                     // Not inserted, subject is full
-                    return@transaction ModifySelectionResult.CannotEnroll(
+                    return@dbQuery ModifySelectionResult.CannotEnroll(
                         CanEnrollStatus.SUBJECT_FULL
                     )
                 }
 
                 onSuccess = {
-                    logger.debug("Student enrolled in subject, user: $studentId, enrollment: $enrollmentId, subject: $subjectId, executor: ${executor.id}")
+                    if (logger.isDebugEnabled) logger.debug("Student enrolled in subject, user: $studentId, enrollment: $enrollmentId, subject: $subjectId, executor: ${executor.id}")
 
                     notificationsService.notifySubjectSelectionUpdate(
                         enrollmentId,
                         subjectId,
-                        transaction { Subject.getEnrolledCount(subjectId, enrollmentId) }
+                        dbQuery { Subject.getEnrolledCount(subjectId, enrollmentId) }
                     )
                 }
 
-                return@transaction ModifySelectionResult.Success
+                return@dbQuery ModifySelectionResult.Success
             } catch (e: EntityNotFoundException) {
-                return@transaction e.tryHandling()
+                return@dbQuery e.tryHandling()
             }
         }
 
@@ -121,45 +119,44 @@ class EnrollmentSelectionServiceImpl(private val notificationsService: Notificat
         executor: UsersService.SessionUser,
         studentId: Int,
         enrollmentId: Int
-    ): ModifySelectionResult =
-        transaction {
-            try {
-                Student.assertExists(studentId)
-                Enrollment.assertExists(enrollmentId)
+    ): ModifySelectionResult = dbQuery {
+        try {
+            Student.assertExists(studentId)
+            Enrollment.assertExists(enrollmentId)
 
-                val selection = Student.getEnrollmentSelectionId(studentId, enrollmentId)
-                    ?: return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.NOT_ENROLLED)
+            val selection = Student.getEnrollmentSelectionId(studentId, enrollmentId)
+                ?: return@dbQuery ModifySelectionResult.CannotModify(ModifySelectionStatus.NOT_ENROLLED)
 
-                if (studentId != executor.id) {
-                    if (executor.type == UserType.TEACHER) {
-                        if (!Teacher.teachesSubject(executor.id, selection.value, enrollmentId)) {
-                            return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
-                        }
-                    } else if (executor.type != UserType.ADMIN) {
-                        return@transaction ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
+            if (studentId != executor.id) {
+                if (executor.type == UserType.TEACHER) {
+                    if (!Teacher.teachesSubject(executor.id, selection.value, enrollmentId)) {
+                        return@dbQuery ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                     }
+                } else if (executor.type != UserType.ADMIN) {
+                    return@dbQuery ModifySelectionResult.CannotModify(ModifySelectionStatus.FORBIDDEN)
                 }
-
-                val bypassDateCheck = executor.type == UserType.ADMIN
-                checkDateRange(enrollmentId, bypassDateCheck)?.let {
-                    return@transaction ModifySelectionResult.CannotEnroll(it)
-                }
-
-                Student.removeEnrollmentSelection(studentId, enrollmentId)
-
-                logger.debug("Student enrollment selection removed, user: $studentId, enrollment: $enrollmentId, executor: ${executor.id}")
-
-                notificationsService.notifySubjectSelectionUpdate(
-                    enrollmentId,
-                    selection.value,
-                    Subject.getEnrolledCount(selection.value, enrollmentId)
-                )
-
-                ModifySelectionResult.Success
-            } catch (e: EntityNotFoundException) {
-                return@transaction e.tryHandling()
             }
+
+            val bypassDateCheck = executor.type == UserType.ADMIN
+            checkDateRange(enrollmentId, bypassDateCheck)?.let {
+                return@dbQuery ModifySelectionResult.CannotEnroll(it)
+            }
+
+            Student.removeEnrollmentSelection(studentId, enrollmentId)
+
+            if (logger.isDebugEnabled) logger.debug("Student enrollment selection removed, user: $studentId, enrollment: $enrollmentId, executor: ${executor.id}")
+
+            notificationsService.notifySubjectSelectionUpdate(
+                enrollmentId,
+                selection.value,
+                Subject.getEnrolledCount(selection.value, enrollmentId)
+            )
+
+            ModifySelectionResult.Success
+        } catch (e: EntityNotFoundException) {
+            return@dbQuery e.tryHandling()
         }
+    }
 
     private fun EntityNotFoundException.tryHandling(): ModifySelectionResult {
         return when (entity) {

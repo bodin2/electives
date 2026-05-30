@@ -58,7 +58,7 @@ object TestDatabase {
         SchemaUtils.create(*Database.tables.toTypedArray())
     }
 
-    fun Application.mockData() {
+    suspend fun Application.mockData() {
         val usersService: UsersService by dependencies
 
         Groups.insert {

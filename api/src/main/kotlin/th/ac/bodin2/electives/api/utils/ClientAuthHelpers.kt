@@ -56,7 +56,7 @@ fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
 val ApplicationCall.user get() = principal<UsersService.SessionUser>()
 
 fun ApplicationCall.userId(): Int? {
-    return principal<UsersService.SessionUser>()?.id
+    return principal<UsersService.SessionUser>()?.id ?: principal<AdminPrincipal>()?.id
 }
 
 fun ApplicationCall.isAdmin(): Boolean = principal<AdminPrincipal>() != null

@@ -7,21 +7,21 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.testing.*
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
+import io.mockk.*
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.api.TestDatabase.mockData
 import th.ac.bodin2.electives.api.services.*
 import th.ac.bodin2.electives.api.services.mock.*
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.MiB
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
 typealias TransactionBlock = JdbcTransaction.() -> Any?
+typealias SuspendTransactionBlock = suspend JdbcTransaction.() -> Any?
 
 abstract class ApplicationTest {
     private fun mockTransactions() {
@@ -30,6 +30,14 @@ abstract class ApplicationTest {
             transaction<Any?>(any(), any(), any(), any())
         } answers {
             lastArg<TransactionBlock>().invoke(mockk(relaxed = true))
+        }
+
+        // `statement` is the 4th parameter (index 3), we can't use `lastArg` because suspend functions carry
+        // an appended `Continuation` as their real last argument
+        coEvery {
+            suspendTransaction<Any?>(any(), any(), any(), any())
+        } coAnswers {
+            arg<SuspendTransactionBlock>(3).invoke(mockk(relaxed = true))
         }
     }
 
@@ -110,7 +118,7 @@ abstract class ApplicationTest {
 
             startApplication()
 
-            transaction { application.mockData() }
+            dbQuery { application.mockData() }
 
             block()
         }

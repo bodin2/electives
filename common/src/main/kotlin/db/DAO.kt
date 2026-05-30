@@ -195,6 +195,24 @@ open class EnrollmentCompanion : EntityClass<Int, Enrollment>(Enrollments) {
     }
 
     /**
+     * Gets all teachers for every subject in the enrollment in a **single** query, grouped by
+     * subject ID. Used to build subject listings without per-subject teacher lookups (N+1).
+     *
+     * @return Map<SubjectId, List<Teacher>>
+     */
+    fun getTeachersBySubject(enrollmentId: Int): Map<Int, List<Teacher>> {
+        val pairs = (TeacherSubjects innerJoin Teachers)
+            .select(Teachers.columns + TeacherSubjects.subject)
+            .where { TeacherSubjects.enrollment eq enrollmentId }
+            .map { it[TeacherSubjects.subject].value to Teacher.wrapRow(it) }
+
+        // Entity.load internally does listOf(Entity).with(...) anyways, so this is much more efficient
+        pairs.map { it.second }.with(Teacher::user, Teacher::groups)
+
+        return pairs.groupBy({ it.first }, { it.second })
+    }
+
+    /**
      * Gets all subject IDs and their enrolled counts for the specified enrollment.
      *
      * @return Map<SubjectId, EnrolledCount>
@@ -210,6 +228,37 @@ open class EnrollmentCompanion : EntityClass<Int, Enrollment>(Enrollments) {
             .associate { it[StudentClasses.subject].value to it[Count(StudentClasses.student)].toInt() }
 
         return subjectIds.associate { it.value to (counts[it.value] ?: 0) }
+    }
+
+    /**
+     * Gets the enrolled counts for every subject across the given active enrollments in a single query,
+     * grouped by enrollment then subject.
+     *
+     * A `LEFT JOIN` from [EnrollmentSubjects] onto [StudentClasses] keeps subjects with zero
+     * enrolments in the result (their count is 0) without a separate subject-id lookup.
+     *
+     * Active enrollments that have no subjects at all will be absent from the map.
+     *
+     * @return Map<EnrollmentId, Map<SubjectId, EnrolledCount>>
+     */
+    fun getSubjectsEnrolledCountsForIds(enrollmentIds: List<Int>): Map<Int, Map<Int, Int>> {
+        if (enrollmentIds.isEmpty()) return emptyMap()
+
+        val countExpr = Count(StudentClasses.student)
+
+        return EnrollmentSubjects
+            .join(StudentClasses, JoinType.LEFT, additionalConstraint = {
+                (EnrollmentSubjects.enrollment eq StudentClasses.enrollment) and
+                        (EnrollmentSubjects.subject eq StudentClasses.subject)
+            })
+            .select(EnrollmentSubjects.enrollment, EnrollmentSubjects.subject, countExpr)
+            .where { EnrollmentSubjects.enrollment inList enrollmentIds }
+            .groupBy(EnrollmentSubjects.enrollment, EnrollmentSubjects.subject)
+            .groupBy(
+                { it[EnrollmentSubjects.enrollment].value },
+                { it[EnrollmentSubjects.subject].value to it[countExpr].toInt() }
+            )
+            .mapValues { (_, pairs) -> pairs.toMap() }
     }
 
     fun getEnrollmentDateRange(enrollmentId: Int): Pair<LocalDateTime?, LocalDateTime?> {

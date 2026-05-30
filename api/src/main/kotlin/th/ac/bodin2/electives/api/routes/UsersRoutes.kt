@@ -6,7 +6,6 @@ import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.resources.*
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.routing
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.RATE_LIMIT_USERS
@@ -75,7 +74,7 @@ val usersController = controller {
 context(enrollmentSelectionService: EnrollmentSelectionService)
 suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
     val response = try {
-        transaction {
+        dbQuery {
             val selections = enrollmentSelectionService.getStudentSelections(userId)
 
             UsersProto.StudentSelections(
@@ -101,7 +100,7 @@ suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
 
 context(usersService: UsersService)
 suspend fun RoutingContext.handleGetUser(userId: Int) {
-    val userProto = transaction {
+    val userProto = dbQuery {
         try {
             when (val type = usersService.getUserType(userId)) {
                 UserType.STUDENT -> usersService.getStudentById(userId)?.toProto()
@@ -119,7 +118,7 @@ suspend fun RoutingContext.handleGetUser(userId: Int) {
 context(subjectService: SubjectService)
 suspend fun RoutingContext.handleGetTeacherSubjects(userId: Int) {
     val response = try {
-        transaction {
+        dbQuery {
             UsersProto.TeacherSubjects(
                 subjects = subjectService.getTeacherSubjects(userId).mapValues {
                     it.value.toProto(

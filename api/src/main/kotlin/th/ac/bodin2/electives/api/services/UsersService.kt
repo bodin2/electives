@@ -30,7 +30,7 @@ interface UsersService {
      * @throws IllegalArgumentException if a referenced group does not have the expected type, or if the password does not meet the requirements.
      * @throws ConflictException if a user/student with the same ID already exists.
      */
-    fun createStudent(
+    suspend fun createStudent(
         id: Int,
         firstName: String,
         gradeId: Int,
@@ -52,8 +52,7 @@ interface UsersService {
      * @throws BatchOperationException.InvalidUserData if any of the user data is invalid with `cause`:
      *   - [IllegalArgumentException] if the password does not meet the requirements, or if any group has the wrong type for its slot.
      */
-    @Transactional
-    fun createStudents(inserts: List<StudentInsert>): List<Student>
+    suspend fun createStudents(inserts: List<StudentInsert>): List<Student>
 
     /**
      * Creates a new teacher with the given information.
@@ -61,7 +60,7 @@ interface UsersService {
      * @throws ConflictException if a user/teacher with the same ID already exists.
      * @throws IllegalArgumentException if the password does not meet the requirements.
      */
-    fun createTeacher(
+    suspend fun createTeacher(
         id: Int,
         firstName: String,
         prefix: String? = null,
@@ -80,8 +79,7 @@ interface UsersService {
      *   - [IllegalArgumentException] if the password does not meet the requirements.
      * @throws BatchOperationException.MissingGroups if any of the specified groups do not exist.
      */
-    @Transactional
-    fun createTeachers(inserts: List<TeacherInsert>): List<Teacher>
+    suspend fun createTeachers(inserts: List<TeacherInsert>): List<Teacher>
 
     /**
      * Creates a new admin with the given information.
@@ -90,7 +88,7 @@ interface UsersService {
      * @throws IllegalArgumentException if the pass
      */
     @Transactional
-    fun createAdmin(insert: AdminInsert): Admin
+    suspend fun createAdmin(insert: AdminInsert): Admin
 
     /**
      * Deletes the user with the given ID.
@@ -98,7 +96,7 @@ interface UsersService {
      * @throws EntityNotFoundException if the user does not exist.
      */
     @Transactional
-    fun deleteUser(id: Int)
+    suspend fun deleteUser(id: Int)
 
     /**
      * Deletes the users with the given ID.
@@ -116,7 +114,7 @@ interface UsersService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun updateStudent(
+    suspend fun updateStudent(
         id: Int,
         update: StudentUpdate,
     ): Student
@@ -128,7 +126,7 @@ interface UsersService {
      * @throws NothingToUpdateException if there's nothing to update.
      */
     @Transactional
-    fun updateTeacher(
+    suspend fun updateTeacher(
         id: Int,
         update: TeacherUpdate,
     ): Teacher
@@ -225,7 +223,7 @@ interface UsersService {
      * @throws IllegalArgumentException if the new password does not meet the requirements.
      */
     @Transactional
-    fun setPassword(id: Int, newPassword: String)
+    suspend fun setPassword(id: Int, newPassword: String)
 
     fun getTeacherById(id: Int): Teacher?
     fun getStudentById(id: Int): Student?
@@ -240,8 +238,7 @@ interface UsersService {
      *
      * @return A pair of the list of students and the total number of matching students (for pagination purposes).
      */
-    @Transactional
-    fun getStudents(page: Int = 1, query: String? = null): Pair<List<Student>, Long>
+    suspend fun getStudents(page: Int = 1, query: String? = null): Pair<List<Student>, Long>
 
     /**
      * Gets a paginated list of teachers, optionally filtered by a search query.
@@ -252,8 +249,7 @@ interface UsersService {
      *
      * @return A pair of the list of teachers and the total number of matching teachers (for pagination purposes).
      */
-    @Transactional
-    fun getTeachers(page: Int = 1, query: String? = null): Pair<List<Teacher>, Long>
+    suspend fun getTeachers(page: Int = 1, query: String? = null): Pair<List<Teacher>, Long>
 
     /**
      * Validates password and creates a new session for the given user ID.
