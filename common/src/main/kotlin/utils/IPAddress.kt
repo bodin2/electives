@@ -1,9 +1,10 @@
 package th.ac.bodin2.electives.utils
 
-import com.google.common.net.InetAddresses
 import java.math.BigInteger
 import java.net.Inet4Address
 import java.net.Inet6Address
+import java.net.InetAddress
+import kotlin.jvm.java
 
 sealed class IP(val bits: Int) {
     class V4(val value: Long) : IP(32)
@@ -13,7 +14,7 @@ sealed class IP(val bits: Int) {
         fun parse(ip: String): IP {
             if (ip.isBlank()) throw IllegalArgumentException("IP must not be blank")
 
-            return when (val address = InetAddresses.forString(ip.trim())) {
+            return when (val address = InetAddress.ofLiteral(ip.trim())) {
                 is Inet4Address -> {
                     val b = address.address
                     val v =

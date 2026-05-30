@@ -17,7 +17,6 @@ dependencies {
 
     // @TODO: Use the version without prebuilt binaries and include setup instructions
     implementation(libs.argon2.jvm)
-    implementation(libs.guava)
 
     testImplementation(libs.kotlin.test.junit)
 }
