@@ -1,8 +1,7 @@
 import { createQuery } from '@tanstack/solid-query'
-import { createEffect, createMemo, For, Show } from 'solid-js'
+import { createEffect, createMemo, For, type JSXElement, Show } from 'solid-js'
 import { useAPI } from '~/providers/APIProvider'
 import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
-import { useI18n } from '~/providers/I18nProvider'
 import { enrollmentsQueryOptions } from '~/queries/enrollments'
 import { teacherSubjectsQueryOptions } from '~/queries/users'
 import { enrollmentSorter } from '~/utils'
@@ -13,12 +12,12 @@ import type { Enrollment, Subject } from '~/api'
 
 export interface TeacherSubjectsTabProps {
     userId: number
+    fallback?: JSXElement
 }
 
 export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
     const { client } = useAPI()
     const enrollment = useEnrollmentCounts()
-    const { string } = useI18n()
     const subjectDisplayContext = useSubjectDisplayContext()
 
     const subjectsQuery = createQuery(() => ({
@@ -68,11 +67,7 @@ export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
             <SectionedList
                 style={{ top: '48px', position: 'sticky' }}
                 items={groupedSubjects()}
-                fallback={
-                    <p class="text-surface-variant text-center">
-                        {string.NO_X_YET({ object: string.SUBJECTS().toLowerCase() })}
-                    </p>
-                }
+                fallback={props.fallback}
                 renderSection={(enrollmentName, items) => (
                     <section>
                         <h1 class="m3-title-large padded">{enrollmentName}</h1>

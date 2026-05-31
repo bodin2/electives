@@ -146,6 +146,18 @@ class GroupServiceImpl : GroupService {
         managers to count
     }
 
+    @Transactional
+    override suspend fun getTeacherGroups(teacherId: Int): List<Group> = dbQuery {
+        Teacher.assertExists(teacherId)
+
+        val query = (TeacherGroups innerJoin Groups)
+            .select(Groups.columns)
+            .where { TeacherGroups.teacher eq teacherId }
+            .orderBy(Groups.id)
+
+        Group.wrapRows(query).toList()
+    }
+
     override fun getMemberCounts() = StudentGroups.select(StudentGroups.group, StudentGroups.student.count())
         .groupBy(StudentGroups.group)
         .associate { it[StudentGroups.group].value to it[StudentGroups.student.count()].toInt() }

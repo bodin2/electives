@@ -61,6 +61,7 @@ function Home() {
     return (
         <Page
             name={string.ENROLLMENTS()}
+            leading={null}
             trailing={
                 <Button
                     variant="text"

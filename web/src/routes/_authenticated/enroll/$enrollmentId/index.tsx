@@ -44,7 +44,7 @@ function RouteComponent() {
     return (
         <Show when={enrollmentQuery.data}>
             {enrollment => (
-                <Page name={enrollment().name}>
+                <Page name={enrollment().name} leading={null} trailing={null} allowBacking>
                     <Show when={(subjectsQuery.data?.length ?? 0) > 0} fallback={<NotFoundPageContent />}>
                         <SubjectList
                             subjects={nonNull(subjectsQuery.data, 'Subjects not fetched')}

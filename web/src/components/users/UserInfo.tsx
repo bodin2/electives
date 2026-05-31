@@ -47,24 +47,35 @@ export default function UserInfo(props: UserInfoProps) {
                     <StickyTabs value={tab()} onChange={setTab} class={styles.tabs} tabs={tabs()} />
                 </Show>
             </Show>
-            <VStack gap={16} grow class={`padded ${styles.tabContent}`}>
+            <VStack gap={16} grow class={`padded ${styles.tabContent}`} style={{ '--sticky-offset': '48px' }}>
                 <SuspenseLoadingPage debugName="UserInfo">
                     <Switch>
                         <Match when={tab() === 'info'}>
-                            <UserDetailsTab
-                                avatarClass={styles.avatar}
-                                avatarPlaceholderClass={`${styles.avatar} ${styles.placeholder}`}
-                                descriptionClass={`${styles.description} m3-body-large`}
-                                labelClass={styles.labelSubText}
-                                initialType={props.initialType}
-                                groups={props.groups}
-                            />
+                            <UserDetailsTab initialType={props.initialType} groups={props.groups} />
                         </Match>
                         <Match when={tab() === 'selections' && ctx.user}>
-                            {user => <StudentSelectionsTab userId={user().id} />}
+                            {user => (
+                                <StudentSelectionsTab
+                                    userId={user().id}
+                                    fallback={
+                                        <p class="text-surface-variant text-center">
+                                            {string.NO_X_YET({ object: string.SELECTIONS().toLowerCase() })}
+                                        </p>
+                                    }
+                                />
+                            )}
                         </Match>
                         <Match when={tab() === 'subjects' && ctx.user}>
-                            {user => <TeacherSubjectsTab userId={user().id} />}
+                            {user => (
+                                <TeacherSubjectsTab
+                                    userId={user().id}
+                                    fallback={
+                                        <p class="text-surface-variant text-center">
+                                            {string.NO_X_YET({ object: string.SUBJECTS().toLowerCase() })}
+                                        </p>
+                                    }
+                                />
+                            )}
                         </Match>
                     </Switch>
                 </SuspenseLoadingPage>

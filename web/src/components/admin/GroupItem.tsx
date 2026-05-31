@@ -21,10 +21,11 @@ interface GroupItemProps {
     expanded?: boolean
     memberCount: number
     memberCounts: Record<number, number>
-    onEdit: (group: Group) => void
-    onDelete: (group: Group) => void
+    onClick: (group: Group) => void
+    onDelete?: (group: Group) => void
     subGroups?: Group[]
     isSubGroup?: boolean
+    noEditIcon?: boolean
 }
 
 export const GROUP_TYPE_ICONS: Record<GroupType, IconifyIcon | undefined> = {
@@ -89,7 +90,7 @@ export default function GroupItem(props: GroupItemProps) {
                 headline={props.group.name}
                 overline={typeLabel()}
                 supporting={string.MEMBER_COUNT({ count: props.memberCount })}
-                onClick={() => props.onEdit(props.group)}
+                onClick={() => props.onClick(props.group)}
                 leading={
                     <HStack alignVertical="center" style={props.isSubGroup ? { 'padding-left': '40px' } : undefined}>
                         <Show when={hasSubGroups()}>
@@ -109,27 +110,33 @@ export default function GroupItem(props: GroupItemProps) {
                 }
                 trailing={
                     <HStack gap={8}>
-                        <Button
-                            variant="text"
-                            iconType="only"
-                            icon={PencilOutlineIcon}
-                            aria-label={string.EDIT_GROUP()}
-                            onClick={e => {
-                                e.stopPropagation()
-                                props.onEdit(props.group)
-                            }}
-                        />
-                        <Button
-                            disabled={!canDelete()}
-                            variant="tonal-error"
-                            iconType="only"
-                            icon={DeleteOutlineIcon}
-                            aria-label={string.DELETE_GROUP()}
-                            onClick={e => {
-                                e.stopPropagation()
-                                props.onDelete(props.group)
-                            }}
-                        />
+                        <Show when={!props.noEditIcon}>
+                            <Button
+                                variant="text"
+                                iconType="only"
+                                icon={PencilOutlineIcon}
+                                aria-label={string.EDIT_GROUP()}
+                                onClick={e => {
+                                    e.stopPropagation()
+                                    props.onClick(props.group)
+                                }}
+                            />
+                        </Show>
+                        <Show when={props.onDelete}>
+                            {onDelete => (
+                                <Button
+                                    disabled={!canDelete()}
+                                    variant="tonal-error"
+                                    iconType="only"
+                                    icon={DeleteOutlineIcon}
+                                    aria-label={string.DELETE_GROUP()}
+                                    onClick={e => {
+                                        e.stopPropagation()
+                                        onDelete()(props.group)
+                                    }}
+                                />
+                            )}
+                        </Show>
                     </HStack>
                 }
             />
@@ -140,8 +147,9 @@ export default function GroupItem(props: GroupItemProps) {
                             group={subGroup}
                             memberCount={props.memberCounts[subGroup.id] ?? 0}
                             memberCounts={props.memberCounts}
-                            onEdit={props.onEdit}
+                            onClick={props.onClick}
                             onDelete={props.onDelete}
+                            noEditIcon={props.noEditIcon}
                             isSubGroup
                         />
                     )}

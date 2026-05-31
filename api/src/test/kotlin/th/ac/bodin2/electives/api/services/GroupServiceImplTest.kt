@@ -2,6 +2,9 @@ package th.ac.bodin2.electives.api.services
 
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import th.ac.bodin2.electives.ConflictException
 import th.ac.bodin2.electives.EntityNotFoundException
@@ -10,6 +13,7 @@ import th.ac.bodin2.electives.api.ApplicationTest
 import th.ac.bodin2.electives.api.TestConstants
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.db.models.TeacherGroups
 import th.ac.bodin2.electives.proto.api.GroupType
 import kotlin.test.*
 
@@ -478,6 +482,94 @@ class GroupServiceImplTest : ApplicationTest() {
         val fetched = transaction { groupService.getById(TestConstants.Groups.LEAF_GROUP_ID) }
         assertNotNull(fetched)
         assertEquals(TestConstants.Groups.GRADE_ID, fetched.parentId?.value)
+    }
+
+    @Test
+    fun `get teacher groups returns groups linked via TeacherGroups`() = runTest {
+        transaction {
+            TeacherGroups.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[group] = TestConstants.Groups.GROUP_1_ID
+            }
+        }
+
+        val groups = @OptIn(Transactional::class) groupService.getTeacherGroups(TestConstants.Teachers.BOB_ID)
+        assertEquals(1, groups.size)
+        assertEquals(TestConstants.Groups.GROUP_1_ID, groups.first().id.value)
+    }
+
+    @Test
+    fun `get teacher groups returns empty for teacher with no memberships`() = runTest {
+        val groups = @OptIn(Transactional::class) groupService.getTeacherGroups(TestConstants.Teachers.ALICE_ID)
+        assertTrue(groups.isEmpty())
+    }
+
+    @Test
+    fun `get teacher groups orders results by group id`() = runTest {
+        transaction {
+            TeacherGroups.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[group] = TestConstants.Groups.GROUP_2_ID
+            }
+            TeacherGroups.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[group] = TestConstants.Groups.GROUP_1_ID
+            }
+        }
+
+        val ids = @OptIn(Transactional::class) groupService.getTeacherGroups(TestConstants.Teachers.BOB_ID)
+            .map { it.id.value }
+
+        assertEquals(ids.sorted(), ids)
+        assertEquals(listOf(TestConstants.Groups.GROUP_1_ID, TestConstants.Groups.GROUP_2_ID), ids)
+    }
+
+    @Test
+    fun `get teacher groups throws when teacher does not exist`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            @OptIn(Transactional::class)
+            groupService.getTeacherGroups(UNUSED_ID)
+        }
+    }
+
+    @Test
+    fun `get teacher groups matches getManagers inverse`() = runTest {
+        transaction {
+            TeacherGroups.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[group] = TestConstants.Groups.GROUP_1_ID
+            }
+        }
+
+        val teacherGroups = @OptIn(Transactional::class)
+        groupService.getTeacherGroups(TestConstants.Teachers.BOB_ID)
+        assertTrue(teacherGroups.any { it.id.value == TestConstants.Groups.GROUP_1_ID })
+
+        val (managers, _) = @OptIn(Transactional::class)
+        groupService.getManagers(TestConstants.Groups.GROUP_1_ID)
+        assertTrue(managers.any { it.id.value == TestConstants.Teachers.BOB_ID })
+    }
+
+    @Test
+    fun `get teacher groups reflects deleted memberships`() = runTest {
+        transaction {
+            TeacherGroups.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[group] = TestConstants.Groups.GROUP_1_ID
+            }
+        }
+
+        val before = @OptIn(Transactional::class) groupService.getTeacherGroups(TestConstants.Teachers.BOB_ID)
+        assertEquals(1, before.size)
+
+        transaction {
+            TeacherGroups.deleteWhere {
+                (TeacherGroups.teacher eq TestConstants.Teachers.BOB_ID) and (TeacherGroups.group eq TestConstants.Groups.GROUP_1_ID)
+            }
+        }
+
+        val after = @OptIn(Transactional::class) groupService.getTeacherGroups(TestConstants.Teachers.BOB_ID)
+        assertTrue(after.isEmpty())
     }
 
     @Test

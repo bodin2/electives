@@ -47,6 +47,14 @@ class TestGroupService : GroupService {
         return emptyList<Teacher>() to 0L
     }
 
+    @Transactional
+    override suspend fun getTeacherGroups(teacherId: Int): List<Group> {
+        if (teacherId != TestServiceConstants.TEACHER_ID) {
+            throw EntityNotFoundException(ExceptionEntity.TEACHER)
+        }
+        return GROUP_IDS.map { MockUtils.mockGroup(it) }
+    }
+
     override fun getMemberCounts() = GROUP_IDS.associateWith { 0 }
 
     override fun getMemberCount(groupId: Int): Int = 0

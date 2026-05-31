@@ -5,6 +5,7 @@ import { createMemo, createSignal, For, type JSX, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { User } from '~/api'
 import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
 import { Button } from '../Button'
 import { ConfirmDialog } from '../dialogs/base/ConfirmDialog'
 import { HStack, VStack } from '../Stack'
@@ -15,10 +16,11 @@ import type { Group } from '~/api/structures'
 interface GroupListProps {
     groups: Group[]
     memberCounts: Record<number, number>
-    onEdit: (group: Group) => void
-    onCreate: () => void
-    onDelete: (group: Group) => Promise<void>
+    onClick: (group: Group) => void
+    onCreate?: () => void
+    onDelete?: (group: Group) => Promise<void>
     emptyElement?: JSX.Element
+    noEditIcon?: boolean
 }
 
 export default function GroupList(props: GroupListProps) {
@@ -69,9 +71,13 @@ export default function GroupList(props: GroupListProps) {
                     placeholder={string.SEARCH_GROUPS()}
                     onInput={e => setSearch(e.target.value)}
                 />
-                <Button variant="filled" icon={PlusIcon} onClick={props.onCreate}>
-                    {string.CREATE_GROUP()}
-                </Button>
+                <Show when={props.onCreate}>
+                    {onCreate => (
+                        <Button variant="filled" icon={PlusIcon} onClick={onCreate()}>
+                            {string.CREATE_GROUP()}
+                        </Button>
+                    )}
+                </Show>
             </HStack>
 
             <Show when={props.groups.length > 0} fallback={props.emptyElement}>
@@ -81,11 +87,12 @@ export default function GroupList(props: GroupListProps) {
                             <GroupItem
                                 expanded={search() !== '' ? true : undefined}
                                 group={group}
-                                onEdit={props.onEdit}
-                                onDelete={g => setGroupToDelete(g)}
+                                onClick={props.onClick}
+                                onDelete={props.onDelete ? g => setGroupToDelete(g) : undefined}
                                 memberCount={props.memberCounts[group.id] ?? 0}
                                 memberCounts={props.memberCounts}
                                 subGroups={subGroupsByParent()[group.id]}
+                                noEditIcon={props.noEditIcon}
                             />
                         )}
                     </For>
@@ -99,7 +106,7 @@ export default function GroupList(props: GroupListProps) {
                     closedBy="any"
                     onCancel={() => setGroupToDelete(undefined)}
                     onConfirm={async () => {
-                        if (groupToDelete) await props.onDelete(groupToDelete)
+                        if (groupToDelete) await nonNull(props.onDelete)(groupToDelete)
                         setGroupToDelete(undefined)
                     }}
                     confirmText={string.DELETE_GROUP()}

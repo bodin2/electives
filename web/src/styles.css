@@ -63,6 +63,9 @@
   padding-inline: 0;
 }
 
+.no-block-padding {
+  padding-block: 0;
+}
 
 .credits {
   color: var(--m3c-on-surface-variant);

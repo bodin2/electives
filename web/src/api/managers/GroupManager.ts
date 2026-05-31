@@ -11,6 +11,8 @@ export class GroupManager implements CacheableManager {
     readonly admin: GroupAdminActions
 
     cachedAll = false
+    /** The list of groups owned by the current user */
+    ownedGroups: Group[] | null = null
 
     constructor(
         private readonly client: Client<unknown>,
@@ -23,6 +25,7 @@ export class GroupManager implements CacheableManager {
 
     clearCache(): void {
         this.cache.clear()
+        this.ownedGroups = null
         this.cachedAll = false
     }
 
@@ -50,16 +53,21 @@ export class GroupManager implements CacheableManager {
         const { force = false, cache = true } = options
 
         if (!force && this.cachedAll) {
+            // Cache may contain other groups, but we only care about the owned groups list for this method, so return that if available
+
+            if (this.ownedGroups) return this.ownedGroups
+
             const cached = this.cache.toArray()
             if (cached.length > 0) return cached
         }
 
-        const data = await this.rest.get<AdminListGroupsResponse>('/admin/groups', {
+        const data = await this.rest.get<AdminListGroupsResponse>('/groups', {
             decoder: AdminListGroupsResponse,
         })
         const groups = data.groups.map(g => this._getOrCreate(g, cache))
 
         if (cache) {
+            this.ownedGroups = groups
             this.cachedAll = true
         }
 
@@ -80,7 +88,7 @@ export class GroupManager implements CacheableManager {
             if (cached) return cached
         }
 
-        const data = await this.rest.get<RawGroup>(`/admin/groups/${id}`, {
+        const data = await this.rest.get<RawGroup>(`/groups/${id}`, {
             decoder: RawGroup,
         })
         return this._getOrCreate(data, cache)
@@ -109,7 +117,7 @@ export class GroupAdminActions {
      * @param group The group data
      */
     async put(id: number, group: RawGroup): Promise<Group> {
-        await this.rest.put(`/admin/groups/${id}`, group, {
+        await this.rest.put(`/groups/${id}`, group, {
             encoder: RawGroup,
         })
         return this.manager._getOrCreate(group)
@@ -122,7 +130,7 @@ export class GroupAdminActions {
      * @param patch The fields to update
      */
     async patch(id: number, patch: AdminGroupPatch): Promise<Group> {
-        const data = await this.rest.patch<RawGroup>(`/admin/groups/${id}`, patch, {
+        const data = await this.rest.patch<RawGroup>(`/groups/${id}`, patch, {
             encoder: AdminGroupPatch,
             decoder: RawGroup,
         })
@@ -135,7 +143,7 @@ export class GroupAdminActions {
      * @param id The group's ID
      */
     async delete(id: number): Promise<void> {
-        await this.rest.delete(`/admin/groups/${id}`)
+        await this.rest.delete(`/groups/${id}`)
         this.manager.cache.delete(id)
     }
 
@@ -145,7 +153,7 @@ export class GroupAdminActions {
      * @returns Group IDs to member counts
      */
     async fetchMemberCounts(): Promise<Record<number, number>> {
-        const data = await this.rest.get<AdminService_GroupMemberCounts>('/admin/groups/member-counts', {
+        const data = await this.rest.get<AdminService_GroupMemberCounts>('/groups/member-counts', {
             decoder: AdminService_GroupMemberCounts,
         })
         return data.memberCounts
@@ -158,7 +166,7 @@ export class GroupAdminActions {
      * @param page The page number (1-based)
      */
     async fetchMembers(groupId: number, page = 1, query?: string): Promise<{ users: User[]; total: number }> {
-        const data = await this.rest.get<AdminListUsersResponse>(`/admin/groups/${groupId}/members`, {
+        const data = await this.rest.get<AdminListUsersResponse>(`/groups/${groupId}/members`, {
             query: { page, query },
             decoder: AdminListUsersResponse,
         })
@@ -175,7 +183,7 @@ export class GroupAdminActions {
      * @param page The page number (1-based)
      */
     async fetchManagers(groupId: number, page = 1, query?: string): Promise<{ users: User[]; total: number }> {
-        const data = await this.rest.get<AdminListUsersResponse>(`/admin/groups/${groupId}/managers`, {
+        const data = await this.rest.get<AdminListUsersResponse>(`/groups/${groupId}/managers`, {
             query: { page, query },
             decoder: AdminListUsersResponse,
         })
@@ -194,7 +202,7 @@ export class GroupAdminActions {
      * @param targetGroupId The destination group's ID
      */
     async migrateMembers(groupId: number, targetGroupId: number): Promise<void> {
-        await this.rest.post(`/admin/groups/${groupId}/members/migrate`, undefined, {
+        await this.rest.post(`/groups/${groupId}/members/migrate`, undefined, {
             query: { target_group_id: targetGroupId },
         })
     }
@@ -206,6 +214,6 @@ export class GroupAdminActions {
      * @param groupId The group's ID
      */
     async deleteMembers(groupId: number): Promise<void> {
-        await this.rest.delete(`/admin/groups/${groupId}/members`)
+        await this.rest.delete(`/groups/${groupId}/members`)
     }
 }

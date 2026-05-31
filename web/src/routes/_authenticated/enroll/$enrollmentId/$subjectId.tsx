@@ -17,11 +17,7 @@ import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import { enrollmentQueryOptions } from '~/queries/enrollments'
 import { selectionsQueryOptions } from '~/queries/selections'
-import {
-    subjectEnrolledCountQueryOptions,
-    subjectMembersQueryOptions,
-    subjectQueryOptions,
-} from '~/queries/subjects'
+import { subjectEnrolledCountQueryOptions, subjectMembersQueryOptions, subjectQueryOptions } from '~/queries/subjects'
 import { nonNull } from '~/utils'
 import { formatCountdown } from '~/utils/date'
 import { catchErrors } from '~/utils/error-component'
@@ -142,7 +138,7 @@ function RouteComponent() {
 
     return (
         <Show when={subjectQuery.data && enrollmentQuery.data}>
-            <Page name={subject().name}>
+            <Page name={subject().name} leading={null} trailing={null} allowBacking>
                 <SubjectInfo
                     subject={subject()}
                     enrollment={en()}

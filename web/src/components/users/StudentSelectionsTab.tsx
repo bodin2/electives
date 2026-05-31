@@ -1,8 +1,7 @@
 import { createQuery } from '@tanstack/solid-query'
-import { createEffect, createMemo, For, Show } from 'solid-js'
+import { createEffect, createMemo, For, type JSXElement, Show } from 'solid-js'
 import { useAPI } from '~/providers/APIProvider'
 import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
-import { useI18n } from '~/providers/I18nProvider'
 import { enrollmentsQueryOptions } from '~/queries/enrollments'
 import { selectionsQueryOptions } from '~/queries/selections'
 import { enrollmentSorter } from '~/utils'
@@ -10,14 +9,15 @@ import SectionedList from '../SectionedList'
 import { useSubjectDisplayContext } from '../subjects/SubjectDisplayContext'
 import SubjectListItem from '../subjects/SubjectListItem'
 import type { Enrollment, Subject } from '~/api'
+
 export interface StudentSelectionsTabProps {
     userId: number
+    fallback?: JSXElement
 }
 
 export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
     const api = useAPI()
     const enrollment = useEnrollmentCounts()
-    const { string } = useI18n()
     const subjectDisplayContext = useSubjectDisplayContext()
 
     const selectionsQuery = createQuery(() => selectionsQueryOptions(api.client, props.userId))
@@ -62,16 +62,21 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
     return (
         <Show when={data()}>
             <SectionedList
-                style={{ top: '48px', position: 'sticky' }}
                 items={groupedSelections()}
-                fallback={
-                    <p class="text-surface-variant text-center">
-                        {string.NO_X_YET({ object: string.SELECTIONS().toLowerCase() })}
-                    </p>
-                }
+                fallback={props.fallback}
                 renderSection={(enrollmentName, items) => (
                     <section>
-                        <h1 class="m3-title-large padded">{enrollmentName}</h1>
+                        <h1
+                            class="m3-title-large padded"
+                            style={{
+                                position: 'sticky',
+                                top: 'var(--sticky-offset)',
+                                'z-index': 'var(--layer-overlay)',
+                                background: 'var(--m3c-surface)',
+                            }}
+                        >
+                            {enrollmentName}
+                        </h1>
                         <ul>
                             <For each={items}>
                                 {({ enrollment: en, subject }) => (

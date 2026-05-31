@@ -75,6 +75,7 @@ suspend fun Application.module() {
     val controllers = mutableListOf(
         authController,
         enrollmentsController,
+        groupsController,
         miscController,
         notificationsController,
         usersController,

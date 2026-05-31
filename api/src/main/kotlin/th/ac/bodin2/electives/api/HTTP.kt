@@ -30,6 +30,7 @@ fun Application.configureHTTP() {
                 "/notifications" -> Long.MAX_VALUE
                 else -> {
                     if (path.startsWith("/admin")) return@bodyLimit 1024.KiB
+                    if (path.startsWith("/groups")) return@bodyLimit 1024.KiB
                     if (path.startsWith("/users")) return@bodyLimit 1.KiB
                     else 0
                 }

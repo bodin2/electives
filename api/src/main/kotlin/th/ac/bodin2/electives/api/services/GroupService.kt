@@ -72,6 +72,14 @@ interface GroupService {
     @Transactional
     suspend fun getManagers(groupId: Int, page: Int = 1, query: String? = null): Pair<List<Teacher>, Long>
 
+    /**
+     * Gets every [Group] the teacher is a manager of. Ordered by group ID.
+     *
+     * @throws EntityNotFoundException if the teacher does not exist.
+     */
+    @Transactional
+    suspend fun getTeacherGroups(teacherId: Int): List<Group>
+
     fun getMemberCounts(): Map<Int, Int>
 
     fun getMemberCount(groupId: Int): Int

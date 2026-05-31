@@ -1,8 +1,4 @@
 import DeleteIcon from '@iconify-icons/mdi/delete-outline'
-import HashTagIcon from '@iconify-icons/mdi/hashtag-box-outline'
-import LabelOutlineIcon from '@iconify-icons/mdi/label-outline'
-import PencilOutlineIcon from '@iconify-icons/mdi/pencil-outline'
-import PlusIcon from '@iconify-icons/mdi/plus'
 import { TextField } from 'm3-solid/src'
 import { createSignal, Show } from 'solid-js'
 import { createStore } from 'solid-js/store'
@@ -10,22 +6,15 @@ import { Portal } from 'solid-js/web'
 import { type Group, GroupType, User, UserType } from '~/api'
 import { useI18n } from '~/providers/I18nProvider'
 import { nonNull } from '~/utils'
-import { Badges, GroupBadge } from '../Badges'
 import { Button } from '../Button'
 import AddGroupToStudentDialog from '../dialogs/AddGroupToStudentDialog'
 import TextFieldDialog from '../dialogs/base/TextFieldDialog'
-import IconLabel from '../IconLabel'
 import { Option, Select } from '../Select'
-import { HStack, VStack } from '../Stack'
-import UserAvatar from './UserAvatar'
-import styles from './UserDetailsTab.module.css'
+import { VStack } from '../Stack'
 import { useUserDisplayContext } from './UserDisplayContext'
+import { type StringApi, slotPlaceholder, UserProfile } from './UserProfile'
 
 interface UserDetailsTabProps {
-    avatarClass?: string
-    avatarPlaceholderClass?: string
-    descriptionClass?: string
-    labelClass?: string
     initialType?: UserType
     groups?: Group[]
 }
@@ -79,14 +68,6 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
 
     const user = () => nonNull(ctx.user)
 
-    const userTypeName = () => {
-        const type = user().type
-        const key = UserType[type]
-        if (!key) return string.USER_TYPE_STUDENT()
-        // @ts-expect-error: Dynamic key
-        return string[`USER_TYPE_${key}`]()
-    }
-
     const editAvatar = (e?: Event) => {
         e?.stopPropagation()
         if (!ctx.editable || !ctx.onEdit) return
@@ -96,75 +77,11 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
     return (
         <Show when={ctx.user}>
             <VStack gap={32}>
-                <HStack gap={32} alignVertical="center">
-                    {/** biome-ignore lint/a11y/noStaticElementInteractions: Intentional */}
-                    {/** biome-ignore lint/a11y/useKeyWithClickEvents: Intentional */}
-                    <div
-                        style={{
-                            position: 'relative',
-                            width: 'fit-content',
-                            cursor: ctx.editable ? 'pointer' : 'default',
-                        }}
-                        onClick={editAvatar}
-                    >
-                        <UserAvatar
-                            imageUrl={user().avatarUrl}
-                            class={props.avatarClass}
-                            placeholderClass={props.avatarPlaceholderClass}
-                        />
-                        <Show when={ctx.editable && ctx.onEdit}>
-                            <Button
-                                size="xs"
-                                variant="tonal"
-                                icon={PencilOutlineIcon}
-                                iconType="only"
-                                onClick={editAvatar}
-                                style={{ position: 'absolute', bottom: 0, right: 0 }}
-                            />
-                        </Show>
-                    </div>
-
-                    <VStack grow>
-                        <HStack alignVertical="center" wrap>
-                            <h1 class="m3-headline-medium">{user().displayName}</h1>
-                            <HStack wrap style={{ 'row-gap': '4px' }}>
-                                <Show when={user().isStudent()}>
-                                    <FixedSlotBadge
-                                        user={user()}
-                                        slot={GroupType.GRADE}
-                                        onEdit={setEditingSlot}
-                                        required
-                                    />
-                                    <FixedSlotBadge
-                                        user={user()}
-                                        slot={GroupType.ROOM}
-                                        onEdit={setEditingSlot}
-                                        required
-                                    />
-                                    <FixedSlotBadge user={user()} slot={GroupType.PROGRAM} onEdit={setEditingSlot} />
-                                </Show>
-                                <BadgeListEditor user={user()} />
-                                <HStack gap={4} alignVertical="center" wrap>
-                                    <Button
-                                        size="xs"
-                                        variant="tonal"
-                                        icon={PlusIcon}
-                                        onClick={() => setAddGroupOpen(true)}
-                                    >
-                                        {string.ADD_GROUP()}
-                                    </Button>
-                                </HStack>
-                            </HStack>
-                        </HStack>
-
-                        <HStack class={styles.infoRow}>
-                            <Show when={!ctx.creating}>
-                                <IconLabel icon={HashTagIcon} text={String(user().id)} class={props.labelClass} />
-                                <IconLabel icon={LabelOutlineIcon} text={userTypeName()} class={props.labelClass} />
-                            </Show>
-                        </HStack>
-                    </VStack>
-                </HStack>
+                <UserProfile
+                    editAvatar={editAvatar}
+                    onAddGroupClick={() => setAddGroupOpen(true)}
+                    onEditGroup={group => setEditingSlot(group)}
+                />
 
                 <VStack
                     as="form"
@@ -354,58 +271,6 @@ export default function UserDetailsTab(props: UserDetailsTabProps) {
             </Portal>
         </Show>
     )
-}
-
-function BadgeListEditor(props: { user: User }) {
-    const ctx = useUserDisplayContext()
-
-    return (
-        <Badges
-            groups={props.user.groups}
-            types={props.user.isTeacher() ? undefined : [GroupType.CUSTOM]}
-            onRemove={
-                ctx.editable && ctx.onEdit
-                    ? group =>
-                          nonNull(ctx.onEdit)(
-                              'groups',
-                              props.user.groups.filter(g => g.id !== group.id).map(g => g.toJSON()),
-                              'patchGroups',
-                          )
-                    : undefined
-            }
-        />
-    )
-}
-
-function FixedSlotBadge(props: { user: User; slot: GroupType; required?: boolean; onEdit: (slot: GroupType) => void }) {
-    const { string } = useI18n()
-    const ctx = useUserDisplayContext()
-    const current = () => props.user.groups.find(g => g.type === props.slot)
-
-    return (
-        <GroupBadge
-            group={current()}
-            fallbackType={props.slot}
-            placeholder={slotPlaceholder(props.slot, string)}
-            required={props.required}
-            onEdit={ctx.editable && ctx.onEdit ? () => props.onEdit(props.slot) : undefined}
-        />
-    )
-}
-
-type StringApi = ReturnType<typeof useI18n>['string']
-
-function slotPlaceholder(slot: GroupType | null, string: StringApi): string {
-    switch (slot) {
-        case GroupType.GRADE:
-            return string.SELECT_GRADE_HINT()
-        case GroupType.ROOM:
-            return string.SELECT_ROOM_HINT()
-        case GroupType.PROGRAM:
-            return string.SELECT_PROGRAM_HINT()
-        default:
-            return string.SELECT_GROUP_HINT()
-    }
 }
 
 function slotLabel(slot: GroupType | null, string: StringApi): string {

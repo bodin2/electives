@@ -4,6 +4,7 @@ import PeopleIcon from '@iconify-icons/mdi/people'
 import TeamIcon from '@iconify-icons/mdi/people-group'
 import TeacherIcon from '@iconify-icons/mdi/teacher'
 import TicketIcon from '@iconify-icons/mdi/ticket'
+import { useMatchRoute } from '@tanstack/solid-router'
 import { UserType } from '~/api'
 import type { IconifyIcon } from '@iconify/types'
 import type { RoutePath } from '~/main'
@@ -25,7 +26,14 @@ export const STUDENT_NAV: NavItem[] = [
 ]
 
 export const TEACHER_NAV: NavItem[] = [
-    { icon: TicketIcon, label: string => string.ENROLLMENTS(), to: '/', exact: true },
+    {
+        icon: TicketIcon,
+        label: string => string.ENROLLMENTS(),
+        to: '/',
+        exact: true,
+        isActive: () => Boolean(useMatchRoute()({ to: '/enroll/$enrollmentId', fuzzy: true })()),
+    },
+    { icon: TeamIcon, label: string => string.GROUPS(), to: '/groups' },
 ]
 
 /**

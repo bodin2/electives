@@ -13,7 +13,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.application
 import io.ktor.server.routing.routing
-import kotlinx.serialization.SerialName
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import th.ac.bodin2.electives.ConflictException
@@ -47,7 +46,6 @@ val adminController = controller {
         AdminEnrollmentsController(enrollmentService, groupService),
         AdminEnrollmentsSubjectsController(enrollmentService),
         AdminSubjectsController(subjectService),
-        AdminGroupsController(groupService),
     ).forEach { ctl -> ctl.apply { this@controller.register() } }
 
     routing {
@@ -639,170 +637,6 @@ class AdminSubjectsController(private val subjectService: SubjectService) : Cont
     }
 }
 
-class AdminGroupsController(
-    private val groupService: GroupService,
-) : Controller {
-    override fun Application.register() {
-        adminRoutes {
-            get<Admin.Groups> { handleGetGroups() }
-
-            get<Admin.Groups.Id> { params -> handleGetGroup(params.id) }
-
-            put<Admin.Groups.Id> { params -> handlePutGroup(params.id) }
-
-            delete<Admin.Groups.Id> { params -> handleDeleteGroup(params.id) }
-
-            patch<Admin.Groups.Id> { params -> handlePatchGroup(params.id) }
-
-            get<Admin.Groups.MemberCounts> { handleGetGroupMemberCounts() }
-
-            get<Admin.Groups.Id.Managers> { params ->
-                val (users, total) = dbQuery {
-                    val (teachers, count) =
-                        @OptIn(Transactional::class)
-                        groupService.getManagers(params.parent.id, params.page, params.query.ifBlank { null })
-
-                    teachers.map { it.toProto() } to count.toInt()
-                }
-
-                call.respond(AdminService.ListUsersResponse(users = users, total = total))
-            }
-
-            get<Admin.Groups.Id.Members> { params ->
-                handleGetGroupMembers(
-                    params.parent.id,
-                    params.page,
-                    params.query.ifBlank { null })
-            }
-
-            delete<Admin.Groups.Id.Members> { params ->
-                handleDeleteGroupMembers(params.parent.id)
-            }
-
-            post<Admin.Groups.Id.Members.Migrate> { params ->
-                handleMigrateGroupMembers(params.parent.parent.id, params.targetGroupId)
-            }
-        }
-    }
-
-    private suspend fun RoutingContext.handleDeleteGroupMembers(groupId: Int) {
-        try {
-            @OptIn(Transactional::class)
-            dbQuery {
-                groupService.deleteMembers(groupId)
-            }
-        } catch (_: EntityNotFoundException) {
-            throw notFound("Group not found")
-        }
-        noContent()
-    }
-
-    private suspend fun RoutingContext.handleMigrateGroupMembers(groupId: Int, targetGroupId: Int) {
-        try {
-            @OptIn(Transactional::class)
-            dbQuery {
-                groupService.migrateMembers(groupId, targetGroupId)
-            }
-        } catch (_: EntityNotFoundException) {
-            throw notFound("Group not found")
-        } catch (_: ConflictException) {
-            throw conflict("Target group must be a different group of the same type")
-        }
-        ok()
-    }
-
-    private suspend fun RoutingContext.handleGetGroupMembers(groupId: Int, page: Int, query: String?) {
-        val response = try {
-            dbQuery {
-                val (members, count) = @OptIn(Transactional::class) groupService.getMembers(groupId, page, query)
-
-                AdminService.ListUsersResponse(
-                    users = members.map { it.toProto() },
-                    total = count.toInt(),
-                )
-            }
-        } catch (_: EntityNotFoundException) {
-            throw notFound("Group not found")
-        }
-        call.respond(response)
-    }
-
-    private suspend fun RoutingContext.handleGetGroups() {
-        val groups = dbQuery { groupService.getAll().map { it.toProto() } }
-        call.respond(AdminService.ListGroupsResponse(groups = groups))
-    }
-
-    private suspend fun RoutingContext.handleGetGroup(id: Int) {
-        val response = dbQuery { groupService.getById(id)?.toProto() }
-            ?: throw notFound()
-
-        call.respond(response)
-    }
-
-    private suspend fun RoutingContext.handlePutGroup(id: Int) {
-        val group = call.parseOrNull<Group>()
-            ?: throw badRequest()
-
-        if (group.id != id) throw badRequest("ID in URL does not match body")
-
-        try {
-            @OptIn(Transactional::class)
-            groupService.create(group.id, group.name, group.type, group.parent_id)
-        } catch (_: ConflictException) {
-            throw conflict("Group with the same ID already exists")
-        } catch (e: ExposedSQLException) {
-            throw badRequest(e.message ?: "SQL exception occurred")
-        }
-        noContent()
-    }
-
-    private suspend fun RoutingContext.handleDeleteGroup(id: Int) {
-        try {
-            @OptIn(Transactional::class)
-            groupService.delete(id)
-        } catch (_: EntityNotFoundException) {
-            throw notFound("Group not found")
-        } catch (_: ConflictException) {
-            throw conflict("Group has members; reassign or remove them before deleting")
-        } catch (e: ExposedSQLException) {
-            throw badRequest(e.message ?: "SQL exception occurred")
-        }
-        noContent()
-    }
-
-    private suspend fun RoutingContext.handlePatchGroup(id: Int) {
-        val req = call.parseOrNull<AdminService.GroupPatch>()
-            ?: throw badRequest()
-
-        val update = GroupService.GroupUpdate(
-            name = req.name,
-            parentId = req.parent_id,
-            setParentId = req.patch_parent_id,
-        )
-
-        val proto = try {
-            dbQuery {
-                @OptIn(Transactional::class)
-                groupService.update(id, update).toProto()
-            }
-        } catch (e: EntityNotFoundException) {
-            throw when (e.entity) {
-                ExceptionEntity.GROUP -> notFound("Group not found")
-
-                else -> e
-            }
-        } catch (_: NothingToUpdateException) {
-            throw badRequest("Nothing to update")
-        }
-        call.respond(proto)
-    }
-
-    private suspend fun RoutingContext.handleGetGroupMemberCounts() {
-        val counts = dbQuery { groupService.getMemberCounts() }
-        call.respond(AdminService.GroupMemberCounts(member_counts = counts))
-    }
-}
-
 private val Long.secondsToUTCDateTime: LocalDateTime
     get() = Instant.ofEpochSecond(this)
         .atZone(ZoneId.of("UTC"))
@@ -857,29 +691,6 @@ private class Admin {
         }
     }
 
-    // GET: ListGroupsResponse
-    @Resource("groups")
-    class Groups(val parent: Admin) {
-        // PUT: Group, GET: Group, DELETE, PATCH: GroupPatch
-        @Resource("{id}")
-        class Id(val parent: Groups, val id: Int) {
-            // GET: ListUsersResponse
-            @Resource("managers")
-            class Managers(val parent: Id, val page: Int = 1, val query: String = "")
-
-            // GET: ListUsersResponse, DELETE
-            @Resource("members")
-            class Members(val parent: Id, val page: Int = 1, val query: String = "") {
-                // POST
-                @Resource("migrate")
-                class Migrate(val parent: Members, @SerialName("target_group_id") val targetGroupId: Int)
-            }
-        }
-
-        // GET: GroupMemberCounts
-        @Resource("member-counts")
-        class MemberCounts(val parent: Groups)
-    }
 }
 
 private fun Application.adminRoutes(block: Route.() -> Unit) {
