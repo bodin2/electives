@@ -1,9 +1,4 @@
-export {
-    type AdminAuthenticateOptions,
-    AdminAuthenticator,
-    type Authenticator,
-    UserAuthenticator,
-} from './auth'
+export { type Authenticator, UserAuthenticator } from './auth'
 export { Cache, type CacheEntry, type CacheOptions } from './cache'
 export {
     Client,
@@ -75,3 +70,4 @@ export {
     UnauthorizedError,
     UserType,
 } from './types'
+

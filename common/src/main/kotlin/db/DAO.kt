@@ -122,7 +122,6 @@ class Teacher(id: EntityID<Int>) : Entity<Int>(id) {
 
 class Admin(id: EntityID<Int>) : Entity<Int>(id) {
     val user by User referencedOn Admins.id
-    var publicKey by Admins.publicKey
 
     companion object : EntityClass<Int, Admin>(Admins) {
         fun assertExists(adminId: Int) {

@@ -1,9 +1,10 @@
-import { createFileRoute, type ErrorRouteComponent, Outlet } from '@tanstack/solid-router'
-import { Match, Switch } from 'solid-js'
-import { UnauthorizedError } from '~/api'
+import { createFileRoute, type ErrorRouteComponent, Outlet, useRouter } from '@tanstack/solid-router'
+import { createEffect, Match, on, Switch } from 'solid-js'
+import { UnauthorizedError, UserType } from '~/api'
 import LoadingPage from '~/components/pages/LoadingPage'
 import { useLogoutRedirect } from '~/hooks/useAuthRedirect'
-import { AuthenticationState, TokenType, useAPI } from '~/providers/APIProvider'
+import { AuthenticationState, useAPI } from '~/providers/APIProvider'
+import { nonNull } from '~/utils'
 import { catchErrors } from '~/utils/error-component'
 
 export const ADMIN_AUTHENTICATED_ROUTE_DEFAULTS = {
@@ -24,10 +25,15 @@ function AdminAuthenticatedLayout() {
     const api = useAPI()
 
     useAdminLogoutRedirect()
+    useNonAdminCrossRedirect()
 
     return (
         <Switch>
-            <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.Admin}>
+            <Match
+                when={
+                    api.authState() === AuthenticationState.LoggedIn && nonNull(api.client.user).type === UserType.ADMIN
+                }
+            >
                 <Outlet />
             </Match>
             <Match when={api.authState() === AuthenticationState.Loading}>
@@ -42,4 +48,21 @@ function UnauthorizedRedirect() {
     return null
 }
 
-const useAdminLogoutRedirect = () => useLogoutRedirect('/manage/login', TokenType.Admin)
+const useAdminLogoutRedirect = () => useLogoutRedirect('/login')
+
+/**
+ * Redirect non-admin users who land on a management route to the user dashboard.
+ */
+function useNonAdminCrossRedirect() {
+    const api = useAPI()
+    const navigate = useRouter().navigate
+
+    createEffect(
+        on(api.authState, state => {
+            if (state !== AuthenticationState.LoggedIn) return
+            if (nonNull(api.client.user).type !== UserType.ADMIN) {
+                navigate({ to: '/', replace: true })
+            }
+        }),
+    )
+}

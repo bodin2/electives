@@ -10,7 +10,6 @@ import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.GroupType
 import th.ac.bodin2.electives.proto.api.UserType
-import java.security.PublicKey
 
 interface UsersService {
     val sessionCreationFlow: SharedFlow<Int>
@@ -84,8 +83,10 @@ interface UsersService {
     /**
      * Creates a new admin with the given information.
      *
+     * The password follows the same requirements as [createStudent]/[createTeacher].
+     *
      * @throws ConflictException if a user/admin with the same ID already exists.
-     * @throws IllegalArgumentException if the pass
+     * @throws IllegalArgumentException if the password does not meet the requirements.
      */
     @Transactional
     suspend fun createAdmin(insert: AdminInsert): Admin
@@ -169,7 +170,7 @@ interface UsersService {
     ) : UserInsert(user)
 
     class TeacherInsert(user: UserData, val groups: List<Int> = emptyList()) : UserInsert(user)
-    class AdminInsert(user: UserData, val publicKey: PublicKey) : UserInsert(user)
+    class AdminInsert(user: UserData) : UserInsert(user)
 
     /**
      * If [setPrefix] is true, the prefix is updated to the given value (which may be null).

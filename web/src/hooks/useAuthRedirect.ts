@@ -1,20 +1,18 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { type Register, type ToPathOption, useRouter } from '@tanstack/solid-router'
 import { type Accessor, createEffect, on, untrack } from 'solid-js'
-import { AuthenticationState, type TokenType, useAPI } from '~/providers/APIProvider'
+import { AuthenticationState, useAPI } from '~/providers/APIProvider'
 import type { RoutePath } from '~/main'
 
 const log = new Logger('hooks/useLoginRedirect')
 
-export function onLogin(callback: (tokenType: TokenType) => void) {
+export function onLogin(callback: () => void) {
     const api = useAPI()
 
     createEffect(
         on(api.authState, state => {
             if (state === AuthenticationState.LoggedIn) {
-                const type = api.tokenType()
-                if (!type) return console.warn('Auth state is LoggedIn but tokenType is null')
-                callback(type)
+                callback()
             }
         }),
     )
@@ -23,15 +21,7 @@ export function onLogin(callback: (tokenType: TokenType) => void) {
 interface UseLoginRedirectOptions {
     search?: Accessor<string | undefined>
     /**
-     * Token type required to trigger the redirect.
-     */
-    tokenType?: TokenType
-    /**
-     * Path to redirect when the token type doesn't match, but the user is authenticated.
-     */
-    altPath?: RoutePath
-    /**
-     * Delay in milliseconds before performing the redirect. Alternate redirects will not use this delay.
+     * Delay in milliseconds before performing the redirect.
      */
     delay?: number
 }
@@ -40,37 +30,32 @@ export function useLoginRedirect(path: Accessor<RoutePath>, options: UseLoginRed
     const router = useRouter()
     const navigate = router.navigate
 
-    const { tokenType, altPath, delay = 0, search } = options
+    const { delay = 0, search } = options
 
-    onLogin(loggedInTokenType => {
-        if (tokenType === undefined || loggedInTokenType === tokenType) {
-            log.info('Logged in, redirecting to', path)
+    onLogin(() => {
+        log.info('Logged in, redirecting to', path)
 
-            untrack(() => {
-                router.clearCache()
-                router.invalidate({ sync: true })
-            })
+        untrack(() => {
+            router.clearCache()
+            router.invalidate({ sync: true })
+        })
 
-            const s = search ? search() : undefined
+        const s = search ? search() : undefined
 
-            setTimeout(() => {
-                const url = `${path()}${s ? `?${decodeURIComponent(s)}` : ''}`
-                navigate({ to: url, replace: true })
-            }, delay)
-        } else if (altPath) {
-            log.info('Logged in with different token type, redirecting to', altPath)
-            navigate({ to: altPath, replace: true })
-        }
+        setTimeout(() => {
+            const url = `${path()}${s ? `?${decodeURIComponent(s)}` : ''}`
+            navigate({ to: url, replace: true })
+        }, delay)
     })
 }
 
-export function useLogoutRedirect(path: ToPathOption<Register['router']>, tokenType?: TokenType) {
+export function useLogoutRedirect(path: ToPathOption<Register['router']>) {
     const api = useAPI()
     const navigate = useRouter().navigate
 
     createEffect(
         on(api.authState, authState => {
-            if (authState === AuthenticationState.LoggedOut || (tokenType && api.tokenType() !== tokenType)) {
+            if (authState === AuthenticationState.LoggedOut) {
                 navigate({
                     to: path,
                     replace: true,

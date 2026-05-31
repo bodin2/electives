@@ -11,8 +11,6 @@ import {
     useContext,
 } from 'solid-js'
 import {
-    type AdminAuthenticateOptions,
-    AdminAuthenticator,
     APIError,
     type Authenticator,
     Client,
@@ -22,7 +20,6 @@ import {
     RESTClient,
     UnauthorizedError,
     UserAuthenticator,
-    UserType,
 } from '~/api'
 import { GatewayEndpoints } from '~/api/gateway'
 import { NetworkError } from '~/api/types'
@@ -40,60 +37,37 @@ export enum AuthenticationState {
 interface APIApi {
     client: Client<unknown>
     authState: Accessor<AuthenticationState>
-    tokenType: Accessor<TokenType | null>
     login(id: number, password: string): Promise<void>
-    adminLogin(key: CryptoKey): Promise<void>
     resumeSession(): Promise<void>
     logout: () => Promise<void>
 }
 
 const TOKEN_KEY = 'auth_token'
-const TOKEN_TYPE_KEY = 'auth_token_type'
 const APIContext = createContext<APIApi>()
 const log = new Logger('APIProvider')
 
-export type TokenType = (typeof TokenType)[keyof typeof TokenType]
-export const TokenType = {
-    User: 'user',
-    Admin: 'admin',
-} as const
-
 type APIClient = Client<unknown>
-const gatewayURLFromBaseURL = (baseURL: string, tokenType: TokenType): string => {
+const gatewayURLFromBaseURL = (baseURL: string): string => {
     const url = new URL(baseURL)
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-    url.pathname = tokenType === TokenType.Admin ? GatewayEndpoints.AdminNotifications : GatewayEndpoints.Notifications
+    url.pathname = GatewayEndpoints.Notifications
     url.search = ''
     url.hash = ''
     return url.toString()
 }
 
-const getTokenType = (): TokenType => {
-    const raw = localStorage.getItem(TOKEN_TYPE_KEY)
-    return raw === TokenType.Admin ? TokenType.Admin : TokenType.User
-}
-
-const createAuthenticator = (rest: RESTClient, tokenType: TokenType): Authenticator<unknown> => {
-    if (tokenType === TokenType.Admin) {
-        return new AdminAuthenticator(rest) as Authenticator<unknown>
-    }
-
-    return new UserAuthenticator(rest) as Authenticator<unknown>
-}
-
-const configureClientAuth = (client: APIClient, tokenType: TokenType): Authenticator<unknown> => {
-    const authenticator = createAuthenticator(client.rest, tokenType)
+const configureClientAuth = (client: APIClient): Authenticator<unknown> => {
+    const authenticator = new UserAuthenticator(client.rest) as Authenticator<unknown>
     client.setAuthenticator(authenticator)
-    client.setGatewayURL(gatewayURLFromBaseURL(client.rest.baseURL, tokenType))
+    client.setGatewayURL(gatewayURLFromBaseURL(client.rest.baseURL))
     return authenticator
 }
 
 export const createClient = () => {
     const baseURL = API_BASE_URL
-    const tokenType = getTokenType()
     const rest = new RESTClient({ baseURL })
     const gateway = new Gateway({
-        url: gatewayURLFromBaseURL(baseURL, tokenType),
+        url: gatewayURLFromBaseURL(baseURL),
         maxReconnectAttempts: 3,
         reconnectDelay: 5000,
     })
@@ -101,7 +75,7 @@ export const createClient = () => {
     latestClient = new Client({
         rest,
         gateway,
-        authenticator: createAuthenticator(rest, tokenType),
+        authenticator: new UserAuthenticator(rest) as Authenticator<unknown>,
         autoConnect: true,
     })
 
@@ -112,12 +86,11 @@ export let latestClient: Client<unknown> | null = null
 
 export const initAuth = async (client: APIClient): Promise<AuthenticationState> => {
     const token = localStorage.getItem(TOKEN_KEY)
-    const tokenType = getTokenType()
     if (!token) return AuthenticationState.LoggedOut
 
     log.info('Got token!')
 
-    const authenticator = configureClientAuth(client, tokenType)
+    const authenticator = configureClientAuth(client)
     authenticator.setToken(token)
 
     try {
@@ -139,13 +112,6 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
     const ctx = useRouteContext({ from: '__root__' })
 
     const [authState, setAuthState] = createSignal(AuthenticationState.Loading)
-    const [tokenType, setTokenType] = createSignal<TokenType | null>(
-        localStorage.getItem(TOKEN_TYPE_KEY) === TokenType.Admin
-            ? TokenType.Admin
-            : localStorage.getItem(TOKEN_TYPE_KEY) === TokenType.User
-              ? TokenType.User
-              : null,
-    )
 
     createEffect(() => {
         log.debug('Authentication state changed to:', AuthenticationState[authState()])
@@ -173,7 +139,6 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
 
             const onReady = (user: ClientEventMap['ready']) => {
                 log.info('Logged in as:', user)
-                setTokenType(user.type === UserType.ADMIN ? TokenType.Admin : TokenType.User)
                 setAuthState(AuthenticationState.LoggedIn)
             }
 
@@ -212,8 +177,6 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
 
             const onLogout = () => {
                 localStorage.removeItem(TOKEN_KEY)
-                localStorage.removeItem(TOKEN_TYPE_KEY)
-                setTokenType(null)
                 setAuthState(AuthenticationState.LoggedOut)
                 queryClient.clear()
 
@@ -254,9 +217,8 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
     const api: APIApi = {
         client,
         authState: authState,
-        tokenType: tokenType,
         login: async (id: number, password: string) => {
-            configureClientAuth(client, TokenType.User)
+            configureClientAuth(client)
             const credentials: LoginOptions = { id, password, clientName: API_CLIENT_NAME }
             await client.login(credentials)
 
@@ -264,25 +226,9 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             if (!token) throw new Error('Missing auth token after user login')
 
             localStorage.setItem(TOKEN_KEY, token)
-            localStorage.setItem(TOKEN_TYPE_KEY, TokenType.User)
 
             log.info('Got token!')
             log.info('Login successful')
-        },
-        adminLogin: async (key: CryptoKey) => {
-            configureClientAuth(client, TokenType.Admin)
-            // TODO: Support multiple admin accounts
-            const credentials: AdminAuthenticateOptions = { key, id: 0 }
-            await client.login(credentials)
-
-            const token = client.rest.token
-            if (!token) throw new Error('Missing auth token after admin login')
-
-            localStorage.setItem(TOKEN_KEY, token)
-            localStorage.setItem(TOKEN_TYPE_KEY, TokenType.Admin)
-
-            log.info('Got token!')
-            log.info('Admin login successful')
         },
         resumeSession: async () => {
             const token = localStorage.getItem(TOKEN_KEY)
@@ -290,8 +236,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
 
             setAuthState(AuthenticationState.Loading)
 
-            const type = getTokenType()
-            const authenticator = configureClientAuth(client, type)
+            const authenticator = configureClientAuth(client)
             authenticator.setToken(token)
 
             try {

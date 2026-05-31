@@ -52,7 +52,6 @@ abstract class ApplicationTest {
             }
 
             register(RATE_LIMIT_ADMIN, mock)
-            register(RATE_LIMIT_ADMIN_AUTH, mock)
             register(RATE_LIMIT_AUTH, mock)
             register(RATE_LIMIT_ENROLLMENTS, mock)
             register(RATE_LIMIT_ENROLLMENTS_SUBJECT_MEMBERS, mock)
@@ -79,11 +78,6 @@ abstract class ApplicationTest {
                         provide<EnrollmentSelectionService> { TestEnrollmentSelectionService() }
                         provide<SubjectService> { TestSubjectService() }
                         provide<GroupService> { TestGroupService() }
-                        provide<AdminAuthService> {
-                            mockk<AdminAuthService>(relaxed = true).apply {
-                                every { permitsIP(any()) } returns true
-                            }
-                        }
                     }
 
                     mockRateLimits()

@@ -18,17 +18,9 @@ import th.ac.bodin2.electives.db.Database
 import th.ac.bodin2.electives.db.models.*
 import th.ac.bodin2.electives.proto.api.GroupType
 import th.ac.bodin2.electives.proto.api.SubjectTag
-import java.security.KeyPair
-import java.security.KeyPairGenerator
-import java.util.*
-
-val adminKeyPair: KeyPair = KeyPairGenerator.getInstance("RSA").apply {
-    initialize(2048)
-}.generateKeyPair()
 
 fun setupTestEnvironment() {
     System.setProperty("ADMIN_ENABLED", "1")
-    System.setProperty("ADMIN_PUBLIC_KEY", Base64.getEncoder().encodeToString(adminKeyPair.public.encoded))
     System.setProperty("APP_ENV", "test")
 }
 

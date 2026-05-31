@@ -80,7 +80,7 @@ suspend fun Application.module() {
         usersController,
     )
 
-    if (isAdminAvailable) {
+    if (isAdminEnabled) {
         controllers += adminController
     }
 
@@ -124,11 +124,10 @@ fun Application.provideDependencies() = dependencies {
     provide<SubjectService> { SubjectServiceImpl() }
     provide<GroupService> { GroupServiceImpl() }
     provide<EnrollmentSelectionService> { EnrollmentSelectionServiceImpl(resolve<NotificationsService>()) }
-
-    if (isAdminEnabled) {
-        provideAdminAuthService()
-    }
 }
+
+val isAdminEnabled: Boolean
+    get() = !env("ADMIN_ENABLED").isNullOrEmpty()
 
 inline fun <reified T : Any> DependencyRegistry.contains() =
     contains(DependencyKey<T>())

@@ -1,11 +1,11 @@
-import { createFileRoute, type ErrorRouteComponent, Outlet } from '@tanstack/solid-router'
-import { Match, Switch } from 'solid-js'
-import { UnauthorizedError } from '~/api'
+import { createFileRoute, type ErrorRouteComponent, Outlet, useRouter } from '@tanstack/solid-router'
+import { createEffect, Match, on, Switch } from 'solid-js'
+import { UnauthorizedError, UserType } from '~/api'
 import DashboardLayout from '~/components/layout/DashboardLayout'
 import { getUserNav } from '~/components/layout/navEntries'
 import LoadingPage from '~/components/pages/LoadingPage'
 import { useLogoutRedirect } from '~/hooks/useAuthRedirect'
-import { AuthenticationState, TokenType, useAPI } from '~/providers/APIProvider'
+import { AuthenticationState, useAPI } from '~/providers/APIProvider'
 import { nonNull } from '~/utils'
 import { catchErrors } from '~/utils/error-component'
 
@@ -27,10 +27,15 @@ function AuthenticatedLayout() {
     const api = useAPI()
 
     useUserLogoutRedirect()
+    useAdminCrossRedirect()
 
     return (
         <Switch>
-            <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.User}>
+            <Match
+                when={
+                    api.authState() === AuthenticationState.LoggedIn && nonNull(api.client.user).type !== UserType.ADMIN
+                }
+            >
                 <DashboardLayout entries={getUserNav(nonNull(api.client.user).type)}>
                     <Outlet />
                 </DashboardLayout>
@@ -47,4 +52,21 @@ function UnauthorizedRedirect() {
     return null
 }
 
-const useUserLogoutRedirect = () => useLogoutRedirect('/login', TokenType.User)
+const useUserLogoutRedirect = () => useLogoutRedirect('/login')
+
+/**
+ * Redirect admins who land on a user-area route to the management dashboard.
+ */
+function useAdminCrossRedirect() {
+    const api = useAPI()
+    const navigate = useRouter().navigate
+
+    createEffect(
+        on(api.authState, state => {
+            if (state !== AuthenticationState.LoggedIn) return
+            if (nonNull(api.client.user).type === UserType.ADMIN) {
+                navigate({ to: '/manage', replace: true })
+            }
+        }),
+    )
+}

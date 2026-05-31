@@ -89,12 +89,6 @@ private fun Application.configureRateLimits() {
             requestKey(authenticated)
         }
 
-        register(RATE_LIMIT_ADMIN_AUTH) {
-            // Includes creating a challenge
-            rateLimiter(limit = 10, refillPeriod = 1.minutes)
-            requestKey { it.request.origin.remoteAddress }
-        }
-
         register(RATE_LIMIT_AUTH) {
             rateLimiter(limit = 10, refillPeriod = 1.minutes)
             requestKey { it.request.origin.remoteAddress }
@@ -139,7 +133,6 @@ private fun Application.configureRateLimits() {
 }
 
 val RATE_LIMIT_ADMIN = RateLimitName("admin")
-val RATE_LIMIT_ADMIN_AUTH = RateLimitName("admin.auth")
 val RATE_LIMIT_AUTH = RateLimitName("auth")
 val RATE_LIMIT_ENROLLMENTS = RateLimitName("enrollments")
 val RATE_LIMIT_ENROLLMENTS_SUBJECT_MEMBERS = RateLimitName("enrollments.subject.members")

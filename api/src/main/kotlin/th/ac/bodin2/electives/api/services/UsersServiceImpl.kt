@@ -4,6 +4,7 @@ import io.ktor.server.plugins.di.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.dao.load
 import org.jetbrains.exposed.v1.dao.with
@@ -14,6 +15,7 @@ import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.annotations.Transactional
+import th.ac.bodin2.electives.api.isAdminEnabled
 import th.ac.bodin2.electives.api.services.UsersServiceImpl.Config
 import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.db.*
@@ -29,6 +31,7 @@ import java.time.LocalDateTime
 import java.util.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -39,6 +42,10 @@ fun DependencyRegistry.provideUsersService() = provide<UsersService> {
                 (env("USER_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.days).inWholeSeconds,
             minimumSessionCreationTime =
                 (env("USER_SESSION_CREATION_MINIMUM_TIME")?.toIntOrNull()?.milliseconds ?: 500.milliseconds),
+            adminSessionDurationSeconds =
+                (env("ADMIN_SESSION_DURATION")?.toIntOrNull()?.seconds ?: 1.hours).inWholeSeconds,
+            adminMinimumSessionCreationTime =
+                (env("ADMIN_SESSION_CREATION_MINIMUM_TIME")?.toIntOrNull()?.milliseconds ?: 3.seconds),
         ),
         argon2 = resolve<Argon2>()
     )
@@ -53,14 +60,54 @@ fun userSearchCondition(query: String): Op<Boolean> {
 }
 
 class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
-    class Config(val sessionDurationSeconds: Long, val minimumSessionCreationTime: Duration)
+    class Config(
+        val sessionDurationSeconds: Long,
+        val minimumSessionCreationTime: Duration,
+        val adminSessionDurationSeconds: Long = sessionDurationSeconds,
+        val adminMinimumSessionCreationTime: Duration = minimumSessionCreationTime,
+    )
 
     private val _sessionCreationFlow = MutableSharedFlow<Int>()
     override val sessionCreationFlow: SharedFlow<Int> = _sessionCreationFlow.asSharedFlow()
 
+    init {
+        bootstrapAdminReset()
+    }
+
+    /**
+     * If `ADMIN_ENABLED` is set and `ADMIN_RESET` holds a non-blank value,
+     * (re)creates the default admin user (id 0) with the password supplied in `ADMIN_RESET`.
+     * 
+     * Any existing user 0 is deleted first.
+     */
+    private fun bootstrapAdminReset() {
+        val resetPassword = env("ADMIN_RESET")
+        if (!isAdminEnabled || resetPassword.isNullOrBlank()) return
+
+        @OptIn(Transactional::class)
+        runBlocking {
+            try {
+                deleteUser(DEFAULT_ADMIN_ID)
+            } catch (_: EntityNotFoundException) {}
+
+            createAdmin(
+                UsersService.AdminInsert(
+                    UsersService.UserData(
+                        id = DEFAULT_ADMIN_ID,
+                        firstName = "Admin",
+                        password = resetPassword,
+                    )
+                )
+            )
+        }
+
+        logger.warn("ADMIN_RESET applied, default admin user (id=$DEFAULT_ADMIN_ID) recreated. You should redeploy without the environment variable set!")
+    }
+
     companion object {
         private const val PAGE_SIZE = 50
         private const val TOKEN_SIZE = 32
+        private const val DEFAULT_ADMIN_ID = 0
         private val secureRand = SecureRandom()
         private val sha256Digest = ThreadLocal.withInitial { MessageDigest.getInstance("SHA-256") }
         private val logger = LoggerFactory.getLogger(UsersServiceImpl::class.java)
@@ -318,14 +365,9 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             .toList()
     }
 
-    // @TODO: Test this
     @Transactional
     override suspend fun createAdmin(insert: UsersService.AdminInsert) = dbQuery {
-        // Admins may have no password (authenticated via RSA key), so a blank password maps to a
-        // null hash and password requirements are not enforced. Hashing is synchronous here because
-        // this method owns its (rare, startup-time) transaction.
-        val rawPassword = insert.user.password
-        val passwordHash = if (rawPassword.isBlank()) null else argon2.hash(rawPassword.toCharArray())
+        val passwordHash = argon2.hash(insert.user.password.assertPasswordRequirements().toCharArray())
 
         val user = createUser(
             id = insert.user.id,
@@ -337,9 +379,7 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             avatarUrl = insert.user.avatarUrl,
         )
 
-        Admin.new(user.id.value) {
-            publicKey = Base64.getEncoder().encodeToString(insert.publicKey.encoded)
-        }
+        Admin.new(user.id.value) {}
     }
 
     private suspend fun <T : UsersService.UserInsert> insertUserBatch(inserts: List<T>): List<PreparedUserInsert<T>> {
@@ -601,8 +641,17 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
     }
 
     @Transactional
-    override suspend fun createSession(id: Int, password: String, aud: String): String =
-        withMinimumDelay(config.minimumSessionCreationTime) {
+    override suspend fun createSession(id: Int, password: String, aud: String): String {
+        val isAdmin = dbQuery {
+            runCatching { getUserType(id) }.getOrNull()
+        } == UserType.ADMIN
+
+        val minimumDelay =
+            if (isAdmin) config.adminMinimumSessionCreationTime else config.minimumSessionCreationTime
+        val sessionDurationSeconds =
+            if (isAdmin) config.adminSessionDurationSeconds else config.sessionDurationSeconds
+
+        return withMinimumDelay(minimumDelay) {
             val password = password.assertPasswordRequirements()
 
             val aud = aud.trim().apply {
@@ -623,13 +672,14 @@ class UsersServiceImpl(val config: Config, val argon2: Argon2) : UsersService {
             require(argon2.verifyAsync(passwordHash, password.toCharArray())) { "Invalid password for user: $id" }
 
             // Persist the new session token in a second short transaction
-            val token = dbQuery { insecurelyCreateSessionWithoutValidation(id) }
+            val token = dbQuery { insecurelyCreateSessionWithoutValidation(id, sessionDurationSeconds) }
 
             _sessionCreationFlow.emit(id)
             logger.debug("New session created, user: $id, aud: $aud")
 
             token
         }
+    }
 
     @Transactional
     override fun insecurelyCreateSessionWithoutValidation(id: Int, customDurationSeconds: Long?): String {

@@ -22,11 +22,9 @@ import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.NothingToUpdateException
 import th.ac.bodin2.electives.api.ADMIN_AUTHENTICATION
 import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN
-import th.ac.bodin2.electives.api.RATE_LIMIT_ADMIN_AUTH
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.asBadRequest
 import th.ac.bodin2.electives.api.services.*
-import th.ac.bodin2.electives.api.services.AdminAuthService.CreateSessionResult
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.Student
@@ -45,7 +43,6 @@ val adminController = controller {
     val groupService: GroupService by dependencies
 
     listOf(
-        adminAuthController,
         AdminUsersController(usersService),
         AdminEnrollmentsController(enrollmentService, groupService),
         AdminEnrollmentsSubjectsController(enrollmentService),
@@ -64,45 +61,6 @@ val adminController = controller {
                     }
 
                     call.response.status(HttpStatusCode.NotFound)
-                }
-            }
-        }
-    }
-}
-
-val adminAuthController = controller {
-    val adminAuthService: AdminAuthService by dependencies
-
-    routing {
-        rateLimit(RATE_LIMIT_ADMIN_AUTH) {
-            get<Admin.Challenge> {
-                call.respond(AdminService.ChallengeResponse(challenge = adminAuthService.newChallenge()))
-            }
-
-            post<Admin.Auth> {
-                val req = call.parseOrNull<AuthService.AuthenticateRequest>() ?: throw notFound()
-
-                try {
-                    when (val result = adminAuthService.createSession(
-                        id = req.id,
-                        signature = req.password,
-                        aud = req.client_name,
-                        ip = call.request.origin.remoteAddress,
-                    )) {
-                        is CreateSessionResult.Success -> call.respond(AuthService.AuthenticateResponse(token = result.token))
-
-                        is CreateSessionResult.NoChallenge,
-                        is CreateSessionResult.IPNotAllowed,
-                        is CreateSessionResult.UserNotAdmin -> throw notFound()
-
-                        is CreateSessionResult.InvalidSignature -> throw unauthorized()
-                    }
-
-                } catch (e: ClientException) {
-                    throw e
-                } catch (e: Exception) {
-                    application.log.error("Attempt create admin session failed: ${e.message}")
-                    throw unauthorized()
                 }
             }
         }
@@ -853,12 +811,6 @@ private val Long.secondsToUTCDateTime: LocalDateTime
 @Suppress("UNUSED")
 @Resource("/admin")
 private class Admin {
-    @Resource("challenge")
-    class Challenge(val parent: Admin)
-
-    @Resource("auth")
-    class Auth(val parent: Admin)
-
     @Resource("users")
     class Users(val parent: Admin) {
         // @TODO: Add route tests

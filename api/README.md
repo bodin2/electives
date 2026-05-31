@@ -61,59 +61,24 @@ The server can be configured using the following environment variables:
 | `NOTIFICATIONS_UPDATE_MAX_SUBSCRIPTIONS_PER_CLIENT` | Maximum amount of subjects a client can subscribe to                                                                        | `5`                                                                                                                                                                                                                        |
 | `NOTIFICAIONS_BULK_UPDATE_INTERVAL`                 | Time in milliseconds between each bulk update notifications                                                                 | `5000` (5 seconds)                                                                                                                                                                                                         |
 | `IS_BEHIND_PROXY`                                   | Set to non-empty value if running behind a proxy (eg. load balancer)                                                        | (None)                                                                                                                                                                                                                     |
-| `ADMIN_ENABLED`                                     | Set to non-empty value to enable dangerous admin endpoints for maintenance                                                  | (None)<br>**Disabled by default for safety.**                                                                                                                                                                              |
-| `ADMIN_ALLOWED_IPS`                                 | Comma-separated list of CIDR ranges allowed to access admin endpoints                                                       | `127.0.0.0/8, ::1/128`<br>Setting to an empty value will use the default. To allow any IP, set to `*` **(dangerous!)**.                                                                                                    |
-| `ADMIN_PUBLIC_KEY`                                  | A base64-encoded X.509 SubjectPublicKeyInfo RSA public key without PEM headers/footers                                      | (None)<br>**Required if `ADMIN_ENABLED` is set.**                                                                                                                                                                          |
-| `ADMIN_CHALLENGE_TIMEOUT`                           | Duration of admin authentication challenge in seconds                                                                       | `60` (1 minute)                                                                                                                                                                                                            |
-| `ADMIN_SESSION_DURATION`                            | Duration of admin sessions in seconds                                                                                       | `3600` (1 hour)                                                                                                                                                                                                            |
+| `ADMIN_ENABLED`                                     | Set to non-empty value to enable admin endpoints                                                                            | (None)<br>**Disabled by default for safety.**                                                                                                                                                                              |
+| `ADMIN_SESSION_DURATION`                            | Duration of admin sessions in seconds.                                                                                      | `3600` (1 hour)                                                                                                                                                                                                            |
 | `ADMIN_SESSION_CREATION_MINIMUM_TIME`               | Minimum time in milliseconds for creating new admin sessions. Prevents spam and timing attacks.                             | `3000` (3 seconds)                                                                                                                                                                                                         |
-| `ADMIN_RESET`                                       | Set to a non-empty value to reset the initial admin user. Use if private key was compromised.                               | (None)                                                                                                                                                                                                                     |
+| `ADMIN_RESET`                                       | See the [Provisioning the Default Admin](#provisioning-the-default-admin) section.                                          | (None)                                                                                                                                                                                                                     |
 
 ## Admin Authentication
 
-The admin authentication system uses RSA key pairs to authenticate admin users.
-To enable admin endpoints, set the `ADMIN_ENABLED` environment variable to a non-empty value and provide a valid RSA public key in the `ADMIN_PUBLIC_KEY` environment variable.
+Admin users authenticate with the standard `POST /auth` endpoint using their user ID and password, exactly like students and teachers.
+A successful login returns a session token, send `HEAD /admin` with the token to verify if the session is valid.
 
-On initial database setup, a user with the ID `0` will be created as an admin user.
-This user will not have a password and cannot be authenticated using regular user authentication methods. Instead, it must be authenticated using the matching RSA private key.
+To enable the admin endpoints, set the `ADMIN_ENABLED` environment variable to a non-empty value.
+While enabled, admin sessions use `ADMIN_SESSION_DURATION` and `ADMIN_SESSION_CREATION_MINIMUM_TIME` instead of the regular `USER_SESSION_*` values.
 
-### Admin Key Generation
+### Provisioning the Default Admin
 
-To generate an RSA key pair for admin authentication, you can use the following OpenSSL commands:
+To create (or reset) the default admin user, set `ADMIN_RESET` to the desired password and start the server with `ADMIN_ENABLED` set.
+On startup the server deletes user `0` if it already exists and recreates it as an admin with the supplied password. **The password must be at least 4 characters once trimmed.**
 
-```bash
-# Generate a 2048-bit RSA private key and save it to private_key.pem
-openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
-# Extract the public key from the private key and save it to public_key.pem
-openssl rsa -pubout -in private_key.pem -out public_key.pem
-```
-
-#### Windows (PowerShell)
-
-To extract the base64-encoded public key string on Windows using PowerShell, run:
-
-```powershell
-# Read the public key file, remove PEM headers/footers, and concatenate the lines
-(Get-Content -Raw -Path public_key.pem) -replace '-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s' -join ''
-```
-
-#### Unix-like Systems (Linux, macOS)
-
-To extract the base64-encoded public key string on Unix-like systems, run:
-
-```bash
-# Read the public key file, remove PEM headers/footers, and concatenate the lines
-awk 'NF {sub(/-----BEGIN PUBLIC KEY-----/, ""); sub(/-----END PUBLIC KEY-----/, ""); printf "%s", $0}' public_key.pem
-```
-
----
-
-You can copy the resulting string and set it as the value of the `ADMIN_PUBLIC_KEY` environment variable.
-
-> [!IMPORTANT]  
-> **Keep the generated private key (`private_key.pem`) secure**, as it will be used to authenticate and receive admin
-> session tokens.
->
-> If the private key is compromised, a new key pair should be generated immediately, and the `ADMIN_PUBLIC_KEY`
-> environment variable should be updated with the new public key.
-> Additionally, restart the server with `ADMIN_RESET` set to a non-empty value to invalidate an existing session and require re-authentication with the new key.
+> [!IMPORTANT]
+> You must **unset `ADMIN_RESET` after a successful startup.**
+> Leaving it set will cause the default admin user to be deleted and recreated on every restart, invalidating any sessions.

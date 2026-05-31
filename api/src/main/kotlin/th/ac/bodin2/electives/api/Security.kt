@@ -4,9 +4,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.di.*
-import th.ac.bodin2.electives.api.services.AdminAuthService
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.services.isAdminAvailable
 import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
@@ -32,21 +30,15 @@ class AdminPrincipal(val id: Int)
 
 fun Application.configureSecurity() {
     val usersService: UsersService by dependencies
-    val app = this
 
     install(Authentication) {
         bearer(USER_AUTHENTICATION) {
             authenticate { tokenCredential -> usersService.toPrincipal(tokenCredential.token, this) }
         }
 
-        if (app.isAdminAvailable) {
+        if (isAdminEnabled) {
             bearer(ADMIN_AUTHENTICATION) {
-                val adminAuthService: AdminAuthService by app.dependencies
                 authenticate { tokenCredential ->
-                    if (!adminAuthService.permitsIP(this.request.origin.remoteAddress)) {
-                        return@authenticate null
-                    }
-
                     val user = usersService.toPrincipal(tokenCredential.token, this)
                     if (user == null || user.type != UserType.ADMIN) return@authenticate null
 
