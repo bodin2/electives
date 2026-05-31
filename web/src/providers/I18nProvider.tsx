@@ -50,6 +50,8 @@ async function fetchDictionary(locale: Locale) {
 
 const I18nProvider: ParentComponent = props => {
     const [locale, setLocale] = createSignal<Locale>('en')
+    // Actually active/loaded locale
+    const [activeLocale, setActiveLocale] = createSignal<Locale>(locale())
 
     createRenderEffect(() => {
         const localStored = localStorage.getItem('locale') as Locale | null
@@ -103,6 +105,7 @@ const I18nProvider: ParentComponent = props => {
 
                 if (data) {
                     log.info('Loaded i18n dictionary for locale:', locale())
+                    setActiveLocale(locale())
                     setValue({
                         ready: true,
                         string: i18n.chainedTranslator(data, tr) as ChainedTranslatorWithJSX<Dict, string>,
@@ -114,7 +117,7 @@ const I18nProvider: ParentComponent = props => {
 
     const [value, setValue] = createStore<I18nApi>({
         ready: false,
-        locale,
+        locale: activeLocale,
         setLocale,
         string: undefined as unknown as I18nApi['string'],
         t: tr,
