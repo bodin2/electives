@@ -68,7 +68,8 @@ export default function SubjectList(props: SubjectListProps) {
             const teacherSubjects = props.subjects.filter(s =>
                 teachersOf(props.enrollment, s)?.some(t => t.id === u.id),
             )
-            grouped.unshift([string.MY_SUBJECTS(), teacherSubjects])
+
+            if (teacherSubjects.length > 0) grouped.unshift([string.MY_SUBJECTS(), teacherSubjects])
         }
 
         return grouped
