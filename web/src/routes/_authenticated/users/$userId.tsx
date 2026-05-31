@@ -1,7 +1,7 @@
 import TicketIcon from '@iconify-icons/mdi/ticket'
 import { createQuery } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
-import { createRenderEffect, onCleanup } from 'solid-js'
+import { createRenderEffect, onCleanup, Show } from 'solid-js'
 import { NotFoundError, UnauthorizedError } from '~/api'
 import IconLabel from '~/components/IconLabel'
 import Page from '~/components/Page'
@@ -58,19 +58,21 @@ function RouteComponent() {
 
     return (
         <Page name={title()} allowBacking leading={null} trailing={null}>
-            <VStack gap={16}>
-                <div class="padded">
-                    <UserProfile />
-                </div>
-                <VStack gap={0}>
-                    <h1 class="padded no-block-padding text-primary m3-title-medium">
-                        <IconLabel icon={TicketIcon} text={string.SELECTIONS()} />
-                    </h1>
-                    <SuspenseLoadingPage debugName="StudentInfoSelections">
-                        <StudentSelectionsTab userId={params().userId} />
-                    </SuspenseLoadingPage>
+            <Show when={loadedUser()}>
+                <VStack gap={16}>
+                    <div class="padded">
+                        <UserProfile />
+                    </div>
+                    <VStack gap={0}>
+                        <h1 class="padded no-block-padding text-primary m3-title-medium">
+                            <IconLabel icon={TicketIcon} text={string.SELECTIONS()} />
+                        </h1>
+                        <SuspenseLoadingPage debugName="StudentInfoSelections">
+                            <StudentSelectionsTab userId={params().userId} />
+                        </SuspenseLoadingPage>
+                    </VStack>
                 </VStack>
-            </VStack>
+            </Show>
         </Page>
     )
 }
