@@ -157,7 +157,7 @@ function RouteComponent() {
                     tabs={[
                         { label: string.GROUP(), value: 'info' },
                         { label: string.MEMBERS_LIST(), value: 'members' },
-                        { label: string.MANAGER_TEACHERS(), value: 'managers' },
+                        { label: string.MANAGERS(), value: 'managers' },
                     ]}
                 />
             </Show>
