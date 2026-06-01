@@ -7,9 +7,9 @@ import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import { studentsQueryOptions, teachersQueryOptions } from '~/queries/users'
 import { debounce } from '~/utils'
-import PaginatedUserList from '../../admin/PaginatedUserList'
 import { Button } from '../../Button'
 import { Dialog } from '../../Dialog'
+import PaginatedUserList from '../../users/PaginatedUserList'
 import type { User } from '~/api'
 
 export interface AddUserDialogProps {

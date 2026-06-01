@@ -5,10 +5,10 @@ import { Icon } from 'm3-solid/src'
 import { For, type JSX, Show } from 'solid-js'
 import { type Group, GroupType } from '~/api'
 import { nonNull } from '~/utils'
-import { GROUP_TYPE_ICONS } from './admin/GroupItem'
 import Badge from './Badge'
 import styles from './Badges.module.css'
 import { Button } from './Button'
+import { GROUP_TYPE_ICONS } from './groups/GroupItem'
 import type { IconifyIcon } from '@iconify/types'
 
 export interface GroupBadgeProps {

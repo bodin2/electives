@@ -8,8 +8,8 @@ import { debounce, nonNull } from '~/utils'
 import { Button } from '../Button'
 import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { HStack, VStack } from '../Stack'
-import { UserListItem } from '../users/UserListItem'
 import styles from './PaginatedUserList.module.css'
+import { UserListItem } from './UserListItem'
 import type { User } from '~/api'
 
 export interface PaginatedUserListHandle {

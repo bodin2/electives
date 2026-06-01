@@ -1,7 +1,7 @@
 import { createQuery } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { NotFoundError, UnauthorizedError } from '~/api/types'
-import GroupList from '~/components/admin/GroupList'
+import GroupList from '~/components/groups/GroupList'
 import Page from '~/components/Page'
 import NotFoundPage from '~/components/pages/NotFoundPage'
 import { VStack } from '~/components/Stack'
