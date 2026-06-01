@@ -65,7 +65,7 @@ const configureClientAuth = (client: APIClient): Authenticator<unknown> => {
 
 export const createClient = () => {
     const baseURL = API_BASE_URL
-    const rest = new RESTClient({ baseURL })
+    const rest = new RESTClient({ baseURL, timeout: 10000 })
     const gateway = new Gateway({
         url: gatewayURLFromBaseURL(baseURL),
         maxReconnectAttempts: 3,
