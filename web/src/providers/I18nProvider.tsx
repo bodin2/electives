@@ -89,7 +89,7 @@ const I18nProvider: ParentComponent = props => {
 
     const tr = i18n.translator(() => dictQuery.data, resolveTemplateWithJSX) as i18n.Translator<Dict, string>
 
-    createEffect(
+    createRenderEffect(
         on(
             () => [dictQuery.data, dictQuery.error, dictQuery.failureCount] as const,
             ([data, error, failureCount]) => {

@@ -8,7 +8,6 @@ import {
     NavigationRailToggle,
 } from 'm3-solid/src'
 import {
-    createEffect,
     createRenderEffect,
     createSignal,
     For,
@@ -118,17 +117,17 @@ function RailShell(props: { entries: NavItem[]; children: JSXElement }) {
         ),
     )
 
-    createEffect(() => {
+    createRenderEffect(() => {
         if (!navOpen() && !modalNav()) return
         pageData.setTopAppBarElevated(navOpen())
     })
 
-    createEffect(() => {
+    createRenderEffect(() => {
         if (modalNav()) pageData.setFocusable(!navOpen())
         else pageData.setFocusable(true)
     })
 
-    createEffect(() => {
+    createRenderEffect(() => {
         setNavOpen(!modalNav())
     })
 

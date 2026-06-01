@@ -1,6 +1,6 @@
 import MagnifyingIcon from '@iconify-icons/mdi/magnify'
 import { ListItem, mergeClasses, TextField } from 'm3-solid/src'
-import { type Component, createEffect, For, type JSXElement, Show, Suspense } from 'solid-js'
+import { type Component, createRenderEffect, For, type JSXElement, Show, Suspense } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useI18n } from '~/providers/I18nProvider'
 import { useScrollData } from '~/providers/ScrollDataProvider'
@@ -62,7 +62,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
         total: 0,
     })
 
-    createEffect(() => {
+    createRenderEffect(() => {
         const d = props.data
         if (d) {
             setStore({
@@ -90,7 +90,7 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
         if (props.page > 1) props.onPagePreload?.(props.page - 1)
     }
 
-    createEffect(() => {
+    createRenderEffect(() => {
         props.ref?.({
             refresh: () => props.onRefresh?.(),
             onUserRemove: userId => {

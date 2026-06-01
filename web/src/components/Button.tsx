@@ -1,6 +1,6 @@
 import { mergeRefs } from '@solid-primitives/refs'
 import { type ButtonProps, LoadingIndicator, Button as M3Button, mergeClasses } from 'm3-solid/src'
-import { createEffect, createSignal, type JSX, Show, splitProps } from 'solid-js'
+import { createRenderEffect, createSignal, type JSX, Show, splitProps } from 'solid-js'
 import { useI18n } from '~/providers/I18nProvider'
 import styles from './Button.module.css'
 
@@ -20,7 +20,7 @@ export function Button(
 
     const [loading, setLoading] = createSignal(local.loading ?? false)
     const isLoadingStateControlled = () => local.loading !== undefined
-    createEffect(() => {
+    createRenderEffect(() => {
         // Let the state be controlled from outside if a loading prop is provided
         if (local.loading !== undefined) setLoading(local.loading)
     })

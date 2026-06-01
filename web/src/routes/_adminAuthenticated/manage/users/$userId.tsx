@@ -93,7 +93,7 @@ function RouteComponent() {
         displayContext.setEdited(modifiedFields().size > 0)
     })
 
-    createEffect(
+    createRenderEffect(
         on(
             () => loadedUser(),
             u => {

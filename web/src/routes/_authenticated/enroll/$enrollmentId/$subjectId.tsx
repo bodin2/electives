@@ -1,7 +1,7 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
-import { createEffect, createSignal, Match, Show, Switch } from 'solid-js'
+import { createRenderEffect, createSignal, Match, Show, Switch } from 'solid-js'
 import { NotFoundError, type User } from '~/api'
 import AddStudentToSubjectButton from '~/components/buttons/AddStudentToSubjectButton'
 import DynamicEnrollButton from '~/components/buttons/DynamicEnrollButton'
@@ -90,7 +90,7 @@ function RouteComponent() {
     const teachers = () => membersQuery.data?.teachers ?? []
     const selectedSubject = () => selectionsQuery.data?.get(enrollmentId())
 
-    createEffect(() => {
+    createRenderEffect(() => {
         enrollment.initializeCounts(enrollmentId(), client.enrollments.resolveAllEnrolledCounts(enrollmentId()))
     })
 

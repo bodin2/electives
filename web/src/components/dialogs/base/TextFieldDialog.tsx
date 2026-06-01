@@ -1,5 +1,5 @@
 import { TextField, TextFieldMultiline, type TextFieldProps } from 'm3-solid/src'
-import { createEffect, createMemo, createSignal, Show } from 'solid-js'
+import { createMemo, createRenderEffect, createSignal, Show } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
 import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../../Button'
@@ -25,7 +25,7 @@ export default function TextFieldDialog(props: TextFieldDialogProps) {
     const [value, setValue] = createSignal(props.initialValue ?? '')
     const [error, setError] = createSignal<string | boolean | null>(null)
 
-    createEffect(() => {
+    createRenderEffect(() => {
         if (props.open) {
             const initial = props.initialValue ?? ''
             setValue(initial)

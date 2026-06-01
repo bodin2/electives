@@ -1,5 +1,5 @@
 import { createQuery } from '@tanstack/solid-query'
-import { createEffect, createMemo, For, type JSXElement, Show } from 'solid-js'
+import { createMemo, createRenderEffect, For, type JSXElement, Show } from 'solid-js'
 import { useAPI } from '~/providers/APIProvider'
 import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
 import { enrollmentsQueryOptions } from '~/queries/enrollments'
@@ -28,7 +28,7 @@ export default function StudentSelectionsTab(props: StudentSelectionsTabProps) {
         return { selections: selectionsQuery.data, enrollments: enrollmentsQuery.data }
     }
 
-    createEffect(() => {
+    createRenderEffect(() => {
         const d = data()
         if (!d) return
 

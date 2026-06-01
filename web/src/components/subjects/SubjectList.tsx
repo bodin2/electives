@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, type JSX, Show } from 'solid-js'
+import { createMemo, createRenderEffect, createSignal, type JSX, Show } from 'solid-js'
 import { useAPI } from '~/providers/APIProvider'
 import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
 import { useI18n } from '~/providers/I18nProvider'
@@ -31,7 +31,7 @@ export default function SubjectList(props: SubjectListProps) {
     const { string } = useI18n()
     const [query, setQuery] = createSignal('')
 
-    createEffect(() => {
+    createRenderEffect(() => {
         if (props.enrollment) {
             enrollment.initializeCounts(
                 props.enrollment.id,

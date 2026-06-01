@@ -1,6 +1,6 @@
 import MinusCircleIcon from '@iconify-icons/mdi/minus-circle'
 import { Icon } from 'm3-solid/src'
-import { createEffect } from 'solid-js'
+import { createRenderEffect } from 'solid-js'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import { VStack } from '../Stack'
@@ -16,7 +16,7 @@ export default function UnenrollDialog(props: {
     const api = useAPI()
     const { string } = useI18n()
 
-    createEffect(() => {
+    createRenderEffect(() => {
         // Close the dialog once the state is invalidated
         if (!props.selectedSubject && props.open) {
             props.onClose(true)

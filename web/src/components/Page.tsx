@@ -1,4 +1,4 @@
-import { createEffect, type JSX, type JSXElement, onCleanup, onMount, splitProps } from 'solid-js'
+import { createRenderEffect, type JSX, type JSXElement, onCleanup, onMount, splitProps } from 'solid-js'
 import { usePageData } from '~/providers/PageProvider'
 import { SuspenseLoadingPage } from './pages/LoadingPage'
 import { VStack } from './Stack'
@@ -52,7 +52,7 @@ export default function Page(props: PageProps) {
         })
     })
 
-    createEffect(() => {
+    createRenderEffect(() => {
         // so ErrorPage works without PageProvider
         if (!pageData) return
 

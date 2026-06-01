@@ -3,7 +3,7 @@ import { useRouteContext } from '@tanstack/solid-router'
 import {
     type Accessor,
     createContext,
-    createEffect,
+    createRenderEffect,
     createSignal,
     on,
     onCleanup,
@@ -113,11 +113,11 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
 
     const [authState, setAuthState] = createSignal(AuthenticationState.Loading)
 
-    createEffect(() => {
+    createRenderEffect(() => {
         log.debug('Authentication state changed to:', AuthenticationState[authState()])
     })
 
-    createEffect(() => {
+    createRenderEffect(() => {
         ctx().authState.then(state => {
             log.debug('Syncing router auth state:', AuthenticationState[state])
             setAuthState(state)
@@ -133,7 +133,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
         })
     }
 
-    createEffect(
+    createRenderEffect(
         on(authState, state => {
             if (state === AuthenticationState.NetworkError) return
 

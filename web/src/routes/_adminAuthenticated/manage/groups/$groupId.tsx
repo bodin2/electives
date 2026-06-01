@@ -5,7 +5,7 @@ import SwapHorizontalIcon from '@iconify-icons/mdi/swap-horizontal'
 import { createQuery, keepPreviousData, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { TextField } from 'm3-solid/src'
-import { createEffect, createMemo, createSignal, For, Match, Show, Switch } from 'solid-js'
+import { createMemo, createRenderEffect, createSignal, For, Match, Show, Switch } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { ConflictError, GroupType, NotFoundError, type User } from '~/api'
 import PaginatedUserList, { type PaginatedUserListHandle } from '~/components/admin/PaginatedUserList'
@@ -79,7 +79,7 @@ function RouteComponent() {
     const [parentId, setParentId] = createSignal<number | null>(null)
 
     // Reset local signals when group data changes
-    createEffect(() => {
+    createRenderEffect(() => {
         const t = groupQuery.data
         if (t) {
             setName(t.name)

@@ -1,7 +1,7 @@
 import FileDownloadIcon from '@iconify-icons/mdi/file-download-outline'
 import { createQuery, keepPreviousData } from '@tanstack/solid-query'
 import { useNavigate } from '@tanstack/solid-router'
-import { createEffect, createMemo, createSignal, For, type JSX, onCleanup, Show } from 'solid-js'
+import { createMemo, createRenderEffect, createSignal, For, type JSX, onCleanup, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useAPI } from '~/providers/APIProvider'
 import { useEnrollmentCounts } from '~/providers/EnrollmentCountsProvider'
@@ -55,7 +55,7 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
         }
     })
 
-    createEffect(() => {
+    createRenderEffect(() => {
         if (!ctx.enrollment) return
 
         const intervalId = setInterval(
@@ -69,7 +69,7 @@ export default function SubjectMembersTab(props: SubjectMembersTabProps) {
         onCleanup(() => clearInterval(intervalId))
     })
 
-    createEffect(prev => {
+    createRenderEffect(prev => {
         if (ctx.enrollment) {
             // Subscribe to version changes
             const v = counts.getVersion(ctx.enrollment.id)

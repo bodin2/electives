@@ -1,5 +1,5 @@
 import DeleteIcon from '@iconify-icons/mdi/delete-outline'
-import { createEffect, createSignal, For, on, Show } from 'solid-js'
+import { createRenderEffect, createSignal, For, on, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
@@ -93,7 +93,7 @@ export function SubjectEnrollmentSelector(props: {
 }) {
     const { string } = useI18n()
 
-    createEffect(
+    createRenderEffect(
         on([() => props.addedEnrollments, () => props.enrollment], ([addedEnrollments, enrollment]) => {
             if (addedEnrollments.length === 1 && !enrollment) {
                 props.setEnrollmentId(addedEnrollments[0].id)

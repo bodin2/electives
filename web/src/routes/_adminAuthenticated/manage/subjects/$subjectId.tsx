@@ -2,7 +2,7 @@ import Logger from '@bodin2/electives-common/Logger'
 import { SubjectTag } from '@bodin2/electives-common/proto/api'
 import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
-import { createEffect, createMemo, createSignal, Show } from 'solid-js'
+import { createMemo, createRenderEffect, createSignal, Show } from 'solid-js'
 import {
     type AdminSubjectPatch,
     ConflictError,
@@ -166,7 +166,7 @@ function RouteComponent() {
 
     const teachers = () => membersQuery.data?.teachers ?? []
 
-    createEffect(() => {
+    createRenderEffect(() => {
         const eid = enrollmentId()
         if (eid !== undefined) {
             enrollment.initializeCounts(eid, client.enrollments.resolveAllEnrolledCounts(eid))
@@ -215,7 +215,7 @@ function RouteComponent() {
         return teachers().map(t => t.id)
     }
 
-    createEffect(() => {
+    createRenderEffect(() => {
         const s = loadedSubject()
         if (s) setSubjectData(s.toJSON())
     })
