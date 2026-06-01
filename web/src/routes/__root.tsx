@@ -2,7 +2,7 @@ import { Title } from '@solidjs/meta'
 import { createRootRouteWithContext, Outlet, useRouteContext } from '@tanstack/solid-router'
 import { TanStackRouterDevtools } from '@tanstack/solid-router-devtools'
 import { Match, Show, Switch } from 'solid-js'
-import { NetworkErrorPage } from '~/components/pages/ErrorPage'
+import ErrorPage, { NetworkErrorPage } from '~/components/pages/ErrorPage'
 import { BaseSubjectDisplayContext, SubjectDisplayContextProvider } from '~/components/subjects/SubjectDisplayContext'
 import { BaseUserDisplayContext, UserDisplayContextProvider } from '~/components/users/UserDisplayContext'
 import APIProvider, { AuthenticationState, useAPI } from '~/providers/APIProvider'
@@ -20,6 +20,7 @@ export interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
     component: RootComponent,
+    errorComponent: ErrorPage,
 })
 
 function RootComponent() {

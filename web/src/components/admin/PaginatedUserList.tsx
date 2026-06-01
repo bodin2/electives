@@ -40,6 +40,8 @@ interface PaginatedUserListProps {
     trailing?: Component<{ user: User }>
     /** Custom component that renders at the top of the list. */
     listHeader?: Component
+    /** Custom component that renders inline with the user count, e.g. filter chips. */
+    filters?: Component
     /** Custom component that renders on the right side of the header. */
     headerRight?: Component
     /** IDs of users that should appear visually selected. */
@@ -120,14 +122,13 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
     return (
         <>
             <VStack gap={16} class={mergeClasses(styles.header, sd.scrolledVertical && styles.scrolled)}>
-                <Show when={props.onSearch}>
-                    <TextField
-                        leadingIcon={MagnifyingIcon}
-                        variant="filled"
-                        label={props.searchLabel}
-                        onInput={debounce(e => nonNull(props.onSearch)(e.target.value.trim() || undefined), 350)}
-                    />
-                </Show>
+                <TextField
+                    leadingIcon={MagnifyingIcon}
+                    variant="filled"
+                    label={props.searchLabel}
+                    disabled={!props.onSearch}
+                    onInput={debounce(e => nonNull(props.onSearch)(e.target.value.trim() || undefined), 350)}
+                />
                 <Show when={totalPages() > 1}>
                     <HStack alignVertical="center" alignHorizontal="center" gap={16}>
                         <Button
@@ -151,12 +152,15 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                         </Button>
                     </HStack>
                 </Show>
-                <HStack alignHorizontal="space-between" alignVertical="center">
-                    <Suspense fallback={<span class="m3-label-large">{string.LOADING()}</span>}>
-                        <Show when={props.data}>
-                            <p class="m3-label-large">{string.USERS_COUNT({ count: store.total })}</p>
-                        </Show>
-                    </Suspense>
+                <HStack alignHorizontal="space-between" alignVertical="center" wrap>
+                    <HStack alignVertical="center" wrap>
+                        <Suspense fallback={<span class="m3-label-large">{string.LOADING()}</span>}>
+                            <Show when={props.data}>
+                                <p class="m3-label-large">{string.USERS_COUNT({ count: store.total })}</p>
+                            </Show>
+                        </Suspense>
+                        {props.filters?.({})}
+                    </HStack>
                     {props.headerRight?.({})}
                 </HStack>
             </VStack>
