@@ -1,6 +1,18 @@
-import { type Component, createSignal, Match, Show, Switch } from 'solid-js'
+import {
+    type Component,
+    createContext,
+    createRenderEffect,
+    createSignal,
+    Match,
+    type ParentProps,
+    Show,
+    Switch,
+    useContext,
+} from 'solid-js'
+import { createStore } from 'solid-js/store'
 import { useTabPersistence } from '~/hooks/useTabPersistence'
 import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
 import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { VStack } from '../Stack'
 import StickyTabs from '../StickyTabs'
@@ -8,32 +20,73 @@ import StudentSelectionsTab from './StudentSelectionsTab'
 import TeacherSubjectsTab from './TeacherSubjectsTab'
 import UserBottomActions from './UserBottomActions'
 import UserDetailsTab from './UserDetailsTab'
-import { useUserDisplayContext } from './UserDisplayContext'
 import styles from './UserInfo.module.css'
-import type { Group, UserType } from '~/api'
+import type { Group, User, UserType } from '~/api'
+import type { UserData, UserPatchSetterKey } from './UserDisplayContext'
 
 export interface UserInfoProps {
+    user?: User
+    userData?: UserData
+    editable?: boolean
+    creating?: boolean
+    edited?: boolean
+    onEdit?: (field: string, value: unknown, patchKey?: UserPatchSetterKey) => Promise<void> | void
+    onSave?: () => Promise<void> | void
+    onDelete?: () => Promise<void> | void
     extraActions?: Component
     initialType?: UserType
     groups?: Group[]
     persistTab?: boolean
 }
 
+export interface UserInfoContext {
+    user?: User
+    userData?: UserData
+    editable?: boolean
+    creating?: boolean
+    edited?: boolean
+    onEdit?: (field: string, value: unknown, patchKey?: UserPatchSetterKey) => Promise<void> | void
+    onSave?: () => Promise<void> | void
+    onDelete?: () => Promise<void> | void
+}
+
+const UserInfoContext = createContext<UserInfoContext>(null as unknown as UserInfoContext)
+export const useUserInfoContext = () =>
+    nonNull(useContext(UserInfoContext), 'useUserInfoContext must be used within a UserInfo provider')
+
+export function UserInfoContextProvider(props: ParentProps<{ value: UserInfoContext }>) {
+    return <UserInfoContext.Provider value={props.value}>{props.children}</UserInfoContext.Provider>
+}
+
 export default function UserInfo(props: UserInfoProps) {
     const { string } = useI18n()
-    const ctx = useUserDisplayContext()
 
     const [tab, setTab] = createSignal('info')
     useTabPersistence(tab, setTab, { disabled: props.persistTab === false })
 
+    // SolidJS moment
+    const [info, setInfo] = createStore<UserInfoContext>(null as unknown as UserInfoContext)
+    createRenderEffect(() => {
+        setInfo({
+            user: props.user,
+            userData: props.userData,
+            editable: props.editable,
+            creating: props.creating,
+            edited: props.edited,
+            onEdit: props.onEdit,
+            onSave: props.onSave,
+            onDelete: props.onDelete,
+        })
+    })
+
     const tabs = () => {
         const list = [{ label: string.USER_INFO(), value: 'info' }]
-        if (!ctx.creating) {
-            if (ctx.user?.isStudent()) {
+        if (!props.creating) {
+            if (props.user?.isStudent()) {
                 list.push({ label: string.SELECTIONS(), value: 'selections' })
             }
 
-            if (ctx.user?.isTeacher()) {
+            if (props.user?.isTeacher()) {
                 list.push({ label: string.SUBJECTS(), value: 'subjects' })
             }
         }
@@ -41,8 +94,8 @@ export default function UserInfo(props: UserInfoProps) {
     }
 
     return (
-        <>
-            <Show when={ctx.user}>
+        <UserInfoContext.Provider value={info}>
+            <Show when={props.user}>
                 <Show when={tabs().length > 1}>
                     <StickyTabs value={tab()} onChange={setTab} class={styles.tabs} tabs={tabs()} />
                 </Show>
@@ -53,7 +106,7 @@ export default function UserInfo(props: UserInfoProps) {
                         <Match when={tab() === 'info'}>
                             <UserDetailsTab initialType={props.initialType} groups={props.groups} />
                         </Match>
-                        <Match when={tab() === 'selections' && ctx.user}>
+                        <Match when={tab() === 'selections' && props.user}>
                             {user => (
                                 <StudentSelectionsTab
                                     userId={user().id}
@@ -65,7 +118,7 @@ export default function UserInfo(props: UserInfoProps) {
                                 />
                             )}
                         </Match>
-                        <Match when={tab() === 'subjects' && ctx.user}>
+                        <Match when={tab() === 'subjects' && props.user}>
                             {user => (
                                 <TeacherSubjectsTab
                                     userId={user().id}
@@ -87,6 +140,6 @@ export default function UserInfo(props: UserInfoProps) {
                 {/* @ts-expect-error: Incorrect types */}
                 <props.extraActions />
             </Show>
-        </>
+        </UserInfoContext.Provider>
     )
 }

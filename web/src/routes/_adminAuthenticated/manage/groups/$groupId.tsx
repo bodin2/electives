@@ -2,7 +2,7 @@ import CloseIcon from '@iconify-icons/mdi/close'
 import DeleteIcon from '@iconify-icons/mdi/delete-outline'
 import PlusIcon from '@iconify-icons/mdi/plus'
 import SwapHorizontalIcon from '@iconify-icons/mdi/swap-horizontal'
-import { createQuery, keepPreviousData, useQueryClient } from '@tanstack/solid-query'
+import { createQuery, keepPreviousData, skipToken, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
 import { TextField } from 'm3-solid/src'
 import { createMemo, createRenderEffect, createSignal, For, Match, Show, Switch } from 'solid-js'
@@ -14,6 +14,7 @@ import AddStudentToGroupDialog from '~/components/dialogs/AddStudentToGroupDialo
 import AddTeacherToGroupDialog from '~/components/dialogs/AddTeacherToGroupDialog'
 import { ConfirmDialog } from '~/components/dialogs/base/ConfirmDialog'
 import { SelectGroupDialog } from '~/components/dialogs/SelectGroupDialog'
+import { GroupMembersFilterChip } from '~/components/enrollments/GroupMembersFilterChip'
 import { GroupSelect } from '~/components/GroupSelect'
 import Page from '~/components/Page'
 import { SuspenseLoadingPage } from '~/components/pages/LoadingPage'
@@ -24,6 +25,7 @@ import StickyTabs from '~/components/StickyTabs'
 import { useTabPersistence } from '~/hooks/useTabPersistence'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
+import { enrollmentsQueryOptions, enrollmentUnenrolledMembersQueryOptions } from '~/queries/enrollments'
 import {
     groupManagersQueryOptions,
     groupMembersQueryOptions,
@@ -48,6 +50,7 @@ export const Route = createFileRoute('/_adminAuthenticated/manage/groups/$groupI
         await Promise.all([
             queryClient.ensureQueryData(groupsQueryOptions(client)),
             queryClient.ensureQueryData(groupQueryOptions(client, groupIdNum)),
+            queryClient.ensureQueryData(enrollmentsQueryOptions(client)),
             queryClient.prefetchQuery(groupMembersQueryOptions(client, groupIdNum, page)),
             queryClient.prefetchQuery(groupManagersQueryOptions(client, groupIdNum, page)),
         ])
@@ -240,6 +243,8 @@ function GroupMembers() {
     const groupId = () => Number(params().groupId)
 
     const [query, setQuery] = createSignal<string | undefined>(undefined)
+    const [filterEnrollmentId, setFilterEnrollmentId] = createSignal<number | null>(null)
+    const isFiltered = () => filterEnrollmentId() !== null
     const [addDialogOpen, setAddDialogOpen] = createSignal(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = createSignal(false)
     const [migrateDialogOpen, setMigrateDialogOpen] = createSignal(false)
@@ -252,12 +257,12 @@ function GroupMembers() {
 
     const allGroupsQuery = createQuery(() => ({
         ...groupsQueryOptions(client),
-        // Only needed once the user opens the migrate dialog.
+        // Only needed once the user opens the migrate dialog
         enabled: migrateDialogOpen(),
         notifyOnChangeProps: ['data'],
     }))
 
-    // Same-type groups, excluding the current one.
+    // Same-type groups, excluding the current one
     const migrateCandidates = createMemo(() => {
         if (!allGroupsQuery.isSuccess || !groupQuery.isSuccess) return []
         const all = allGroupsQuery.data
@@ -272,9 +277,23 @@ function GroupMembers() {
     const membersQuery = createQuery(() => ({
         ...groupMembersQueryOptions(client, groupId(), search().page, query()),
         placeholderData: keepPreviousData,
-        notifyOnChangeProps: ['data'],
+        notifyOnChangeProps: ['data', 'isFetching'],
+        enabled: !isFiltered(),
+    }))
+    const unenrolledQuery = createQuery(() => ({
+        ...enrollmentUnenrolledMembersQueryOptions(
+            client,
+            filterEnrollmentId() ?? 0,
+            isFiltered() ? groupId() : skipToken,
+            search().page,
+        ),
+        placeholderData: keepPreviousData,
+        notifyOnChangeProps: ['data', 'isFetching'],
     }))
     const debouncedSetQuery = createMemo(() => debounce(setQuery, 350))
+
+    const activeData = () =>
+        isFiltered() ? (unenrolledQuery.isSuccess ? unenrolledQuery.data : membersQuery.data) : membersQuery.data
 
     const hasNoMembers = () => membersQuery.isSuccess && membersQuery.data?.users.length === 0
 
@@ -370,54 +389,80 @@ function GroupMembers() {
                 />
             </Portal>
             <PaginatedUserList
+                isFetching={membersQuery.isFetching || unenrolledQuery.isFetching}
                 searchLabel={string.SEARCH_STUDENTS()}
-                onSearch={debouncedSetQuery()}
+                // The unenrolled-members endpoint doesn't support server-side search
+                onSearch={isFiltered() ? undefined : debouncedSetQuery()}
                 ref={h => (listHandle = h)}
                 page={search().page}
-                data={membersQuery.data}
+                data={activeData()}
                 onClick={user => navigate({ to: '/manage/users/$userId', params: { userId: String(user.id) } })}
                 onPageChange={page => navigate({ search: { ...search(), page } })}
-                onPagePreload={page => qc.prefetchQuery(groupMembersQueryOptions(client, groupId(), page))}
-                onRefresh={() => qc.invalidateQueries({ queryKey: ['groups', groupId(), 'members'] })}
-                headerRight={() => (
-                    <HStack gap={8} alignVertical="center">
-                        <Button
-                            disabled={hasNoMembers()}
-                            onClick={() => setDeleteDialogOpen(true)}
-                            size="xs"
-                            variant="tonal-error"
-                            icon={DeleteIcon}
-                        >
-                            {string.DELETE_MEMBERS()}
-                        </Button>
-                        <Button
-                            disabled={hasNoMembers()}
-                            onClick={() => setMigrateDialogOpen(true)}
-                            size="xs"
-                            variant="tonal"
-                            icon={SwapHorizontalIcon}
-                        >
-                            {string.MIGRATE_MEMBERS()}
-                        </Button>
-                        <Button onClick={() => setAddDialogOpen(true)} size="xs" icon={PlusIcon}>
-                            {string.ADD_STUDENT()}
-                        </Button>
-                    </HStack>
-                )}
-                trailing={props => (
-                    <Button
-                        disabled={!isFixedGroup()}
-                        aria-label={string.REMOVE()}
-                        size="xs"
-                        variant="tonal-error"
-                        onClick={e => {
-                            e.stopPropagation()
-                            return removeUserFromGroup(props.user)
+                onPagePreload={page =>
+                    isFiltered() ? undefined : qc.prefetchQuery(groupMembersQueryOptions(client, groupId(), page))
+                }
+                onRefresh={() =>
+                    isFiltered()
+                        ? qc.invalidateQueries({
+                              queryKey: ['enrollments', filterEnrollmentId(), 'unenrolledMembers'],
+                          })
+                        : qc.invalidateQueries({ queryKey: ['groups', groupId(), 'members'] })
+                }
+                filters={() => (
+                    <GroupMembersFilterChip
+                        groupId={groupId()}
+                        value={filterEnrollmentId()}
+                        onChange={v => {
+                            setFilterEnrollmentId(v)
+                            navigate({ search: { ...search(), page: 1 } })
                         }}
-                        icon={CloseIcon}
-                        iconType="only"
                     />
                 )}
+                headerRight={() =>
+                    !isFiltered() && (
+                        <HStack gap={8} alignVertical="center" wrap>
+                            <Button
+                                disabled={hasNoMembers()}
+                                onClick={() => setDeleteDialogOpen(true)}
+                                size="xs"
+                                variant="tonal-error"
+                                icon={DeleteIcon}
+                            >
+                                {string.DELETE_MEMBERS()}
+                            </Button>
+                            <Button
+                                disabled={hasNoMembers()}
+                                onClick={() => setMigrateDialogOpen(true)}
+                                size="xs"
+                                variant="tonal"
+                                icon={SwapHorizontalIcon}
+                            >
+                                {string.MIGRATE_MEMBERS()}
+                            </Button>
+                            <Button onClick={() => setAddDialogOpen(true)} size="xs" icon={PlusIcon}>
+                                {string.ADD_STUDENT()}
+                            </Button>
+                        </HStack>
+                    )
+                }
+                trailing={
+                    isFiltered()
+                        ? undefined
+                        : props => (
+                              <Button
+                                  disabled={!isFixedGroup()}
+                                  aria-label={string.REMOVE()}
+                                  size="xs"
+                                  variant="tonal-error"
+                                  onClick={e => {
+                                      e.stopPropagation()
+                                      return removeUserFromGroup(props.user)
+                                  }}
+                                  icon={CloseIcon}
+                                  iconType="only"
+                              />
+                          )
+                }
             />
         </div>
     )

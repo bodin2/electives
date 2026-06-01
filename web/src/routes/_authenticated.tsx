@@ -1,9 +1,14 @@
 import { createFileRoute, type ErrorRouteComponent, Outlet, useRouter } from '@tanstack/solid-router'
 import { createRenderEffect, Match, on, Switch } from 'solid-js'
-import { UnauthorizedError, UserType } from '~/api'
+import { UnauthorizedError } from '~/api'
 import DashboardLayout from '~/components/layout/DashboardLayout'
 import { getUserNav } from '~/components/layout/navEntries'
 import LoadingPage from '~/components/pages/LoadingPage'
+import {
+    type UserDisplayContext,
+    UserDisplayContextProvider,
+    useUserDisplayContext,
+} from '~/components/users/UserDisplayContext'
 import { useLogoutRedirect } from '~/hooks/useAuthRedirect'
 import { AuthenticationState, useAPI } from '~/providers/APIProvider'
 import { nonNull } from '~/utils'
@@ -25,6 +30,20 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedLayout() {
     const api = useAPI()
+    const userDisplayContext = useUserDisplayContext()
+
+    const udcValue = (): UserDisplayContext => {
+        if (api.client.user?.isTeacher())
+            return {
+                ...userDisplayContext,
+                viewLinkProps: userId => ({
+                    to: '/users/$userId',
+                    params: { userId },
+                }),
+            }
+
+        return userDisplayContext
+    }
 
     useUserLogoutRedirect()
     useAdminCrossRedirect()
@@ -33,12 +52,18 @@ function AuthenticatedLayout() {
         <Switch>
             <Match
                 when={
-                    api.authState() === AuthenticationState.LoggedIn && nonNull(api.client.user).type !== UserType.ADMIN
+                    api.authState() === AuthenticationState.LoggedIn &&
+                    !nonNull(api.client.user).isAdmin() &&
+                    api.client.user
                 }
             >
-                <DashboardLayout entries={getUserNav(nonNull(api.client.user).type)}>
-                    <Outlet />
-                </DashboardLayout>
+                {user => (
+                    <UserDisplayContextProvider value={udcValue()}>
+                        <DashboardLayout entries={getUserNav(user().type)}>
+                            <Outlet />
+                        </DashboardLayout>
+                    </UserDisplayContextProvider>
+                )}
             </Match>
             <Match when={api.authState() === AuthenticationState.Loading}>
                 <LoadingPage debugName="AuthenticatedLayout" />
@@ -64,7 +89,7 @@ function useAdminCrossRedirect() {
     createRenderEffect(
         on(api.authState, state => {
             if (state !== AuthenticationState.LoggedIn) return
-            if (nonNull(api.client.user).type === UserType.ADMIN) {
+            if (api.client.user?.isAdmin()) {
                 navigate({ to: '/manage', replace: true })
             }
         }),

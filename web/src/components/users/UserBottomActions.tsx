@@ -3,10 +3,10 @@ import { Show } from 'solid-js'
 import { useI18n } from '~/providers/I18nProvider'
 import BottomBar, { bottomBarStyles } from '../BottomBar'
 import { Button } from '../Button'
-import { useUserDisplayContext } from './UserDisplayContext'
+import { useUserInfoContext } from './UserInfo'
 
 export default function UserBottomActions() {
-    const ctx = useUserDisplayContext()
+    const ctx = useUserInfoContext()
     const { string } = useI18n()
 
     return (

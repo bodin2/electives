@@ -8,11 +8,13 @@ import { VStack } from '~/components/Stack'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import { groupMemberCountsQueryOptions, groupsQueryOptions } from '~/queries/groups'
+import { AUTHENTICATED_ROUTE_DEFAULTS } from '~/routes/_authenticated'
 import { nonNull } from '~/utils'
 import { catchErrors } from '~/utils/error-component'
 import type { Group } from '~/api/structures'
 
 export const Route = createFileRoute('/_authenticated/groups/')({
+    ...AUTHENTICATED_ROUTE_DEFAULTS,
     component: RouteComponent,
     errorComponent: catchErrors([NotFoundError, NotFoundPage], [UnauthorizedError, NotFoundPage]),
     loader: async ({ context: { client, queryClient } }) => {

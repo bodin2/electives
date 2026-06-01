@@ -1,5 +1,5 @@
 import MagnifyingIcon from '@iconify-icons/mdi/magnify'
-import { ListItem, mergeClasses, TextField } from 'm3-solid/src'
+import { ListItem, LoadingIndicator, mergeClasses, TextField } from 'm3-solid/src'
 import { type Component, createRenderEffect, For, type JSXElement, Show, Suspense } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useI18n } from '~/providers/I18nProvider'
@@ -35,6 +35,7 @@ interface PaginatedUserListProps {
     class?: string
     ref?: (handle: PaginatedUserListHandle) => void
     showGradeGroup?: boolean
+    isFetching?: boolean
     onRefresh?: () => void
     /** Custom trailing component for each user item. */
     trailing?: Component<{ user: User }>
@@ -160,13 +161,16 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
                             </Show>
                         </Suspense>
                         {props.filters?.({})}
+                        <Show when={props.isFetching}>
+                            <LoadingIndicator container size={24} />
+                        </Show>
                     </HStack>
                     {props.headerRight?.({})}
                 </HStack>
             </VStack>
             <SuspenseLoadingPage debugName="PaginatedUserListContent">
                 <Show when={store.users.size > 0} fallback={props.emptyElement}>
-                    <div class={styles.grid}>
+                    <div class={mergeClasses(styles.grid, props.isFetching && styles.fetching)}>
                         {props.listHeader?.({})}
                         <Show when={props.isLoading && !props.data && store.users.size === 0}>
                             <ListItem headline={string.LOADING()} />

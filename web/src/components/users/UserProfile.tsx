@@ -11,7 +11,7 @@ import { Button } from '../Button'
 import IconLabel from '../IconLabel'
 import { HStack, VStack } from '../Stack'
 import UserAvatar from './UserAvatar'
-import { useUserDisplayContext } from './UserDisplayContext'
+import { useUserInfoContext } from './UserInfo'
 import styles from './UserProfile.module.css'
 import type { User } from '~/api/structures'
 
@@ -21,7 +21,7 @@ export function UserProfile(props: {
     onEditGroup?: (slot: GroupType) => void
 }) {
     const { string } = useI18n()
-    const ctx = useUserDisplayContext()
+    const ctx = useUserInfoContext()
 
     const user = () => nonNull(ctx.user)
 
@@ -66,24 +66,10 @@ export function UserProfile(props: {
                 <HStack alignVertical="center" wrap>
                     <h1 class="m3-headline-medium">{user().displayName}</h1>
                     <HStack wrap style={{ 'row-gap': '4px' }}>
-                        <Show when={user().isStudent() && props.onEditGroup}>
-                            {onEditGroup => (
-                                <>
-                                    <FixedSlotBadge
-                                        user={user()}
-                                        slot={GroupType.GRADE}
-                                        onEdit={onEditGroup()}
-                                        required
-                                    />
-                                    <FixedSlotBadge
-                                        user={user()}
-                                        slot={GroupType.ROOM}
-                                        onEdit={onEditGroup()}
-                                        required
-                                    />
-                                    <FixedSlotBadge user={user()} slot={GroupType.PROGRAM} onEdit={onEditGroup()} />
-                                </>
-                            )}
+                        <Show when={user().isStudent()}>
+                            <FixedSlotBadge user={user()} slot={GroupType.GRADE} onEdit={props.onEditGroup} required />
+                            <FixedSlotBadge user={user()} slot={GroupType.ROOM} onEdit={props.onEditGroup} required />
+                            <FixedSlotBadge user={user()} slot={GroupType.PROGRAM} onEdit={props.onEditGroup} />
                         </Show>
                         <BadgeListEditor user={user()} />
                         <Show when={props.onAddGroupClick}>
@@ -110,7 +96,7 @@ export function UserProfile(props: {
 }
 
 function BadgeListEditor(props: { user: User }) {
-    const ctx = useUserDisplayContext()
+    const ctx = useUserInfoContext()
 
     return (
         <Badges
@@ -137,7 +123,7 @@ function FixedSlotBadge(props: {
     onEdit?: (slot: GroupType) => void
 }) {
     const { string } = useI18n()
-    const ctx = useUserDisplayContext()
+    const ctx = useUserInfoContext()
     const current = () => props.user.groups.find(g => g.type === props.slot)
 
     return (

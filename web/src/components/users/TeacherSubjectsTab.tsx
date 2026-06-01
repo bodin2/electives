@@ -77,7 +77,7 @@ export default function TeacherSubjectsTab(props: TeacherSubjectsTabProps) {
                                     <SubjectListItem
                                         subject={subject}
                                         enrollmentId={en.id}
-                                        linkProps={subjectDisplayContext.viewLinkProps(en.id, subject.id, 'members')}
+                                        linkProps={subjectDisplayContext.viewLinkProps(en.id, subject.id, 'info')}
                                     />
                                 )}
                             </For>

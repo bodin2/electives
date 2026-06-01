@@ -52,7 +52,7 @@ function RouteComponent() {
                 onSearch={debouncedSetQuery()}
                 searchLabel={string.SEARCH_TEACHERS()}
                 headerRight={() => (
-                    <HStack gap={8}>
+                    <HStack gap={8} wrap>
                         <BulkAddUserAction type={UserType.TEACHER} onComplete={onRefresh} />
                         <LinkButton size="xs" {...userDisplayContext.createLinkProps('teacher')} icon={PlusIcon}>
                             {string.ADD_TEACHER()}

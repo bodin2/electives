@@ -1,6 +1,6 @@
 import { createFileRoute, type ErrorRouteComponent, Outlet, useRouter } from '@tanstack/solid-router'
 import { createRenderEffect, Match, on, Switch } from 'solid-js'
-import { UnauthorizedError, UserType } from '~/api'
+import { UnauthorizedError } from '~/api'
 import LoadingPage from '~/components/pages/LoadingPage'
 import { useLogoutRedirect } from '~/hooks/useAuthRedirect'
 import { AuthenticationState, useAPI } from '~/providers/APIProvider'
@@ -29,11 +29,7 @@ function AdminAuthenticatedLayout() {
 
     return (
         <Switch>
-            <Match
-                when={
-                    api.authState() === AuthenticationState.LoggedIn && nonNull(api.client.user).type === UserType.ADMIN
-                }
-            >
+            <Match when={api.authState() === AuthenticationState.LoggedIn && nonNull(api.client.user).isAdmin()}>
                 <Outlet />
             </Match>
             <Match when={api.authState() === AuthenticationState.Loading}>
@@ -60,7 +56,7 @@ function useNonAdminCrossRedirect() {
     createRenderEffect(
         on(api.authState, state => {
             if (state !== AuthenticationState.LoggedIn) return
-            if (nonNull(api.client.user).type !== UserType.ADMIN) {
+            if (!api.client.user?.isAdmin()) {
                 navigate({ to: '/', replace: true })
             }
         }),

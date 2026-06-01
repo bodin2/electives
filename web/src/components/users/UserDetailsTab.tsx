@@ -11,7 +11,7 @@ import AddGroupToStudentDialog from '../dialogs/AddGroupToStudentDialog'
 import TextFieldDialog from '../dialogs/base/TextFieldDialog'
 import { Option, Select } from '../Select'
 import { VStack } from '../Stack'
-import { useUserDisplayContext } from './UserDisplayContext'
+import { useUserInfoContext } from './UserInfo'
 import { type StringApi, slotPlaceholder, UserProfile } from './UserProfile'
 
 interface UserDetailsTabProps {
@@ -21,7 +21,7 @@ interface UserDetailsTabProps {
 
 export default function UserDetailsTab(props: UserDetailsTabProps) {
     const { string } = useI18n()
-    const ctx = useUserDisplayContext()
+    const ctx = useUserInfoContext()
 
     const [avatarDialogOpen, setAvatarDialogOpen] = createSignal(false)
     const [addGroupOpen, setAddGroupOpen] = createSignal(false)

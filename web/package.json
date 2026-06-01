@@ -17,7 +17,7 @@
     "@tanstack/solid-query": "5.100.14",
     "@tanstack/solid-router": "1.170.10",
     "@tanstack/solid-router-devtools": "1.167.0",
-    "m3-solid": "https://github.com/PalmDevs/m3-solid.git#b7ee713",
+    "m3-solid": "https://github.com/PalmDevs/m3-solid.git#ec5dd9c",
     "marked": "18.0.4",
     "mitt": "3.0.1",
     "postcss": "8.5.15",

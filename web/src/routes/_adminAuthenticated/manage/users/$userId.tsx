@@ -1,18 +1,18 @@
 import { createQuery, useQueryClient } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
-import { batch, createEffect, createMemo, createRenderEffect, createSignal, on, onCleanup, onMount } from 'solid-js'
+import { batch, createMemo, createRenderEffect, createSignal, on } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import { type AdminUserPatch, GroupType, NotFoundError, User, UserType } from '~/api'
 import { ConfirmDialog } from '~/components/dialogs/base/ConfirmDialog'
 import Page from '~/components/Page'
 import NotFoundPage from '~/components/pages/NotFoundPage'
-import { type UserData, type UserPatchSetterKey, useUserDisplayContext } from '~/components/users/UserDisplayContext'
 import UserInfo from '~/components/users/UserInfo'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import { groupsQueryOptions } from '~/queries/groups'
 import { userQueryOptions } from '~/queries/users'
 import { catchErrors } from '~/utils/error-component'
+import type { UserData, UserPatchSetterKey } from '~/components/users/UserDisplayContext'
 
 type UserSearch = {
     type?: 'student' | 'teacher'
@@ -55,7 +55,6 @@ function RouteComponent() {
     const { client } = useAPI()
     const { string } = useI18n()
     const qc = useQueryClient()
-    const displayContext = useUserDisplayContext()
 
     const [confirmDeleteOpen, setConfirmDeleteOpen] = createSignal(false)
 
@@ -89,9 +88,7 @@ function RouteComponent() {
 
     const user = createMemo(() => new User(client, userData()))
 
-    createEffect(() => {
-        displayContext.setEdited(modifiedFields().size > 0)
-    })
+    const edited = () => modifiedFields().size > 0
 
     createRenderEffect(
         on(
@@ -116,10 +113,6 @@ function RouteComponent() {
             },
         ),
     )
-
-    onCleanup(() => {
-        displayContext.setUserData(undefined)
-    })
 
     const title = () => {
         if (!isNew()) return user().displayName
@@ -180,7 +173,7 @@ function RouteComponent() {
                     programId,
                 })
 
-                displayContext.setUserData({ ...userData(), newPassword: '' })
+                setUserData({ ...userData(), newPassword: '' })
 
                 await invalidate(u.type, u.id)
 
@@ -259,32 +252,6 @@ function RouteComponent() {
         }
     }
 
-    onMount(() => {
-        batch(() => {
-            displayContext.setOnDelete(handleDelete)
-            displayContext.setOnEdit(handleEdit)
-            displayContext.setOnSave(handleSave)
-        })
-
-        onCleanup(() => {
-            batch(() => {
-                displayContext.setUser(undefined)
-                displayContext.setCreating(false)
-                displayContext.setOnDelete(undefined)
-                displayContext.setOnEdit(undefined)
-                displayContext.setOnSave(undefined)
-            })
-        })
-    })
-
-    createRenderEffect(() => {
-        batch(() => {
-            displayContext.setCreating(isNew())
-            displayContext.setUser(user())
-            displayContext.setUserData(userData())
-        })
-    })
-
     return (
         <Page name={title()} allowBacking leading={null} trailing={null}>
             <Portal>
@@ -300,7 +267,18 @@ function RouteComponent() {
                     <p>{string.CONFIRM_DELETE_USER({ name: <strong>{user().displayName}</strong> })}</p>
                 </ConfirmDialog>
             </Portal>
-            <UserInfo initialType={initialType()} groups={groups()} />
+            <UserInfo
+                user={user()}
+                userData={userData()}
+                editable
+                creating={isNew()}
+                edited={edited()}
+                onEdit={handleEdit}
+                onSave={handleSave}
+                onDelete={handleDelete}
+                initialType={initialType()}
+                groups={groups()}
+            />
         </Page>
     )
 }
