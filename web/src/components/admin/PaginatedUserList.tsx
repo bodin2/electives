@@ -1,6 +1,6 @@
 import MagnifyingIcon from '@iconify-icons/mdi/magnify'
 import { ListItem, LoadingIndicator, mergeClasses, TextField } from 'm3-solid/src'
-import { type Component, createRenderEffect, For, type JSXElement, Show, Suspense } from 'solid-js'
+import { batch, type Component, createRenderEffect, For, type JSXElement, Show, Suspense } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { useI18n } from '~/providers/I18nProvider'
 import { useScrollData } from '~/providers/ScrollDataProvider'
@@ -95,20 +95,24 @@ export default function PaginatedUserList(props: PaginatedUserListProps) {
         props.ref?.({
             refresh: () => props.onRefresh?.(),
             onUserRemove: userId => {
-                setStore('users', u => {
-                    const newUserMap = new Map(u)
-                    newUserMap.delete(userId)
-                    return newUserMap
+                batch(() => {
+                    setStore('users', u => {
+                        const newUserMap = new Map(u)
+                        newUserMap.delete(userId)
+                        setStore('total', newUserMap.size)
+                        return newUserMap
+                    })
                 })
-                setStore('total', t => t - 1)
             },
             onUserAdd: user => {
-                setStore('users', u => {
-                    const newUserMap = new Map(u)
-                    newUserMap.set(user.id, user)
-                    return newUserMap
+                batch(() => {
+                    setStore('users', u => {
+                        const newUserMap = new Map(u)
+                        newUserMap.set(user.id, user)
+                        setStore('total', newUserMap.size)
+                        return newUserMap
+                    })
                 })
-                setStore('total', t => t + 1)
             },
             onUserEdit: user => {
                 setStore('users', u => {
