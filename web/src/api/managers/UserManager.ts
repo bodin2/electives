@@ -229,6 +229,7 @@ export class UserAdminActions {
             {
                 encoder: AdminBulkAddUsersRequest,
                 decoder: AdminListUsersResponse,
+                timeout: Number.POSITIVE_INFINITY, // Don't timeout since this can take a while with many users
             },
         )
         return data.users.map(u => this.manager._getOrCreate(u))
