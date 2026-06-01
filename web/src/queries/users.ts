@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/solid-query'
+import { nonNull } from '~/utils'
 import type { Client } from '~/api'
 
 /**
@@ -35,6 +36,6 @@ export const userQueryOptions = (client: Client<unknown>, userId: number) =>
  */
 export const teacherSubjectsQueryOptions = (client: Client<unknown>, userId: number | '@me') =>
     queryOptions({
-        queryKey: ['teacherSubjects', userId] as const,
+        queryKey: ['teacherSubjects', userId === '@me' ? nonNull(client.user).id : userId] as const,
         queryFn: () => client.users.fetchTeacherSubjects(userId),
     })

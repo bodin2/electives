@@ -126,7 +126,6 @@ function RouteComponent() {
         Promise.all([
             qc.removeQueries({ queryKey: ['subjects', subjectId(), 'enrolledCount'] }),
             qc.removeQueries({ queryKey: ['subjects', subjectId(), 'members'] }),
-            qc.invalidateQueries({ queryKey: ['selections', '@me'] }),
             qc.invalidateQueries({ queryKey: ['selections', user.id] }),
         ])
 
