@@ -2,6 +2,7 @@ import AddCircleIcon from '@iconify-icons/mdi/add-circle'
 import { createQuery, keepPreviousData } from '@tanstack/solid-query'
 import { Icon } from 'm3-solid/src'
 import { createSignal, type JSX, Show } from 'solid-js'
+import { SuspenseLoadingPage } from '~/components/pages/LoadingPage'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import { studentsQueryOptions, teachersQueryOptions } from '~/queries/users'
@@ -71,26 +72,28 @@ export default function AddUserDialog(props: AddUserDialogProps) {
             }
         >
             <Show when={error()}>{err => <p class="m3-body-medium text-error">{err()}</p>}</Show>
-            <PaginatedUserList
-                onSearch={debouncedSetSearch}
-                searchLabel={props.type === 'teacher' ? string.SEARCH_TEACHERS() : string.SEARCH_STUDENTS()}
-                page={page()}
-                data={usersQuery.data ?? { users: [], total: 0 }}
-                selectedIds={props.selectedIds}
-                disabledIds={props.disabledIds}
-                onPageChange={setPage}
-                onClick={async user => {
-                    try {
-                        const shouldClose = await props.onConfirm(user)
-                        if (shouldClose !== false) {
-                            props.onSuccess?.(api.client.users.cache.get(user.id) ?? user)
+            <SuspenseLoadingPage debugName="AddUserPaginatedList">
+                <PaginatedUserList
+                    onSearch={debouncedSetSearch}
+                    searchLabel={props.type === 'teacher' ? string.SEARCH_TEACHERS() : string.SEARCH_STUDENTS()}
+                    page={page()}
+                    data={usersQuery.data ?? { users: [], total: 0 }}
+                    selectedIds={props.selectedIds}
+                    disabledIds={props.disabledIds}
+                    onPageChange={setPage}
+                    onClick={async user => {
+                        try {
+                            const shouldClose = await props.onConfirm(user)
+                            if (shouldClose !== false) {
+                                props.onSuccess?.(api.client.users.cache.get(user.id) ?? user)
+                            }
+                            await props.onClose()
+                        } catch (e) {
+                            setError(String(e))
                         }
-                        await props.onClose()
-                    } catch (e) {
-                        setError(String(e))
-                    }
-                }}
-            />
+                    }}
+                />
+            </SuspenseLoadingPage>
         </Dialog>
     )
 }
