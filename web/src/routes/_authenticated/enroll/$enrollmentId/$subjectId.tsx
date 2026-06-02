@@ -137,7 +137,7 @@ function RouteComponent() {
 
     return (
         <Show when={subjectQuery.data && enrollmentQuery.data}>
-            <Page name={subject().name} leading={null} trailing={null} allowBacking>
+            <Page name={subject().name} allowBacking>
                 <SubjectInfo
                     subject={subject()}
                     enrollment={en()}

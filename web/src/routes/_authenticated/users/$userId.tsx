@@ -62,7 +62,7 @@ function RouteComponent() {
     const title = () => loadedUser()?.displayName
 
     return (
-        <Page name={title()} allowBacking leading={null} trailing={null}>
+        <Page name={title()} allowBacking>
             <Show when={loadedUser()}>
                 {u => (
                     <UserInfoContextProvider value={{ user: u() }}>

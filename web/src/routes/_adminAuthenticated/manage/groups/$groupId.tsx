@@ -149,7 +149,7 @@ function RouteComponent() {
     const onPageChange = (page: number) => navigate({ search: { ...search(), page } })
 
     return (
-        <Page name={isNew() ? string.CREATE_GROUP() : name()} allowBacking leading={null} trailing={null}>
+        <Page name={isNew() ? string.CREATE_GROUP() : name()} allowBacking>
             <Show when={!isNew()}>
                 <StickyTabs
                     value={tab()}

@@ -130,12 +130,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page
-            name={isNew() ? string.CREATE_ENROLLMENT() : enrollment().name}
-            allowBacking
-            leading={null}
-            trailing={null}
-        >
+        <Page name={isNew() ? string.CREATE_ENROLLMENT() : enrollment().name} allowBacking>
             <EnrollmentInfo
                 creating={isNew()}
                 enrollment={enrollment()}

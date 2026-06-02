@@ -11,7 +11,7 @@ import { SuspenseLoadingPage } from '~/components/pages/LoadingPage'
 import { HStack, VStack } from '~/components/Stack'
 import { useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
-import { enrollmentsQueryOptions, adminEnrollmentsProgressQueryOptions } from '~/queries/enrollments'
+import { adminEnrollmentsProgressQueryOptions, enrollmentsQueryOptions } from '~/queries/enrollments'
 import { groupsQueryOptions } from '~/queries/groups'
 import { enrollmentSorter } from '~/utils'
 import styles from './index.module.css'
@@ -60,7 +60,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={string.ENROLLMENTS()} leading={null} trailing={null}>
+        <Page name={string.ENROLLMENTS()}>
             <VStack gap={0} grow>
                 <HStack class={styles.searchContainer} alignVertical="center" gap={16} wrap>
                     <TextField

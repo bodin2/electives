@@ -1,81 +1,46 @@
-import { createRenderEffect, type JSX, type JSXElement, onCleanup, onMount, splitProps } from 'solid-js'
-import { usePageData } from '~/providers/PageProvider'
+import { type Component, type JSX, type JSXElement, splitProps } from 'solid-js'
+import { usePageOptions } from '~/providers/PageOptionsProvider'
+import { useShellChrome } from '~/providers/ShellChromeProvider'
 import { SuspenseLoadingPage } from './pages/LoadingPage'
 import { VStack } from './Stack'
 
 interface PageProps extends JSX.HTMLAttributes<HTMLElement> {
-    /**
-     * null = inherit
-     */
-    name?: JSXElement | null
-    /**
-     * null = inherit
-     */
-    leading?: JSXElement | null
-    /**
-     * null = inherit
-     */
-    trailing?: JSXElement | null
-    /**
-     * undefined = inherit
-     */
+    /** Page title. Omit to inherit. */
+    name?: JSXElement
+    /** Extra leading content for the top app bar (e.g. tabs). Omit to inherit. */
+    leading?: JSXElement
+    /** Extra trailing content for the top app bar (e.g. page actions). Omit to inherit. */
+    trailing?: JSXElement
+    /** Whether to show the back button. Omit to inherit. */
     allowBacking?: boolean
     style?: JSX.CSSProperties
     showLoading?: boolean
 }
 
 export default function Page(props: PageProps) {
-    const pageData = usePageData()
+    const chrome = useShellChrome()
     const [local, others] = splitProps(props, [
         'name',
-        'showLoading',
-        'children',
         'leading',
         'trailing',
         'allowBacking',
+        'showLoading',
+        'children',
     ])
 
-    onMount(() => {
-        if (!pageData) return
+    const TitleComp: Component = () => <>{local.name}</>
+    const LeadingComp: Component = () => <>{local.leading}</>
+    const TrailingComp: Component = () => <>{local.trailing}</>
 
-        const prevTitle = pageData.title
-        const prevLeading = pageData.leading
-        const prevTrailing = pageData.trailing
-        const prevAllowBacking = pageData.allowBacking
-
-        onCleanup(() => {
-            // Only restore title if it's not blank, so the text doesn't look blank for a moment when it's loading something
-            if (prevTitle) pageData.setTitle(prevTitle)
-            pageData.setLeading(prevLeading)
-            pageData.setTrailing(prevTrailing)
-            pageData.setAllowBacking(prevAllowBacking)
-        })
-    })
-
-    createRenderEffect(() => {
-        // so ErrorPage works without PageProvider
-        if (!pageData) return
-
-        if (local.name !== null) {
-            const name = local.name
-            pageData.setTitle(name !== undefined ? () => name : '')
-        }
-
-        if (local.leading !== null) {
-            const leading = local.leading
-            pageData.setLeading(leading !== undefined ? () => leading : undefined)
-        }
-
-        if (local.trailing !== null) {
-            const trailing = local.trailing
-            pageData.setTrailing(trailing !== undefined ? () => trailing : undefined)
-        }
-
-        if (local.allowBacking !== undefined) pageData.setAllowBacking(local.allowBacking)
-    })
+    usePageOptions(() => ({
+        title: local.name !== undefined ? TitleComp : undefined,
+        headerLeading: local.leading !== undefined ? LeadingComp : undefined,
+        headerTrailing: local.trailing !== undefined ? TrailingComp : undefined,
+        allowBacking: local.allowBacking,
+    }))
 
     return (
-        <VStack gap={0} as="main" grow inert={!pageData.focusable} {...others}>
+        <VStack gap={0} as="main" grow inert={!chrome.focusable()} {...others}>
             <SuspenseLoadingPage debugName="Page">{local.children}</SuspenseLoadingPage>
         </VStack>
     )

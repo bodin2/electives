@@ -328,7 +328,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={isNew() ? string.CREATE_SUBJECT() : subject().name} allowBacking leading={null} trailing={null}>
+        <Page name={isNew() ? string.CREATE_SUBJECT() : subject().name} allowBacking>
             <SubjectInfo
                 subject={subject()}
                 enrollment={enrollment_()}

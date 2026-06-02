@@ -45,7 +45,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={string.GROUPS()} leading={null} trailing={null}>
+        <Page name={string.GROUPS()} allowBacking={false}>
             <GroupList
                 noEditIcon
                 groups={nonNull(groupsQuery.data)}

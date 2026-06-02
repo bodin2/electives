@@ -1,10 +1,5 @@
-import SettingsIcon from '@iconify-icons/mdi/cog'
 import { createQuery } from '@tanstack/solid-query'
 import { createFileRoute } from '@tanstack/solid-router'
-import { createSignal } from 'solid-js'
-import { Portal } from 'solid-js/web'
-import { Button } from '~/components/Button'
-import SettingsDialog from '~/components/dialogs/SettingsDialog'
 import EnrollmentList from '~/components/enrollments/EnrollmentList'
 import Page from '~/components/Page'
 import { VStack } from '~/components/Stack'
@@ -49,8 +44,6 @@ function Home() {
             })
             .sort(enrollmentSorter)
 
-    const [settingsOpen, setSettingsOpen] = createSignal(false)
-
     const onCardClick = (id: number) => {
         navigate({
             to: '/enroll/$enrollmentId',
@@ -59,28 +52,11 @@ function Home() {
     }
 
     return (
-        <Page
-            name={string.ENROLLMENTS()}
-            leading={null}
-            trailing={
-                <Button
-                    variant="text"
-                    aria-label={string.SETTINGS()}
-                    icon={SettingsIcon}
-                    iconType="only"
-                    onClick={() => {
-                        setSettingsOpen(true)
-                    }}
-                />
-            }
-        >
+        <Page name={string.ENROLLMENTS()} allowBacking={false}>
             <VStack gap={16} class="padded">
                 <UserInfoCard class={styles.card} />
             </VStack>
             <EnrollmentList enrollments={enrollments()} user={user} onCardClick={onCardClick} />
-            <Portal>
-                <SettingsDialog open={settingsOpen()} onClose={() => setSettingsOpen(false)} />
-            </Portal>
         </Page>
     )
 }

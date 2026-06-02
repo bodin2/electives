@@ -8,7 +8,6 @@ import { BaseUserDisplayContext, UserDisplayContextProvider } from '~/components
 import APIProvider, { AuthenticationState, useAPI } from '~/providers/APIProvider'
 import { EnrollmentCountsProvider } from '~/providers/EnrollmentCountsProvider'
 import { useI18n } from '~/providers/I18nProvider'
-import PageDataProvider from '~/providers/PageProvider'
 import type { QueryClient } from '@tanstack/solid-query'
 import type { Client } from '~/api'
 
@@ -28,17 +27,15 @@ function RootComponent() {
 
     return (
         <>
-            <PageDataProvider>
-                <APIProvider client={context().client}>
-                    <EnrollmentCountsProvider client={context().client}>
-                        <SubjectDisplayContextProvider value={BaseSubjectDisplayContext}>
-                            <UserDisplayContextProvider value={BaseUserDisplayContext}>
-                                <ReadyOutlet />
-                            </UserDisplayContextProvider>
-                        </SubjectDisplayContextProvider>
-                    </EnrollmentCountsProvider>
-                </APIProvider>
-            </PageDataProvider>
+            <APIProvider client={context().client}>
+                <EnrollmentCountsProvider client={context().client}>
+                    <SubjectDisplayContextProvider value={BaseSubjectDisplayContext}>
+                        <UserDisplayContextProvider value={BaseUserDisplayContext}>
+                            <ReadyOutlet />
+                        </UserDisplayContextProvider>
+                    </SubjectDisplayContextProvider>
+                </EnrollmentCountsProvider>
+            </APIProvider>
             <TanStackRouterDevtools position="bottom-left" />
         </>
     )

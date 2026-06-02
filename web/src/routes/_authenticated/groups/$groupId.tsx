@@ -14,7 +14,6 @@ import { useI18n } from '~/providers/I18nProvider'
 import { enrollmentsQueryOptions } from '~/queries/enrollments'
 import { groupManagersQueryOptions, groupMembersQueryOptions, groupQueryOptions } from '~/queries/groups'
 import { AUTHENTICATED_ROUTE_DEFAULTS } from '~/routes/_authenticated'
-import { nonNull } from '~/utils'
 import { catchErrors } from '~/utils/error-component'
 
 export const Route = createFileRoute('/_authenticated/groups/$groupId')({
@@ -52,6 +51,7 @@ function RouteComponent() {
 
     const groupQuery = createQuery(() => ({
         ...groupQueryOptions(client, groupId()),
+        notifyOnChangeProps: ['data', 'isSuccess'],
     }))
 
     const [tab, setTab] = createSignal<'members' | 'managers'>('members')
@@ -60,7 +60,7 @@ function RouteComponent() {
     const onPageChange = (page: number) => navigate({ search: { ...search(), page } })
 
     return (
-        <Page name={nonNull(groupQuery.data).name} allowBacking leading={null} trailing={null}>
+        <Page name={groupQuery.isSuccess ? groupQuery.data.name : ''} allowBacking>
             <StickyTabs
                 value={tab()}
                 onChange={setTab}

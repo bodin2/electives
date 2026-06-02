@@ -45,7 +45,7 @@ function RouteComponent() {
     const onRefresh = () => qc.invalidateQueries({ queryKey: ['admin', 'students'] })
 
     return (
-        <Page name={string.STUDENTS()} leading={null} trailing={null}>
+        <Page name={string.STUDENTS()}>
             <PaginatedUserList
                 onSearch={debouncedSetQuery()}
                 searchLabel={string.SEARCH_STUDENTS()}

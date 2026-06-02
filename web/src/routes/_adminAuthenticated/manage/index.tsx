@@ -64,7 +64,7 @@ function AdminDashboard() {
         })
 
     return (
-        <Page name={string.ADMIN_DASHBOARD()} leading={null} trailing={null}>
+        <Page name={string.ADMIN_DASHBOARD()}>
             <VStack class={styles.content} gap={16}>
                 <Show when={activeEnrollments().length > 0}>
                     <VStack gap={8}>

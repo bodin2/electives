@@ -35,7 +35,7 @@ function RouteComponent() {
     const subjectsQuery = createQuery(() => ({ ...adminSubjectsQueryOptions(client), notifyOnChangeProps: ['data'] }))
 
     return (
-        <Page name={string.SUBJECTS()} leading={null} trailing={null}>
+        <Page name={string.SUBJECTS()}>
             <SubjectList
                 noRandom
                 searchContainerClass={styles.adminSearchContainer}

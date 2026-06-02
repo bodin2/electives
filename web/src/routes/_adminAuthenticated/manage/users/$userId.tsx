@@ -253,7 +253,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={title()} allowBacking leading={null} trailing={null}>
+        <Page name={title()} allowBacking>
             <Portal>
                 <ConfirmDialog
                     open={confirmDeleteOpen()}

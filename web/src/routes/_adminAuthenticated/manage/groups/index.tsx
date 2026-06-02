@@ -57,7 +57,7 @@ function RouteComponent() {
     }
 
     return (
-        <Page name={string.GROUPS()} leading={null} trailing={null}>
+        <Page name={string.GROUPS()}>
             <GroupList
                 groups={nonNull(groupsQuery.data)}
                 memberCounts={nonNull(memberCountsQuery.data)}
