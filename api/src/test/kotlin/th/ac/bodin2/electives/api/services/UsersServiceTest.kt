@@ -28,7 +28,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
 
 @OptIn(Transactional::class)
-class UsersServiceImplTest : ApplicationTest() {
+class UsersServiceTest : ApplicationTest() {
     private val ApplicationTestBuilder.usersService: UsersService
         get() {
             val usersService: UsersService by application.dependencies
@@ -332,8 +332,8 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `session expires`() = runTest {
-        val usersService = UsersServiceImpl(
-            UsersServiceImpl.Config(
+        val usersService = UsersService(
+            UsersService.Config(
                 sessionDurationSeconds = 1,
                 minimumSessionCreationTime = 0.seconds
             ),
@@ -352,8 +352,8 @@ class UsersServiceImplTest : ApplicationTest() {
 
     @Test
     fun `session creation takes at least set minimum`() = runTest {
-        val usersService = UsersServiceImpl(
-            UsersServiceImpl.Config(
+        val usersService = UsersService(
+            UsersService.Config(
                 sessionDurationSeconds = 5,
                 minimumSessionCreationTime = 1.seconds
             ),

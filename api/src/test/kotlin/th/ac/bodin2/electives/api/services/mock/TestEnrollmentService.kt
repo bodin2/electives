@@ -1,113 +1,99 @@
 package th.ac.bodin2.electives.api.services.mock
 
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.EnrollmentService
+import th.ac.bodin2.electives.api.services.EnrollmentService.QueryResult
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_WITHOUT_SUBJECTS_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
-import th.ac.bodin2.electives.db.Enrollment
-import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Subject
-import th.ac.bodin2.electives.db.Teacher
-import java.time.LocalDateTime
 
-class TestEnrollmentService : EnrollmentService {
+object TestEnrollmentService {
+    val ENROLLMENT_IDS = listOf(
+        ENROLLMENT_ID,
+        ENROLLMENT_WITHOUT_SUBJECTS_ID,
+    )
 
-    @Transactional
-    override suspend fun create(
-        id: Int,
-        name: String,
-        group: Int?,
-        startDate: LocalDateTime?,
-        endDate: LocalDateTime?
-    ): Enrollment = error("Not testable")
+    @OptIn(Transactional::class)
+    operator fun invoke(): EnrollmentService {
+        fun resolveEnrollment(enrollmentId: Int) =
+            if (enrollmentId in ENROLLMENT_IDS) MockUtils.mockEnrollment(enrollmentId) else null
 
-    @Transactional
-    override suspend fun delete(id: Int) = error("Not testable")
+        fun resolveSubject(enrollmentId: Int, subjectId: Int): QueryResult<out Subject> {
+            val enrollment = resolveEnrollment(enrollmentId)
+                ?: return QueryResult.EnrollmentNotFound
 
-    @Transactional
-    override suspend fun update(id: Int, update: EnrollmentService.EnrollmentUpdate): Enrollment {
-        if (id !in ENROLLMENT_IDS) throw EntityNotFoundException(ExceptionEntity.ENROLLMENT)
-        return MockUtils.mockEnrollment(id)
-    }
+            if (subjectId != SUBJECT_ID) {
+                return QueryResult.SubjectNotFound
+            }
 
-    @Transactional
-    override suspend fun setSubjects(enrollmentId: Int, subjectIds: List<Int>) = error("Not testable")
+            val subject = enrollment.subjects.find { it.id.value == subjectId }
+                ?: return QueryResult.SubjectNotPartOfEnrollment(subjectId, enrollmentId)
 
-    companion object {
-        val ENROLLMENT_IDS = listOf(
-            ENROLLMENT_ID,
-            ENROLLMENT_WITHOUT_SUBJECTS_ID,
-        )
-    }
-
-    override fun getAll() = ENROLLMENT_IDS.map { id -> MockUtils.mockEnrollment(id) }
-
-    override fun getById(enrollmentId: Int) =
-        if (enrollmentId in ENROLLMENT_IDS) MockUtils.mockEnrollment(enrollmentId)
-        else null
-
-    override fun getSubjects(enrollmentId: Int): EnrollmentService.QueryResult<out List<Subject>> {
-        val enrollment = getById(enrollmentId)
-            ?: return EnrollmentService.QueryResult.EnrollmentNotFound
-
-        return EnrollmentService.QueryResult.Success(enrollment.subjects.toList())
-    }
-
-    override fun getSubject(
-        enrollmentId: Int,
-        subjectId: Int
-    ): EnrollmentService.QueryResult<out Subject> {
-        val enrollment = getById(enrollmentId)
-            ?: return EnrollmentService.QueryResult.EnrollmentNotFound
-
-        if (subjectId != SUBJECT_ID) {
-            return EnrollmentService.QueryResult.SubjectNotFound
+            return QueryResult.Success(subject)
         }
 
-        val subject = enrollment.subjects.find { it.id.value == subjectId }
-            ?: return EnrollmentService.QueryResult.SubjectNotPartOfEnrollment(subjectId, enrollmentId)
+        return mockk(relaxed = true) {
+            coEvery { update(any(), any()) } answers {
+                val id = firstArg<Int>()
+                if (id !in ENROLLMENT_IDS) throw EntityNotFoundException(ExceptionEntity.ENROLLMENT)
+                MockUtils.mockEnrollment(id)
+            }
 
-        return EnrollmentService.QueryResult.Success(subject)
-    }
+            every { getAll() } answers { ENROLLMENT_IDS.map { id -> MockUtils.mockEnrollment(id) } }
 
-    override fun getSubjectMembers(
-        enrollmentId: Int,
-        subjectId: Int,
-        withStudents: Boolean,
-    ): EnrollmentService.QueryResult<out Pair<List<Teacher>, List<Student>>> {
-        return when (val result = getSubject(enrollmentId, subjectId)) {
-            is EnrollmentService.QueryResult.EnrollmentNotFound,
-            is EnrollmentService.QueryResult.SubjectNotFound,
-            is EnrollmentService.QueryResult.SubjectNotPartOfEnrollment ->
-                result
+            every { getById(any()) } answers { resolveEnrollment(firstArg()) }
 
-            else ->
-                EnrollmentService.QueryResult.Success(
-                    listOf(MockUtils.mockTeacher(TEACHER_ID)) to buildList {
-                        if (withStudents) add(MockUtils.mockStudent(STUDENT_ID))
-                    }
+            every { getSubjects(any()) } answers {
+                val enrollmentId = firstArg<Int>()
+                val enrollment = resolveEnrollment(enrollmentId)
+                    ?: return@answers QueryResult.EnrollmentNotFound
+
+                QueryResult.Success(enrollment.subjects.toList())
+            }
+
+            every { getSubject(any(), any()) } answers {
+                resolveSubject(firstArg(), secondArg())
+            }
+
+            every { getSubjectMembers(any(), any(), any()) } answers {
+                val enrollmentId = firstArg<Int>()
+                val subjectId = secondArg<Int>()
+                val withStudents = thirdArg<Boolean>()
+                when (val result = resolveSubject(enrollmentId, subjectId)) {
+                    is QueryResult.EnrollmentNotFound,
+                    is QueryResult.SubjectNotFound,
+                    is QueryResult.SubjectNotPartOfEnrollment ->
+                        result
+
+                    else ->
+                        QueryResult.Success(
+                            listOf(MockUtils.mockTeacher(TEACHER_ID)) to buildList {
+                                if (withStudents) add(MockUtils.mockStudent(STUDENT_ID))
+                            }
+                        )
+                }
+            }
+
+            every { getEnrolledCount(any()) } returns 0
+
+            every { getUnenrolledMembers(any(), any(), any()) } answers {
+                val enrollmentId = firstArg<Int>()
+                resolveEnrollment(enrollmentId)
+                    ?: return@answers QueryResult.EnrollmentNotFound
+
+                QueryResult.Success(
+                    listOf(MockUtils.mockStudent(STUDENT_ID)) to 1L
                 )
+            }
         }
-    }
-
-    override fun getEnrolledCount(enrollmentId: Int): Int = 0
-
-    override fun getUnenrolledMembers(
-        enrollmentId: Int,
-        groupId: Int,
-        page: Int
-    ): EnrollmentService.QueryResult<out Pair<List<Student>, Long>> {
-        val enrollment = getById(enrollmentId)
-            ?: return EnrollmentService.QueryResult.EnrollmentNotFound
-
-        return EnrollmentService.QueryResult.Success(
-            listOf(MockUtils.mockStudent(STUDENT_ID)) to 1L
-        )
     }
 }

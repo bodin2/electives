@@ -18,7 +18,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import kotlin.test.*
 
-class EnrollmentServiceImplTest : ApplicationTest() {
+class EnrollmentServiceTest : ApplicationTest() {
     private val ApplicationTestBuilder.enrollmentService: EnrollmentService
         get() {
             val service: EnrollmentService by application.dependencies

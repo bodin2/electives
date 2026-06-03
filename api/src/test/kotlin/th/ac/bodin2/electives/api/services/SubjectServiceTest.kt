@@ -13,7 +13,7 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import kotlin.test.*
 
-class SubjectServiceImplTest : ApplicationTest() {
+class SubjectServiceTest : ApplicationTest() {
     private val ApplicationTestBuilder.subjectService: SubjectService
         get() {
             val service: SubjectService by application.dependencies

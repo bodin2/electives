@@ -27,7 +27,7 @@ import java.time.LocalDateTime
 import kotlin.test.*
 
 @OptIn(Transactional::class)
-class EnrollmentSelectionServiceImplTest : ApplicationTest() {
+class EnrollmentSelectionServiceTest : ApplicationTest() {
     private val ApplicationTestBuilder.enrollmentSelectionService: EnrollmentSelectionService
         get() {
             val service: EnrollmentSelectionService by application.dependencies

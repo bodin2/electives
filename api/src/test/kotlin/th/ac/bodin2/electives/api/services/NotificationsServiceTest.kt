@@ -33,7 +33,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(DelicateCoroutinesApi::class, Transactional::class)
-class NotificationsServiceImplTest : ApplicationTest() {
+class NotificationsServiceTest : ApplicationTest() {
     private val ApplicationTestBuilder.usersService: UsersService
         get() {
             val service: UsersService by application.dependencies
@@ -46,13 +46,13 @@ class NotificationsServiceImplTest : ApplicationTest() {
             return service
         }
 
-    private val ApplicationTestBuilder.notificationsService: NotificationsServiceImpl
+    private val ApplicationTestBuilder.notificationsService: NotificationsService
         get() {
             val service: NotificationsService by application.dependencies
-            return service as NotificationsServiceImpl
+            return service
         }
 
-    val serviceConfig = NotificationsServiceImpl.Config(
+    val serviceConfig = NotificationsService.Config(
         maxSubjectSubscriptionsPerClient = 5,
         bulkUpdateInterval = 500.milliseconds,
         bulkUpdatesEnabled = false
@@ -90,7 +90,7 @@ class NotificationsServiceImplTest : ApplicationTest() {
             {
                 application {
                     dependencies.provide<NotificationsService> {
-                        NotificationsServiceImpl(serviceConfig, resolve<UsersService>())
+                        NotificationsService(serviceConfig, resolve<UsersService>())
                     }
                 }
             },

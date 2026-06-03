@@ -19,7 +19,7 @@ object StudentClasses : Table("student_classes") {
         //   - WHERE enrollment = ? AND subject IN (...), Count(student)  (per-subject enrolled counts)
         //
         // The leftmost (enrollment, subject) prefix also covers the capacity COUNT subquery in
-        // EnrollmentSelectionServiceImpl.setStudentSelection, keeping each SERIALIZABLE attempt/retry
+        // EnrollmentSelectionService.setStudentSelection, keeping each SERIALIZABLE attempt/retry
         // cheap under burst traffic.
         index(false, enrollment, subject, student)
     }

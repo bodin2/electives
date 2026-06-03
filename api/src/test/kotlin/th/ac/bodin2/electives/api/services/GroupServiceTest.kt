@@ -17,7 +17,7 @@ import th.ac.bodin2.electives.db.models.TeacherGroups
 import th.ac.bodin2.electives.proto.api.GroupType
 import kotlin.test.*
 
-class GroupServiceImplTest : ApplicationTest() {
+class GroupServiceTest : ApplicationTest() {
     private val ApplicationTestBuilder.groupService: GroupService
         get() {
             val service: GroupService by application.dependencies

@@ -121,10 +121,10 @@ fun Application.provideDependencies() = dependencies {
         provideNotificationsService()
     }
 
-    provide<EnrollmentService> { EnrollmentServiceImpl() }
-    provide<SubjectService> { SubjectServiceImpl() }
-    provide<GroupService> { GroupServiceImpl() }
-    provide<EnrollmentSelectionService> { EnrollmentSelectionServiceImpl(resolve<NotificationsService>()) }
+    provide<EnrollmentService> { EnrollmentService() }
+    provide<SubjectService> { SubjectService() }
+    provide<GroupService> { GroupService() }
+    provide<EnrollmentSelectionService> { EnrollmentSelectionService(resolve<NotificationsService>()) }
 }
 
 val isAdminEnabled: Boolean

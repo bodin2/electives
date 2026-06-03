@@ -151,7 +151,7 @@ private suspend fun RoutingContext.handlePutStudentEnrollmentSelection(
 
         is ModifySelectionResult.NotFound -> {
             /**
-             * See [th.ac.bodin2.electives.api.services.EnrollmentSelectionServiceImpl.tryHandling]
+             * See [th.ac.bodin2.electives.api.services.EnrollmentSelectionService.tryHandling]
              */
             throw when (result.entity) {
                 ExceptionEntity.ENROLLMENT -> notFound("Enrollment not found")

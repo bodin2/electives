@@ -1,67 +1,61 @@
 package th.ac.bodin2.electives.api.services.mock
 
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.MockUtils
 import th.ac.bodin2.electives.api.annotations.Transactional
 import th.ac.bodin2.electives.api.services.GroupService
+import th.ac.bodin2.electives.api.services.GroupService.GroupUpdate
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_GROUP_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_GROUP_ID
-import th.ac.bodin2.electives.db.Group
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
-import th.ac.bodin2.electives.proto.api.GroupType
 
-class TestGroupService : GroupService {
-    companion object {
-        val GROUP_IDS = listOf(ENROLLMENT_GROUP_ID, SUBJECT_GROUP_ID)
-    }
+object TestGroupService {
+    val GROUP_IDS = listOf(ENROLLMENT_GROUP_ID, SUBJECT_GROUP_ID)
 
-    @Transactional
-    override suspend fun create(id: Int, name: String, type: GroupType, parentId: Int?): Group = error("Not testable")
-
-    @Transactional
-    override suspend fun delete(id: Int) = error("Not testable")
-
-    @Transactional
-    override suspend fun update(id: Int, update: GroupService.GroupUpdate): Group {
-        if (id !in GROUP_IDS) throw EntityNotFoundException(ExceptionEntity.GROUP)
-        return MockUtils.mockGroup(id, parentId = if (update.setParentId) update.parentId else null)
-    }
-
-    override fun getAll() = GROUP_IDS.map { id -> MockUtils.mockGroup(id) }
-
-    override fun getById(groupId: Int) =
-        if (groupId in GROUP_IDS) MockUtils.mockGroup(groupId)
-        else null
-
-    @Transactional
-    override suspend fun getMembers(groupId: Int, page: Int, query: String?): Pair<List<Student>, Long> {
-        if (groupId !in GROUP_IDS) throw EntityNotFoundException(ExceptionEntity.GROUP)
-        return emptyList<Student>() to 0L
-    }
-
-    @Transactional
-    override suspend fun getManagers(groupId: Int, page: Int, query: String?): Pair<List<Teacher>, Long> {
-        if (groupId !in GROUP_IDS) throw EntityNotFoundException(ExceptionEntity.GROUP)
-        return emptyList<Teacher>() to 0L
-    }
-
-    @Transactional
-    override suspend fun getTeacherGroups(teacherId: Int): List<Group> {
-        if (teacherId != TestServiceConstants.TEACHER_ID) {
-            throw EntityNotFoundException(ExceptionEntity.TEACHER)
+    @OptIn(Transactional::class)
+    operator fun invoke(): GroupService = mockk(relaxed = true) {
+        coEvery { update(any(), any()) } answers {
+            val id = firstArg<Int>()
+            val update = secondArg<GroupUpdate>()
+            if (id !in GROUP_IDS) throw EntityNotFoundException(ExceptionEntity.GROUP)
+            MockUtils.mockGroup(id, parentId = if (update.setParentId) update.parentId else null)
         }
-        return GROUP_IDS.map { MockUtils.mockGroup(it) }
+
+        every { getAll() } answers { GROUP_IDS.map { id -> MockUtils.mockGroup(id) } }
+
+        every { getById(any()) } answers {
+            val groupId = firstArg<Int>()
+            if (groupId in GROUP_IDS) MockUtils.mockGroup(groupId) else null
+        }
+
+        coEvery { getMembers(any(), any(), any()) } answers {
+            val groupId = firstArg<Int>()
+            if (groupId !in GROUP_IDS) throw EntityNotFoundException(ExceptionEntity.GROUP)
+            emptyList<Student>() to 0L
+        }
+
+        coEvery { getManagers(any(), any(), any()) } answers {
+            val groupId = firstArg<Int>()
+            if (groupId !in GROUP_IDS) throw EntityNotFoundException(ExceptionEntity.GROUP)
+            emptyList<Teacher>() to 0L
+        }
+
+        coEvery { getTeacherGroups(any()) } answers {
+            val teacherId = firstArg<Int>()
+            if (teacherId != TEACHER_ID) {
+                throw EntityNotFoundException(ExceptionEntity.TEACHER)
+            }
+            GROUP_IDS.map { MockUtils.mockGroup(it) }
+        }
+
+        every { getMemberCounts() } answers { GROUP_IDS.associateWith { 0 } }
+
+        every { getMemberCount(any()) } returns 0
     }
-
-    override fun getMemberCounts() = GROUP_IDS.associateWith { 0 }
-
-    override fun getMemberCount(groupId: Int): Int = 0
-
-    @Transactional
-    override suspend fun deleteMembers(groupId: Int) = error("Not testable")
-
-    @Transactional
-    override suspend fun migrateMembers(groupId: Int, targetGroupId: Int) = error("Not testable")
 }
