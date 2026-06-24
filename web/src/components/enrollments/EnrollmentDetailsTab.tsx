@@ -103,13 +103,22 @@ export default function EnrollmentDetailsTab(props: { stickyOffset?: number }) {
         let start: number | null = null
         let end: number | null = null
 
+        // Use the multi-argument Date constructor instead of parsing an ISO string
+        // without an explicit timezone, which treats the date as UTC
+        const localDate = (datePart: string, timePart: string): Date | null => {
+            const [year, month, day] = datePart.split('-').map(Number)
+            const [hours, minutes] = timePart.split(':').map(Number)
+            if ([year, month, day, hours, minutes].some(Number.isNaN)) return null
+            return new Date(year, month - 1, day, hours, minutes)
+        }
+
         if (range.start[0] && range.start[1]) {
-            const d = new Date(`${range.start[0]}T${range.start[1]}`)
-            if (!Number.isNaN(d.getTime())) start = Math.floor(d.getTime() / 1000)
+            const d = localDate(range.start[0], range.start[1])
+            if (d && !Number.isNaN(d.getTime())) start = Math.floor(d.getTime() / 1000)
         }
         if (range.end[0] && range.end[1]) {
-            const d = new Date(`${range.end[0]}T${range.end[1]}`)
-            if (!Number.isNaN(d.getTime())) end = Math.floor(d.getTime() / 1000)
+            const d = localDate(range.end[0], range.end[1])
+            if (d && !Number.isNaN(d.getTime())) end = Math.floor(d.getTime() / 1000)
         }
 
         await ctx.onEdit?.('startDate', start, 'patchStartDate')
