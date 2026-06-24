@@ -51,7 +51,7 @@ export default function ErrorPage(props: { error: string | Error; reset: () => v
                     <Button
                         onClick={() => {
                             latestClient?.clearCaches()
-                            queryClient.resetQueries()
+                            queryClient.clear()
                             router.invalidate({ sync: true })
                             props.reset()
                         }}
