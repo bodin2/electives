@@ -16,6 +16,9 @@ selections.
 
 ## Building & Running
 
+This project requires Java 25 or higher and Gradle 9.5.0 or higher. The Gradle wrapper is included in the project.
+Older versions of Java or Gradle may work but aren't actively tested.
+
 To build or run the project, use one of the following tasks:
 
 | Task                                         | Description                                                          |
