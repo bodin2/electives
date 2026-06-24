@@ -11,8 +11,6 @@ export class GroupManager implements CacheableManager {
     readonly admin: GroupAdminActions
 
     cachedAll = false
-    /** The list of groups owned by the current user */
-    ownedGroups: Group[] | null = null
 
     constructor(
         private readonly client: Client<unknown>,
@@ -25,7 +23,6 @@ export class GroupManager implements CacheableManager {
 
     clearCache(): void {
         this.cache.clear()
-        this.ownedGroups = null
         this.cachedAll = false
     }
 
@@ -53,10 +50,6 @@ export class GroupManager implements CacheableManager {
         const { force = false, cache = true } = options
 
         if (!force && this.cachedAll) {
-            // Cache may contain other groups, but we only care about the owned groups list for this method, so return that if available
-
-            if (this.ownedGroups) return this.ownedGroups
-
             const cached = this.cache.toArray()
             if (cached.length > 0) return cached
         }
@@ -66,10 +59,7 @@ export class GroupManager implements CacheableManager {
         })
         const groups = data.groups.map(g => this._getOrCreate(g, cache))
 
-        if (cache) {
-            this.ownedGroups = groups
-            this.cachedAll = true
-        }
+        if (cache) this.cachedAll = true
 
         return groups
     }

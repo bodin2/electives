@@ -30,7 +30,12 @@ function RouteComponent() {
     const { client } = useAPI()
     const { string } = useI18n()
 
-    const groupsQuery = createQuery(() => ({ ...groupsQueryOptions(client), notifyOnChangeProps: ['data'] }))
+    const groupsQuery = createQuery(() => ({
+        ...groupsQueryOptions(client),
+        notifyOnChangeProps: ['data'],
+        // Only return groups the user is a member of
+        select: data => data.filter(g => nonNull(client.user).hasGroup(g.id)),
+    }))
     const memberCountsQuery = createQuery(() => ({
         ...groupMemberCountsQueryOptions(client),
         notifyOnChangeProps: ['data'],
