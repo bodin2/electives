@@ -63,9 +63,12 @@ class EnrollmentSelectionService(private val notificationsService: Notifications
                     }
                 }
 
-                // By the time we reach here, bypassDateCheck will only be true if the executor is an admin
-                val bypassDateCheck = executor.type == UserType.ADMIN
-                when (val result = canEnrollInSubject(studentId, enrollmentId, subjectId, bypassDateCheck)) {
+                // By the time we reach here:
+                //  - admins bypass both the start and end date checks
+                //  - teachers bypass only the start date check (they may set selections before enrollment opens, but not after it ends)
+                val bypassStartDate = executor.type == UserType.ADMIN || executor.type == UserType.TEACHER
+                val bypassEndDate = executor.type == UserType.ADMIN
+                when (val result = canEnrollInSubject(studentId, enrollmentId, subjectId, bypassStartDate, bypassEndDate)) {
                     CanEnrollStatus.CAN_ENROLL -> {}
 
                     else -> return@dbQuery ModifySelectionResult.CannotEnroll(result)
@@ -150,8 +153,9 @@ class EnrollmentSelectionService(private val notificationsService: Notifications
                 }
             }
 
-            val bypassDateCheck = executor.type == UserType.ADMIN
-            checkDateRange(enrollmentId, bypassDateCheck)?.let {
+            val bypassStartDate = executor.type == UserType.ADMIN || executor.type == UserType.TEACHER
+            val bypassEndDate = executor.type == UserType.ADMIN
+            checkDateRange(enrollmentId, bypassStartDate, bypassEndDate)?.let {
                 return@dbQuery ModifySelectionResult.CannotEnroll(it)
             }
 
@@ -201,14 +205,12 @@ class EnrollmentSelectionService(private val notificationsService: Notifications
         return buildMap { Student.getAllEnrollmentSelections(studentId).forEach { put(it.first, it.second) } }
     }
 
-    private fun checkDateRange(enrollmentId: Int, bypass: Boolean): CanEnrollStatus? {
+    private fun checkDateRange(enrollmentId: Int, bypassStartDate: Boolean, bypassEndDate: Boolean): CanEnrollStatus? {
         val (startDate, endDate) = Enrollment.getEnrollmentDateRange(enrollmentId)
         // Enrollment dates are stored as LocalDateTime in UTC
         val now = LocalDateTime.now(ZoneOffset.UTC)
-        if (!bypass) {
-            if (startDate != null && now.isBefore(startDate)) return CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE
-            if (endDate != null && now.isAfter(endDate)) return CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE
-        }
+        if (!bypassStartDate && startDate != null && now.isBefore(startDate)) return CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE
+        if (!bypassEndDate && endDate != null && now.isAfter(endDate)) return CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE
         return null
     }
 
@@ -227,10 +229,11 @@ class EnrollmentSelectionService(private val notificationsService: Notifications
         studentId: Int,
         enrollmentId: Int,
         subjectId: Int,
-        bypassDateCheck: Boolean,
+        bypassStartDate: Boolean,
+        bypassEndDate: Boolean,
     ): CanEnrollStatus {
         // Check enrollment date range
-        checkDateRange(enrollmentId, bypassDateCheck)?.let { return it }
+        checkDateRange(enrollmentId, bypassStartDate, bypassEndDate)?.let { return it }
 
         if (!Subject.isPartOfEnrollment(subjectId, enrollmentId)) return CanEnrollStatus.SUBJECT_NOT_IN_ENROLLMENT
 

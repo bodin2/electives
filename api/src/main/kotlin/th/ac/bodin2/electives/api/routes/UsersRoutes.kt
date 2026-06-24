@@ -17,6 +17,7 @@ import th.ac.bodin2.electives.api.services.SubjectService
 import th.ac.bodin2.electives.api.services.UsersService
 import th.ac.bodin2.electives.api.utils.*
 import th.ac.bodin2.electives.db.toProto
+import th.ac.bodin2.electives.proto.api.AdminService
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.proto.api.UsersService.SetStudentEnrollmentSelectionRequest
 import th.ac.bodin2.electives.proto.api.UsersService as UsersProto
@@ -29,6 +30,18 @@ val usersController = controller {
     routing {
         authenticatedRoutes {
             rateLimit(RATE_LIMIT_USERS) {
+                get<Users.Students> { params ->
+                    authenticated(ELEVATED_USER_ONLY) { _ ->
+                        context(usersService) { handleListStudents(params.page, params.query.ifBlank { null }) }
+                    }
+                }
+
+                get<Users.Teachers> { params ->
+                    authenticated(ELEVATED_USER_ONLY) { _ ->
+                        context(usersService) { handleListTeachers(params.page, params.query.ifBlank { null }) }
+                    }
+                }
+
                 get<Users.Id> {
                     resolveUserIdEnforced(it.id) { userId, _ ->
                         context(usersService) { handleGetUser(userId) }
@@ -96,6 +109,24 @@ suspend fun RoutingContext.handleGetStudentSelections(userId: Int) {
     // But that requires an extra query and exposes unnecessary information...
 
     call.respond(response)
+}
+
+context(usersService: UsersService)
+suspend fun RoutingContext.handleListStudents(page: Int, query: String?) {
+    val (users, total) = dbQuery {
+        val (students, count) = usersService.getStudents(page, query)
+        students.map { it.toProto() } to count.toInt()
+    }
+    call.respond(AdminService.ListUsersResponse(users = users, total = total))
+}
+
+context(usersService: UsersService)
+suspend fun RoutingContext.handleListTeachers(page: Int, query: String?) {
+    val (users, total) = dbQuery {
+        val (teachers, count) = usersService.getTeachers(page, query)
+        teachers.map { it.toProto() } to count.toInt()
+    }
+    call.respond(AdminService.ListUsersResponse(users = users, total = total))
 }
 
 context(usersService: UsersService)
@@ -268,6 +299,14 @@ private fun modifyingNonStudentUserSelection() =
 @Suppress("UNUSED")
 @Resource("/users")
 private class Users {
+    // GET: ListUsersResponse
+    @Resource("students")
+    class Students(val parent: Users = Users(), val page: Int = 1, val query: String = "")
+
+    // GET: ListUsersResponse
+    @Resource("teachers")
+    class Teachers(val parent: Users = Users(), val page: Int = 1, val query: String = "")
+
     @Resource("{id}")
     class Id(val parent: Users = Users(), val id: String) {
         @Resource("selections")

@@ -70,28 +70,6 @@ class AdminUsersController(
 ) : Controller {
     override fun Application.register() {
         adminRoutes {
-            get<Admin.Users.Students> { params ->
-                val (users, total) = dbQuery {
-                    val (students, count) =
-                        usersService.getStudents(params.page, params.query.ifBlank { null })
-
-                    students.map { it.toProto() } to count.toInt()
-                }
-
-                call.respond(AdminService.ListUsersResponse(users = users, total = total))
-            }
-
-            get<Admin.Users.Teachers> { params ->
-                val (users, total) = dbQuery {
-                    val (teachers, count) =
-                        usersService.getTeachers(params.page, params.query.ifBlank { null })
-
-                    teachers.map { it.toProto() } to count.toInt()
-                }
-
-                call.respond(AdminService.ListUsersResponse(users = users, total = total))
-            }
-
             put<Admin.Users.Id> { params -> handlePutUser(params.id) }
 
             patch<Admin.Users.Id> { params -> handlePatchUser(params.id) }
@@ -651,14 +629,6 @@ private class Admin {
         // POST: BulkAddUsersRequest, DELETE: BulkDeleteUsersRequest
         @Resource("bulk")
         class Bulk(val parent: Users)
-
-        // GET: ListUsersResponse
-        @Resource("students")
-        class Students(val parent: Users, val page: Int = 1, val query: String = "")
-
-        // GET: ListUsersResponse
-        @Resource("teachers")
-        class Teachers(val parent: Users, val page: Int = 1, val query: String = "")
 
         // DELETE, PATCH: UserPatch, PUT: AddUserRequest
         @Resource("{id}")

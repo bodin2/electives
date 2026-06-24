@@ -125,6 +125,36 @@ export class UserManager implements CacheableManager {
         }
         return userResolvable.id
     }
+
+    /**
+     * Fetch students (paginated). Requires teacher or admin privileges.
+     *
+     * @param page The page number (1-based)
+     * @param query The search query
+     */
+    async fetchStudents(page = 1, query?: string): Promise<{ users: User[]; total: number }> {
+        const data = await this.rest.get<AdminListUsersResponse>('/users/students', {
+            query: { page, query },
+            decoder: AdminListUsersResponse,
+        })
+        const users = data.users.map(u => this._getOrCreate(u))
+        return { users, total: data.total }
+    }
+
+    /**
+     * Fetch teachers (paginated). Requires teacher or admin privileges.
+     *
+     * @param page The page number (1-based)
+     * @param query The search query
+     */
+    async fetchTeachers(page = 1, query?: string): Promise<{ users: User[]; total: number }> {
+        const data = await this.rest.get<AdminListUsersResponse>('/users/teachers', {
+            query: { page, query },
+            decoder: AdminListUsersResponse,
+        })
+        const users = data.users.map(u => this._getOrCreate(u))
+        return { users, total: data.total }
+    }
 }
 
 export class UserAdminActions {
@@ -148,35 +178,6 @@ export class UserAdminActions {
         }
 
         return true
-    }
-
-    /**
-     * Fetch students (paginated)
-     * @param page The page number (1-based)
-     * @param query The search query
-     */
-    async fetchStudents(page = 1, query?: string): Promise<{ users: User[]; total: number }> {
-        const data = await this.rest.get<AdminListUsersResponse>('/admin/users/students', {
-            query: { page, query },
-            decoder: AdminListUsersResponse,
-        })
-        const users = data.users.map(u => this.manager._getOrCreate(u))
-        return { users, total: data.total }
-    }
-
-    /**
-     * Fetch teachers (paginated)
-     *
-     * @param page The page number (1-based)
-     * @param query The search query
-     */
-    async fetchTeachers(page = 1, query?: string): Promise<{ users: User[]; total: number }> {
-        const data = await this.rest.get<AdminListUsersResponse>('/admin/users/teachers', {
-            query: { page, query },
-            decoder: AdminListUsersResponse,
-        })
-        const users = data.users.map(u => this.manager._getOrCreate(u))
-        return { users, total: data.total }
     }
 
     /**

@@ -7,8 +7,8 @@ import type { Client } from '~/api'
  */
 export const studentsQueryOptions = (client: Client<unknown>, page: number, query?: string) =>
     queryOptions({
-        queryKey: ['admin', 'students', { page, query }] as const,
-        queryFn: () => client.users.admin.fetchStudents(page, query),
+        queryKey: ['users', 'students', { page, query }] as const,
+        queryFn: () => client.users.fetchStudents(page, query),
         staleTime: query ? 5000 : 10000,
     })
 
@@ -17,8 +17,8 @@ export const studentsQueryOptions = (client: Client<unknown>, page: number, quer
  */
 export const teachersQueryOptions = (client: Client<unknown>, page: number, query?: string) =>
     queryOptions({
-        queryKey: ['admin', 'teachers', { page, query }] as const,
-        queryFn: () => client.users.admin.fetchTeachers(page, query),
+        queryKey: ['users', 'teachers', { page, query }] as const,
+        queryFn: () => client.users.fetchTeachers(page, query),
         staleTime: query ? 5000 : 10000,
     })
 

@@ -441,7 +441,39 @@ class EnrollmentSelectionServiceTest : ApplicationTest() {
     }
 
     @Test
-    fun `teachers cannot bypass date range checks`() = runTest {
+    fun `teachers can set selection before enrollment starts`() = runTest {
+        transaction {
+            Enrollments.insert {
+                it[id] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[name] = TestConstants.Enrollments.OUT_OF_DATE_NAME
+                it[startDate] = LocalDateTime.now().plusDays(1)
+                it[endDate] = LocalDateTime.now().plusDays(2)
+            }
+
+            EnrollmentSubjects.insert {
+                it[enrollment] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+
+            TeacherSubjects.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[enrollment] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+        }
+
+        val result = enrollmentSelectionService.setStudentSelection(
+            bobSessionUser,
+            TestConstants.Students.JOHN_ID,
+            TestConstants.Enrollments.OUT_OF_DATE_ID,
+            TestConstants.Subjects.PHYSICS_ID,
+        )
+
+        assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(result)
+    }
+
+    @Test
+    fun `teachers cannot set selection after enrollment ends`() = runTest {
         transaction {
             Enrollments.insert {
                 it[id] = TestConstants.Enrollments.OUT_OF_DATE_ID
@@ -566,5 +598,86 @@ class EnrollmentSelectionServiceTest : ApplicationTest() {
         )
 
         assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(result)
+    }
+
+    @Test
+    fun `teachers can delete selection before enrollment starts`() = runTest {
+        transaction {
+            Enrollments.insert {
+                it[id] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[name] = TestConstants.Enrollments.OUT_OF_DATE_NAME
+                it[startDate] = LocalDateTime.now().plusDays(1)
+                it[endDate] = LocalDateTime.now().plusDays(2)
+            }
+
+            EnrollmentSubjects.insert {
+                it[enrollment] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+
+            TeacherSubjects.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[enrollment] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+        }
+
+        // Bypass date check by inserting the selection directly
+        transaction {
+            StudentClasses.insert {
+                it[student] = TestConstants.Students.JOHN_ID
+                it[enrollment] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+        }
+
+        val result = enrollmentSelectionService.deleteStudentSelection(
+            bobSessionUser,
+            TestConstants.Students.JOHN_ID,
+            TestConstants.Enrollments.OUT_OF_DATE_ID
+        )
+
+        assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(result)
+    }
+
+    @Test
+    fun `teachers cannot delete selection after enrollment ends`() = runTest {
+        transaction {
+            Enrollments.insert {
+                it[id] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[name] = TestConstants.Enrollments.OUT_OF_DATE_NAME
+                it[startDate] = LocalDateTime.now().minusDays(2)
+                it[endDate] = LocalDateTime.now().minusDays(1)
+            }
+
+            EnrollmentSubjects.insert {
+                it[enrollment] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+
+            TeacherSubjects.insert {
+                it[teacher] = TestConstants.Teachers.BOB_ID
+                it[enrollment] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+        }
+
+        // Bypass date check by inserting the selection directly
+        transaction {
+            StudentClasses.insert {
+                it[student] = TestConstants.Students.JOHN_ID
+                it[enrollment] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                it[subject] = TestConstants.Subjects.PHYSICS_ID
+            }
+        }
+
+        val result = enrollmentSelectionService.deleteStudentSelection(
+            bobSessionUser,
+            TestConstants.Students.JOHN_ID,
+            TestConstants.Enrollments.OUT_OF_DATE_ID
+        )
+
+        assertIs<EnrollmentSelectionService.ModifySelectionResult.CannotEnroll>(result)
+        assertEquals(EnrollmentSelectionService.CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE, result.status)
     }
 }

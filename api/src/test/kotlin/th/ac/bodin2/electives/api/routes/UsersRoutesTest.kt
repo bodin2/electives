@@ -1,5 +1,6 @@
 package th.ac.bodin2.electives.api.routes
 
+import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
@@ -15,6 +16,7 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
 import th.ac.bodin2.electives.api.services.mock.testEnrollmentSelectionServiceResponse
+import th.ac.bodin2.electives.proto.api.AdminService
 import th.ac.bodin2.electives.proto.api.User
 import th.ac.bodin2.electives.proto.api.UserType
 import kotlin.test.Test
@@ -232,5 +234,65 @@ class UsersRoutesTest : ApplicationTest() {
     fun `get other user subjects as teacher`() = runRouteTest {
         client.getWithAuth("/users/$STUDENT_ID/subjects", teacherToken())
             .assertBadRequest("Viewing subjects for non-teacher users")
+    }
+
+    @Test
+    fun `list students as teacher`() = runRouteTest {
+        val response = client.getWithAuth("/users/students", teacherToken())
+            .assertOK()
+            .parse<AdminService.ListUsersResponse>()
+
+        assertTrue(response.users.size >= 0)
+    }
+
+    @Test
+    fun `list teachers as teacher`() = runRouteTest {
+        val response = client.getWithAuth("/users/teachers", teacherToken())
+            .assertOK()
+            .parse<AdminService.ListUsersResponse>()
+
+        assertTrue(response.users.size >= 0)
+    }
+
+    @Test
+    fun `list students with query as teacher`() = runRouteTest {
+        val response = client.getWithAuth("/users/students?query=test", teacherToken())
+            .assertOK()
+            .parse<AdminService.ListUsersResponse>()
+
+        assertTrue(response.users.size >= 0)
+    }
+
+    @Test
+    fun `list teachers with query as teacher`() = runRouteTest {
+        val response = client.getWithAuth("/users/teachers?query=test", teacherToken())
+            .assertOK()
+            .parse<AdminService.ListUsersResponse>()
+
+        assertTrue(response.users.size >= 0)
+    }
+
+    @Test
+    fun `list students as student is unauthorized`() = runRouteTest {
+        client.getWithAuth("/users/students", studentToken())
+            .assertUnauthorized()
+    }
+
+    @Test
+    fun `list teachers as student is unauthorized`() = runRouteTest {
+        client.getWithAuth("/users/teachers", studentToken())
+            .assertUnauthorized()
+    }
+
+    @Test
+    fun `list students without auth is unauthorized`() = runRouteTest {
+        startApplication()
+        client.get("/users/students").assertUnauthorized()
+    }
+
+    @Test
+    fun `list teachers without auth is unauthorized`() = runRouteTest {
+        startApplication()
+        client.get("/users/teachers").assertUnauthorized()
     }
 }

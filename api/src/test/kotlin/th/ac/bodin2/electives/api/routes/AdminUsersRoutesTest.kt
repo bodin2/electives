@@ -13,7 +13,6 @@ import th.ac.bodin2.electives.proto.api.User
 import th.ac.bodin2.electives.proto.api.UserType
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class AdminUsersRoutesTest : ApplicationTest() {
     private suspend fun HttpClient.adminGet(url: String): HttpResponse =
@@ -27,50 +26,6 @@ class AdminUsersRoutesTest : ApplicationTest() {
         startApplication()
 
         client.adminGet("/admin/users/$UNUSED_ID").assertNotFound()
-    }
-
-    @Test
-    fun `get students list`() = runRouteTest {
-        startApplication()
-
-        val response = client.adminGet("/admin/users/students")
-            .assertOK()
-            .parse<AdminService.ListUsersResponse>()
-
-        assertTrue(response.users.size >= 0)
-    }
-
-    @Test
-    fun `get teachers list`() = runRouteTest {
-        startApplication()
-
-        val response = client.adminGet("/admin/users/teachers")
-            .assertOK()
-            .parse<AdminService.ListUsersResponse>()
-
-        assertTrue(response.users.size >= 0)
-    }
-
-    @Test
-    fun `get students list with query`() = runRouteTest {
-        startApplication()
-
-        val response = client.adminGet("/admin/users/students?query=test")
-            .assertOK()
-            .parse<AdminService.ListUsersResponse>()
-
-        assertTrue(response.users.size >= 0)
-    }
-
-    @Test
-    fun `get teachers list with query`() = runRouteTest {
-        startApplication()
-
-        val response = client.adminGet("/admin/users/teachers?query=test")
-            .assertOK()
-            .parse<AdminService.ListUsersResponse>()
-
-        assertTrue(response.users.size >= 0)
     }
 
     @Test

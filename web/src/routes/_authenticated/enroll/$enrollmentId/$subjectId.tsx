@@ -144,7 +144,7 @@ function RouteComponent() {
                     teachers={teachers()}
                     user={client.user ?? undefined}
                     onStudentRemove={isTaughtBy() ? handleStudentRemove : undefined}
-                    studentRemoveDisabled={user.isTeacher() ? !en().isSelectionOpen() : true}
+                    studentRemoveDisabled={user.isTeacher() ? en().isSelectionEnded() : true}
                     extraActions={props => (
                         <VStack alignHorizontal="center" grow>
                             <Switch>
@@ -162,7 +162,7 @@ function RouteComponent() {
                                         class={styles.actionButton}
                                         enrollmentId={en().id}
                                         subjectId={props.subject.id}
-                                        disabled={isFull() || !en().isSelectionOpen()}
+                                        disabled={isFull() || en().isSelectionEnded()}
                                     />
                                 </Match>
                             </Switch>

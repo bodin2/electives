@@ -42,7 +42,7 @@ function RouteComponent() {
 
     let listHandle: PaginatedUserListHandle | undefined
 
-    const onRefresh = () => qc.invalidateQueries({ queryKey: ['admin', 'students'] })
+    const onRefresh = () => qc.invalidateQueries({ queryKey: ['users', 'students'] })
 
     return (
         <Page name={string.STUDENTS()}>
