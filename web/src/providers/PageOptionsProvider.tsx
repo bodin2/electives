@@ -11,7 +11,7 @@ import {
 import { createStore, produce } from 'solid-js/store'
 
 export interface PageOptions {
-    title?: string | Component
+    title?: Component
     headerLeading?: Component
     headerTrailing?: Component
     allowBacking?: boolean

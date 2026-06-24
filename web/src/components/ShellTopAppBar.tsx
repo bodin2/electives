@@ -1,6 +1,6 @@
 import ArrowLeftIcon from '@iconify-icons/mdi/arrow-left'
 import { useCanGoBack } from '@tanstack/solid-router'
-import { type Component, type JSXElement, Show } from 'solid-js'
+import { type Component, Show } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
 import { useI18n } from '~/providers/I18nProvider'
 import { useMergedPageOptions } from '~/providers/PageOptionsProvider'
@@ -40,7 +40,7 @@ export default function ShellTopAppBar(props: ShellTopAppBarProps) {
     const Headline: Component = () => (
         <HStack alignHorizontal="center" alignVertical="center" gap={16} style={{ 'padding-inline-start': '8px' }}>
             <SchoolLogo style={{ width: '32px', height: '36px' }} />
-            <Show when={opts().title}>{T => renderTitle(T())}</Show>
+            <Show when={opts().title}>{T => <Dynamic component={T()} />}</Show>
         </HStack>
     )
 
@@ -60,8 +60,4 @@ export default function ShellTopAppBar(props: ShellTopAppBarProps) {
             trailing={Trailing}
         />
     )
-}
-
-function renderTitle(title: string | Component): JSXElement {
-    return typeof title === 'function' ? <Dynamic component={title} /> : title
 }
