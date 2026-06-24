@@ -1,7 +1,7 @@
 @layer reset, m3-solid;
 
 :root {
-  --m3-primary-font: "Google Sans Flex";
+  --m3-primary-font: "Google Sans Flex", "Google Sans";
 
   &[lang="th"] {
     --m3-primary-font: "Google Sans";
