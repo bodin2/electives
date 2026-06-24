@@ -24,6 +24,8 @@ import th.ac.bodin2.electives.db.models.TeacherSubjects
 import th.ac.bodin2.electives.db.toProto
 import th.ac.bodin2.electives.proto.api.SubjectTag
 import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.util.TimeZone
 import kotlin.test.*
 
 @OptIn(Transactional::class)
@@ -400,6 +402,42 @@ class EnrollmentSelectionServiceTest : ApplicationTest() {
         )
 
         assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(result3)
+    }
+
+    @Test
+    fun `date range check uses UTC now regardless of server timezone`() = runTest {
+        val originalTz = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Bangkok")) // UTC+7
+        try {
+            val utcNow = LocalDateTime.now(ZoneOffset.UTC)
+            transaction {
+                Enrollments.insert {
+                    it[id] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                    it[name] = TestConstants.Enrollments.OUT_OF_DATE_NAME
+                    // If broken, LocalDateTime.now() would return UTC+x and fall well outside [utcNow-1m, utcNow+1m]
+                    it[startDate] = utcNow.minusMinutes(1)
+                    it[endDate] = utcNow.plusMinutes(1)
+                }
+                EnrollmentSubjects.insert {
+                    it[enrollment] = TestConstants.Enrollments.OUT_OF_DATE_ID
+                    it[subject] = TestConstants.Subjects.PHYSICS_ID
+                }
+            }
+
+            val result = enrollmentSelectionService.setStudentSelection(
+                johnSessionUser,
+                TestConstants.Students.JOHN_ID,
+                TestConstants.Enrollments.OUT_OF_DATE_ID,
+                TestConstants.Subjects.PHYSICS_ID,
+            )
+
+            assertIs<EnrollmentSelectionService.ModifySelectionResult.Success>(
+                result,
+                "Selection should succeed when UTC now is inside the stored UTC window but got: $result",
+            )
+        } finally {
+            TimeZone.setDefault(originalTz)
+        }
     }
 
     @Test

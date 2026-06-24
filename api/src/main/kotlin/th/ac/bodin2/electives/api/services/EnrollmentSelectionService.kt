@@ -19,6 +19,7 @@ import th.ac.bodin2.electives.db.models.Subjects
 import th.ac.bodin2.electives.proto.api.UserType
 import java.sql.Connection.TRANSACTION_SERIALIZABLE
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 class EnrollmentSelectionService(private val notificationsService: NotificationsService) {
     companion object {
@@ -202,7 +203,8 @@ class EnrollmentSelectionService(private val notificationsService: Notifications
 
     private fun checkDateRange(enrollmentId: Int, bypass: Boolean): CanEnrollStatus? {
         val (startDate, endDate) = Enrollment.getEnrollmentDateRange(enrollmentId)
-        val now = LocalDateTime.now()
+        // Enrollment dates are stored as LocalDateTime in UTC
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         if (!bypass) {
             if (startDate != null && now.isBefore(startDate)) return CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE
             if (endDate != null && now.isAfter(endDate)) return CanEnrollStatus.NOT_IN_ENROLLMENT_DATE_RANGE

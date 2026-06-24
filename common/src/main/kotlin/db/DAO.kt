@@ -12,6 +12,7 @@ import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.db.models.*
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 class User(id: EntityID<Int>) : Entity<Int>(id) {
     companion object : EntityClass<Int, User>(Users)
@@ -157,7 +158,8 @@ open class EnrollmentCompanion : EntityClass<Int, Enrollment>(Enrollments) {
         if (!exists(id)) throw EntityNotFoundException(ExceptionEntity.ENROLLMENT)
     }
 
-    fun getAllActiveIds(at: LocalDateTime = LocalDateTime.now()): List<Int> {
+    // Enrollment start/end dates are persisted in UTC
+    fun getAllActiveIds(at: LocalDateTime = LocalDateTime.now(ZoneOffset.UTC)): List<Int> {
         return Enrollments
             .select(Enrollments.id)
             .where {
