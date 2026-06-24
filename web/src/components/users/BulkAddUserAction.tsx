@@ -181,7 +181,7 @@ export function BulkAddUserAction(props: BulkAddUserActionProps) {
                                 <ListItem
                                     class="no-side-padding"
                                     headline={string.ADD_ELLIPSIS()}
-                                    supportingText={string.USERS_COUNT({ count: importRequests().length - 10 })}
+                                    supporting={string.USERS_COUNT({ count: importRequests().length - 10 })}
                                 />
                             </Show>
                         </VStack>

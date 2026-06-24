@@ -20,7 +20,7 @@ export function VStack<const As extends keyof JSX.HTMLElementTags>(props: StackP
     return (
         <Dynamic
             component={local.as ?? 'div'}
-            {...others}
+            {...(others as Record<string, unknown>)}
             class={`${styles.stack} ${styles.vert}`}
             classList={{
                 ...local.classList,
@@ -57,7 +57,7 @@ export function HStack<const As extends keyof JSX.HTMLElementTags>(props: StackP
     return (
         <Dynamic
             component={local.as ?? 'div'}
-            {...others}
+            {...(others as Record<string, unknown>)}
             class={styles.stack}
             classList={{
                 ...local.classList,

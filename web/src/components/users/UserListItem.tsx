@@ -42,6 +42,7 @@ export function UserListItem(props: UserListItemProps) {
         props.showGradeGroup ? props.user.groups : props.user.groups.filter(g => g.type !== GroupType.GRADE)
 
     return (
+        // @ts-expect-error: Trying to satisfy ListItem's discriminated union
         <ListItem
             class={mergeClasses(
                 props.selected && styles.selected,

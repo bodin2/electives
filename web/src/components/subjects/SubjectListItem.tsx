@@ -111,7 +111,13 @@ export default function SubjectListItem(props: SubjectListItemProps) {
         <Show
             when={props.onClick}
             fallback={
-                <LinkListItem aria-label={ariaLabel()} {...props.linkProps} {...commonProps()} preloadDelay={500} />
+                // @ts-expect-error: createLink + ListItem union is too complex to satisfy
+                <LinkListItem
+                    aria-label={ariaLabel()}
+                    {...(props.linkProps as Record<string, unknown>)}
+                    {...commonProps()}
+                    preloadDelay={500}
+                />
             }
         >
             {onClick => <ListItem aria-label={ariaLabel()} onClick={onClick()} {...commonProps()} />}
