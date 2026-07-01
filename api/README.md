@@ -14,6 +14,9 @@ selections.
 
 - Kotlin
 
+- OpenTelemetry (traces + logs)
+- Micrometer (metrics)
+
 ## Building & Running
 
 This project requires Java 25 or higher and Gradle 9.5.0 or higher. The Gradle wrapper is included in the project.
@@ -68,6 +71,10 @@ The server can be configured using the following environment variables:
 | `ADMIN_SESSION_DURATION`                            | Duration of admin sessions in seconds.                                                                                      | `3600` (1 hour)                                                                                                                                                                                                            |
 | `ADMIN_SESSION_CREATION_MINIMUM_TIME`               | Minimum time in milliseconds for creating new admin sessions. Prevents spam and timing attacks.                             | `3000` (3 seconds)                                                                                                                                                                                                         |
 | `ADMIN_RESET`                                       | See the [Provisioning the Default Admin](#provisioning-the-default-admin) section.                                          | (None)                                                                                                                                                                                                                     |
+| `OTEL_SERVICE_NAME`                                 | The `service.name` reported to the telemetry backend.                                                                       | `electives-api`                                                                                                                                                                                                            |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                       | Base OTLP endpoint for traces, metrics, and logs. For Grafana LGTM, use the HTTP receiver (port `4318`).                    | `http://localhost:4318`                                                                                                                                                                                                    |
+| `OTEL_EXPORTER_OTLP_HEADERS`                        | Extra OTLP headers in `key=value,key2=value2` form. Used for auth against hosted backends (e.g. Grafana Cloud).             | (None)                                                                                                                                                                                                                     |
+| `OTEL_METRIC_EXPORT_INTERVAL`                       | How often in milliseconds to let Micrometer push metrics over OTLP.                                                         | `15000` (15 seconds)<br>This is a burst heavy application, so frequent metric pushes are expected.                                                                                                                         |
 
 ## Admin Authentication
 
@@ -85,3 +92,57 @@ On startup the server deletes user `0` if it already exists and recreates it as 
 > [!IMPORTANT]
 > You must **unset `ADMIN_RESET` after a successful startup.**
 > Leaving it set will cause the default admin user to be deleted and recreated on every restart, invalidating any sessions.
+
+## Observability
+
+The server emits three telemetry signals to the configured OTLP endpoint:
+
+- **Metrics**: HTTP metrics + JVM/system metrics (memory, GC, threads, CPU, file descriptors).
+- **Traces**: One span per request. DB access is traced by a `db.query` span per unit of work, with a child `db.statement` span per SQL statement.
+- **Logs**: a Logback appender bridges application logs, correlated with traces via `trace_id` and `span_id`.
+
+During tests, telemetry is automatically disabled.
+
+### Running a local Grafana LGTM backend
+
+The `grafana/otel-lgtm` all-in-one image bundles Grafana, Tempo, Loki, and Mimir with an OTLP receiver.
+
+Start it with Docker:
+
+```bash
+docker run -d --name grafana-lgtm \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -p 3001:3000 \
+  -e GF_SECURITY_ADMIN_USER=admin \
+  -e GF_SECURITY_ADMIN_PASSWORD=admin \
+  grafana/otel-lgtm:latest
+```
+
+Ports:
+
+- `4317` = OTLP gRPC
+- `4318` = OTLP HTTP (used by the defaults above)
+- `3001` = Grafana UI
+
+Then run the server with the defaults from `.env.example` and open Grafana at <http://localhost:3001> (login `admin`/`admin`).
+
+Traces are under **Drilldown** > **Traces**. Metrics and logs are explorable via their respective data sources.
+
+### Using a hosted backend (e.g. Grafana Cloud)
+
+Point the endpoint at your tenant's OTLP gateway and supply auth headers:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-<region>.grafana.net/otlp
+OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic <base64(instanceId:token)>"
+```
+
+The transport protocol (`http/protobuf`) and exporter selection (traces/logs over OTLP, metrics by Micrometer) are fixed in `TelemetryService` and need no configuration.
+The same headers are forwarded by the Micrometer OTLP registry for metric pushes.
+
+### Profiling
+
+The span waterfall shows which (route, SQL statement, etc.) is slow, but not what is slow.
+
+For per-method CPU flamegraphs, either attach the [OpenTelemetry Java agent](https://opentelemetry.io/docs/zero-code/java/agent/) (auto-instruments JDBC/HikariCP/coroutines with no code changes) or run [Grafana Pyroscope](https://grafana.com/oss/pyroscope/) for continuous profiling. Both are optional and independent of the LGTM setup above.

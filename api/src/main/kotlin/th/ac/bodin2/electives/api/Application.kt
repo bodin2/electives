@@ -59,6 +59,11 @@ suspend fun Application.module() {
         setupDatabase()
     }
 
+    // KtorServerTelemetry must precede other logging/telemetry plugins
+    val telemetry = TelemetryService(disabled = isTest)
+    telemetry.configure(this)
+    monitor.subscribe(ApplicationStopping) { telemetry.close() }
+
     install(CallLogging) {
         logger = callLogger
 

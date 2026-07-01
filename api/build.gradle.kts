@@ -19,6 +19,19 @@ tasks.test {
 
 dependencies {
     implementation(project(":common"))
+
+    implementation(platform(libs.otel.bom))
+    implementation(platform(libs.otel.instrumentation.bom.alpha))
+
+    implementation(libs.ktor.server.metrics.micrometer)
+    implementation(libs.micrometer.registry.otlp)
+    implementation(libs.otel.sdk)
+    implementation(libs.otel.sdk.autoconfigure)
+    implementation(libs.otel.exporter.otlp)
+    implementation(libs.otel.extension.kotlin)
+    implementation(libs.otel.ktor)
+    implementation(libs.otel.logback.appender)
+
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.conditional.headers)
     implementation(libs.ktor.server.forwarded.header)
