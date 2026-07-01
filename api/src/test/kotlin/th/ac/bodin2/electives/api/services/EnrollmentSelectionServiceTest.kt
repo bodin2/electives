@@ -351,8 +351,8 @@ class EnrollmentSelectionServiceTest : ApplicationTest() {
             Enrollments.insert {
                 it[id] = TestConstants.Enrollments.OUT_OF_DATE_ID
                 it[name] = TestConstants.Enrollments.OUT_OF_DATE_NAME
-                it[startDate] = LocalDateTime.now().minusSeconds(5)
-                it[endDate] = LocalDateTime.now().minusSeconds(1)
+                it[startDate] = LocalDateTime.now(ZoneOffset.UTC).minusSeconds(5)
+                it[endDate] = LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1)
             }
 
             EnrollmentSubjects.insert {
@@ -370,8 +370,8 @@ class EnrollmentSelectionServiceTest : ApplicationTest() {
 
         transaction {
             Enrollments.update({ Enrollments.id eq TestConstants.Enrollments.OUT_OF_DATE_ID }) {
-                it[startDate] = LocalDateTime.now().plusSeconds(5)
-                it[endDate] = LocalDateTime.now().plusSeconds(10)
+                it[startDate] = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(5)
+                it[endDate] = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(10)
             }
         }
 
@@ -389,8 +389,8 @@ class EnrollmentSelectionServiceTest : ApplicationTest() {
 
         transaction {
             Enrollments.update({ Enrollments.id eq TestConstants.Enrollments.OUT_OF_DATE_ID }) {
-                it[startDate] = LocalDateTime.now()
-                it[endDate] = LocalDateTime.now().plusSeconds(10)
+                it[startDate] = LocalDateTime.now(ZoneOffset.UTC)
+                it[endDate] = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(10)
             }
         }
 
