@@ -1,7 +1,5 @@
 .infoRow {
-    height: 32px;
-    column-gap: 16px;
-    row-gap: 0px;
+    min-height: 32px;
     flex-wrap: wrap;
 }
 

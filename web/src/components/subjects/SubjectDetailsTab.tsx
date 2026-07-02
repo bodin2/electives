@@ -68,7 +68,7 @@ export default function SubjectDetailsTab() {
                     <EditButton field="name" />
                 </HStack>
                 <VStack gap={0} style={{ color: 'var(--m3c-on-surface-variant)' }}>
-                    <HStack class={styles.infoRow}>
+                    <HStack class={styles.infoRow} gap="0px 16px">
                         <HStack alignVertical="center" gap={4}>
                             <IconLabel
                                 aria-label={`${string.CATEGORY()}: ${categoryName()}`}
@@ -100,7 +100,7 @@ export default function SubjectDetailsTab() {
                             <EditButton field="location" />
                         </HStack>
                     </HStack>
-                    <HStack class={styles.infoRow}>
+                    <HStack class={styles.infoRow} gap="0px 16px">
                         <HStack alignVertical="center" gap={4}>
                             <Show
                                 when={enrolledCount() !== undefined}
