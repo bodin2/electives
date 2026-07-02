@@ -10,7 +10,7 @@ import Page from '~/components/Page'
 import { VStack } from '~/components/Stack'
 import Version from '~/components/Version'
 import { useLoginRedirect } from '~/hooks/useAuthRedirect'
-import { AuthenticationState, useAPI } from '~/providers/APIProvider'
+import { LoggedOutState, useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import type { RoutePath } from '~/main'
 
@@ -70,7 +70,7 @@ function Login() {
                         </Button>
                     </VStack>
                 }
-                open={api.authState() === AuthenticationState.LoggedOut}
+                open={api.authState() instanceof LoggedOutState}
             >
                 <VStack gap={24}>
                     <form

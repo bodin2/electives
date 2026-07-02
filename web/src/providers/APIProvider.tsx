@@ -27,11 +27,30 @@ import { API_BASE_URL, API_CLIENT_NAME } from '~/constants'
 import { queryClient } from '~/queries/queryClient'
 import { nonNull } from '~/utils'
 
-export enum AuthenticationState {
-    Loading = 0,
-    LoggedOut = 1,
-    LoggedIn = 2,
-    NetworkError = 3,
+export abstract class AuthenticationState {
+    get friendlyName(): string {
+        return this.constructor.name.replace(/State$/, '')
+    }
+}
+
+export class LoadingState extends AuthenticationState {}
+
+export class LoggedOutState extends AuthenticationState {}
+
+export class LoggedInState extends AuthenticationState {}
+
+export class NetworkErrorState extends AuthenticationState {
+    constructor(public readonly error: NetworkError) {
+        super()
+    }
+}
+
+const sameAuthState = (a: AuthenticationState, b: AuthenticationState): boolean => {
+    if (a instanceof NetworkErrorState && b instanceof NetworkErrorState) {
+        return a.error.type === b.error.type
+    }
+
+    return a.constructor === b.constructor
 }
 
 interface APIApi {
@@ -86,7 +105,7 @@ export let latestClient: Client<unknown> | null = null
 
 export const initAuth = async (client: APIClient): Promise<AuthenticationState> => {
     const token = localStorage.getItem(TOKEN_KEY)
-    if (!token) return AuthenticationState.LoggedOut
+    if (!token) return new LoggedOutState()
 
     log.info('Got token!')
 
@@ -95,15 +114,16 @@ export const initAuth = async (client: APIClient): Promise<AuthenticationState> 
 
     try {
         await client.resume(token)
-        return AuthenticationState.LoggedIn
+        return new LoggedInState()
     } catch (e: unknown) {
         log.error('Failed to login with stored token:', e)
 
-        if (e instanceof APIError && !(e instanceof NetworkError)) {
-            return AuthenticationState.LoggedOut
-        }
+        if (e instanceof NetworkError) return new NetworkErrorState(e)
+        if (e instanceof APIError) return new LoggedOutState()
 
-        return AuthenticationState.NetworkError
+        return new NetworkErrorState(
+            new NetworkError(e instanceof Error ? e.message : String(e), NetworkError.Type.Generic),
+        )
     }
 }
 
@@ -111,15 +131,17 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
     const client = props.client
     const ctx = useRouteContext({ from: '__root__' })
 
-    const [authState, setAuthState] = createSignal(AuthenticationState.Loading)
+    const [authState, setAuthState] = createSignal<AuthenticationState>(new LoadingState(), {
+        equals: sameAuthState,
+    })
 
     createRenderEffect(() => {
-        log.debug('Authentication state changed to:', AuthenticationState[authState()])
+        log.debug('Authentication state changed to:', authState().friendlyName)
     })
 
     createRenderEffect(() => {
         ctx().authState.then(state => {
-            log.debug('Syncing router auth state:', AuthenticationState[state])
+            log.debug('Syncing router auth state:', state.friendlyName)
             setAuthState(state)
         })
     })
@@ -135,11 +157,11 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
 
     createRenderEffect(
         on(authState, state => {
-            if (state === AuthenticationState.NetworkError) return
+            if (state instanceof NetworkErrorState) return
 
             const onReady = (user: ClientEventMap['ready']) => {
                 log.info('Logged in as:', user)
-                setAuthState(AuthenticationState.LoggedIn)
+                setAuthState(new LoggedInState())
             }
 
             const onError = (err: ClientEventMap['error']) => {
@@ -147,8 +169,8 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             }
 
             const onNetworkError = (err: ClientEventMap['networkError']) => {
-                log.error('Network error occurred', err)
-                if (authState() !== AuthenticationState.LoggedOut) setAuthState(AuthenticationState.NetworkError)
+                log.error('Network error occurred:', err)
+                if (!(authState() instanceof LoggedOutState)) setAuthState(new NetworkErrorState(err))
             }
 
             const onGatewayConnect = () => {
@@ -167,7 +189,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             }
 
             const onUnauthorized = (error: ClientEventMap['unauthorized']) => {
-                if (authState() === AuthenticationState.LoggedOut) {
+                if (authState() instanceof LoggedOutState) {
                     log.warn('Received unauthorized event while logged out, likely a bad session.')
                     return
                 }
@@ -177,7 +199,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
 
             const onLogout = () => {
                 localStorage.removeItem(TOKEN_KEY)
-                setAuthState(AuthenticationState.LoggedOut)
+                setAuthState(new LoggedOutState())
                 queryClient.clear()
 
                 log.info('Logged out')
@@ -234,7 +256,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             const token = localStorage.getItem(TOKEN_KEY)
             if (!token) throw new Error('No stored token available to resume session')
 
-            setAuthState(AuthenticationState.Loading)
+            setAuthState(new LoadingState())
 
             const authenticator = configureClientAuth(client)
             authenticator.setToken(token)
@@ -245,7 +267,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
                 if (e instanceof UnauthorizedError) {
                     log.warn('Failed to resume session with stored token, logging out:', e)
                     await client.logout().catch(() => null)
-                    setAuthState(AuthenticationState.LoggedOut)
+                    setAuthState(new LoggedOutState())
                 }
 
                 throw e

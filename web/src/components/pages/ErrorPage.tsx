@@ -1,7 +1,8 @@
 import { useRouter } from '@tanstack/solid-router'
 import { mergeClasses } from 'm3-solid/src'
-import { createRenderEffect, Show } from 'solid-js'
-import { latestClient, useAPI } from '~/providers/APIProvider'
+import { createRenderEffect, onCleanup, onMount, Show } from 'solid-js'
+import { NetworkError } from '~/api/types'
+import { latestClient, NetworkErrorState, useAPI } from '~/providers/APIProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import { queryClient } from '~/queries/queryClient'
 import { Button } from '../Button'
@@ -70,9 +71,35 @@ export function NetworkErrorPage() {
     const api = useAPI()
     const { string } = useI18n()
 
+    const networkError = (): NetworkError | undefined => {
+        const state = api.authState()
+        return state instanceof NetworkErrorState ? state.error : undefined
+    }
+
+    const isTimeoutOrOffline = () => networkError()?.type === NetworkError.Type.Timeout || !navigator.onLine
+
+    onMount(() => {
+        if (!isTimeoutOrOffline()) return
+
+        const resume = () => api.resumeSession().catch(() => {})
+
+        // Reconnect every 10 seconds if the error is a timeout
+        const interval = setInterval(resume, 10000)
+
+        // Try to reconnect on focus or when the user comes back online
+        window.addEventListener('online', resume, { once: true })
+        window.addEventListener('pageshow', resume, { once: true })
+
+        onCleanup(() => {
+            clearInterval(interval)
+            window.removeEventListener('online', resume)
+            window.removeEventListener('pageshow', resume)
+        })
+    })
+
     return (
         <ErrorPage
-            error={navigator.onLine ? string.ERROR_API_UNREACHABLE() : string.ERROR_OFFLINE()}
+            error={isTimeoutOrOffline() ? string.ERROR_OFFLINE() : string.ERROR_API_UNREACHABLE()}
             reset={() => api.resumeSession()}
         />
     )

@@ -1,7 +1,7 @@
 import Logger from '@bodin2/electives-common/Logger'
 import { type Register, type ToPathOption, useRouter } from '@tanstack/solid-router'
 import { type Accessor, createEffect, on, untrack } from 'solid-js'
-import { AuthenticationState, useAPI } from '~/providers/APIProvider'
+import { LoggedInState, LoggedOutState, useAPI } from '~/providers/APIProvider'
 import type { RoutePath } from '~/main'
 
 const log = new Logger('hooks/useLoginRedirect')
@@ -11,9 +11,7 @@ export function onLogin(callback: () => void) {
 
     createEffect(
         on(api.authState, state => {
-            if (state === AuthenticationState.LoggedIn) {
-                callback()
-            }
+            if (state instanceof LoggedInState) callback()
         }),
     )
 }
@@ -55,7 +53,7 @@ export function useLogoutRedirect(path: ToPathOption<Register['router']>) {
 
     createEffect(
         on(api.authState, authState => {
-            if (authState === AuthenticationState.LoggedOut) {
+            if (authState instanceof LoggedOutState) {
                 navigate({
                     to: path,
                     replace: true,

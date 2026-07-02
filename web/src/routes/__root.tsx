@@ -5,7 +5,7 @@ import { Match, Show, Switch } from 'solid-js'
 import ErrorPage, { NetworkErrorPage } from '~/components/pages/ErrorPage'
 import { BaseSubjectDisplayContext, SubjectDisplayContextProvider } from '~/components/subjects/SubjectDisplayContext'
 import { BaseUserDisplayContext, UserDisplayContextProvider } from '~/components/users/UserDisplayContext'
-import APIProvider, { AuthenticationState, useAPI } from '~/providers/APIProvider'
+import APIProvider, { type AuthenticationState, NetworkErrorState, useAPI } from '~/providers/APIProvider'
 import { EnrollmentCountsProvider } from '~/providers/EnrollmentCountsProvider'
 import { useI18n } from '~/providers/I18nProvider'
 import type { QueryClient } from '@tanstack/solid-query'
@@ -48,7 +48,7 @@ function ReadyOutlet() {
     return (
         <Show when={i18n.ready}>
             <Switch>
-                <Match when={api.authState() === AuthenticationState.NetworkError}>
+                <Match when={api.authState() instanceof NetworkErrorState}>
                     <NetworkErrorPage />
                 </Match>
                 <Match when={true}>

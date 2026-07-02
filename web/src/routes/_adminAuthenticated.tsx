@@ -3,7 +3,7 @@ import { createRenderEffect, Match, on, Switch } from 'solid-js'
 import { UnauthorizedError } from '~/api'
 import LoadingPage from '~/components/pages/LoadingPage'
 import { useLogoutRedirect } from '~/hooks/useAuthRedirect'
-import { AuthenticationState, useAPI } from '~/providers/APIProvider'
+import { LoadingState, LoggedInState, useAPI } from '~/providers/APIProvider'
 import { nonNull } from '~/utils'
 import { catchErrors } from '~/utils/error-component'
 
@@ -29,10 +29,10 @@ function AdminAuthenticatedLayout() {
 
     return (
         <Switch>
-            <Match when={api.authState() === AuthenticationState.LoggedIn && nonNull(api.client.user).isAdmin()}>
+            <Match when={api.authState() instanceof LoggedInState && nonNull(api.client.user).isAdmin()}>
                 <Outlet />
             </Match>
-            <Match when={api.authState() === AuthenticationState.Loading}>
+            <Match when={api.authState() instanceof LoadingState}>
                 <LoadingPage debugName="AdminAuthenticatedLayout" />
             </Match>
         </Switch>
@@ -55,7 +55,7 @@ function useNonAdminCrossRedirect() {
 
     createRenderEffect(
         on(api.authState, state => {
-            if (state !== AuthenticationState.LoggedIn) return
+            if (!(state instanceof LoggedInState)) return
             if (!api.client.user?.isAdmin()) {
                 navigate({ to: '/', replace: true })
             }

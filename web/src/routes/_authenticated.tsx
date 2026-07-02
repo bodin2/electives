@@ -10,7 +10,7 @@ import {
     useUserDisplayContext,
 } from '~/components/users/UserDisplayContext'
 import { useLogoutRedirect } from '~/hooks/useAuthRedirect'
-import { AuthenticationState, useAPI } from '~/providers/APIProvider'
+import { LoadingState, LoggedInState, useAPI } from '~/providers/APIProvider'
 import { nonNull } from '~/utils'
 import { catchErrors } from '~/utils/error-component'
 
@@ -52,7 +52,7 @@ function AuthenticatedLayout() {
         <Switch>
             <Match
                 when={
-                    api.authState() === AuthenticationState.LoggedIn &&
+                    api.authState() instanceof LoggedInState &&
                     !nonNull(api.client.user).isAdmin() &&
                     api.client.user
                 }
@@ -65,7 +65,7 @@ function AuthenticatedLayout() {
                     </UserDisplayContextProvider>
                 )}
             </Match>
-            <Match when={api.authState() === AuthenticationState.Loading}>
+            <Match when={api.authState() instanceof LoadingState}>
                 <LoadingPage debugName="AuthenticatedLayout" />
             </Match>
         </Switch>
@@ -88,7 +88,7 @@ function useAdminCrossRedirect() {
 
     createRenderEffect(
         on(api.authState, state => {
-            if (state !== AuthenticationState.LoggedIn) return
+            if (!(state instanceof LoggedInState)) return
             if (api.client.user?.isAdmin()) {
                 navigate({ to: '/manage', replace: true })
             }
