@@ -45,14 +45,17 @@ export default function GroupList(props: GroupListProps) {
 
     const filteredGroups = createMemo(() => {
         const query = search().toLowerCase()
-        return props.groups
-            .filter(
-                g =>
-                    g.isRoot() &&
-                    (g.name.toLowerCase().includes(query) ||
-                        (subGroupsByParent()[g.id]?.some(g => g.name.toLowerCase().includes(query)) ?? false)),
-            )
-            .sort(User.GROUP_SORTER)
+        const parents = props.groups.filter(
+            g =>
+                g.isRoot() &&
+                (g.name.toLowerCase().includes(query) ||
+                    (subGroupsByParent()[g.id]?.some(g => g.name.toLowerCase().includes(query)) ?? false)),
+        )
+
+        // Subgroups (with parents), but the root is not in the list (filtered out by search, no permissions, etc.)
+        const subsWithoutUIParents = props.groups.filter(g => g.isSub() && !parents.some(r => r.id === g.parentId))
+
+        return [...parents, ...subsWithoutUIParents].sort(User.GROUP_SORTER)
     })
 
     const setGroupToDelete = (group: Group | undefined) => {
