@@ -1,0 +1,48 @@
+.wrapper {
+    position: fixed;
+    z-index: var(--layer-overlay-high);
+    /* Shouldn't capture clicks, the inner Menu re-enables them */
+    pointer-events: none;
+    /* transform-origin is set inline based on resolved placement */
+}
+
+.wrapper > * {
+    pointer-events: auto;
+}
+
+.opening {
+    animation: m3-menu-in 180ms var(--m3-timing-function-slow-spatial, ease-out) both;
+}
+
+.closing {
+    animation: m3-menu-out 120ms var(--m3-timing-function-fast, ease-in) both;
+}
+
+@keyframes m3-menu-in {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes m3-menu-out {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opening,
+    .closing {
+        animation-duration: 1ms;
+    }
+}

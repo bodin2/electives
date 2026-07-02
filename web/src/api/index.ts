@@ -1,9 +1,4 @@
-export {
-    type AdminAuthenticateOptions,
-    AdminAuthenticator,
-    type Authenticator,
-    UserAuthenticator,
-} from './auth'
+export { type Authenticator, UserAuthenticator } from './auth'
 export { Cache, type CacheEntry, type CacheOptions } from './cache'
 export {
     Client,
@@ -20,33 +15,30 @@ export {
     GatewayStatus,
 } from './gateway'
 export {
-    type AdminElectiveCounts,
-    type AdminElectiveListEntry,
-    ElectiveAdminActions,
-    ElectiveManager,
+    type AdminEnrollmentCounts,
+    type AdminEnrollmentListEntry,
+    EnrollmentAdminActions,
+    EnrollmentManager,
     type FetchOptions,
-    SelectionAdminActions,
+    GroupAdminActions,
+    GroupManager,
     SelectionManager,
     SubjectAdminActions,
     SubjectManager,
     type SubjectMembersResult,
-    TeamAdminActions,
-    TeamManager,
     UserAdminActions,
     UserManager,
 } from './managers'
 export { RESTClient, type RESTOptions, type RequestOptions } from './rest'
-export { Elective, Subject, Team, User } from './structures'
+export { Enrollment, Group, Subject, User } from './structures'
 export {
     type AdminAddUserRequest,
-    type AdminElectivePatch,
-    type AdminListElectivesResponse,
-    type AdminListTeamsResponse,
+    AdminEnrollmentPatch,
+    type AdminGroupPatch,
+    type AdminListGroupsResponse,
     type AdminListUsersResponse,
-    type AdminSetElectiveSubjectsRequest,
-    type AdminSetStudentSelectionsRequest,
+    type AdminSetEnrollmentSubjectsRequest,
     type AdminSubjectPatch,
-    type AdminTeamPatch,
     type AdminUserPatch,
     APIError,
     type AuthenticateRequest,
@@ -56,7 +48,8 @@ export {
     type ClientOptions,
     ConflictError,
     ForbiddenError,
-    type ListElectivesResponse,
+    GroupType,
+    type ListEnrollmentsResponse,
     type ListSubjectMembersResponse,
     type ListSubjectsResponse,
     type LoginOptions,
@@ -64,11 +57,11 @@ export {
     type NotificationEnvelope,
     type NotificationIdentify,
     RateLimitError,
-    type RawElective,
+    type RawEnrollment,
+    type RawGroup,
     type RawSubject,
-    type RawTeam,
     type RawUser,
-    type SetStudentElectiveSelectionRequest,
+    type SetStudentEnrollmentSelectionRequest,
     type StudentSelections,
     type SubjectEnrollmentUpdate,
     type SubjectEnrollmentUpdateSubscription,
@@ -77,3 +70,4 @@ export {
     UnauthorizedError,
     UserType,
 } from './types'
+

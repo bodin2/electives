@@ -8,45 +8,50 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.DaoEntityID
 import org.jetbrains.exposed.v1.jdbc.EmptySizedIterable
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
-import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_TEAM_ID
-import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ELECTIVE_WITHOUT_SUBJECTS_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_GROUP_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ENROLLMENT_WITHOUT_SUBJECTS_ID
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_GROUP_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_ID
-import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.SUBJECT_TEAM_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
 import th.ac.bodin2.electives.db.*
-import th.ac.bodin2.electives.db.models.Electives
+import th.ac.bodin2.electives.db.models.Enrollments
+import th.ac.bodin2.electives.db.models.Groups
 import th.ac.bodin2.electives.db.models.Subjects
-import th.ac.bodin2.electives.db.models.Teams
 import th.ac.bodin2.electives.db.models.Users
 
 object MockUtils {
     /**
-     * Makes sure handleGetElectiveSubjects -> Subject.toProto() can call Elective.require() without issues
+     * Makes sure handleGetEnrollmentSubjects -> Subject.toProto() can call Enrollment.require() without issues
      */
     fun mockDAOHelpers() {
-        mockkObject(Elective.Companion)
-        every { Elective.assertExists(any()) } answers { mockk(relaxed = true) }
+        mockkObject(Enrollment.Companion)
+        every { Enrollment.assertExists(any()) } answers { mockk(relaxed = true) }
+
+        // Batched subject-listing helpers (used by List<Subject>.toProto)
+        every { Enrollment.getTeachersBySubject(any()) } returns mapOf(SUBJECT_ID to listOf(mockTeacher(TEACHER_ID)))
+        every { Enrollment.getSubjectsEnrolledCounts(any()) } returns mapOf(SUBJECT_ID to 0)
     }
 
     fun unmockDAOHelpers() {
-        unmockkObject(Elective.Companion)
+        unmockkObject(Enrollment.Companion)
     }
 
-    fun mockElective(id: Int): Elective {
-        val mock = mockk<Elective>(relaxed = true)
-        every { mock.id } returns DaoEntityID(id, Electives)
+    fun mockEnrollment(id: Int): Enrollment {
+        val mock = mockk<Enrollment>(relaxed = true)
+        every { mock.id } returns DaoEntityID(id, Enrollments)
         every { mock.name } returns id.toString()
         every { mock.subjects } returns
-                if (id == ELECTIVE_WITHOUT_SUBJECTS_ID) EmptySizedIterable()
+                if (id == ENROLLMENT_WITHOUT_SUBJECTS_ID) EmptySizedIterable()
                 else SizedCollection(mockSubject(SUBJECT_ID))
-        every { mock.teamId } returns EntityID(ELECTIVE_TEAM_ID, Teams)
+        every { mock.groupId } returns EntityID(ENROLLMENT_GROUP_ID, Groups)
 
         return mock
     }
 
-    fun mockTeam(id: Int): Team {
-        val mock = mockk<Team>(relaxed = true)
-        every { mock.id } returns DaoEntityID(id, Teams)
+    fun mockGroup(id: Int, parentId: Int? = null): Group {
+        val mock = mockk<Group>(relaxed = true)
+        every { mock.id } returns DaoEntityID(id, Groups)
+        every { mock.parentId } returns parentId?.let { EntityID(it, Groups) }
 
         return mock
     }
@@ -54,7 +59,7 @@ object MockUtils {
     fun mockSubject(id: Int): Subject {
         val mock = mockk<Subject>(relaxed = true)
         every { mock.id } returns DaoEntityID(id, Subjects)
-        every { mock.teamId } returns DaoEntityID(SUBJECT_TEAM_ID, Teams)
+        every { mock.groupId } returns DaoEntityID(SUBJECT_GROUP_ID, Groups)
         every { mock.getTeachers(any()) } returns listOf(mockTeacher(TEACHER_ID))
         every { mock.getEnrolledCount(any()) } returns 0
 
@@ -91,7 +96,12 @@ object MockUtils {
         val mock = mockk<Student>(relaxed = true)
         every { mock.user } returns user
         every { mock.id } returns mockId(id)
-        every { mock.teams } returns SizedCollection(listOf(mockTeam(ELECTIVE_TEAM_ID), mockTeam(SUBJECT_TEAM_ID)))
+        every { mock.groups } returns SizedCollection(
+            listOf(
+                mockGroup(ENROLLMENT_GROUP_ID),
+                mockGroup(SUBJECT_GROUP_ID),
+            )
+        )
 
         return mock
     }

@@ -26,10 +26,10 @@ export function useRetryableSubscription(
         }
 
         attemptSubscribe()
-    })
 
-    onCleanup(() => {
-        cleanedUp = true
-        unsubscribe()
+        onCleanup(() => {
+            cleanedUp = true
+            unsubscribe()
+        })
     })
 }

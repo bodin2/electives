@@ -1,77 +1,137 @@
-import { type Component, createSignal, Match, Show, Suspense, Switch } from 'solid-js'
-import { useTabPersistence } from '../../hooks/useTabPersistence'
-import { useI18n } from '../../providers/I18nProvider'
-import { nonNull } from '../../utils'
-import LoadingPage from '../pages/LoadingPage'
+import {
+    type Component,
+    createContext,
+    createRenderEffect,
+    createSignal,
+    Match,
+    type ParentProps,
+    Show,
+    Switch,
+    useContext,
+} from 'solid-js'
+import { createStore } from 'solid-js/store'
+import { useTabPersistence } from '~/hooks/useTabPersistence'
+import { useI18n } from '~/providers/I18nProvider'
+import { nonNull } from '~/utils'
+import { SuspenseLoadingPage } from '../pages/LoadingPage'
 import { VStack } from '../Stack'
 import StickyTabs from '../StickyTabs'
 import StudentSelectionsTab from './StudentSelectionsTab'
+import TeacherSubjectsTab from './TeacherSubjectsTab'
 import UserBottomActions from './UserBottomActions'
 import UserDetailsTab from './UserDetailsTab'
-import { useUserDisplayContext } from './UserDisplayContext'
 import styles from './UserInfo.module.css'
-import type { Team, UserType } from '../../api'
+import type { Group, User, UserType } from '~/api'
+import type { UserData, UserPatchSetterKey } from './UserDisplayContext'
 
 export interface UserInfoProps {
+    user?: User
+    userData?: UserData
+    editable?: boolean
+    creating?: boolean
+    edited?: boolean
+    onEdit?: (field: string, value: unknown, patchKey?: UserPatchSetterKey) => Promise<void> | void
+    onSave?: () => Promise<void> | void
+    onDelete?: () => Promise<void> | void
     extraActions?: Component
     initialType?: UserType
-    teams?: Team[]
+    groups?: Group[]
     persistTab?: boolean
+}
+
+export interface UserInfoContext {
+    user?: User
+    userData?: UserData
+    editable?: boolean
+    creating?: boolean
+    edited?: boolean
+    onEdit?: (field: string, value: unknown, patchKey?: UserPatchSetterKey) => Promise<void> | void
+    onSave?: () => Promise<void> | void
+    onDelete?: () => Promise<void> | void
+}
+
+const UserInfoContext = createContext<UserInfoContext>(null as unknown as UserInfoContext)
+export const useUserInfoContext = () =>
+    nonNull(useContext(UserInfoContext), 'useUserInfoContext must be used within a UserInfo provider')
+
+export function UserInfoContextProvider(props: ParentProps<{ value: UserInfoContext }>) {
+    return <UserInfoContext.Provider value={props.value}>{props.children}</UserInfoContext.Provider>
 }
 
 export default function UserInfo(props: UserInfoProps) {
     const { string } = useI18n()
-    const ctx = useUserDisplayContext()
 
     const [tab, setTab] = createSignal('info')
     useTabPersistence(tab, setTab, { disabled: props.persistTab === false })
 
+    // SolidJS moment
+    const [info, setInfo] = createStore<UserInfoContext>(null as unknown as UserInfoContext)
+    createRenderEffect(() => {
+        setInfo({
+            user: props.user,
+            userData: props.userData,
+            editable: props.editable,
+            creating: props.creating,
+            edited: props.edited,
+            onEdit: props.onEdit,
+            onSave: props.onSave,
+            onDelete: props.onDelete,
+        })
+    })
+
     const tabs = () => {
         const list = [{ label: string.USER_INFO(), value: 'info' }]
-        if (!ctx.creating) {
-            if (ctx.user?.isStudent()) {
+        if (!props.creating) {
+            if (props.user?.isStudent()) {
                 list.push({ label: string.SELECTIONS(), value: 'selections' })
             }
 
-            // TODO: Subjects tab for teachers
-            // if (ctx.user?.isTeacher()) {
-            //     list.push({ label: string.SUBJECTS(), value: 'subjects' })
-            // }
+            if (props.user?.isTeacher()) {
+                list.push({ label: string.SUBJECTS(), value: 'subjects' })
+            }
         }
         return list
     }
 
     return (
-        <>
-            <Show when={ctx.user}>
+        <UserInfoContext.Provider value={info}>
+            <Show when={props.user}>
                 <Show when={tabs().length > 1}>
                     <StickyTabs value={tab()} onChange={setTab} class={styles.tabs} tabs={tabs()} />
                 </Show>
             </Show>
-            <VStack gap={16} grow class={`padded ${styles.tabContent}`}>
-                <Suspense fallback={<LoadingPage />}>
+            <VStack gap={16} grow class={`padded ${styles.tabContent}`} style={{ '--sticky-offset': '48px' }}>
+                <SuspenseLoadingPage debugName="UserInfo">
                     <Switch>
                         <Match when={tab() === 'info'}>
-                            <UserDetailsTab
-                                avatarClass={styles.avatar}
-                                avatarPlaceholderClass={`${styles.avatar} ${styles.placeholder}`}
-                                descriptionClass={`${styles.description} m3-body-large`}
-                                labelClass={styles.labelSubText}
-                                initialType={props.initialType}
-                                teams={props.teams}
-                            />
+                            <UserDetailsTab initialType={props.initialType} groups={props.groups} />
                         </Match>
-                        <Match when={tab() === 'selections'}>
-                            <StudentSelectionsTab userId={nonNull(ctx.user).id} />
+                        <Match when={tab() === 'selections' && props.user}>
+                            {user => (
+                                <StudentSelectionsTab
+                                    userId={user().id}
+                                    fallback={
+                                        <p class="text-surface-variant text-center">
+                                            {string.NO_X_YET({ object: string.SELECTIONS().toLowerCase() })}
+                                        </p>
+                                    }
+                                />
+                            )}
                         </Match>
-                        {/* TODO */}
-                        {/* <Match when={tab() === 'subjects'}>
-                            <VStack gap={8} alignHorizontal="center">
-
-                            </VStack>
-                        </Match> */}
+                        <Match when={tab() === 'subjects' && props.user}>
+                            {user => (
+                                <TeacherSubjectsTab
+                                    userId={user().id}
+                                    fallback={
+                                        <p class="text-surface-variant text-center">
+                                            {string.NO_X_YET({ object: string.SUBJECTS().toLowerCase() })}
+                                        </p>
+                                    }
+                                />
+                            )}
+                        </Match>
                     </Switch>
-                </Suspense>
+                </SuspenseLoadingPage>
             </VStack>
 
             <UserBottomActions />
@@ -80,6 +140,6 @@ export default function UserInfo(props: UserInfoProps) {
                 {/* @ts-expect-error: Incorrect types */}
                 <props.extraActions />
             </Show>
-        </>
+        </UserInfoContext.Provider>
     )
 }

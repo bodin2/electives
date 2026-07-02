@@ -2,40 +2,42 @@ import { Title } from '@solidjs/meta'
 import { createRootRouteWithContext, Outlet, useRouteContext } from '@tanstack/solid-router'
 import { TanStackRouterDevtools } from '@tanstack/solid-router-devtools'
 import { Match, Show, Switch } from 'solid-js'
-import { NetworkErrorPage } from '../components/pages/ErrorPage'
-import { BaseSubjectDisplayContext, SubjectDisplayContextProvider } from '../components/subjects/SubjectDisplayContext'
-import { BaseUserDisplayContext, UserDisplayContextProvider } from '../components/users/UserDisplayContext'
-import APIProvider, { AuthenticationState, useAPI } from '../providers/APIProvider'
-import { EnrollmentCountsProvider } from '../providers/EnrollmentCountsProvider'
-import { useI18n } from '../providers/I18nProvider'
-import PageDataProvider from '../providers/PageProvider'
-import type { Client } from '../api'
+import ErrorPage, { NetworkErrorPage } from '~/components/pages/ErrorPage'
+import { BaseSubjectDisplayContext, SubjectDisplayContextProvider } from '~/components/subjects/SubjectDisplayContext'
+import { BaseUserDisplayContext, UserDisplayContextProvider } from '~/components/users/UserDisplayContext'
+import APIProvider, { type AuthenticationState, NetworkErrorState, useAPI } from '~/providers/APIProvider'
+import { EnrollmentCountsProvider } from '~/providers/EnrollmentCountsProvider'
+import { useI18n } from '~/providers/I18nProvider'
+import type { QueryClient } from '@tanstack/solid-query'
+import type { Client } from '~/api'
 
 export interface RouterContext {
     client: Client<unknown>
     authState: Promise<AuthenticationState>
+    queryClient: QueryClient
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
     component: RootComponent,
+    errorComponent: ErrorPage,
 })
 
 function RootComponent() {
     const context = useRouteContext({ from: '__root__' })
 
     return (
-        <PageDataProvider>
+        <>
             <APIProvider client={context().client}>
                 <EnrollmentCountsProvider client={context().client}>
                     <SubjectDisplayContextProvider value={BaseSubjectDisplayContext}>
                         <UserDisplayContextProvider value={BaseUserDisplayContext}>
                             <ReadyOutlet />
-                            <TanStackRouterDevtools position="bottom-left" />
                         </UserDisplayContextProvider>
                     </SubjectDisplayContextProvider>
                 </EnrollmentCountsProvider>
             </APIProvider>
-        </PageDataProvider>
+            <TanStackRouterDevtools position="bottom-left" />
+        </>
     )
 }
 
@@ -46,7 +48,7 @@ function ReadyOutlet() {
     return (
         <Show when={i18n.ready}>
             <Switch>
-                <Match when={api.authState() === AuthenticationState.NetworkError}>
+                <Match when={api.authState() instanceof NetworkErrorState}>
                     <NetworkErrorPage />
                 </Match>
                 <Match when={true}>

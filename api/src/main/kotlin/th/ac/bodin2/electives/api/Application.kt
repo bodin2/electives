@@ -1,5 +1,7 @@
 package th.ac.bodin2.electives.api
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -57,6 +59,14 @@ suspend fun Application.module() {
         setupDatabase()
     }
 
+    // KtorServerTelemetry must precede other logging/telemetry plugins
+    val telemetry = TelemetryService(
+        // Telemetry is disabled in tests and whenever no OTLP endpoint is configured
+        disabled = isTest || env("OTEL_EXPORTER_OTLP_ENDPOINT").isNullOrBlank(),
+    )
+    telemetry.configure(this)
+    monitor.subscribe(ApplicationStopping) { telemetry.close() }
+
     install(CallLogging) {
         logger = callLogger
 
@@ -65,19 +75,21 @@ suspend fun Application.module() {
         mdc("userId") { it.userId()?.toString() }
     }
 
+    configureStatusPages()
     configureHTTP()
     configureWebSocket()
     configureSecurity()
 
     val controllers = mutableListOf(
         authController,
-        electivesController,
+        enrollmentsController,
+        groupsController,
         miscController,
         notificationsController,
         usersController,
     )
 
-    if (isAdminAvailable) {
+    if (isAdminEnabled) {
         controllers += adminController
     }
 
@@ -86,15 +98,22 @@ suspend fun Application.module() {
 
 fun setupDatabase() {
     if (TransactionManager.primaryDatabase == null) {
-        val path = requireEnvNonBlank("DB_PATH")
-        Database.init("jdbc:sqlite:$path", "org.sqlite.JDBC") {
-            createStatement().use {
-                it.execute("PRAGMA foreign_keys=ON;")
-                it.execute("PRAGMA journal_mode=WAL;")
-                it.execute("PRAGMA synchronous=NORMAL;")
-                it.execute("PRAGMA busy_timeout=5000;")
-            }
-        }
+        val poolSize = env("DB_POOL_SIZE")?.toInt() ?: 10
+        val dataSource = HikariDataSource(HikariConfig().apply {
+            jdbcUrl = requireEnvNonBlank("DB_URL")
+            username = env("DB_USER")
+            password = env("DB_PASSWORD")
+            driverClassName = "org.postgresql.Driver"
+            maximumPoolSize = poolSize
+            minimumIdle = env("DB_MINIMUM_IDLE")?.toInt() ?: poolSize
+            connectionTimeout = env("DB_CONNECTION_TIMEOUT")?.toLong() ?: 10_000
+            maxLifetime = env("DB_MAX_LIFETIME")?.toLong() ?: 1_800_000
+            idleTimeout = env("DB_IDLE_TIMEOUT")?.toLong() ?: 600_000
+            leakDetectionThreshold = env("DB_LEAK_DETECTION_THRESHOLD")?.toLong() ?: 0
+            isAutoCommit = false
+            transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+        })
+        Database.init(dataSource)
     } else {
         logger.warn("Database already initialized? This is not normal.")
     }
@@ -110,20 +129,14 @@ fun Application.provideDependencies() = dependencies {
         provideNotificationsService()
     }
 
-    provide<ElectiveService> { ElectiveServiceImpl() }
-    provide<SubjectService> { SubjectServiceImpl() }
-    provide<TeamService> { TeamServiceImpl() }
-    provide<ElectiveSelectionService> { ElectiveSelectionServiceImpl(resolve<NotificationsService>()) }
-
-    if (isAdminEnabled) {
-        provideAdminAuthService()
-    }
+    provide<EnrollmentService> { EnrollmentService() }
+    provide<SubjectService> { SubjectService() }
+    provide<GroupService> { GroupService() }
+    provide<EnrollmentSelectionService> { EnrollmentSelectionService(resolve<NotificationsService>()) }
 }
+
+val isAdminEnabled: Boolean
+    get() = !env("ADMIN_ENABLED").isNullOrEmpty()
 
 inline fun <reified T : Any> DependencyRegistry.contains() =
     contains(DependencyKey<T>())
-
-suspend inline fun <reified T : Any> DependencyRegistry.resolveOrNull(): T? {
-    val key = DependencyKey<T>()
-    return if (contains(key)) get(key) else null
-}

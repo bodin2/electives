@@ -1,7 +1,7 @@
 /** biome-ignore-all lint/a11y/useHeadingContent: Heading only for cosmetic purposes, couldn't apply it on the line for some reason */
 
 import { type Component, createMemo, createRenderEffect, createSignal, type JSX, on, onCleanup, Show } from 'solid-js'
-import { useScrollData } from '../providers/ScrollDataProvider'
+import { useScrollData } from '~/providers/ScrollDataProvider'
 import { HStack } from './Stack'
 import styles from './TopAppBar.module.css'
 

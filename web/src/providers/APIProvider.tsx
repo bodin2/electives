@@ -3,7 +3,7 @@ import { useRouteContext } from '@tanstack/solid-router'
 import {
     type Accessor,
     createContext,
-    createEffect,
+    createRenderEffect,
     createSignal,
     on,
     onCleanup,
@@ -11,8 +11,6 @@ import {
     useContext,
 } from 'solid-js'
 import {
-    type AdminAuthenticateOptions,
-    AdminAuthenticator,
     APIError,
     type Authenticator,
     Client,
@@ -20,109 +18,112 @@ import {
     Gateway,
     type LoginOptions,
     RESTClient,
+    UnauthorizedError,
     UserAuthenticator,
-    UserType,
-} from '../api'
-import { GatewayEndpoints } from '../api/gateway'
-import { NetworkError } from '../api/types'
-import { nonNull } from '../utils'
+} from '~/api'
+import { GatewayEndpoints } from '~/api/gateway'
+import { NetworkError } from '~/api/types'
+import { API_BASE_URL, API_CLIENT_NAME } from '~/constants'
+import { queryClient } from '~/queries/queryClient'
+import { nonNull } from '~/utils'
 
-export enum AuthenticationState {
-    Loading = 0,
-    LoggedOut = 1,
-    LoggedIn = 2,
-    NetworkError = 3,
+export abstract class AuthenticationState {
+    get friendlyName(): string {
+        return this.constructor.name.replace(/State$/, '')
+    }
+}
+
+export class LoadingState extends AuthenticationState {}
+
+export class LoggedOutState extends AuthenticationState {}
+
+export class LoggedInState extends AuthenticationState {}
+
+export class NetworkErrorState extends AuthenticationState {
+    constructor(public readonly error: NetworkError) {
+        super()
+    }
+}
+
+const sameAuthState = (a: AuthenticationState, b: AuthenticationState): boolean => {
+    if (a instanceof NetworkErrorState && b instanceof NetworkErrorState) {
+        return a.error.type === b.error.type
+    }
+
+    return a.constructor === b.constructor
 }
 
 interface APIApi {
     client: Client<unknown>
     authState: Accessor<AuthenticationState>
-    tokenType: Accessor<TokenType | null>
     login(id: number, password: string): Promise<void>
-    adminLogin(key: CryptoKey): Promise<void>
     resumeSession(): Promise<void>
     logout: () => Promise<void>
 }
 
 const TOKEN_KEY = 'auth_token'
-const TOKEN_TYPE_KEY = 'auth_token_type'
 const APIContext = createContext<APIApi>()
 const log = new Logger('APIProvider')
 
-export enum TokenType {
-    User = 'user',
-    Admin = 'admin',
-}
-
 type APIClient = Client<unknown>
-const gatewayURLFromBaseURL = (baseURL: string, tokenType: TokenType): string => {
+const gatewayURLFromBaseURL = (baseURL: string): string => {
     const url = new URL(baseURL)
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-    url.pathname = tokenType === TokenType.Admin ? GatewayEndpoints.AdminNotifications : GatewayEndpoints.Notifications
+    url.pathname = GatewayEndpoints.Notifications
     url.search = ''
     url.hash = ''
     return url.toString()
 }
 
-const getTokenType = (): TokenType => {
-    const raw = localStorage.getItem(TOKEN_TYPE_KEY)
-    return raw === TokenType.Admin ? TokenType.Admin : TokenType.User
-}
-
-const createAuthenticator = (rest: RESTClient, tokenType: TokenType): Authenticator<unknown> => {
-    if (tokenType === TokenType.Admin) {
-        return new AdminAuthenticator(rest) as Authenticator<unknown>
-    }
-
-    return new UserAuthenticator(rest) as Authenticator<unknown>
-}
-
-const configureClientAuth = (client: APIClient, tokenType: TokenType): Authenticator<unknown> => {
-    const authenticator = createAuthenticator(client.rest, tokenType)
+const configureClientAuth = (client: APIClient): Authenticator<unknown> => {
+    const authenticator = new UserAuthenticator(client.rest) as Authenticator<unknown>
     client.setAuthenticator(authenticator)
-    client.setGatewayURL(gatewayURLFromBaseURL(client.rest.baseURL, tokenType))
+    client.setGatewayURL(gatewayURLFromBaseURL(client.rest.baseURL))
     return authenticator
 }
 
 export const createClient = () => {
-    const baseURL = process.env.API_BASE_URL || 'http://localhost:8080'
-    const tokenType = getTokenType()
-    const rest = new RESTClient({ baseURL })
+    const baseURL = API_BASE_URL
+    const rest = new RESTClient({ baseURL, timeout: 10000 })
     const gateway = new Gateway({
-        url: gatewayURLFromBaseURL(baseURL, tokenType),
+        url: gatewayURLFromBaseURL(baseURL),
         maxReconnectAttempts: 3,
         reconnectDelay: 5000,
     })
 
-    return new Client({
+    latestClient = new Client({
         rest,
         gateway,
-        authenticator: createAuthenticator(rest, tokenType),
+        authenticator: new UserAuthenticator(rest) as Authenticator<unknown>,
         autoConnect: true,
     })
+
+    return latestClient
 }
+
+export let latestClient: Client<unknown> | null = null
 
 export const initAuth = async (client: APIClient): Promise<AuthenticationState> => {
     const token = localStorage.getItem(TOKEN_KEY)
-    const tokenType = getTokenType()
-    if (!token) return AuthenticationState.LoggedOut
+    if (!token) return new LoggedOutState()
 
     log.info('Got token!')
 
-    const authenticator = configureClientAuth(client, tokenType)
+    const authenticator = configureClientAuth(client)
     authenticator.setToken(token)
 
     try {
         await client.resume(token)
-        return AuthenticationState.LoggedIn
+        return new LoggedInState()
     } catch (e: unknown) {
         log.error('Failed to login with stored token:', e)
 
-        if (e instanceof APIError && !(e instanceof NetworkError)) {
-            return AuthenticationState.LoggedOut
-        }
+        if (e instanceof NetworkError) return new NetworkErrorState(e)
+        if (e instanceof APIError) return new LoggedOutState()
 
-        return AuthenticationState.NetworkError
+        return new NetworkErrorState(
+            new NetworkError(e instanceof Error ? e.message : String(e), NetworkError.Type.Generic),
+        )
     }
 }
 
@@ -130,47 +131,37 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
     const client = props.client
     const ctx = useRouteContext({ from: '__root__' })
 
-    const [authState, setAuthState] = createSignal(AuthenticationState.Loading)
-    const [tokenType, setTokenType] = createSignal<TokenType | null>(
-        localStorage.getItem(TOKEN_TYPE_KEY) === TokenType.Admin
-            ? TokenType.Admin
-            : localStorage.getItem(TOKEN_TYPE_KEY) === TokenType.User
-              ? TokenType.User
-              : null,
-    )
-    const [updater, setUpdater] = createSignal(0)
-
-    createEffect(() => {
-        log.debug('Authentication state changed to:', AuthenticationState[authState()])
+    const [authState, setAuthState] = createSignal<AuthenticationState>(new LoadingState(), {
+        equals: sameAuthState,
     })
 
-    createEffect(() => {
+    createRenderEffect(() => {
+        log.debug('Authentication state changed to:', authState().friendlyName)
+    })
+
+    createRenderEffect(() => {
         ctx().authState.then(state => {
-            log.debug('Syncing router auth state:', AuthenticationState[state])
+            log.debug('Syncing router auth state:', state.friendlyName)
             setAuthState(state)
         })
     })
 
-    let loggingOut = false
-
     function checkSession(error: Error) {
-        loggingOut = true
         client.hasSession().then(hasSession => {
             if (!hasSession) {
                 log.warn('Unauthorized, logging out:', error.message)
                 return client.logout()
             }
-
-            loggingOut = false
         })
     }
 
-    createEffect(
-        on(updater, () => {
+    createRenderEffect(
+        on(authState, state => {
+            if (state instanceof NetworkErrorState) return
+
             const onReady = (user: ClientEventMap['ready']) => {
                 log.info('Logged in as:', user)
-                setTokenType(user.type === UserType.ADMIN ? TokenType.Admin : TokenType.User)
-                setAuthState(AuthenticationState.LoggedIn)
+                setAuthState(new LoggedInState())
             }
 
             const onError = (err: ClientEventMap['error']) => {
@@ -178,8 +169,8 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             }
 
             const onNetworkError = (err: ClientEventMap['networkError']) => {
-                log.error('Network error occurred', err)
-                if (authState() !== AuthenticationState.LoggedOut) setAuthState(AuthenticationState.NetworkError)
+                log.error('Network error occurred:', err)
+                if (!(authState() instanceof LoggedOutState)) setAuthState(new NetworkErrorState(err))
             }
 
             const onGatewayConnect = () => {
@@ -198,7 +189,7 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
             }
 
             const onUnauthorized = (error: ClientEventMap['unauthorized']) => {
-                if (authState() === AuthenticationState.LoggedOut || loggingOut) {
+                if (authState() instanceof LoggedOutState) {
                     log.warn('Received unauthorized event while logged out, likely a bad session.')
                     return
                 }
@@ -208,10 +199,8 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
 
             const onLogout = () => {
                 localStorage.removeItem(TOKEN_KEY)
-                localStorage.removeItem(TOKEN_TYPE_KEY)
-                setTokenType(null)
-                setAuthState(AuthenticationState.LoggedOut)
-                setUpdater(~updater())
+                setAuthState(new LoggedOutState())
+                queryClient.clear()
 
                 log.info('Logged out')
             }
@@ -250,43 +239,39 @@ const APIProvider: ParentComponent<{ client: APIClient }> = props => {
     const api: APIApi = {
         client,
         authState: authState,
-        tokenType: tokenType,
         login: async (id: number, password: string) => {
-            configureClientAuth(client, TokenType.User)
-            const credentials: LoginOptions = { id, password, clientName: `web@${process.env.APP_VERSION}` }
+            configureClientAuth(client)
+            const credentials: LoginOptions = { id, password, clientName: API_CLIENT_NAME }
             await client.login(credentials)
 
             const token = client.rest.token
             if (!token) throw new Error('Missing auth token after user login')
 
             localStorage.setItem(TOKEN_KEY, token)
-            localStorage.setItem(TOKEN_TYPE_KEY, TokenType.User)
 
             log.info('Got token!')
             log.info('Login successful')
-        },
-        adminLogin: async (key: CryptoKey) => {
-            configureClientAuth(client, TokenType.Admin)
-            const credentials: AdminAuthenticateOptions = { key }
-            await client.login(credentials)
-
-            const token = client.rest.token
-            if (!token) throw new Error('Missing auth token after admin login')
-
-            localStorage.setItem(TOKEN_KEY, token)
-            localStorage.setItem(TOKEN_TYPE_KEY, TokenType.Admin)
-
-            log.info('Got token!')
-            log.info('Admin login successful')
         },
         resumeSession: async () => {
             const token = localStorage.getItem(TOKEN_KEY)
             if (!token) throw new Error('No stored token available to resume session')
 
-            const type = getTokenType()
-            const authenticator = configureClientAuth(client, type)
+            setAuthState(new LoadingState())
+
+            const authenticator = configureClientAuth(client)
             authenticator.setToken(token)
-            await client.resume(token)
+
+            try {
+                await client.resume(token)
+            } catch (e) {
+                if (e instanceof UnauthorizedError) {
+                    log.warn('Failed to resume session with stored token, logging out:', e)
+                    await client.logout().catch(() => null)
+                    setAuthState(new LoggedOutState())
+                }
+
+                throw e
+            }
         },
         logout: () => client.logout(),
     }

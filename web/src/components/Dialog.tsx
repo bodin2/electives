@@ -1,5 +1,6 @@
-import { Dialog as M3Dialog, type DialogProps as M3DialogProps } from 'm3-solid'
-import { createEffect, createSignal, type ParentComponent, Show, splitProps } from 'solid-js'
+import { Dialog as M3Dialog, type DialogProps as M3DialogProps } from 'm3-solid/src'
+import { createRenderEffect, createSignal, type ParentComponent, Show, splitProps } from 'solid-js'
+import { Portal } from 'solid-js/web'
 import styles from './Dialog.module.css'
 
 export type DialogProps = Omit<M3DialogProps, 'open' | 'onOpenChange'> & {
@@ -13,7 +14,7 @@ export const Dialog: ParentComponent<DialogProps> = props => {
     const [internalOpen, setInternalOpen] = createSignal(false)
     const [shouldMount, setShouldMount] = createSignal(false)
 
-    createEffect(() => {
+    createRenderEffect(() => {
         if (local.open) {
             setShouldMount(true)
             setInternalOpen(true)
@@ -33,17 +34,20 @@ export const Dialog: ParentComponent<DialogProps> = props => {
 
     return (
         <Show when={shouldMount()}>
-            <M3Dialog
-                {...others}
-                open={internalOpen()}
-                onOpenChange={handleOpenChange}
-                backdropProps={{
-                    class: styles.backdrop,
-                    ...local.backdropProps,
-                }}
-            >
-                {local.children}
-            </M3Dialog>
+            <Portal>
+                <M3Dialog
+                    {...others}
+                    open={internalOpen()}
+                    onOpenChange={handleOpenChange}
+                    class={styles.dialog}
+                    backdropProps={{
+                        class: styles.dialog,
+                        ...local.backdropProps,
+                    }}
+                >
+                    {local.children}
+                </M3Dialog>
+            </Portal>
         </Show>
     )
 }

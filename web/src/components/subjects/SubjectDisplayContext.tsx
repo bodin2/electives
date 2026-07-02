@@ -1,6 +1,6 @@
 import { createContext, type ParentProps, useContext } from 'solid-js'
 import type { LinkProps } from '@tanstack/solid-router'
-import type { AdminSubjectPatch } from '../../api'
+import type { AdminSubjectPatch } from '~/api'
 
 export type PatchSetterKey = {
     [K in keyof AdminSubjectPatch]: AdminSubjectPatch[K] extends boolean | undefined ? K : never
@@ -9,7 +9,7 @@ export type PatchSetterKey = {
 export interface SubjectDisplayContext {
     editable: boolean
     createLinkProps: () => LinkProps
-    viewLinkProps: (electiveId: number, subjectId: number) => LinkProps
+    viewLinkProps: (enrollmentId: number, subjectId: number, tab?: string) => LinkProps
     editLinkProps: (subjectId: number) => LinkProps
 }
 
@@ -30,13 +30,14 @@ export const BaseSubjectDisplayContext = {
         to: '/manage/subjects/$subjectId',
         params: { subjectId: 'new' },
     }),
-    editLinkProps: (subjectId: number) => ({
+    editLinkProps: subjectId => ({
         to: '/manage/subjects/$subjectId',
         params: { subjectId },
     }),
-    viewLinkProps: (electiveId: number, subjectId: number) => ({
-        to: '/enroll/$electiveId/$subjectId',
-        params: { electiveId, subjectId },
+    viewLinkProps: (enrollmentId, subjectId, tab?: string) => ({
+        to: '/enroll/$enrollmentId/$subjectId',
+        params: { enrollmentId, subjectId },
+        search: { tab },
     }),
     editable: false,
 } as const satisfies SubjectDisplayContext

@@ -1,0 +1,1460 @@
+package th.ac.bodin2.electives.api.services
+
+import io.ktor.server.plugins.di.*
+import io.ktor.server.testing.*
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import th.ac.bodin2.electives.ConflictException
+import th.ac.bodin2.electives.EntityNotFoundException
+import th.ac.bodin2.electives.api.ApplicationTest
+import th.ac.bodin2.electives.api.TestConstants
+import th.ac.bodin2.electives.api.TestConstants.Students
+import th.ac.bodin2.electives.api.TestConstants.Teachers
+import th.ac.bodin2.electives.api.TestConstants.TestData
+import th.ac.bodin2.electives.api.annotations.Transactional
+import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.UNUSED_ID
+import th.ac.bodin2.electives.api.utils.dbQuery
+import th.ac.bodin2.electives.db.toProto
+import th.ac.bodin2.electives.proto.api.UserType
+import th.ac.bodin2.electives.utils.Argon2
+import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
+
+@OptIn(Transactional::class)
+class UsersServiceTest : ApplicationTest() {
+    private val ApplicationTestBuilder.usersService: UsersService
+        get() {
+            val usersService: UsersService by application.dependencies
+            return usersService
+        }
+
+    @Test
+    fun `get student user type`() = runTest {
+        val userType = transaction { usersService.getUserType(Students.JOHN_ID) }
+        assertEquals(UserType.STUDENT, userType)
+
+    }
+
+    @Test
+    fun `get teacher user type`() = runTest {
+        val userType = transaction { usersService.getUserType(Teachers.BOB_ID) }
+        assertEquals(UserType.TEACHER, userType)
+
+    }
+
+    @Test
+    fun `get non existent user type`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            transaction { usersService.getUserType(UNUSED_ID) }
+        }
+    }
+
+    @Test
+    fun `create student`() = runTest {
+        suspendTransaction {
+            val student = usersService.createStudent(
+                id = 1010,
+                firstName = "New",
+                middleName = "Student",
+                lastName = "User",
+                password = "testpass",
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+                groupIds = listOf(TestConstants.Groups.GROUP_1_ID)
+            )
+
+            assertNotNull(student)
+            assertEquals(1010, student.id.value)
+            assertEquals("New", student.user.firstName)
+            assertEquals(TestConstants.Groups.GROUP_1_ID, student.groups.first().id.value)
+        }
+    }
+
+    @Test
+    fun `create teacher`() = runTest {
+        suspendTransaction {
+            val teacher = usersService.createTeacher(
+                id = 2010,
+                firstName = "New",
+                lastName = "Teacher",
+                password = "testpass"
+            )
+
+            assertNotNull(teacher)
+            assertEquals(2010, teacher.id.value)
+            assertEquals("New", teacher.user.firstName)
+        }
+    }
+
+    @Test
+    fun `create teacher with groups`() = runTest {
+        suspendTransaction {
+            val teacher = usersService.createTeacher(
+                id = 2011,
+                firstName = "Grouped",
+                lastName = "Teacher",
+                password = "testpass",
+                groupIds = listOf(TestConstants.Groups.GROUP_1_ID)
+            )
+
+            assertNotNull(teacher)
+            assertEquals(2011, teacher.id.value)
+            assertEquals(TestConstants.Groups.GROUP_1_ID, teacher.groups.first().id.value)
+        }
+    }
+
+    @Test
+    fun `create teacher with missing group throws`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            suspendTransaction {
+                usersService.createTeacher(
+                    id = 2012,
+                    firstName = "Missing",
+                    lastName = "Group",
+                    password = "testpass",
+                    groupIds = listOf(UNUSED_ID)
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create student with duplicate id throws conflict`() = runTest {
+        assertFailsWith<ConflictException> {
+            suspendTransaction {
+                usersService.createStudent(
+                    id = Students.JOHN_ID,
+                    firstName = "Duplicate",
+                    lastName = "Student",
+                    password = "testpass",
+                    gradeId = TestConstants.Groups.GRADE_ID,
+                    roomId = TestConstants.Groups.ROOM_ID,
+                    programId = TestConstants.Groups.PROGRAM_ID,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create teacher with duplicate id throws conflict`() = runTest {
+        assertFailsWith<ConflictException> {
+            suspendTransaction {
+                usersService.createTeacher(
+                    id = Teachers.BOB_ID,
+                    firstName = "Duplicate",
+                    lastName = "Teacher",
+                    password = "testpass"
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create student session`() = runTest {
+        val token = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
+
+        assertNotNull(token)
+        assertTrue(token.isNotBlank())
+
+        val user = transaction {
+            usersService.getSessionUser(token)
+        }
+
+        assertEquals(Students.JOHN_ID, user.id)
+        assertEquals(UserType.STUDENT, user.type)
+    }
+
+    @Test
+    fun `create teacher session`() = runTest {
+        val token = usersService.createSession(Teachers.BOB_ID, Teachers.BOB_PASSWORD, TestData.CLIENT_NAME)
+
+        assertNotNull(token)
+        assertTrue(token.isNotBlank())
+
+        val user = transaction {
+            usersService.getSessionUser(token)
+        }
+
+        assertEquals(Teachers.BOB_ID, user.id)
+        assertEquals(UserType.TEACHER, user.type)
+    }
+
+    @Test
+    fun `create user session with invalid password`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.createSession(Students.JOHN_ID, "wrongpassword", TestData.CLIENT_NAME)
+        }
+    }
+
+    @Test
+    fun `create non existent user session`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            usersService.createSession(UNUSED_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
+        }
+    }
+
+    @Test
+    fun `get session with invalid token`() = runTest {
+        assertFailsWith<Exception> {
+            transaction {
+                usersService.getSessionUser("")
+            }
+        }
+    }
+
+    @Test
+    fun `clear session`() = runTest {
+        val token = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
+
+        transaction {
+            usersService.clearSession(Students.JOHN_ID)
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            transaction {
+                usersService.getSessionUser(token)
+            }
+        }
+    }
+
+    @Test
+    fun `get student by ID`() = runTest {
+        val student = transaction {
+            usersService.getStudentById(Students.JOHN_ID)
+        }
+
+        assertNotNull(student)
+        assertEquals(Students.JOHN_ID, student.id.value)
+    }
+
+    @Test
+    fun `get non existent student by ID`() = runTest {
+        val student = transaction {
+            usersService.getStudentById(UNUSED_ID)
+        }
+
+        assertNull(student)
+    }
+
+    @Test
+    fun `get teacher by ID`() = runTest {
+        val teacher = transaction {
+            usersService.getTeacherById(Teachers.BOB_ID)
+        }
+
+        assertNotNull(teacher)
+        assertEquals(Teachers.BOB_ID, teacher.id.value)
+    }
+
+    @Test
+    fun `get non existent teacher by ID`() = runTest {
+        val teacher = transaction {
+            usersService.getTeacherById(UNUSED_ID)
+        }
+
+        assertNull(teacher)
+    }
+
+    @Test
+    fun `create session with empty password`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.createSession(
+                Students.JOHN_ID,
+                "",
+                TestData.CLIENT_NAME
+            )
+        }
+    }
+
+    @Test
+    fun `create session with too long password`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.createSession(
+                Students.JOHN_ID,
+                "p".repeat(TestConstants.Limits.PASSWORD_TOO_LONG),
+                TestData.CLIENT_NAME
+            )
+        }
+    }
+
+    @Test
+    fun `create session with too long client name`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.createSession(
+                Students.JOHN_ID,
+                Students.JOHN_PASSWORD,
+                "c".repeat(TestConstants.Limits.CLIENT_NAME_TOO_LONG)
+            )
+        }
+    }
+
+    @Test
+    fun `create session with empty client name`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "")
+        }
+    }
+
+    @Test
+    fun `session invalidates after multiple sessions created`() = runTest {
+        val token1 = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client1")
+        val token2 = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client2")
+
+        assertNotEquals(token1, token2)
+
+        assertFailsWith<IllegalArgumentException> {
+            transaction {
+                usersService.getSessionUser(token1)
+            }
+        }
+
+        val user = transaction {
+            usersService.getSessionUser(token2)
+        }
+        assertEquals(Students.JOHN_ID, user.id)
+    }
+
+    @Test
+    fun `generate unique session tokens`() = runTest {
+        val token1 = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client1")
+        val token2 = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, "client1")
+
+        assertNotEquals(token1, token2)
+    }
+
+    @Test
+    fun `session expires`() = runTest {
+        val usersService = UsersService(
+            UsersService.Config(
+                sessionDurationSeconds = 1,
+                minimumSessionCreationTime = 0.seconds
+            ),
+            application.dependencies.resolve<Argon2>()
+        )
+
+        val token = usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
+
+        // Wait for session to expire
+        delay(1001.milliseconds)
+
+        assertFailsWith<IllegalArgumentException> {
+            transaction { usersService.getSessionUser(token) }
+        }
+    }
+
+    @Test
+    fun `session creation takes at least set minimum`() = runTest {
+        val usersService = UsersService(
+            UsersService.Config(
+                sessionDurationSeconds = 5,
+                minimumSessionCreationTime = 1.seconds
+            ),
+            application.dependencies.resolve<Argon2>()
+        )
+
+        val time = measureTime {
+            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
+        }
+
+        assert(time >= 1.seconds) { "Session creation took less than minimum time" }
+    }
+
+    @Test
+    fun `delete user`() = runTest {
+        usersService.deleteUser(Students.JOHN_ID)
+
+        val student = transaction { usersService.getStudentById(Students.JOHN_ID) }
+        assertNull(student)
+    }
+
+    @Test
+    fun `delete non existent user`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            usersService.deleteUser(UNUSED_ID)
+        }
+    }
+
+    @Test
+    fun `update student`() = runTest {
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = "Updated",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                ),
+                groups = listOf(TestConstants.Groups.GROUP_1_ID)
+            )
+        )
+
+        transaction {
+            val student = usersService.getStudentById(Students.JOHN_ID)
+            assertNotNull(student)
+            assertEquals("Updated", student.user.firstName)
+        }
+    }
+
+    @Test
+    fun `update student nonexistent group`() = runTest {
+        assertFailsWith<UsersService.BatchOperationException.MissingGroups> {
+            usersService.updateStudent(
+                Students.JOHN_ID,
+                UsersService.StudentUpdate(
+                    user = UsersService.UserUpdate(
+                        firstName = null,
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    ),
+                    groups = listOf(UNUSED_ID)
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `update student grade swaps existing grade membership`() = runTest {
+        val newGradeId = 9001
+
+        // Create a second GRADE-typed group to swap into.
+        run {
+            val groupService: GroupService by application.dependencies
+            dbQuery { groupService.create(newGradeId, "Grade 8", th.ac.bodin2.electives.proto.api.GroupType.GRADE) }
+        }
+
+        val oldGradeId = TestConstants.Groups.GRADE_ID
+
+        transaction {
+            val before = usersService.getStudentById(Students.JOHN_ID)!!.groups.map { it.id.value }.toSet()
+            assertTrue(oldGradeId in before, "Student should start in old GRADE group")
+            assertFalse(newGradeId in before)
+        }
+
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                ),
+                gradeId = newGradeId,
+            )
+        )
+
+        transaction {
+            val after = usersService.getStudentById(Students.JOHN_ID)!!.groups.map { it.id.value }.toSet()
+            assertTrue(newGradeId in after, "Student should now be in the new GRADE group")
+            assertFalse(oldGradeId in after, "Old GRADE group membership should have been removed")
+            // Sanity-check that ROOM/PROGRAM memberships are untouched.
+            assertTrue(TestConstants.Groups.ROOM_ID in after)
+            assertTrue(TestConstants.Groups.PROGRAM_ID in after)
+        }
+    }
+
+    @Test
+    fun `update student rejects wrong-typed group for fixed slot`() = runTest {
+        // Trying to set gradeId to a CUSTOM-typed group must be rejected with IllegalArgumentException.
+        assertFailsWith<IllegalArgumentException> {
+            usersService.updateStudent(
+                Students.JOHN_ID,
+                UsersService.StudentUpdate(
+                    user = UsersService.UserUpdate(
+                        firstName = null,
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    ),
+                    gradeId = TestConstants.Groups.GROUP_1_ID,
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `update non existent student`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            usersService.updateStudent(
+                UNUSED_ID,
+                UsersService.StudentUpdate(
+                    user = UsersService.UserUpdate(
+                        firstName = "Nope",
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `update teacher name`() = runTest {
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = "Robert",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                )
+            )
+        )
+
+        transaction {
+            val teacher = usersService.getTeacherById(Teachers.BOB_ID)
+            assertNotNull(teacher)
+            assertEquals("Robert", teacher.user.firstName)
+        }
+    }
+
+    @Test
+    fun `update non existent teacher`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            usersService.updateTeacher(
+                UNUSED_ID,
+                UsersService.TeacherUpdate(
+                    user = UsersService.UserUpdate(
+                        firstName = "Nope",
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `update teacher groups replaces existing memberships`() = runTest {
+        // Seed the teacher with an initial group so we can verify replacement removes it.
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                ),
+                groups = listOf(TestConstants.Groups.GROUP_1_ID)
+            )
+        )
+
+        transaction {
+            val before = usersService.getTeacherById(Teachers.BOB_ID)!!.groups.map { it.id.value }.toSet()
+            assertEquals(setOf(TestConstants.Groups.GROUP_1_ID), before)
+        }
+
+        // Replace with a different set.
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                ),
+                groups = listOf(TestConstants.Groups.GRADE_ID, TestConstants.Groups.ROOM_ID)
+            )
+        )
+
+        transaction {
+            val after = usersService.getTeacherById(Teachers.BOB_ID)!!.groups.map { it.id.value }.toSet()
+            assertEquals(setOf(TestConstants.Groups.GRADE_ID, TestConstants.Groups.ROOM_ID), after)
+        }
+    }
+
+    @Test
+    fun `update teacher groups with empty list clears memberships`() = runTest {
+        // Seed first.
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                ),
+                groups = listOf(TestConstants.Groups.GROUP_1_ID)
+            )
+        )
+
+        // Clear.
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                ),
+                groups = emptyList()
+            )
+        )
+
+        transaction {
+            val groups = usersService.getTeacherById(Teachers.BOB_ID)!!.groups.toList()
+            assertTrue(groups.isEmpty())
+        }
+    }
+
+    @Test
+    fun `update teacher groups only without user changes succeeds`() = runTest {
+        // No user fields provided — only groups. Must not throw NothingToUpdateException.
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                ),
+                groups = listOf(TestConstants.Groups.GROUP_1_ID)
+            )
+        )
+
+        transaction {
+            val groups = usersService.getTeacherById(Teachers.BOB_ID)!!.groups.map { it.id.value }.toSet()
+            assertEquals(setOf(TestConstants.Groups.GROUP_1_ID), groups)
+        }
+    }
+
+    @Test
+    fun `update teacher with nonexistent group throws`() = runTest {
+        assertFailsWith<UsersService.BatchOperationException.MissingGroups> {
+            usersService.updateTeacher(
+                Teachers.BOB_ID,
+                UsersService.TeacherUpdate(
+                    user = UsersService.UserUpdate(
+                        firstName = null,
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    ),
+                    groups = listOf(UNUSED_ID)
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `update teacher with no changes throws NothingToUpdate`() = runTest {
+        assertFailsWith<th.ac.bodin2.electives.NothingToUpdateException> {
+            usersService.updateTeacher(
+                Teachers.BOB_ID,
+                UsersService.TeacherUpdate(
+                    user = UsersService.UserUpdate(
+                        firstName = null,
+                        middleName = null,
+                        lastName = null,
+                        avatarUrl = null,
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `set password`() = runTest {
+        usersService.setPassword(Students.JOHN_ID, "newpassword123")
+
+        // Old password should fail
+        assertFailsWith<IllegalArgumentException> {
+            usersService.createSession(Students.JOHN_ID, Students.JOHN_PASSWORD, TestData.CLIENT_NAME)
+        }
+
+        // New password should work
+        val token = usersService.createSession(Students.JOHN_ID, "newpassword123", TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
+
+    @Test
+    fun `set password too short`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.setPassword(Students.JOHN_ID, "abc")
+        }
+    }
+
+    @Test
+    fun `set password non existent user`() = runTest {
+        assertFailsWith<EntityNotFoundException> {
+            usersService.setPassword(UNUSED_ID, "newpassword123")
+        }
+    }
+
+    @Test
+    fun `list students`() = runTest {
+        val (students, total) = suspendTransaction { usersService.getStudents() }
+
+        assertTrue(students.isNotEmpty())
+        // In tests, we should have students < PAGE_SIZE
+        assertEquals(total, students.size.toLong())
+        assertTrue(students.any { it.id.value == Students.JOHN_ID })
+    }
+
+    @Test
+    fun `list teachers`() = runTest {
+        val (teachers, total) = suspendTransaction { usersService.getTeachers() }
+
+        assertTrue(teachers.isNotEmpty())
+        // In tests, we should have students < PAGE_SIZE
+        assertEquals(total, teachers.size.toLong())
+        assertTrue(teachers.any { it.id.value == Teachers.BOB_ID })
+    }
+
+    @Test
+    fun `list students on empty page`() = runTest {
+        val (students, total) = suspendTransaction { usersService.getStudents(page = 100) }
+
+        assertTrue(students.isEmpty())
+        assertTrue(total >= 0)
+    }
+
+    @Test
+    fun `list students on invalid page fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            suspendTransaction { usersService.getStudents(page = 0) }
+        }
+    }
+
+    @Test
+    fun `list teachers on invalid page fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            suspendTransaction { usersService.getTeachers(page = 0) }
+        }
+    }
+
+    @Test
+    fun `search students by first name`() = runTest {
+        val (students, total) = suspendTransaction { usersService.getStudents(query = Students.JOHN_FIRST_NAME) }
+
+        assertTrue(students.isNotEmpty())
+        assertTrue(transaction {
+            students.all {
+                it.user.firstName.contains(
+                    Students.JOHN_FIRST_NAME,
+                    ignoreCase = true
+                )
+            }
+        })
+        assertEquals(total, students.size.toLong())
+    }
+
+    @Test
+    fun `search students by last name`() = runTest {
+        val (students, total) = suspendTransaction { usersService.getStudents(query = Students.JOHN_LAST_NAME) }
+
+        assertTrue(students.isNotEmpty())
+        assertTrue(students.any { it.id.value == Students.JOHN_ID })
+        assertEquals(total, students.size.toLong())
+    }
+
+    @Test
+    fun `search students by id substring`() = runTest {
+        val idSubstring = Students.JOHN_ID.toString().substring(0, 3)
+        val (students, total) = suspendTransaction { usersService.getStudents(query = idSubstring) }
+
+        assertTrue(students.isNotEmpty())
+        assertTrue(students.any { it.id.value == Students.JOHN_ID })
+        assertEquals(total, students.size.toLong())
+    }
+
+    @Test
+    fun `search students with no results`() = runTest {
+        val (students, total) = suspendTransaction { usersService.getStudents(query = "nonexistentnameXYZ") }
+
+        assertTrue(students.isEmpty())
+        assertEquals(0L, total)
+    }
+
+    @Test
+    fun `search students with blank query returns all`() = runTest {
+        val (allStudents, allTotal) = suspendTransaction { usersService.getStudents() }
+        val (blankStudents, blankTotal) = suspendTransaction { usersService.getStudents(query = "  ") }
+
+        assertEquals(allTotal, blankTotal)
+        assertEquals(allStudents.size, blankStudents.size)
+    }
+
+    @Test
+    fun `search teachers by first name`() = runTest {
+        val (teachers, total) = suspendTransaction { usersService.getTeachers(query = Teachers.BOB_FIRST_NAME) }
+
+        assertTrue(teachers.isNotEmpty())
+        assertTrue(teachers.any { it.id.value == Teachers.BOB_ID })
+        assertEquals(total, teachers.size.toLong())
+    }
+
+    @Test
+    fun `search teachers with no results`() = runTest {
+        val (teachers, total) = suspendTransaction { usersService.getTeachers(query = "nonexistentnameXYZ") }
+
+        assertTrue(teachers.isEmpty())
+        assertEquals(0L, total)
+    }
+
+    @Test
+    fun `search students by middle name`() = runTest {
+        val (students, _) = suspendTransaction { usersService.getStudents(query = Students.JOHN_MIDDLE_NAME) }
+
+        assertTrue(students.isNotEmpty())
+        assertTrue(students.any { it.id.value == Students.JOHN_ID })
+    }
+
+    @Test
+    fun `create student with short password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            suspendTransaction {
+                usersService.createStudent(
+                    id = UNUSED_ID,
+                    firstName = "Test",
+                    middleName = null,
+                    lastName = "User",
+                    password = "abc",
+                    avatarUrl = null,
+                    gradeId = TestConstants.Groups.GRADE_ID,
+                    roomId = TestConstants.Groups.ROOM_ID,
+                    programId = TestConstants.Groups.PROGRAM_ID,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create student with long password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            suspendTransaction {
+                usersService.createStudent(
+                    id = UNUSED_ID,
+                    firstName = "Test",
+                    middleName = null,
+                    lastName = "User",
+                    password = "a".repeat(4097),
+                    avatarUrl = null,
+                    gradeId = TestConstants.Groups.GRADE_ID,
+                    roomId = TestConstants.Groups.ROOM_ID,
+                    programId = TestConstants.Groups.PROGRAM_ID,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create teacher with short password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            suspendTransaction {
+                usersService.createTeacher(
+                    id = UNUSED_ID,
+                    firstName = "Test",
+                    middleName = null,
+                    lastName = "Teacher",
+                    password = "abc",
+                    avatarUrl = null
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create teacher with long password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            suspendTransaction {
+                usersService.createTeacher(
+                    id = UNUSED_ID,
+                    firstName = "Test",
+                    middleName = null,
+                    lastName = "Teacher",
+                    password = "a".repeat(4097),
+                    avatarUrl = null
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `create session with long password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.createSession(
+                Students.JOHN_ID,
+                "a".repeat(4097),
+                TestData.CLIENT_NAME
+            )
+        }
+    }
+
+    @Test
+    fun `set password with long password fails`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            usersService.setPassword(Students.JOHN_ID, "a".repeat(4097))
+        }
+    }
+
+    @Test
+    fun `password trimming works for create session`() = runTest {
+        usersService.setPassword(Students.JOHN_ID, "  testpass  ")
+
+        val token = usersService.createSession(Students.JOHN_ID, "  testpass  ", TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
+
+    @Test
+    fun `password trimming works for set password`() = runTest {
+        usersService.setPassword(Students.JOHN_ID, "   newpass   ")
+
+        val token = usersService.createSession(Students.JOHN_ID, "   newpass   ", TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
+
+    @Test
+    fun `password with exactly 4 chars works`() = runTest {
+        usersService.setPassword(Students.JOHN_ID, "1234")
+        val token = usersService.createSession(Students.JOHN_ID, "1234", TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
+
+    @Test
+    fun `password with exactly 4096 chars works`() = runTest {
+        val longPassword = "a".repeat(4096)
+        usersService.setPassword(Students.JOHN_ID, longPassword)
+        val token = usersService.createSession(Students.JOHN_ID, longPassword, TestData.CLIENT_NAME)
+        assertNotNull(token)
+    }
+
+    @Test
+    fun `create students batch`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(3001, "Alice", null, "Smith", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+                groups = listOf(TestConstants.Groups.GROUP_1_ID)
+            ),
+            UsersService.StudentInsert(
+                UsersService.UserData(3002, "Bob", null, "Jones", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+                groups = emptyList()
+            ),
+        )
+
+        val students = suspendTransaction { usersService.createStudents(inserts) }
+
+        assertEquals(2, students.size)
+        assertTrue(students.any { it.id.value == 3001 })
+        assertTrue(students.any { it.id.value == 3002 })
+
+        transaction {
+            val alice = usersService.getStudentById(3001)
+            assertNotNull(alice)
+            assertEquals(TestConstants.Groups.GROUP_1_ID, alice.groups.first().id.value)
+        }
+    }
+
+    @Test
+    fun `create students batch empty list`() = runTest {
+        val students = suspendTransaction { usersService.createStudents(emptyList()) }
+        assertTrue(students.isEmpty())
+    }
+
+    @Test
+    fun `create students batch with missing group throws`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(3003, "Charlie", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+                groups = listOf(UNUSED_ID)
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.MissingGroups> {
+            suspendTransaction { usersService.createStudents(inserts) }
+        }
+        assertTrue(UNUSED_ID in ex.ids)
+    }
+
+    @Test
+    fun `create students batch with duplicate id throws`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(Students.JOHN_ID, "Duplicate", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.ConflictingEntities> {
+            suspendTransaction { usersService.createStudents(inserts) }
+        }
+        assertTrue(Students.JOHN_ID in ex.ids)
+    }
+
+    @Test
+    fun `create students batch multiple duplicates reports all ids`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(Students.JOHN_ID, "Dup1", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+            ),
+            UsersService.StudentInsert(
+                UsersService.UserData(Students.JANE_ID, "Dup2", password = "testpass"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+            ),
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.ConflictingEntities> {
+            suspendTransaction { usersService.createStudents(inserts) }
+        }
+        assertTrue(Students.JOHN_ID in ex.ids)
+        assertTrue(Students.JANE_ID in ex.ids)
+    }
+
+    @Test
+    fun `create students batch with short password throws`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(3004, "Short", password = "abc"),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
+            suspendTransaction { usersService.createStudents(inserts) }
+        }
+        assertEquals(3004, ex.id)
+        assertIs<IllegalArgumentException>(ex.cause)
+    }
+
+    @Test
+    fun `create students batch with long password throws`() = runTest {
+        val inserts = listOf(
+            UsersService.StudentInsert(
+                UsersService.UserData(3005, "Long", password = "a".repeat(4097)),
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
+            suspendTransaction { usersService.createStudents(inserts) }
+        }
+        assertEquals(3005, ex.id)
+        assertIs<IllegalArgumentException>(ex.cause)
+    }
+
+    @Test
+    fun `create teachers batch`() = runTest {
+        val inserts = listOf(
+            UsersService.TeacherInsert(
+                UsersService.UserData(4001, "Carol", null, "White", password = "testpass"),
+                groups = listOf(TestConstants.Groups.GROUP_1_ID)
+            ),
+            UsersService.TeacherInsert(
+                UsersService.UserData(4002, "Dave", null, "Black", password = "testpass")
+            ),
+        )
+
+        val teachers = suspendTransaction { usersService.createTeachers(inserts) }
+
+        assertEquals(2, teachers.size)
+        assertTrue(teachers.any { it.id.value == 4001 })
+        assertTrue(teachers.any { it.id.value == 4002 })
+
+        transaction {
+            val carol = usersService.getTeacherById(4001)
+            assertNotNull(carol)
+            assertEquals(TestConstants.Groups.GROUP_1_ID, carol.groups.first().id.value)
+        }
+    }
+
+    @Test
+    fun `create teachers batch empty list`() = runTest {
+        val teachers = suspendTransaction { usersService.createTeachers(emptyList()) }
+        assertTrue(teachers.isEmpty())
+    }
+
+    @Test
+    fun `create teachers batch with duplicate id throws`() = runTest {
+        val inserts = listOf(
+            UsersService.TeacherInsert(
+                UsersService.UserData(Teachers.BOB_ID, "Duplicate", password = "testpass")
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.ConflictingEntities> {
+            suspendTransaction { usersService.createTeachers(inserts) }
+        }
+        assertTrue(Teachers.BOB_ID in ex.ids)
+    }
+
+    @Test
+    fun `create teachers batch with short password throws`() = runTest {
+        val inserts = listOf(
+            UsersService.TeacherInsert(
+                UsersService.UserData(4003, "Short", password = "abc")
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
+            suspendTransaction { usersService.createTeachers(inserts) }
+        }
+        assertEquals(4003, ex.id)
+        assertIs<IllegalArgumentException>(ex.cause)
+    }
+
+    @Test
+    fun `create teachers batch with long password throws`() = runTest {
+        val inserts = listOf(
+            UsersService.TeacherInsert(
+                UsersService.UserData(4004, "Long", password = "a".repeat(4097))
+            )
+        )
+
+        val ex = assertFailsWith<UsersService.BatchOperationException.InvalidUserData> {
+            suspendTransaction { usersService.createTeachers(inserts) }
+        }
+        assertEquals(4004, ex.id)
+        assertIs<IllegalArgumentException>(ex.cause)
+    }
+
+    @Test
+    fun `session creation flow triggers on session create`() = runTest {
+        coroutineScope {
+            val collectJob = launch {
+                usersService.sessionCreationFlow.first()
+            }
+
+            yield() // let the collector start before we emit
+
+            suspendTransaction {
+                usersService.createSession(
+                    Students.JOHN_ID,
+                    Students.JOHN_PASSWORD,
+                    TestData.CLIENT_NAME
+                )
+            }
+
+            collectJob.join()
+        }
+    }
+
+    @Test
+    fun `insecurely creating sessions with custom duration works`() = runTest {
+        val token = transaction {
+            usersService.insecurelyCreateSessionWithoutValidation(
+                Students.JOHN_ID,
+                customDurationSeconds = 1
+            )
+        }
+
+        assertNotNull(token)
+        assertTrue(token.isNotBlank())
+
+        // Wait for session to expire
+        delay(1001.milliseconds)
+
+        assertFailsWith<IllegalArgumentException> {
+            transaction { usersService.getSessionUser(token) }
+        }
+    }
+
+    @Test
+    fun `create student with prefix`() = runTest {
+        suspendTransaction {
+            val student = usersService.createStudent(
+                id = 5001,
+                firstName = "Maria",
+                prefix = "Dr.",
+                lastName = "Santos",
+                password = "testpass",
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+            )
+
+            assertNotNull(student)
+            assertEquals("Dr.", student.user.prefix)
+        }
+    }
+
+    @Test
+    fun `create teacher with prefix`() = runTest {
+        suspendTransaction {
+            val teacher = usersService.createTeacher(
+                id = 5002,
+                firstName = "Alan",
+                prefix = "Prof.",
+                lastName = "Turing",
+                password = "testpass"
+            )
+
+            assertNotNull(teacher)
+            assertEquals("Prof.", teacher.user.prefix)
+        }
+    }
+
+    @Test
+    fun `create student without prefix`() = runTest {
+        suspendTransaction {
+            val student = usersService.createStudent(
+                id = 5003,
+                firstName = "Alice",
+                lastName = "Wonder",
+                password = "testpass",
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+            )
+
+            assertNotNull(student)
+            assertNull(student.user.prefix)
+        }
+    }
+
+    @Test
+    fun `update student prefix`() = runTest {
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Mr.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        transaction {
+            val student = usersService.getStudentById(Students.JOHN_ID)
+            assertNotNull(student)
+            assertEquals("Mr.", student.user.prefix)
+        }
+    }
+
+    @Test
+    fun `update student clears prefix when setPrefix true and prefix null`() = runTest {
+        // First assign a prefix
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Mr.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        // Then clear it
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        transaction {
+            val student = usersService.getStudentById(Students.JOHN_ID)
+            assertNotNull(student)
+            assertNull(student.user.prefix)
+        }
+    }
+
+    @Test
+    fun `update student does not change prefix when setPrefix false`() = runTest {
+        // First assign a prefix
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Ms.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        // Update firstName without touching prefix
+        usersService.updateStudent(
+            Students.JOHN_ID,
+            UsersService.StudentUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = "Updated",
+                    prefix = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = false,
+                )
+            )
+        )
+
+        transaction {
+            val student = usersService.getStudentById(Students.JOHN_ID)
+            assertNotNull(student)
+            assertEquals("Ms.", student.user.prefix)
+            assertEquals("Updated", student.user.firstName)
+        }
+    }
+
+    @Test
+    fun `update teacher prefix`() = runTest {
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Dr.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        transaction {
+            val teacher = usersService.getTeacherById(Teachers.BOB_ID)
+            assertNotNull(teacher)
+            assertEquals("Dr.", teacher.user.prefix)
+        }
+    }
+
+    @Test
+    fun `update teacher clears prefix when setPrefix true and prefix null`() = runTest {
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = "Prof.",
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        usersService.updateTeacher(
+            Teachers.BOB_ID,
+            UsersService.TeacherUpdate(
+                user = UsersService.UserUpdate(
+                    firstName = null,
+                    prefix = null,
+                    middleName = null,
+                    lastName = null,
+                    avatarUrl = null,
+                    setPrefix = true,
+                )
+            )
+        )
+
+        transaction {
+            val teacher = usersService.getTeacherById(Teachers.BOB_ID)
+            assertNotNull(teacher)
+            assertNull(teacher.user.prefix)
+        }
+    }
+
+    @Test
+    fun `create student with prefix is included in proto serialization`() = runTest {
+        val student = suspendTransaction {
+            usersService.createStudent(
+                id = 5004,
+                firstName = "Anna",
+                prefix = "Mrs.",
+                lastName = "Brown",
+                password = "testpass",
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+            )
+        }
+
+        val proto = transaction { student.toProto() }
+        assertEquals("Mrs.", proto.prefix)
+        assertEquals("Anna", proto.first_name)
+    }
+
+    @Test
+    fun `create teacher with prefix is included in proto serialization`() = runTest {
+        val teacher = suspendTransaction {
+            usersService.createTeacher(
+                id = 5005,
+                firstName = "Charles",
+                prefix = "Mr.",
+                lastName = "Darwin",
+                password = "testpass"
+            )
+        }
+
+        val proto = transaction { teacher.toProto() }
+        assertEquals("Mr.", proto.prefix)
+        assertEquals("Charles", proto.first_name)
+    }
+
+    @Test
+    fun `create student without prefix has no prefix in proto serialization`() = runTest {
+        val student = suspendTransaction {
+            usersService.createStudent(
+                id = 5006,
+                firstName = "Bob",
+                lastName = "Noprefix",
+                password = "testpass",
+                gradeId = TestConstants.Groups.GRADE_ID,
+                roomId = TestConstants.Groups.ROOM_ID,
+                programId = TestConstants.Groups.PROGRAM_ID,
+            )
+        }
+
+        val proto = transaction { student.toProto() }
+        assertNull(proto.prefix)
+    }
+}
+
+

@@ -1,4 +1,7 @@
 <configuration>
+    <!-- Override with -DLOG_LEVEL=DEBUG (or env LOG_LEVEL) for verbose local debugging. -->
+    <property name="LOG_LEVEL" value="${LOG_LEVEL:-INFO}"/>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -11,18 +14,59 @@
     </appender>
     <appender name="KTOR_CALL_LOGGING" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{userId:-anonymous} @ %X{ip:-???}] - %msg%n</pattern>
+            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{userId:-anonymous} @ %X{ip:-???}] -
+                %msg%n
+            </pattern>
         </encoder>
     </appender>
-    <root level="INFO">
+
+    <!--
+        Async wrappers keep logging off request threads under high load. discardingThreshold=0 ensures WARN/ERROR
+        are never dropped; only lower levels may be discarded if the queue fills, which is acceptable.
+    -->
+    <appender name="ASYNC_STDOUT" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>4096</queueSize>
+        <discardingThreshold>0</discardingThreshold>
         <appender-ref ref="STDOUT"/>
-    </root>
-    <logger name="io.ktor.server.plugins.cors.CORS" level="WARN" />
-    <logger name="ElectivesAPI" level="DEBUG" />
-    <logger name="th.ac.bodin2.electives.api" level="DEBUG" additivity="false">
+    </appender>
+    <appender name="ASYNC_APP_STDOUT" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>4096</queueSize>
+        <discardingThreshold>0</discardingThreshold>
         <appender-ref ref="APP_STDOUT"/>
+    </appender>
+    <appender name="ASYNC_KTOR_CALL_LOGGING" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>4096</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="KTOR_CALL_LOGGING"/>
+    </appender>
+
+    <!--
+        Bridges logs into OpenTelemetry so they are exported over OTLP.
+        The appender is inert until TelemetryService calls OpenTelemetryAppender.install(openTelemetry) at startup.
+        When telemetry is disabled, it simply drops records.
+    -->
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <captureExperimentalAttributes>false</captureExperimentalAttributes>
+        <captureMdcAttributes>*</captureMdcAttributes>
+    </appender>
+    <appender name="ASYNC_OTEL" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>4096</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="OTEL"/>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="ASYNC_STDOUT"/>
+        <appender-ref ref="ASYNC_OTEL"/>
+    </root>
+    <logger name="io.ktor.server.plugins.cors.CORS" level="WARN"/>
+    <logger name="ElectivesAPI" level="${LOG_LEVEL}"/>
+    <logger name="th.ac.bodin2.electives.api" level="${LOG_LEVEL}" additivity="false">
+        <appender-ref ref="ASYNC_APP_STDOUT"/>
+        <appender-ref ref="ASYNC_OTEL"/>
     </logger>
     <logger name="CallLogging" additivity="false">
-        <appender-ref ref="KTOR_CALL_LOGGING"/>
+        <appender-ref ref="ASYNC_KTOR_CALL_LOGGING"/>
+        <appender-ref ref="ASYNC_OTEL"/>
     </logger>
 </configuration>

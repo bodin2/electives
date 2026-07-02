@@ -9,16 +9,23 @@ selections.
 - Protocol Buffers
 
 - JetBrains Exposed
-- SQLite
+- HikariCP
+- PostgreSQL (production), SQLite in-memory (tests)
 
 - Kotlin
 
+- OpenTelemetry (traces + logs)
+- Micrometer (metrics)
+
 ## Building & Running
+
+This project requires Java 25 or higher and Gradle 9.5.0 or higher. The Gradle wrapper is included in the project.
+Older versions of Java or Gradle may work but aren't actively tested.
 
 To build or run the project, use one of the following tasks:
 
 | Task                                         | Description                                                          |
-|----------------------------------------------|----------------------------------------------------------------------|
+| -------------------------------------------- | -------------------------------------------------------------------- |
 | `./gradlew :api:test`                        | Run the tests                                                        |
 | `./gradlew :api:build`                       | Build everything                                                     |
 | `./gradlew :api:buildFatJar`                 | Build an executable JAR of the server with all dependencies included |
@@ -38,73 +45,104 @@ If the server starts successfully, you'll see the following output:
 
 The server can be configured using the following environment variables:
 
-| Variable Name                                       | Description                                                                                     | Default Value                                                                                                                       |
-|-----------------------------------------------------|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| `APP_ENV`                                           | The application environment. Can be `development`, `test`, or `production`.                     | (Unset, will assume `production`)<br>**Try not to set in production environments.**                                                 |
-| `HOST`                                              | The host the server binds to                                                                    | `0.0.0.0`                                                                                                                           |
-| `PORT`                                              | The port the server listens on                                                                  | `8080`                                                                                                                              |
-| `DB_PATH`                                           | The SQLite database file path                                                                   | (None)<br>An error will be thrown if not set.                                                                                       |
-| `CORS_HOSTS`                                        | Comma-separated list of allowed CORS origins                                                    | (None)<br>Defaults to `*` when `APP_ENV` is `development` or `test`.<br>Otherwise will throw an exception in production if not set. |
-| `ARGON2_MEMORY`                                     | The memory cost for Argon2 password hashing                                                     | `65536` (64 MB)                                                                                                                     |
-| `ARGON2_AVG_TIME`                                   | The average time cost (in milliseconds) for Argon2 password hashing                             | `500` (0.5 seconds)                                                                                                                 |
-| `USER_SESSION_DURATION`                             | Duration of user sessions in seconds                                                            | `86400` (24 hours)                                                                                                                  |
-| `USER_SESSION_CREATION_MINIMUM_TIME`                | Minimum time in milliseconds for creating new user sessions. Prevents spam and timing attacks.  | `500` (0.5 seconds)                                                                                                                 |
-| `NOTIFICATIONS_UPDATE_MAX_SUBSCRIPTIONS_PER_CLIENT` | Maximum amount of subjects a client can subscribe to                                            | `5`                                                                                                                                 |
-| `NOTIFICATIONS_BULK_UPDATE_INTERVAL`                | Time in milliseconds between each bulk update notifications                                     | `5000` (5 seconds)                                                                                                                  |
-| `IS_BEHIND_PROXY`                                   | Set to non-empty value if running behind a proxy (eg. load balancer)                            | (None)                                                                                                                              |
-| `ADMIN_ENABLED`                                     | Set to non-empty value to enable dangerous admin endpoints for maintenance                      | (None)<br>**Disabled by default for safety.**                                                                                       |
-| `ADMIN_ALLOWED_IPS`                                 | Comma-separated list of CIDR ranges allowed to access admin endpoints                           | `127.0.0.0/8, ::1/128`<br>Setting to an empty value will use the default. To allow any IP, set to `*` **(dangerous!)**.             |
-| `ADMIN_PUBLIC_KEY`                                  | A base64-encoded X.509 SubjectPublicKeyInfo RSA public key without PEM headers/footers          | (None)<br>**Required if `ADMIN_ENABLED` is set.**                                                                                   |
-| `ADMIN_CHALLENGE_TIMEOUT`                           | Duration of admin authentication challenge in seconds                                           | `60` (1 minute)                                                                                                                     |
-| `ADMIN_SESSION_DURATION`                            | Duration of admin sessions in seconds                                                           | `3600` (1 hour)                                                                                                                     |
-| `ADMIN_SESSION_CREATION_MINIMUM_TIME`               | Minimum time in milliseconds for creating new admin sessions. Prevents spam and timing attacks. | `3000` (3 seconds)                                                                                                                  |
-| `ADMIN_RESET`                                       | Set to a non-empty value to reset the initial admin user. Use if private key was compromised.   | (None)                                                                                                                              |
+| Variable Name                                       | Description                                                                                                                 | Default Value                                                                                                                                                                                                              |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_ENV`                                           | The application environment. Can be `development`, `test`, or `production`.                                                 | (Unset, will assume `production`)<br>**Try not to set in production environments.**                                                                                                                                        |
+| `HOST`                                              | The host the server binds to                                                                                                | `0.0.0.0`                                                                                                                                                                                                                  |
+| `PORT`                                              | The port the server listens on                                                                                              | `8080`                                                                                                                                                                                                                     |
+| `DB_URL`                                            | JDBC URL of the PostgreSQL database (e.g. `jdbc:postgresql://host:5432/db?tcpKeepAlive=true`)                               | (None)<br>An error will be thrown if not set.<br>You should also use the `tcpKeepAlive=true` parameter to [maintain connections](https://www.cybertec-postgresql.com/en/tcp-keepalive-for-a-better-postgresql-experience). |
+| `DB_USER`                                           | Database username                                                                                                           | (None)                                                                                                                                                                                                                     |
+| `DB_PASSWORD`                                       | Database password                                                                                                           | (None)                                                                                                                                                                                                                     |
+| `DB_POOL_SIZE`                                      | Maximum number of connections in the HikariCP pool. A common starting point is `(2 × DB cores) + effective_spindles`.       | `10`                                                                                                                                                                                                                       |
+| `DB_MINIMUM_IDLE`                                   | Minimum number of idle connections HikariCP keeps. Defaults to `DB_POOL_SIZE` (fixed-size pool) so the full pool is warm.   | `DB_POOL_SIZE`                                                                                                                                                                                                             |
+| `DB_CONNECTION_TIMEOUT`                             | Max milliseconds a caller waits for a pooled connection before failing.                                                     | `10000` (10 seconds)                                                                                                                                                                                                       |
+| `DB_MAX_LIFETIME`                                   | Max milliseconds a connection lives before being retired and replaced. Should be shorter than any DB/network idle timeout.  | `1800000` (30 minutes)                                                                                                                                                                                                     |
+| `DB_IDLE_TIMEOUT`                                   | Max milliseconds an idle connection sits in the pool before removal (only applies when `DB_MINIMUM_IDLE` < `DB_POOL_SIZE`). | `600000` (10 minutes)                                                                                                                                                                                                      |
+| `DB_LEAK_DETECTION_THRESHOLD`                       | Milliseconds a connection may be held before HikariCP logs a possible leak. `0` disables detection.                         | `0` (disabled)                                                                                                                                                                                                             |
+| `CORS_HOSTS`                                        | Comma-separated list of allowed CORS origins                                                                                | (None)<br>Defaults to `*` when `APP_ENV` is `development` or `test`.<br>Otherwise will throw an exception in production if not set.                                                                                        |
+| `ARGON2_MEMORY`                                     | The memory cost for Argon2 password hashing                                                                                 | `65536` (64 MB)                                                                                                                                                                                                            |
+| `ARGON2_AVG_TIME`                                   | The average time cost (in milliseconds) for Argon2 password hashing                                                         | `500` (0.5 seconds)                                                                                                                                                                                                        |
+| `USER_SESSION_DURATION`                             | Duration of user sessions in seconds                                                                                        | `86400` (24 hours)                                                                                                                                                                                                         |
+| `USER_SESSION_CREATION_MINIMUM_TIME`                | Minimum time in milliseconds for creating new user sessions. Prevents spam and timing attacks.                              | `500` (0.5 seconds)                                                                                                                                                                                                        |
+| `NOTIFICATIONS_UPDATE_MAX_SUBSCRIPTIONS_PER_CLIENT` | Maximum amount of subjects a client can subscribe to                                                                        | `5`                                                                                                                                                                                                                        |
+| `NOTIFICAIONS_BULK_UPDATE_INTERVAL`                 | Time in milliseconds between each bulk update notifications                                                                 | `5000` (5 seconds)                                                                                                                                                                                                         |
+| `IS_BEHIND_PROXY`                                   | Set to non-empty value if running behind a proxy (eg. load balancer)                                                        | (None)                                                                                                                                                                                                                     |
+| `ADMIN_ENABLED`                                     | Set to non-empty value to enable admin endpoints                                                                            | (None)<br>**Disabled by default for safety.**                                                                                                                                                                              |
+| `ADMIN_SESSION_DURATION`                            | Duration of admin sessions in seconds.                                                                                      | `3600` (1 hour)                                                                                                                                                                                                            |
+| `ADMIN_SESSION_CREATION_MINIMUM_TIME`               | Minimum time in milliseconds for creating new admin sessions. Prevents spam and timing attacks.                             | `3000` (3 seconds)                                                                                                                                                                                                         |
+| `ADMIN_RESET`                                       | See the [Provisioning the Default Admin](#provisioning-the-default-admin) section.                                          | (None)                                                                                                                                                                                                                     |
+| `OTEL_SERVICE_NAME`                                 | The `service.name` reported to the telemetry backend.                                                                       | `electives-api`                                                                                                                                                                                                            |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                       | Base OTLP endpoint for traces, metrics, and logs. For Grafana LGTM, use the HTTP receiver (port `4318`). Unset to disable.  | (None)<br>Disabled by default.                                                                                                                                                                                             |
+| `OTEL_EXPORTER_OTLP_HEADERS`                        | Extra OTLP headers in `key=value,key2=value2` form. Used for auth against hosted backends (e.g. Grafana Cloud).             | (None)                                                                                                                                                                                                                     |
+| `OTEL_METRIC_EXPORT_INTERVAL`                       | How often in milliseconds to let Micrometer push metrics over OTLP.                                                         | `15000` (15 seconds)<br>This is a burst heavy application, so frequent metric pushes are expected.                                                                                                                         |
 
 ## Admin Authentication
 
-The admin authentication system uses RSA key pairs to authenticate admin users.
-To enable admin endpoints, set the `ADMIN_ENABLED` environment variable to a non-empty value and provide a valid RSA public key in the `ADMIN_PUBLIC_KEY` environment variable.
+Admin users authenticate with the standard `POST /auth` endpoint using their user ID and password, exactly like students and teachers.
+A successful login returns a session token, send `HEAD /admin` with the token to verify if the session is valid.
 
-On initial database setup, a user with the ID `0` will be created as an admin user.
-This user will not have a password and cannot be authenticated using regular user authentication methods. Instead, it must be authenticated using the matching RSA private key.
+To enable the admin endpoints, set the `ADMIN_ENABLED` environment variable to a non-empty value.
+While enabled, admin sessions use `ADMIN_SESSION_DURATION` and `ADMIN_SESSION_CREATION_MINIMUM_TIME` instead of the regular `USER_SESSION_*` values.
 
-### Admin Key Generation
+### Provisioning the Default Admin
 
-To generate an RSA key pair for admin authentication, you can use the following OpenSSL commands:
+To create (or reset) the default admin user, set `ADMIN_RESET` to the desired password and start the server with `ADMIN_ENABLED` set.
+On startup the server deletes user `0` if it already exists and recreates it as an admin with the supplied password. **The password must be at least 4 characters once trimmed.**
+
+> [!IMPORTANT]
+> You must **unset `ADMIN_RESET` after a successful startup.**
+> Leaving it set will cause the default admin user to be deleted and recreated on every restart, invalidating any sessions.
+
+## Observability
+
+The server emits three telemetry signals to the configured OTLP endpoint:
+
+- **Metrics**: HTTP metrics + JVM/system metrics (memory, GC, threads, CPU, file descriptors).
+- **Traces**: One span per request. DB access is traced by a `db.query` span per unit of work, with a child `db.statement` span per SQL statement.
+- **Logs**: a Logback appender bridges application logs, correlated with traces via `trace_id` and `span_id`.
+
+When no OTLP endpoint is specified or during tests, telemetry is automatically disabled.
+
+### Running a local Grafana LGTM backend
+
+The `grafana/otel-lgtm` all-in-one image bundles Grafana, Tempo, Loki, and Mimir with an OTLP receiver.
+
+Start it with Docker:
 
 ```bash
-# Generate a 2048-bit RSA private key and save it to private_key.pem
-openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
-# Extract the public key from the private key and save it to public_key.pem
-openssl rsa -pubout -in private_key.pem -out public_key.pem
+docker run -d --name grafana-lgtm \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -p 3001:3000 \
+  -e GF_SECURITY_ADMIN_USER=admin \
+  -e GF_SECURITY_ADMIN_PASSWORD=admin \
+  grafana/otel-lgtm:latest
 ```
 
-#### Windows (PowerShell)
+Ports:
 
-To extract the base64-encoded public key string on Windows using PowerShell, run:
+- `4317` = OTLP gRPC
+- `4318` = OTLP HTTP (used by the defaults above)
+- `3001` = Grafana UI
 
-```powershell
-# Read the public key file, remove PEM headers/footers, and concatenate the lines
-(Get-Content -Raw -Path public_key.pem) -replace '-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s' -join ''
-```
+Then run the server with the defaults from `.env.example` and open Grafana at <http://localhost:3001> (login `admin`/`admin`).
 
-#### Unix-like Systems (Linux, macOS)
+Traces are under **Drilldown** > **Traces**. Metrics and logs are explorable via their respective data sources.
 
-To extract the base64-encoded public key string on Unix-like systems, run:
+### Using a hosted backend (e.g. Grafana Cloud)
+
+Point the endpoint at your tenant's OTLP gateway and supply auth headers:
 
 ```bash
-# Read the public key file, remove PEM headers/footers, and concatenate the lines
-awk 'NF {sub(/-----BEGIN PUBLIC KEY-----/, ""); sub(/-----END PUBLIC KEY-----/, ""); printf "%s", $0}' public_key.pem
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-<region>.grafana.net/otlp
+OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic <base64(instanceId:token)>"
 ```
 
----
+The transport protocol (`http/protobuf`) and exporter selection (traces/logs over OTLP, metrics by Micrometer) are fixed in `TelemetryService` and need no configuration.
+The same headers are forwarded by the Micrometer OTLP registry for metric pushes.
 
-You can copy the resulting string and set it as the value of the `ADMIN_PUBLIC_KEY` environment variable.
+### Profiling
 
-> [!IMPORTANT]  
-> **Keep the generated private key (`private_key.pem`) secure**, as it will be used to authenticate and receive admin
-> session tokens.
->
-> If the private key is compromised, a new key pair should be generated immediately, and the `ADMIN_PUBLIC_KEY`
-> environment variable should be updated with the new public key.
-> Additionally, restart the server with `ADMIN_RESET` set to a non-empty value to invalidate an existing session and require re-authentication with the new key.
+The span waterfall shows which (route, SQL statement, etc.) is slow, but not what is slow.
+
+For per-method CPU flamegraphs, either attach the [OpenTelemetry Java agent](https://opentelemetry.io/docs/zero-code/java/agent/) (auto-instruments JDBC/HikariCP/coroutines with no code changes) or run [Grafana Pyroscope](https://grafana.com/oss/pyroscope/) for continuous profiling. Both are optional and independent of the LGTM setup above.

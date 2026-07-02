@@ -4,10 +4,8 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.di.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import th.ac.bodin2.electives.api.services.AdminAuthService
 import th.ac.bodin2.electives.api.services.UsersService
-import th.ac.bodin2.electives.api.services.isAdminAvailable
+import th.ac.bodin2.electives.api.utils.dbQuery
 import th.ac.bodin2.electives.proto.api.UserType
 import th.ac.bodin2.electives.utils.Argon2
 import th.ac.bodin2.electives.utils.KiB
@@ -32,21 +30,15 @@ class AdminPrincipal(val id: Int)
 
 fun Application.configureSecurity() {
     val usersService: UsersService by dependencies
-    val app = this
 
     install(Authentication) {
         bearer(USER_AUTHENTICATION) {
             authenticate { tokenCredential -> usersService.toPrincipal(tokenCredential.token, this) }
         }
 
-        if (app.isAdminAvailable) {
+        if (isAdminEnabled) {
             bearer(ADMIN_AUTHENTICATION) {
-                val adminAuthService: AdminAuthService by app.dependencies
                 authenticate { tokenCredential ->
-                    if (!adminAuthService.permitsIP(this.request.origin.remoteAddress)) {
-                        return@authenticate null
-                    }
-
                     val user = usersService.toPrincipal(tokenCredential.token, this)
                     if (user == null || user.type != UserType.ADMIN) return@authenticate null
 
@@ -58,9 +50,9 @@ fun Application.configureSecurity() {
 }
 
 
-fun UsersService.toPrincipal(token: String, call: ApplicationCall): UsersService.SessionUser? =
+suspend fun UsersService.toPrincipal(token: String, call: ApplicationCall): UsersService.SessionUser? =
     try {
-        transaction { getSessionUser(token) }
+        dbQuery { getSessionUser(token) }
     } catch (e: Exception) {
         logger.debug("Cannot authenticate user (address: ${call.request.origin.remoteAddress}, hash: ${token.toHash()}): ${e.message}")
         null

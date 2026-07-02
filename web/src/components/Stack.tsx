@@ -1,7 +1,7 @@
 import { type ComponentProps, type JSX, type JSXElement, splitProps } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
 import styles from './Stack.module.css'
-import type { StyleRecordOnly } from '../global'
+import type { StyleRecordOnly } from '~/global'
 
 export function VStack<const As extends keyof JSX.HTMLElementTags>(props: StackProps<As>) {
     const [local, others] = splitProps(props, [
@@ -20,7 +20,7 @@ export function VStack<const As extends keyof JSX.HTMLElementTags>(props: StackP
     return (
         <Dynamic
             component={local.as ?? 'div'}
-            {...others}
+            {...(others as Record<string, unknown>)}
             class={`${styles.stack} ${styles.vert}`}
             classList={{
                 ...local.classList,
@@ -57,7 +57,7 @@ export function HStack<const As extends keyof JSX.HTMLElementTags>(props: StackP
     return (
         <Dynamic
             component={local.as ?? 'div'}
-            {...others}
+            {...(others as Record<string, unknown>)}
             class={styles.stack}
             classList={{
                 ...local.classList,

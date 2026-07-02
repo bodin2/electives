@@ -1,6 +1,8 @@
 package th.ac.bodin2.electives.api.services.mock
 
-import kotlinx.coroutines.flow.SharedFlow
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
 import th.ac.bodin2.electives.EntityNotFoundException
 import th.ac.bodin2.electives.ExceptionEntity
 import th.ac.bodin2.electives.api.MockUtils.mockAdmin
@@ -13,154 +15,104 @@ import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.ADMIN_TOKEN
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.PASSWORD
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.STUDENT_ID
 import th.ac.bodin2.electives.api.services.mock.TestServiceConstants.TEACHER_ID
-import th.ac.bodin2.electives.db.Admin
 import th.ac.bodin2.electives.db.Student
 import th.ac.bodin2.electives.db.Teacher
 import th.ac.bodin2.electives.proto.api.UserType
 
-class TestUsersService : UsersService {
-    private val hasSessions = mutableSetOf<Int>()
+object TestUsersService {
+    @OptIn(Transactional::class)
+    operator fun invoke(): UsersService {
+        val hasSessions = mutableSetOf<Int>()
 
-    override val sessionCreationFlow: SharedFlow<Int>
-        get() = error("Not testable")
-
-    override fun createStudent(
-        id: Int,
-        firstName: String,
-        middleName: String?,
-        lastName: String?,
-        password: String,
-        avatarUrl: String?,
-        teams: List<Int>?,
-    ) = error("Not testable")
-
-    @Transactional
-    override fun createStudents(inserts: List<UsersService.StudentInsert>) = error("Not testable")
-
-    override fun createTeacher(
-        id: Int,
-        firstName: String,
-        middleName: String?,
-        lastName: String?,
-        password: String,
-        avatarUrl: String?,
-    ) = error("Not testable")
-
-    @Transactional
-    override fun createTeachers(inserts: List<UsersService.TeacherInsert>) = error("Not testable")
-
-    @Transactional
-    override fun createAdmin(insert: UsersService.AdminInsert) = error("Not testable")
-
-    @Transactional
-    override fun deleteUser(id: Int) = error("Not testable")
-
-    @Transactional
-    override suspend fun deleteUsers(id: List<Int>) = error("Not testable")
-
-    @Transactional
-    override fun updateStudent(id: Int, update: UsersService.StudentUpdate): Student {
-        if (id != STUDENT_ID) throw EntityNotFoundException(ExceptionEntity.STUDENT)
-        return mockStudent(id)
-    }
-
-    @Transactional
-    override fun updateTeacher(id: Int, update: UsersService.TeacherUpdate): Teacher {
-        if (id != TEACHER_ID) throw EntityNotFoundException(ExceptionEntity.TEACHER)
-        return mockTeacher(id)
-    }
-
-    @Transactional
-    override fun setPassword(id: Int, newPassword: String) {
-        getUserType(id) // throws if user not found
-    }
-
-    override fun getUserType(id: Int) = when (id) {
-        ADMIN_ID -> UserType.ADMIN
-        TEACHER_ID -> UserType.TEACHER
-        STUDENT_ID -> UserType.STUDENT
-        else -> throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
-    }
-
-    @Transactional
-    override suspend fun createSession(id: Int, password: String, aud: String): String {
-        if (password != PASSWORD) {
-            throw IllegalArgumentException("Invalid password for user ID: $id")
+        fun userType(id: Int) = when (id) {
+            ADMIN_ID -> UserType.ADMIN
+            TEACHER_ID -> UserType.TEACHER
+            STUDENT_ID -> UserType.STUDENT
+            else -> throw EntityNotFoundException(ExceptionEntity.USER, "User does not exist: $id")
         }
 
-        return insecurelyCreateSessionWithoutValidation(id)
-    }
+        return mockk(relaxed = true) {
+            every { getUserType(any()) } answers { userType(firstArg()) }
 
-    @Transactional
-    override fun insecurelyCreateSessionWithoutValidation(id: Int, customDurationSeconds: Long?): String {
-        hasSessions.add(id)
-        return id.toString()
-    }
+            coEvery { updateStudent(any(), any()) } answers {
+                val id = firstArg<Int>()
+                if (id != STUDENT_ID) throw EntityNotFoundException(ExceptionEntity.STUDENT)
+                mockStudent(id)
+            }
 
-    override fun getSessionUser(token: String): UsersService.SessionUser {
-        if (token == ADMIN_TOKEN) {
-            return UsersService.SessionUser(
-                id = ADMIN_ID,
-                type = UserType.ADMIN
-            )
-        }
+            coEvery { updateTeacher(any(), any()) } answers {
+                val id = firstArg<Int>()
+                if (id != TEACHER_ID) throw EntityNotFoundException(ExceptionEntity.TEACHER)
+                mockTeacher(id)
+            }
 
-        val id = token.toIntOrNull()
-            ?: throw IllegalArgumentException("No session for token: $token")
+            coEvery { setPassword(any(), any()) } answers {
+                userType(firstArg()) // throws if user not found
+            }
 
-        if (!hasSessions.contains(id)) {
-            throw IllegalArgumentException("No session for user ID: $id")
-        }
+            coEvery { createSession(any(), any(), any()) } answers {
+                val id = firstArg<Int>()
+                val password = secondArg<String>()
+                if (password != PASSWORD) {
+                    throw IllegalArgumentException("Invalid password for user ID: $id")
+                }
+                hasSessions.add(id)
+                id.toString()
+            }
 
-        return UsersService.SessionUser(
-            id = id,
-            type = getUserType(id)
-        )
-    }
+            every { insecurelyCreateSessionWithoutValidation(any(), any()) } answers {
+                val id = firstArg<Int>()
+                hasSessions.add(id)
+                id.toString()
+            }
 
-    override fun clearSession(userId: Int) {
-        hasSessions.remove(userId)
-    }
+            every { getSessionUser(any()) } answers {
+                val token = firstArg<String>()
+                if (token == ADMIN_TOKEN) {
+                    return@answers UsersService.SessionUser(id = ADMIN_ID, type = UserType.ADMIN)
+                }
 
-    override fun getTeacherById(id: Int): Teacher? {
-        return if (id == TEACHER_ID) {
-            mockTeacher(id)
-        } else {
-            null
-        }
-    }
+                val id = token.toIntOrNull()
+                    ?: throw IllegalArgumentException("No session for token: $token")
 
-    override fun getAdminById(id: Int): Admin? {
-        return if (id == ADMIN_ID) {
-            mockAdmin(id)
-        } else {
-            null
-        }
-    }
+                if (!hasSessions.contains(id)) {
+                    throw IllegalArgumentException("No session for user ID: $id")
+                }
 
-    override fun getStudentById(id: Int): Student? {
-        return if (id == STUDENT_ID) {
-            mockStudent(id)
-        } else {
-            null
-        }
-    }
+                UsersService.SessionUser(id = id, type = userType(id))
+            }
 
-    @Transactional
-    override fun getStudents(page: Int, query: String?): Pair<List<Student>, Long> {
-        return if (page == 1) {
-            listOf(mockStudent(STUDENT_ID)) to 1
-        } else {
-            emptyList<Student>() to 0
-        }
-    }
+            every { clearSession(any()) } answers {
+                hasSessions.remove(firstArg())
+                Unit
+            }
 
-    @Transactional
-    override fun getTeachers(page: Int, query: String?): Pair<List<Teacher>, Long> {
-        return if (page == 1) {
-            listOf(mockTeacher(TEACHER_ID)) to 1
-        } else {
-            emptyList<Teacher>() to 0
+            every { getTeacherById(any()) } answers {
+                val id = firstArg<Int>()
+                if (id == TEACHER_ID) mockTeacher(id) else null
+            }
+
+            every { getAdminById(any()) } answers {
+                val id = firstArg<Int>()
+                if (id == ADMIN_ID) mockAdmin(id) else null
+            }
+
+            every { getStudentById(any()) } answers {
+                val id = firstArg<Int>()
+                if (id == STUDENT_ID) mockStudent(id) else null
+            }
+
+            coEvery { getStudents(any(), any()) } answers {
+                val page = firstArg<Int>()
+                if (page == 1) listOf(mockStudent(STUDENT_ID)) to 1L
+                else emptyList<Student>() to 0L
+            }
+
+            coEvery { getTeachers(any(), any()) } answers {
+                val page = firstArg<Int>()
+                if (page == 1) listOf(mockTeacher(TEACHER_ID)) to 1L
+                else emptyList<Teacher>() to 0L
+            }
         }
     }
 }

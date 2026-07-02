@@ -8,13 +8,13 @@ object TestServiceConstants {
 
     const val UNUSED_ID = 9999
 
-    const val ELECTIVE_TEAM_ID = 100
-    const val SUBJECT_TEAM_ID = 101
+    const val ENROLLMENT_GROUP_ID = 100
+    const val SUBJECT_GROUP_ID = 101
 
     const val SUBJECT_ID = 200
 
-    const val ELECTIVE_ID = 300
-    const val ELECTIVE_WITHOUT_SUBJECTS_ID = 301
+    const val ENROLLMENT_ID = 300
+    const val ENROLLMENT_WITHOUT_SUBJECTS_ID = 301
 
     const val PASSWORD = "password"
     const val ADMIN_TOKEN = "admin-token"

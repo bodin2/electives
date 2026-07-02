@@ -17,6 +17,16 @@
     gap: 16px;
 }
 
+.enrollmentGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(512px, 1fr));
+    gap: 8px;
+
+    @media (max-width: 600px) {
+        grid-template-columns: 1fr;
+    }
+}
+
 .label {
     color: var(--m3c-primary);
 }

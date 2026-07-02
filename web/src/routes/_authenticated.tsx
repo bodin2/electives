@@ -1,13 +1,18 @@
-import { createFileRoute, type ErrorRouteComponent, Outlet } from '@tanstack/solid-router'
-import { Match, Switch } from 'solid-js'
-import { UnauthorizedError } from '../api'
-import { PageTopAppBar } from '../components/PageTopAppBar'
-import LoadingPage from '../components/pages/LoadingPage'
-import { useLogoutRedirect } from '../hooks/useAuthRedirect'
-import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
-import { usePageData } from '../providers/PageProvider'
-import ScrollDataProvider from '../providers/ScrollDataProvider'
-import { catchErrors } from '../utils/error-component'
+import { createFileRoute, type ErrorRouteComponent, Outlet, useRouter } from '@tanstack/solid-router'
+import { createRenderEffect, Match, on, Switch } from 'solid-js'
+import { UnauthorizedError } from '~/api'
+import DashboardLayout from '~/components/layout/DashboardLayout'
+import { getUserNav } from '~/components/layout/navEntries'
+import LoadingPage from '~/components/pages/LoadingPage'
+import {
+    type UserDisplayContext,
+    UserDisplayContextProvider,
+    useUserDisplayContext,
+} from '~/components/users/UserDisplayContext'
+import { useLogoutRedirect } from '~/hooks/useAuthRedirect'
+import { LoadingState, LoggedInState, useAPI } from '~/providers/APIProvider'
+import { nonNull } from '~/utils'
+import { catchErrors } from '~/utils/error-component'
 
 export const AUTHENTICATED_ROUTE_DEFAULTS = {
     errorComponent: catchErrors([UnauthorizedError, UnauthorizedRedirect]),
@@ -25,22 +30,45 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedLayout() {
     const api = useAPI()
-    const pageData = usePageData()
+    const userDisplayContext = useUserDisplayContext()
+
+    const udcValue = (): UserDisplayContext => {
+        if (api.client.user?.isTeacher())
+            return {
+                ...userDisplayContext,
+                viewLinkProps: userId => ({
+                    to: '/users/$userId',
+                    params: { userId },
+                }),
+            }
+
+        return userDisplayContext
+    }
 
     useUserLogoutRedirect()
+    useAdminCrossRedirect()
 
     return (
-        <ScrollDataProvider>
-            <Switch>
-                <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.User}>
-                    <PageTopAppBar elevated={pageData.topAppBarElevated} />
-                    <Outlet />
-                </Match>
-                <Match when={api.authState() === AuthenticationState.Loading}>
-                    <LoadingPage />
-                </Match>
-            </Switch>
-        </ScrollDataProvider>
+        <Switch>
+            <Match
+                when={
+                    api.authState() instanceof LoggedInState &&
+                    !nonNull(api.client.user).isAdmin() &&
+                    api.client.user
+                }
+            >
+                {user => (
+                    <UserDisplayContextProvider value={udcValue()}>
+                        <DashboardLayout entries={getUserNav(user().type)}>
+                            <Outlet />
+                        </DashboardLayout>
+                    </UserDisplayContextProvider>
+                )}
+            </Match>
+            <Match when={api.authState() instanceof LoadingState}>
+                <LoadingPage debugName="AuthenticatedLayout" />
+            </Match>
+        </Switch>
     )
 }
 
@@ -49,4 +77,21 @@ function UnauthorizedRedirect() {
     return null
 }
 
-const useUserLogoutRedirect = () => useLogoutRedirect('/login', TokenType.User)
+const useUserLogoutRedirect = () => useLogoutRedirect('/login')
+
+/**
+ * Redirect admins who land on a user-area route to the management dashboard.
+ */
+function useAdminCrossRedirect() {
+    const api = useAPI()
+    const navigate = useRouter().navigate
+
+    createRenderEffect(
+        on(api.authState, state => {
+            if (!(state instanceof LoggedInState)) return
+            if (api.client.user?.isAdmin()) {
+                navigate({ to: '/manage', replace: true })
+            }
+        }),
+    )
+}

@@ -17,7 +17,12 @@
     "skipLibCheck": true,
     "strict": true,
 
-    "types": ["node", "vite/client", "bun"]
+    "types": ["node", "vite/client", "bun"],
+    "noEmit": true,
+
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   },
   "include": ["src"]
 }

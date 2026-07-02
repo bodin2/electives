@@ -1,0 +1,10 @@
+.header {
+    padding-block: 8px;
+    padding-inline-start: 16px;
+    padding-inline-end: 8px;
+    position: sticky;
+    /* Top app bar height + search + padding */
+    top: calc(var(--sticky-offset) + 72px);
+    background-color: var(--m3c-surface);
+    z-index: var(--layer-overlay);
+}

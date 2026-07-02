@@ -19,6 +19,19 @@ tasks.test {
 
 dependencies {
     implementation(project(":common"))
+
+    implementation(platform(libs.otel.bom))
+    implementation(platform(libs.otel.instrumentation.bom.alpha))
+
+    implementation(libs.ktor.server.metrics.micrometer)
+    implementation(libs.micrometer.registry.otlp)
+    implementation(libs.otel.sdk)
+    implementation(libs.otel.sdk.autoconfigure)
+    implementation(libs.otel.exporter.otlp)
+    implementation(libs.otel.extension.kotlin)
+    implementation(libs.otel.ktor)
+    implementation(libs.otel.logback.appender)
+
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.conditional.headers)
     implementation(libs.ktor.server.forwarded.header)
@@ -32,14 +45,13 @@ dependencies {
     implementation(libs.ktor.server.di)
     implementation(libs.ktor.server.rate.limit)
     implementation(libs.ktor.server.call.logging)
+    implementation(libs.ktor.server.status.pages)
     implementation(libs.logback.classic)
+    implementation(libs.postgresql)
+    implementation(libs.hikaricp)
 
+    testImplementation(libs.sqlite.jdbc)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.mockk)
-}
-
-val compileKotlin: KotlinCompile by tasks
-compileKotlin.compilerOptions {
-    freeCompilerArgs.add("-Xcontext-parameters")
 }

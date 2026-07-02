@@ -1,4 +1,4 @@
-import { Icon, mergeClasses } from 'm3-solid'
+import { Icon, mergeClasses } from 'm3-solid/src'
 import styles from './ContainedIcon.module.css'
 import { VStack } from './Stack'
 import type { IconifyIcon } from '@iconify/types'

@@ -1,10 +1,11 @@
-import { createFileRoute, type ErrorRouteComponent, Outlet } from '@tanstack/solid-router'
-import { Match, Switch } from 'solid-js'
-import { UnauthorizedError } from '../api'
-import LoadingPage from '../components/pages/LoadingPage'
-import { useLogoutRedirect } from '../hooks/useAuthRedirect'
-import { AuthenticationState, TokenType, useAPI } from '../providers/APIProvider'
-import { catchErrors } from '../utils/error-component'
+import { createFileRoute, type ErrorRouteComponent, Outlet, useRouter } from '@tanstack/solid-router'
+import { createRenderEffect, Match, on, Switch } from 'solid-js'
+import { UnauthorizedError } from '~/api'
+import LoadingPage from '~/components/pages/LoadingPage'
+import { useLogoutRedirect } from '~/hooks/useAuthRedirect'
+import { LoadingState, LoggedInState, useAPI } from '~/providers/APIProvider'
+import { nonNull } from '~/utils'
+import { catchErrors } from '~/utils/error-component'
 
 export const ADMIN_AUTHENTICATED_ROUTE_DEFAULTS = {
     errorComponent: catchErrors([UnauthorizedError, UnauthorizedRedirect]),
@@ -24,14 +25,15 @@ function AdminAuthenticatedLayout() {
     const api = useAPI()
 
     useAdminLogoutRedirect()
+    useNonAdminCrossRedirect()
 
     return (
         <Switch>
-            <Match when={api.authState() === AuthenticationState.LoggedIn && api.tokenType() === TokenType.Admin}>
+            <Match when={api.authState() instanceof LoggedInState && nonNull(api.client.user).isAdmin()}>
                 <Outlet />
             </Match>
-            <Match when={api.authState() === AuthenticationState.Loading}>
-                <LoadingPage />
+            <Match when={api.authState() instanceof LoadingState}>
+                <LoadingPage debugName="AdminAuthenticatedLayout" />
             </Match>
         </Switch>
     )
@@ -42,4 +44,21 @@ function UnauthorizedRedirect() {
     return null
 }
 
-const useAdminLogoutRedirect = () => useLogoutRedirect('/manage/login', TokenType.Admin)
+const useAdminLogoutRedirect = () => useLogoutRedirect('/login')
+
+/**
+ * Redirect non-admin users who land on a management route to the user dashboard.
+ */
+function useNonAdminCrossRedirect() {
+    const api = useAPI()
+    const navigate = useRouter().navigate
+
+    createRenderEffect(
+        on(api.authState, state => {
+            if (!(state instanceof LoggedInState)) return
+            if (!api.client.user?.isAdmin()) {
+                navigate({ to: '/', replace: true })
+            }
+        }),
+    )
+}

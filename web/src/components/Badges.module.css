@@ -1,0 +1,14 @@
+.badge {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    
+    &:has(.actionButton) {
+        padding-inline-end: 4px;
+    }
+
+    .actionButton {
+        width: 32px;
+        height: 24px;
+    }
+}

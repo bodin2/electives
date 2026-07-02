@@ -9,12 +9,12 @@ plugins {
 
 subprojects {
     tasks.withType<JavaCompile>().configureEach {
-        options.release.set(21)
+        options.release.set(25)
     }
 
     tasks.withType<KotlinCompile>().configureEach {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
+            jvmTarget = JvmTarget.fromTarget("25")
         }
     }
 }

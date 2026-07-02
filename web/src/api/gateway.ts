@@ -159,10 +159,10 @@ export class Gateway {
     }
 
     /**
-     * Subscribe to updates for specific subjects in an elective
+     * Subscribe to updates for specific subjects in an enrollment
      */
-    subscribeToElective(electiveId: number, subjectIds: number[]): void {
-        this.subscribe({ [electiveId]: { subjectIds } })
+    subscribeToEnrollment(enrollmentId: number, subjectIds: number[]): void {
+        this.subscribe({ [enrollmentId]: { subjectIds } })
     }
 
     /**
@@ -336,6 +336,5 @@ export class Gateway {
 }
 
 export const GatewayEndpoints = {
-    AdminNotifications: '/notifications',
     Notifications: '/notifications',
 } as const

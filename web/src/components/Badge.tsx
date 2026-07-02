@@ -1,4 +1,4 @@
-import { mergeClasses } from 'm3-solid'
+import { mergeClasses } from 'm3-solid/src'
 import styles from './Badge.module.css'
 import type { ComponentProps } from 'solid-js'
 

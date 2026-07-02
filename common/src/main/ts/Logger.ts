@@ -1,5 +1,5 @@
 const createLogMethod =
-    (method: 'log' | 'debug' | 'warn' | 'error') =>
+    (method: 'log' | 'debug' | 'warn' | 'error' | 'trace') =>
     (tag: string, ...args: unknown[]) =>
         console[method](
             `%c ${tag} %c`,
@@ -13,6 +13,7 @@ export default class Logger {
     static debug = createLogMethod('debug')
     static warn = createLogMethod('warn')
     static error = createLogMethod('error')
+    static trace = createLogMethod('trace')
 
     constructor(public tag: string) {}
 
@@ -30,5 +31,9 @@ export default class Logger {
 
     error(...args: unknown[]) {
         Logger.error(this.tag, ...args)
+    }
+
+    trace(...args: unknown[]) {
+        Logger.trace(this.tag, ...args)
     }
 }

@@ -22,8 +22,8 @@ suspend fun RoutingContext.authenticated(
     types: List<UserType> = ALL_USER_TYPES,
     block: suspend RoutingContext.(user: UsersService.SessionUser) -> Unit
 ) {
-    val user = call.user ?: return unauthorized()
-    if (user.type !in types) return unauthorized()
+    val user = call.user ?: throw unauthorized()
+    if (user.type !in types) throw unauthorized()
 
     block(user)
 }
@@ -39,8 +39,8 @@ suspend fun RoutingContext.authenticated(
     getTypes: (userId: Int) -> List<UserType>,
     block: suspend RoutingContext.(user: UsersService.SessionUser) -> Unit
 ) {
-    val user = call.user ?: return unauthorized()
-    if (user.type !in getTypes(user.id)) return unauthorized()
+    val user = call.user ?: throw unauthorized()
+    if (user.type !in getTypes(user.id)) throw unauthorized()
 
     block(user)
 }
@@ -56,7 +56,7 @@ fun Routing.authenticatedRoutes(block: Route.() -> Unit) {
 val ApplicationCall.user get() = principal<UsersService.SessionUser>()
 
 fun ApplicationCall.userId(): Int? {
-    return principal<UsersService.SessionUser>()?.id
+    return principal<UsersService.SessionUser>()?.id ?: principal<AdminPrincipal>()?.id
 }
 
 fun ApplicationCall.isAdmin(): Boolean = principal<AdminPrincipal>() != null

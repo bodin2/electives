@@ -1,7 +1,7 @@
 import HomeIcon from '@iconify-icons/mdi/home'
-import { mergeClasses } from 'm3-solid'
+import { mergeClasses } from 'm3-solid/src'
 import { createSignal, onMount, Show } from 'solid-js'
-import { useI18n } from '../../providers/I18nProvider'
+import { useI18n } from '~/providers/I18nProvider'
 import { Button } from '../Button'
 import { Dialog } from '../Dialog'
 import NotFoundIllustration, { NotFoundEEIllustration } from '../images/NotFoundIllustration'
@@ -12,7 +12,7 @@ import styles from './NotFoundPage.module.css'
 
 export default function NotFoundPage() {
     return (
-        <Page allowBacking leading={null} trailing={null}>
+        <Page allowBacking>
             <NotFoundPageContent illustration />
         </Page>
     )
@@ -47,11 +47,7 @@ export function NotFoundPageContent(props: { illustration?: boolean }) {
             <Show when={props.illustration}>
                 <Show when={count() >= COUNTER_THRESHOLD}>
                     <div class={styles.ee} aria-hidden="true">
-                        <NotFoundEEIllustration
-                            tabindex="-1"
-                            class={styles.popup}
-                            onClick={() => setDialogOpen(true)}
-                        />
+                        <NotFoundEEIllustration class={styles.popup} onClick={() => setDialogOpen(true)} />
                     </div>
                 </Show>
                 <Dialog
