@@ -79,8 +79,6 @@ export function NetworkErrorPage() {
     const isTimeoutOrOffline = () => networkError()?.type === NetworkError.Type.Timeout || !navigator.onLine
 
     onMount(() => {
-        if (!isTimeoutOrOffline()) return
-
         const resume = () => api.resumeSession().catch(() => {})
 
         // Reconnect every 10 seconds if the error is a timeout
