@@ -127,13 +127,15 @@ function FixedSlotBadge(props: {
     const current = () => props.user.groups.find(g => g.type === props.slot)
 
     return (
-        <GroupBadge
-            group={current()}
-            fallbackType={props.slot}
-            placeholder={slotPlaceholder(props.slot, string)}
-            required={props.required}
-            onEdit={ctx.editable && props.onEdit ? () => nonNull(props.onEdit)(props.slot) : undefined}
-        />
+        <Show when={ctx.editable || current()}>
+            <GroupBadge
+                group={current()}
+                fallbackType={props.slot}
+                placeholder={slotPlaceholder(props.slot, string)}
+                required={props.required}
+                onEdit={ctx.editable && props.onEdit ? () => nonNull(props.onEdit)(props.slot) : undefined}
+            />
+        </Show>
     )
 }
 
