@@ -72,7 +72,7 @@ The server can be configured using the following environment variables:
 | `ADMIN_SESSION_CREATION_MINIMUM_TIME`               | Minimum time in milliseconds for creating new admin sessions. Prevents spam and timing attacks.                             | `3000` (3 seconds)                                                                                                                                                                                                         |
 | `ADMIN_RESET`                                       | See the [Provisioning the Default Admin](#provisioning-the-default-admin) section.                                          | (None)                                                                                                                                                                                                                     |
 | `OTEL_SERVICE_NAME`                                 | The `service.name` reported to the telemetry backend.                                                                       | `electives-api`                                                                                                                                                                                                            |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`                       | Base OTLP endpoint for traces, metrics, and logs. For Grafana LGTM, use the HTTP receiver (port `4318`).                    | `http://localhost:4318`                                                                                                                                                                                                    |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                       | Base OTLP endpoint for traces, metrics, and logs. For Grafana LGTM, use the HTTP receiver (port `4318`). Unset to disable.  | (None)<br>Disabled by default.                                                                                                                                                                                             |
 | `OTEL_EXPORTER_OTLP_HEADERS`                        | Extra OTLP headers in `key=value,key2=value2` form. Used for auth against hosted backends (e.g. Grafana Cloud).             | (None)                                                                                                                                                                                                                     |
 | `OTEL_METRIC_EXPORT_INTERVAL`                       | How often in milliseconds to let Micrometer push metrics over OTLP.                                                         | `15000` (15 seconds)<br>This is a burst heavy application, so frequent metric pushes are expected.                                                                                                                         |
 
@@ -101,7 +101,7 @@ The server emits three telemetry signals to the configured OTLP endpoint:
 - **Traces**: One span per request. DB access is traced by a `db.query` span per unit of work, with a child `db.statement` span per SQL statement.
 - **Logs**: a Logback appender bridges application logs, correlated with traces via `trace_id` and `span_id`.
 
-During tests, telemetry is automatically disabled.
+When no OTLP endpoint is specified or during tests, telemetry is automatically disabled.
 
 ### Running a local Grafana LGTM backend
 

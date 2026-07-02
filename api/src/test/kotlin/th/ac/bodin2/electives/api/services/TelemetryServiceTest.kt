@@ -6,6 +6,7 @@ import io.ktor.server.testing.*
 import io.opentelemetry.instrumentation.ktor.v3_0.KtorServerTelemetry
 import kotlinx.coroutines.runBlocking
 import th.ac.bodin2.electives.api.setupTestEnvironment
+import java.time.Duration
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -28,6 +29,20 @@ class TelemetryServiceTest {
     fun `disabled service exposes no tracer`() {
         val telemetry = TelemetryService(disabled = true)
         assertNull(telemetry.tracer, "disabled telemetry must not expose a tracer")
+    }
+
+    @Test
+    fun `service is inert when disabled even if an endpoint is configured`() {
+        val telemetry = TelemetryService(
+            disabled = true,
+            config = TelemetryService.Config(
+                serviceName = "test",
+                otlpEndpoint = "http://localhost:4318",
+                otlpHeaders = emptyMap(),
+                metricStep = Duration.ofMillis(15_000),
+            ),
+        )
+        assertNull(telemetry.tracer, "disabled telemetry must not expose a tracer even with an endpoint set")
     }
 
     @Test

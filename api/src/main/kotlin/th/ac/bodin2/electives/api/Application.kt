@@ -60,7 +60,10 @@ suspend fun Application.module() {
     }
 
     // KtorServerTelemetry must precede other logging/telemetry plugins
-    val telemetry = TelemetryService(disabled = isTest)
+    val telemetry = TelemetryService(
+        // Telemetry is disabled in tests and whenever no OTLP endpoint is configured
+        disabled = isTest || env("OTEL_EXPORTER_OTLP_ENDPOINT").isNullOrBlank(),
+    )
     telemetry.configure(this)
     monitor.subscribe(ApplicationStopping) { telemetry.close() }
 

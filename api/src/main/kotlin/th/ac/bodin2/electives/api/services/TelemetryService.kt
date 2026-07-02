@@ -55,7 +55,7 @@ class TelemetryService(
         companion object {
             fun fromEnv() = Config(
                 serviceName = env("OTEL_SERVICE_NAME") ?: "electives-api",
-                otlpEndpoint = (env("OTEL_EXPORTER_OTLP_ENDPOINT") ?: "http://localhost:4318").trimEnd('/'),
+                otlpEndpoint = (env("OTEL_EXPORTER_OTLP_ENDPOINT") ?: "").trimEnd('/'),
                 otlpHeaders = parseHeaders(env("OTEL_EXPORTER_OTLP_HEADERS")),
                 metricStep = Duration.ofMillis(env("OTEL_METRIC_EXPORT_INTERVAL")?.toLongOrNull() ?: 15_000L),
             )
