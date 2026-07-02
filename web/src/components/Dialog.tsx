@@ -39,8 +39,9 @@ export const Dialog: ParentComponent<DialogProps> = props => {
                     {...others}
                     open={internalOpen()}
                     onOpenChange={handleOpenChange}
+                    class={styles.dialog}
                     backdropProps={{
-                        class: styles.backdrop,
+                        class: styles.dialog,
                         ...local.backdropProps,
                     }}
                 >
