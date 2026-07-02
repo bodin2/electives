@@ -28,6 +28,7 @@
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s;
     width: 100%;
+    -webkit-tap-highlight-color: transparent;
 
     &:open::picker-icon {
         rotate: 180deg;
@@ -87,6 +88,8 @@
     border: none;
     border-radius: var(--m3-shape-small);
     box-shadow: var(--m3-elevation-1);
+    /* Ensure the picker paints above other page content on mobile browsers */
+    z-index: var(--layer-dialog);
 }
 
 .supportingText {
